@@ -6,6 +6,8 @@ logs/
 scripts/infomap
 scripts/SampleSizeR
 scripts/NetworkMedicineToolbox
+scripts/.RData
+scripts/.Rhistory
 
 # The data that I am using right now
 data/
