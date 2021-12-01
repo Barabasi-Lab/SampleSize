@@ -290,3 +290,14 @@ sbatch /home/j.aguirreplans/Projects/Scipher/SampleSize/data/RA/scripts/data_imp
 
 
 
+#############
+UPDATE GITHUB
+#############
+
+# To add new changes:
+git add .
+git commit -m "First commit"
+git push origin master
+
+# To pull changes from the repository:
+git pull origin master
