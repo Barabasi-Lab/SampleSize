@@ -1,0 +1,98 @@
+---
+title: "GTEx preprocessing"
+author: "Joaquim Aguirre-Plans"
+date: "26/11/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Description
+
+Preprocess GTEx data (version v8).
+
+```{r, message=FALSE}
+library(data.table)
+library(dplyr)
+library(ggplot2)
+set.seed(1510)
+```
+
+## Read files
+
+```{r define_files}
+# Define input files
+samples_subjects_file = '/home/j.aguirreplans/Databases/GTEx/v8/GTEx_Annotations_SamplesSubjectsMerged.txt'
+tpm_file = '/home/j.aguirreplans/Databases/GTEx/v8/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_tpm.gct'
+
+# Define output file
+tpm_filt_file = '/home/j.aguirreplans/Databases/GTEx/v8/GTEx_RNASeq_gene_tpm_filtered.gct'
+```
+
+```{r read_files}
+# Read input files
+samples_df = fread(samples_subjects_file)
+tpm_df = fread(tpm_file)
+
+```
+
+## Remove genes with low TPM expression
+
+We filter the samples in the TPM file by keeping the ones that are in the samples information file:
+
+```{r filter_tpm_file_samples}
+dim(tpm_df[,-1:-2])
+tpm_df <- tpm_df %>% select(c("Name", "Description", samples_df$SAMPID))
+dim(tpm_df[,-1:-2])
+length(samples_df$SAMPID)
+
+```
+
+We calculate the median, mean, sum and standard deviation of the expression of each gene:
+
+```{r}
+info_df = data.frame(Name=tpm_df$Name, Description=tpm_df$Description, sum=rowSums(tpm_df[,-1:-2]))
+info_df$sd = apply(tpm_df[,-1:-2], 1, sd)
+info_df$mean = rowMeans(tpm_df[,-1:-2])
+info_df$median = apply(tpm_df[,-1:-2], 1, median)
+info_df$log2_median = log2(info_df$median)
+info_df$log2_mean = log2(info_df$mean)
+info_df$zero_sum_counts = as.numeric(apply(tpm_df[,-1:-2], 1, function(i) sum(i == 0) )) # Number of times that the sum of the TPMs is equal to 0
+
+dim(info_df)
+```
+
+We keep the genes whose sum, standard deviation, mean or median expression is above 0.
+Also, we keep the genes whose expression is 0 in more than 50% of the samples (as in https://www.biostars.org/p/377059/):
+
+```{r}
+info_filt_df = info_df[(info_df$sum > 0) & (info_df$mean > 0) & (info_df$median > 0) & (info_df$sd > 0) & (info_df$zero_sum_counts < dim(tpm_df[, -1])[2]/2) ,]
+dim(info_filt_df)
+
+```
+
+We filter the TPM matrix:
+
+```{r}
+tpm_filt_df = tpm_df[tpm_df$Name %in% info_filt_df$Name,]
+dim(tpm_filt_df)
+
+```
+
+Save the filtered gene expression data:
+
+```{r}
+fwrite(tpm_filt_df, tpm_filt_file)
+
+```
+
+```{r}
+rm(tpm_df)
+rm(tpm_filt_df)
+rm(info_df)
+rm(info_filt_df)
+
+```
+

@@ -1,0 +1,292 @@
+###################################
+COPY FILES FROM COMPUTER TO CLUSTER
+###################################
+
+1. COPY SCRIPTS
+
+scp /Users/quim/Dropbox/Postdoc/Projects/Scipher/SampleSizeEffect/scripts/* discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts
+
+2. COPY DATA FILES
+
+scp -r /Users/quim/Documents/DATA/BioGroup/Scipher/data/bootstrap discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/data
+scp -r /Users/quim/Documents/DATA/BioGroup/Scipher/data/bootstrap/responders discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/data/bootstrap
+
+
+######################################
+CREATE RENV ENVIRONMENT IN THE CLUSTER
+######################################
+
+srun --partition=short --nodes=1 --cpus-per-task=1 --pty /bin/bash
+module load R/4.0.3
+R
+install.packages("renv")
+renv::init("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR")
+install.packages('devtools')
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+library(devtools)
+install_github('deisygysi/NetSci')
+install.packages('optparse')
+install.packages('dplyr')
+install.packages('RcppEigen')
+BiocManager::install("WGCNA")
+install.packages('optparse')
+renv::snapshot() # To save the changes in the renv environment
+
+Include this line at the beginning of the R script:
+renv::init("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR")
+
+
+########################################
+INSTALL R PACKAGES TO RUN IN THE CLUSTER
+########################################
+
+¡¡¡¡¡ This might not be necessary anymore because I can use the renv environment !!!!!
+
+https://thecoatlessprofessor.com/programming/r/working-with-r-on-a-cluster/ 
+
+1. CREATE R_LIBS
+
+mkdir ~/Rlibs
+
+2. LOAD R MODULE
+
+module load R/4.0.3
+
+3. EXPORT R ENVIRONMENT
+
+export R_LIBS=~/Rlibs
+
+4. INSTALL PACKAGES
+
+module load R/4.0.3
+R
+install.packages('devtools')
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+library(devtools)
+install_github('deisygysi/NetSci')
+install.packages('optparse')
+install.packages('RcppEigen')
+BiocManager::install("WGCNA")
+
+All the packages are installed in:
+
+ls /home/j.aguirreplans/R/x86_64-pc-linux-gnu-library/4.0/
+
+
+#########################
+RUN A TEST IN THE CLUSTER
+#########################
+
+sbatch /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/generate_cn_test.sh
+squeue -u j.aguirreplans
+sacct
+
+
+#############################################################
+RUN GENERATION OF CO-EXPRESSION NETWORKS USING WTO IN CLUSTER
+#############################################################
+
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_wto_cluster.py
+
+squeue -u j.aguirreplans
+sacct
+
+
+#######################################################################
+RUN GENERATION OF CO-EXPRESSION NETWORKS USING OTHER METRICS IN CLUSTER
+#######################################################################
+
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/bootstrap/nonresponders -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_N100 -m wto
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/bootstrap/responders -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_responders_wto_N100 -m wto
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_cluster.py -m wgcna
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_cluster.py -m pearson
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_cluster.py -m spearman
+
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/bootstrap/nonresponders -o /scratch/j.aguirreplans/Scipher/SampleSize/example_wto -m wto
+
+squeue -u j.aguirreplans
+sacct
+sacct -ojobid,jobname,state,nodelist
+
+Check memory (WTO):
+seff 21612351
+Job ID: 21612351
+Cluster: discovery
+User/Group: j.aguirreplans/users
+State: COMPLETED (exit code 0)
+Cores: 1
+CPU Utilized: 04:47:25
+CPU Efficiency: 99.95% of 04:47:33 core-walltime
+Job Wall-clock time: 04:47:33
+Memory Utilized: 32.21 GB
+Memory Efficiency: 32.98% of 97.66 GB
+
+seff 21612312
+Job ID: 21612312
+Cluster: discovery
+User/Group: j.aguirreplans/users
+State: COMPLETED (exit code 0)
+Cores: 1
+CPU Utilized: 09:10:24
+CPU Efficiency: 99.99% of 09:10:26 core-walltime
+Job Wall-clock time: 09:10:26
+Memory Utilized: 33.96 GB
+Memory Efficiency: 34.77% of 97.66 GB
+
+Job failed because of memory:
+Job ID: 21623791
+Cluster: discovery
+User/Group: j.aguirreplans/users
+State: FAILED (exit code 1)
+Cores: 1
+CPU Utilized: 15:48:46
+CPU Efficiency: 99.79% of 15:50:47 core-walltime
+Job Wall-clock time: 15:50:47
+Memory Utilized: 31.67 GB
+Memory Efficiency: 81.08% of 39.06 GB
+
+#################################
+TRANSFER FILES OUT OF THE CLUSTER
+#################################
+
+Network files:
+
+sshfs j.aguirreplans@xfer.discovery.neu.edu:/scratch/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_N100/* /System/Volumes/Data/Volumes/QUIM/DATA/Scipher/SampleSize/networks_nonresponders_wto_N100
+
+Scripts:
+
+scp discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/* /Users/quim/Dropbox/Postdoc/Projects/Scipher/SampleSize/scripts/
+scp discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/\*.html /Users/j.aguirreplans/Desktop/results_GTEx
+
+Results:
+
+scp discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/\* /Users/j.aguirreplans/Desktop/results_GTEx
+
+
+#########################################
+CREATE VIRTUAL ENVIRONMENT IN THE CLUSTER
+#########################################
+
+Create conda environment:
+https://rc-docs.northeastern.edu/en/latest/software/conda.html#creating-python 
+
+srun --partition=short --nodes=1 --cpus-per-task=1 --pty /bin/bash
+module load python/3.8.1
+module load anaconda3/3.7
+conda create -n ScipherSampleSizeEnv
+source activate ScipherSampleSizeEnv
+
+Run conda environment using OnDemand:
+https://rc-docs.northeastern.edu/en/latest/using-ood/interactiveapps.html
+
+To install NetworkMedicineToolbox, I just cloned the repository in the scripts directory.
+To update NetworkMedicineToolbox, I just have to:
+cd /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/NetworkMedicineToolbox
+git pull origin master
+
+Install modules:
+srun --partition=short --nodes=1 --cpus-per-task=1 --pty /bin/bash
+module load python/3.8.1
+module load anaconda3/3.7
+source activate ScipherSampleSizeEnv
+pip install GEOparse
+
+To use the function girvan_newman of networkx, there was an incompatibility with the package decorator, it required a version of decorator lower than 5. So I have downgraded it:
+source activate ScipherSampleSizeEnv
+pip install --upgrade decorator==4.3
+
+######################################################
+ANALYSIS OF GENE CO-EXPRESSION NETWORKS IN THE CLUSTER
+######################################################
+
+
+# 10,000 genes, NONRESPONDERS, N20, pvals 0.05, 0.01, 0.001
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_N50 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_sample_size
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_G10000_N20 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_sample_size_G10000_N20_pval_0.05 -p 0.05
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_G10000_N20 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_sample_size_G10000_N20_pval_0.01 -p 0.01
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_G10000_N20 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_sample_size_G10000_N20_pval_0.001 -p 0.001
+
+# All genes, NONRESPONDERS, N100, pvals 0.05, 0.01, top 100
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_nonresponders_wto_N100_pval_0.05_top_100 -p 0.05
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_nonresponders_wto_N100_pval_0.01_top_100 -p 0.01
+
+# All genes, NONRESPONDERS, N100, pvals 0.01, 0.05, tops 0.1, 0.5, 1
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_nonresponders_wto_N100_pval_0.01_top_0.1 -p 0.01 -t 0.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_nonresponders_wto_N100_pval_0.01_top_0.5 -p 0.01 -t 0.5
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_nonresponders_wto_N100_pval_0.01_top_1 -p 0.01 -t 1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_nonresponders_wto_N100_pval_0.05_top_0.1 -p 0.05 -t 0.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_nonresponders_wto_N100_pval_0.05_top_0.5 -p 0.05 -t 0.5
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_nonresponders_wto_N100_pval_0.05_top_1 -p 0.05 -t 1
+
+# All genes, RESPONDERS, N100, pvals 0.01, 0.05, tops 0.1, 0.5, 1
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_responders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_responders_wto_N100_pval_0.01_top_0.1 -p 0.01 -t 0.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_responders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_responders_wto_N100_pval_0.01_top_0.5 -p 0.01 -t 0.5
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_responders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_responders_wto_N100_pval_0.01_top_1 -p 0.01 -t 1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_responders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_responders_wto_N100_pval_0.05_top_0.1 -p 0.05 -t 0.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_responders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_responders_wto_N100_pval_0.05_top_0.5 -p 0.05 -t 0.5
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_responders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_responders_wto_N100_pval_0.05_top_1 -p 0.05 -t 1
+
+
+
+# Copy results
+scp -r discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots_N100 /Users/quim/Desktop
+
+######################################
+ANALYSIS DISEASE GENES VS. SAMPLE SIZE
+######################################
+
+Download data from COVID-19 project: https://github.com/Barabasi-Lab/COVID-19/blob/main/data/Guney2016_GenesDisease.tsv
+Download data from Entrez to Gene symbol: https://ftp.ncbi.nih.gov/gene/DATA/GENE_INFO/Mammalia/
+Download data from MeSH (mtrees2021.bin): https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/meshtrees/ 
+
+Transfer data to the cluster:
+scp /Users/quim/Dropbox/References/Gysi_PNAS21_Supplementary/Guney2016_GenesDisease.tsv discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/data
+scp /Users/quim/Documents/DATA/BioGroup/Scipher/data/Homo_sapiens.gene_info discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/data
+scp /Users/quim/Documents/Databases/MeSH/mtrees2021.bin discovery:/home/j.aguirreplans/Databases/MeSH
+
+How to plot it?
+---------------
+- Group diseases by disease type: for example, first branch of MeSH.
+- Make a plot for each group of diseases and check which diseases are more representative of each group.
+- Choose the most representative diseases of each group and make a plot of it.
+- Get the genes of all diseases of each group to make another plot.
+
+
+Run shiny app:
+
+module load R/4.0.3
+R
+library(shiny)
+setwd('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts')
+runApp(SampleSizeShiny)
+
+or
+runApp('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny')
+
+
+
+###################################
+ANALYSIS USING RA DATASET FROM ENZO
+###################################
+
+Download data from: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE97810
+
+- Non normalized data: GSE97810_non-normalized_baseline.txt.gz
+- Soft formatted family file: GSE97810_family.soft
+
+Transfer data to the cluster:
+scp -r /Users/quim/Documents/DATA/BioGroup/Scipher/data/RA discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/data
+
+Run script to import data:
+sbatch /home/j.aguirreplans/Projects/Scipher/SampleSize/data/RA/scripts/data_import_GSE97810.sh
+
+
+
