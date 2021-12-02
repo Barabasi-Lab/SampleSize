@@ -24,14 +24,17 @@ set.seed(1510)
 ## Read files
 
 ```{r define_files}
+# Define working directories
+databases_dir = '/home/j.aguirreplans/Databases'
+#databases_dir = '/Users/j.aguirreplans/Databases'
+
 # Define input files
-subjects_file = '/home/j.aguirreplans/Databases/GTEx/v8/GTEx_Analysis_v8_Annotations_SubjectPhenotypesDS.txt'
-samples_file = '/home/j.aguirreplans/Databases/GTEx/v8/GTEx_Analysis_v8_Annotations_SampleAttributesDS.txt'
-tpm_file = '/home/j.aguirreplans/Databases/GTEx/v8/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_tpm.gct'
-tpm_median_file = '/home/j.aguirreplans/Databases/GTEx/v8/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_median_tpm.gct'
+subjects_file = paste(databases_dir, 'GTEx/v8/GTEx_Analysis_v8_Annotations_SubjectPhenotypesDS.txt', sep='/')
+samples_file = paste(databases_dir, 'GTEx/v8/GTEx_Analysis_v8_Annotations_SampleAttributesDS.txt', sep='/')
+tpm_file = paste(databases_dir, 'GTEx/v8/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_tpm.gct', sep='/')
 
 # Define output file
-samples_subjects_file = '/home/j.aguirreplans/Databases/GTEx/v8/GTEx_Annotations_SamplesSubjectsMerged.txt'
+samples_subjects_file = paste(databases_dir, 'GTEx/v8/GTEx_Annotations_SamplesSubjectsMerged.txt', sep='/')
 ```
 
 ```{r read_files}
@@ -130,6 +133,14 @@ We keep only columns of interest:
 
 ```{r}
 samples_df <- samples_df[,c("SAMPID", "SUBJID", "SEX", "AGE", "DTHHRDY", "SMTS", "SMTSD")]
+
+```
+
+We create tissue names without special characters:
+
+```{r}
+samples_df$SMTS.no.sp.char <- gsub(' ', '.', gsub(' - ', '.', gsub('[\\(\\)]', '', samples_df$SMTS)))
+samples_df$SMTSD.no.sp.char <- gsub(' ', '.', gsub(' - ', '.', gsub('[\\(\\)]', '', samples_df$SMTSD)))
 
 ```
 
@@ -376,7 +387,6 @@ sd_expression_all_tissues
 ```
 
 ```{r}
-rm(tpm_df)
 rm(info_df)
 rm(info_filt_df)
 rm(log_median_expression_all_tissues)
@@ -384,6 +394,25 @@ rm(log_mean_expression_all_tissues)
 rm(sd_expression_all_tissues)
 
 ```
+
+
+## Check if there are genes with same symbol
+
+They seem to be isoforms or splicing variants of the same gene:
+
+```{r}
+repeated_genes <- tpm_df$Description[duplicated(tpm_df$Description)]
+length(repeated_genes)
+tpm_df[tpm_df$Description %in% repeated_genes[1:10],][,c("Name", "Description")][order(Description),]
+
+```
+
+```{r}
+rm(tpm_df)
+
+```
+
+
 
 ## Check if there are multiple samples for same subject and tissue
 
