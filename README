@@ -108,6 +108,10 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coex
 
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/bootstrap/nonresponders -o /scratch/j.aguirreplans/Scipher/SampleSize/example_wto -m wto
 
+# Using samples files
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Liver -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Liver -m wto
+
 squeue -u j.aguirreplans
 sacct
 sacct -ojobid,jobname,state,nodelist

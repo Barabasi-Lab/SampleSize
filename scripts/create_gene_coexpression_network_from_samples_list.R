@@ -37,11 +37,11 @@ output_file = opt$output_file
 metric = opt$metric
 wto_n = strtoi(opt$wto_n)
 
-samples_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Liver/RNAseq_samples_Liver_female_size_10_rep_1.txt'
-rnaseq_file = '/home/j.aguirreplans/Databases/GTEx/v8/GTEx_RNASeq_gene_tpm_filtered_t.gct'
-output_file = '/scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Liver/RNAseq_Liver_female_size_10_rep_1.net'
-metric = 'wto'
-wto_n = 100
+#samples_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Liver/RNAseq_samples_Liver_female_size_10_rep_1.txt'
+#rnaseq_file = '/home/j.aguirreplans/Databases/GTEx/v8/GTEx_RNASeq_gene_tpm_filtered_t.gct'
+#output_file = '/scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Liver/RNAseq_Liver_female_size_10_rep_1.net'
+#metric = 'wto'
+#wto_n = 100
 
 # Get scripts dir
 initial.options <- commandArgs(trailingOnly = FALSE)
