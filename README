@@ -163,7 +163,7 @@ sshfs j.aguirreplans@xfer.discovery.neu.edu:/scratch/j.aguirreplans/Scipher/Samp
 
 Scripts:
 
-scp discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/* /Users/quim/Dropbox/Postdoc/Projects/Scipher/SampleSize/scripts/
+scp discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/\* /Users/j.aguirreplans/Dropbox/Postdoc/Projects/Scipher/SampleSize/scripts/
 scp discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/\*.html /Users/j.aguirreplans/Desktop/results_GTEx
 
 Results:
@@ -298,10 +298,16 @@ sbatch /home/j.aguirreplans/Projects/Scipher/SampleSize/data/RA/scripts/data_imp
 UPDATE GITHUB
 #############
 
+# Go to the folder
+cd /home/j.aguirreplans/Projects/Scipher/SampleSize
+
 # To add new changes:
 git add .
-git commit -m "First commit"
+git commit -m "Changes in the convergence calculation"
 git push origin master
 
 # To pull changes from the repository:
 git pull origin master
+
+# Get personal token to authentificate for 2 factor authentification (in case it has expired):
+Go to Github > Settings > Developer Settings > Personal access tokens
