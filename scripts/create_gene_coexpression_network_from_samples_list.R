@@ -37,9 +37,9 @@ output_file = opt$output_file
 metric = opt$metric
 wto_n = strtoi(opt$wto_n)
 
-#samples_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Liver/RNAseq_samples_Liver_female_size_10_rep_1.txt'
-#rnaseq_file = '/home/j.aguirreplans/Databases/GTEx/v8/GTEx_RNASeq_gene_tpm_filtered_t.gct'
-#output_file = '/scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Liver/RNAseq_Liver_female_size_10_rep_1.net'
+#samples_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood_female/RNAseq_samples_Whole.Blood_female_size_10_rep_1.txt'
+#rnaseq_file = '/home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Whole.Blood_female.gct'
+#output_file = '/scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Whole.Blood_female/RNAseq_Whole.Blood_female_size_10_rep_1.net'
 #metric = 'wto'
 #wto_n = 100
 

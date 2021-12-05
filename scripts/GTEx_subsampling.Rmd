@@ -28,16 +28,14 @@ databases_dir = '/home/j.aguirreplans/Databases'
 output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data'
 #output_dir = '/Users/quim/Documents/DATA/BioGroup/Scipher/data'
 
-# Define input files
+# Define input files and dirs
 samples_subjects_file = '/home/j.aguirreplans/Databases/GTEx/v8/GTEx_Annotations_SamplesSubjectsMerged.txt'
-#tpm_filt_file = paste(databases_dir, 'GTEx/v8/GTEx_RNASeq_gene_tpm_filtered.gct', sep='/')
 
 ```
 
 ```{r read_files}
 # Read input files
 samples_df = fread(samples_subjects_file)
-#rnaseq = fread(tpm_filt_file)
 
 ```
 
@@ -46,8 +44,8 @@ samples_df = fread(samples_subjects_file)
 We define the list of tissues that we want to analyze:
 
 ```{r}
-#tissues <- c('Muscle.Skeletal', 'Whole.Blood', 'Breast.Mammary.Tissue', 'Testis', 'Ovary', 'Liver', 'Brain.Cortex', 'Brain.Cerebellum')
 tissues <- unique(samples_df$SMTSD.no.sp.char)
+#tissues <- c('Spleen', 'Whole.Blood')
 
 ```
 
@@ -102,7 +100,7 @@ for (tissue in tissues){
     tissue_sex_samples = samples_df[(samples_df$SMTSD.no.sp.char == tissue) & (samples_df$SEX == sex_id),]$SAMPID
     if (length(tissue_sex_samples) > 10){
       size_list <- seq(10, length(tissue_sex_samples), 10)
-      tissue_sampling_dir = paste(sampling_dir, tissue, sep='/')
+      tissue_sampling_dir = paste(sampling_dir, paste(tissue, sex, sep="_"), sep='/')
       dir.create(tissue_sampling_dir, showWarnings = FALSE)
       output_file_name = paste(paste(paste('RNAseq_samples', tissue, sex, sep="_")))
       subsamples_df <- create_random_subsamples_with_replacement(samples_list=tissue_sex_samples, size_list=size_list, rep=10, output_dir=tissue_sampling_dir, output_file_name=output_file_name)

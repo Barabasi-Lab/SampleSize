@@ -119,10 +119,10 @@ example_2$run = 1:1000
 delta = 0.2
 min = (C[1,3] - delta) %>% as.numeric()
 max = (C[1,3] + delta) %>% as.numeric()
-# If the value is outside the interval obtained as a result of adding/substracting delta, it puts a 0
+# If the value is outside the interval obtained as a result of adding/substracting delta, it puts a 1
 example_2$p = ifelse( example_2$wTO > min & example_2$wTO < max, 0, 1)
 
-# Here, we sum all the scores inside the limits defined by delta, to calculate the p-value
+# Here, we sum all the scores outside the limits defined by delta, to calculate the p-value
 example_2$prop = cumsum(example_2$p)
 example_2$pval = example_2$prop/example_2$run
 

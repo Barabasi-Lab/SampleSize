@@ -367,18 +367,17 @@ databases_dir = '/home/j.aguirreplans/Databases'
 output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data'
 #output_dir = '/Users/quim/Documents/DATA/BioGroup/Scipher/data'
 
-# Define input files
+# Define input files and dirs
 samples_subjects_file = '/home/j.aguirreplans/Databases/GTEx/v8/GTEx_Annotations_SamplesSubjectsMerged.txt'
-#tpm_filt_file = paste(databases_dir, 'GTEx/v8/GTEx_RNASeq_gene_tpm_filtered.gct', sep='/')</code></pre>
+tpm_filt_dir = paste(databases_dir, 'GTEx/v8/tpm_filtered_files_by_tissue', sep='/')</code></pre>
 <pre class="r"><code># Read input files
-samples_df = fread(samples_subjects_file)
-#rnaseq = fread(tpm_filt_file)</code></pre>
+samples_df = fread(samples_subjects_file)</code></pre>
 </div>
 <div id="subsampling" class="section level2">
 <h2>Subsampling</h2>
 <p>We define the list of tissues that we want to analyze:</p>
-<pre class="r"><code>#tissues &lt;- c('Muscle.Skeletal', 'Whole.Blood', 'Breast.Mammary.Tissue', 'Testis', 'Ovary', 'Liver', 'Brain.Cortex', 'Brain.Cerebellum')
-tissues &lt;- unique(samples_df$SMTSD.no.sp.char)</code></pre>
+<pre class="r"><code>tissues &lt;- unique(samples_df$SMTSD.no.sp.char)
+#tissues &lt;- c('Spleen', 'Whole.Blood')</code></pre>
 <p>We define the sampling function:</p>
 <pre class="r"><code>## Random sampling with replacement
 create_random_subsample_datasets_with_replacement &lt;- function(samples_list, size_list, rep, rnaseq, output_dir, output_file_name){
@@ -423,7 +422,7 @@ for (tissue in tissues){
     tissue_sex_samples = samples_df[(samples_df$SMTSD.no.sp.char == tissue) &amp; (samples_df$SEX == sex_id),]$SAMPID
     if (length(tissue_sex_samples) &gt; 10){
       size_list &lt;- seq(10, length(tissue_sex_samples), 10)
-      tissue_sampling_dir = paste(sampling_dir, tissue, sep='/')
+      tissue_sampling_dir = paste(sampling_dir, paste(tissue, sex, sep=&quot;_&quot;), sep='/')
       dir.create(tissue_sampling_dir, showWarnings = FALSE)
       output_file_name = paste(paste(paste('RNAseq_samples', tissue, sex, sep=&quot;_&quot;)))
       subsamples_df &lt;- create_random_subsamples_with_replacement(samples_list=tissue_sex_samples, size_list=size_list, rep=10, output_dir=tissue_sampling_dir, output_file_name=output_file_name)

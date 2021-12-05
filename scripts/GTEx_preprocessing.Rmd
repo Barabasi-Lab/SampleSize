@@ -17,6 +17,7 @@ Preprocess GTEx data (version v8).
 library(data.table)
 library(dplyr)
 library(ggplot2)
+library(tidyr)
 set.seed(1510)
 ```
 
@@ -26,14 +27,22 @@ set.seed(1510)
 # Define working directories
 databases_dir = '/home/j.aguirreplans/Databases'
 #databases_dir = '/Users/j.aguirreplans/Databases'
+ppi_dir = '/home/j.aguirreplans/data/PPI'
 
 # Define input files
 samples_subjects_file = paste(databases_dir, 'GTEx/v8/GTEx_Annotations_SamplesSubjectsMerged.txt', sep='/')
 tpm_file = paste(databases_dir, 'GTEx/v8/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_tpm.gct', sep='/')
+ppi_network_file = paste(ppi_dir, 'interactome_2019_merged.csv', sep='/')
+ppi_info_file = paste(ppi_dir, 'interactome_2019_merged_protAnnots.csv', sep='/')
 
-# Define output file
+# Define output files and dirs
+tpm_no_duplicates_file = paste(databases_dir, 'GTEx/v8/GTEx_RNASeq_gene_tpm_no_duplicates.gct', sep='/')
+tpm_only_ppi_file = paste(databases_dir, 'GTEx/v8/GTEx_RNASeq_gene_tpm_only_ppi.gct', sep='/')
 tpm_filt_file = paste(databases_dir, 'GTEx/v8/GTEx_RNASeq_gene_tpm_filtered.gct', sep='/')
 tpm_filt_transposed_file = paste(databases_dir, 'GTEx/v8/GTEx_RNASeq_gene_tpm_filtered_t.gct', sep='/')
+ppi_network_symbol_file = paste(ppi_dir, 'interactome_2019_merged_symbols.csv', sep='/')
+tpm_filt_dir = paste(databases_dir, 'GTEx/v8/tpm_filtered_files_by_tissue', sep='/')
+
 ```
 
 ```{r read_files}
@@ -43,84 +52,148 @@ tpm_df = fread(tpm_file)
 
 ```
 
+
+## Change format of expression to long format
+
+We will change the format of the gene expression dataframe to long format, as it is easier to process the data in rows than in columns in R:
+
+```{r change_to_long_format}
+#tpm_long_df = tpm_df %>% pivot_longer(!c(Name, Description), names_to = "Sample", values_to = "TPM")
+#dim(tpm_long_df)
+#head(tpm_long_df)
+
+```
+
+
+## Calculate the median expression of genes that have the same symbol
+
+There are ENSEMBL genes that have the same symbol. They are probably isoforms:
+
+```{r get_genes_with_same_symbol}
+repeated_genes <- unique(tpm_df$Description[duplicated(tpm_df$Description)])
+length(repeated_genes)
+tpm_df[tpm_df$Description %in% repeated_genes[1:10],][,c("Name", "Description")][order(Description),]
+
+```
+
+We will merge these genes by calculating the median expression between them:
+
+```{r merge_expression_of_genes_with_same_symbol}
+dim(tpm_df)
+if (!(file.exists(tpm_no_duplicates_file))){
+  tpm_df = subset(tpm_df, select=-Name)
+  repeated_genes_aggregated = aggregate(.~Description, tpm_df[tpm_df$Description %in% repeated_genes,], median)
+  tpm_df = rbind(tpm_df[!(tpm_df$Description %in% repeated_genes),], repeated_genes_aggregated)
+  fwrite(tpm_df, tpm_no_duplicates_file)
+} else {
+  tpm_df = fread(tpm_no_duplicates_file)
+}
+dim(tpm_df)
+
+```
+
+
+## Keep only genes in the PPI network
+
+We read the PPI network and map the gene IDs to symbols:
+
+```{r map_symbols_to_ppi}
+PPI = fread(ppi_network_file)
+dim(PPI)
+PPI_info_df = fread(ppi_info_file)
+head(PPI)
+head(PPI_info_df)
+PPI_symbol = left_join(PPI[,c("proteinA", "proteinB")], PPI_info_df[,c("GeneID", "Symbol")], by=c("proteinA"="GeneID")) %>% rename(proteinA_symbol=Symbol)
+PPI_symbol = left_join(PPI_symbol[,c("proteinA", "proteinB", "proteinA_symbol")], PPI_info_df[,c("GeneID", "Symbol")], by=c("proteinB"="GeneID")) %>% rename(proteinB_symbol=Symbol)
+
+# Get unique links
+PPI_symbol = PPI_symbol %>% unique()
+dim(PPI_symbol)
+PPI_symbol = PPI_symbol %>%
+  filter(proteinA_symbol != "" & proteinB_symbol != "") %>%
+  filter(proteinA_symbol != proteinB_symbol)
+dim(PPI_symbol)
+head(PPI_symbol)
+
+fwrite(PPI_symbol, ppi_network_symbol_file)
+
+```
+
+We filter the genes, keeping the ones that are part of the PPI network:
+
+```{r keep_genes_in_ppi}
+nodes_network = unique(c(PPI_symbol$proteinA_symbol, PPI_symbol$proteinB_symbol))
+length(nodes_network)
+tpm_df = tpm_df[tpm_df$Description %in% nodes_network,]
+fwrite(tpm_df, tpm_only_ppi_file)
+dim(tpm_df)
+
+```
+
+Examples of proteins in the PPI network that are not in the expression dataset:
+
+```{r}
+nodes_network[!(nodes_network %in% tpm_df$Description)][1:10]
+length(nodes_network[!(nodes_network %in% tpm_df$Description)])
+
+```
+
+
 ## Remove genes with low TPM expression
 
 We filter the samples in the TPM file by keeping the ones that are in the samples information file:
 
 ```{r filter_tpm_file_samples}
-dim(tpm_df[,-1:-2])
-tpm_df <- tpm_df %>% select(c("Name", "Description", samples_df$SAMPID))
-dim(tpm_df[,-1:-2])
+dim(tpm_df[,-1])
+tpm_df <- tpm_df %>% select(c("Description", samples_df$SAMPID))
+dim(tpm_df[,-1])
 length(samples_df$SAMPID)
 
 ```
 
-We calculate the median, mean, sum and standard deviation of the expression of each gene:
+We filter the low expressed genes for each tissue and sex:
 
-```{r}
-info_df = data.frame(Name=tpm_df$Name, Description=tpm_df$Description, sum=rowSums(tpm_df[,-1:-2]))
-info_df$sd = apply(tpm_df[,-1:-2], 1, sd)
-info_df$mean = rowMeans(tpm_df[,-1:-2])
-info_df$median = apply(tpm_df[,-1:-2], 1, median)
-info_df$log2_median = log2(info_df$median)
-info_df$log2_mean = log2(info_df$mean)
-info_df$zero_sum_counts = as.numeric(apply(tpm_df[,-1:-2], 1, function(i) sum(i == 0) )) # Number of times that the sum of the TPMs is equal to 0
-
-dim(info_df)
-```
-
-We keep the genes whose sum, standard deviation, mean or median expression is above 0.
-Also, we keep the genes whose expression is 0 in more than 50% of the samples (as in https://www.biostars.org/p/377059/):
-
-```{r}
-info_filt_df = info_df[(info_df$sum > 0) & (info_df$mean > 0) & (info_df$median > 0) & (info_df$sd > 0) & (info_df$zero_sum_counts < dim(tpm_df[, -1])[2]/2) ,]
-dim(info_filt_df)
-
-```
-
-We filter the TPM matrix:
-
-```{r}
-tpm_filt_df = tpm_df[tpm_df$Name %in% info_filt_df$Name,]
-dim(tpm_filt_df)
-
-```
-
-Save the filtered gene expression data:
-
-```{r}
-fwrite(tpm_filt_df, tpm_filt_file)
-
+```{r remove_low_expressed_genes_for_all_tissues}
+sex_to_id = data.frame(row.names=c("male","female") , val=c(1,2))
+for (tissue in unique(samples_df$SMTSD.no.sp.char)){
+  for (sex in rownames(sex_to_id)){
+    print(tissue)
+    print(sex)
+    sex_id = sex_to_id[sex,]
+    # Get TPM matrix of the tissue and sex
+    #samples_tissue = samples_df[samples_df$SMTSD.no.sp.char == tissue,]$SAMPID
+    samples_tissue_sex = samples_df[(samples_df$SMTSD.no.sp.char == tissue) & (samples_df$SEX == sex_id),]$SAMPID
+    if (length(samples_tissue_sex) > 10){
+      tpm_tissue_sex_df = tpm_df %>% select(c("Description", all_of(samples_tissue_sex)))
+      print(dim(tpm_tissue_sex_df))
+      # Calculate metrics of expression
+      info_df = data.frame(Description=tpm_tissue_sex_df$Description, sum=rowSums(tpm_tissue_sex_df[,-1]))
+      info_df$sd = apply(tpm_tissue_sex_df[,-1], 1, sd)
+      info_df$mean = rowMeans(tpm_tissue_sex_df[,-1])
+      info_df$median = apply(tpm_tissue_sex_df[,-1], 1, median)
+      info_df$zero_sum_counts = as.numeric(apply(tpm_tissue_sex_df[,-1], 1, function(i) sum(i == 0) )) # Number of times that the sum of the TPMs is equal to 0
+      # Filter low expressed genes
+      info_filt_df = info_df[(info_df$sum > 0) & (info_df$mean > 0) & (info_df$median > 0) & (info_df$sd > 0) & (info_df$zero_sum_counts < dim(tpm_tissue_sex_df[, -1])[2]/2) ,]
+      tpm_tissue_sex_filt_df = tpm_tissue_sex_df[tpm_tissue_sex_df$Description %in% info_filt_df$Description,]
+      print(dim(tpm_tissue_sex_filt_df))
+      # Get transposed matrix
+      tpm_tissue_sex_filt_df.t <- t(as.matrix(tpm_tissue_sex_filt_df)) %>% as.data.frame() 
+      colnames(tpm_tissue_sex_filt_df.t) <- rownames(tpm_tissue_sex_filt_df)
+      tpm_tissue_sex_filt_df.t <- cbind(Sample = colnames(tpm_tissue_sex_filt_df), tpm_tissue_sex_filt_df.t)
+      tpm_tissue_sex_filt_file = paste(tpm_filt_dir, paste("GTEx_RNASeq_", tissue, "_", sex, ".gct", sep=''), sep='/')
+      fwrite(tpm_tissue_sex_filt_df.t, tpm_tissue_sex_filt_file)
+    }
+  }
+}
 ```
 
 ```{r}
 rm(tpm_df)
+rm(tpm_tissue_sex_df)
+rm(tpm_tissue_sex_filt_df)
+rm(tpm_tissue_sex_filt_df.t)
 rm(info_df)
 rm(info_filt_df)
-
-```
-
-We change the format of the gene expression dataframe to accomodate it to the one that works best to create the networks:
-
-```{r}
-# Remove the genes column and include it as "rownames"
-genes <- tpm_filt_df[, 1][[1]]
-tpm_filt_df <- as.matrix(tpm_filt_df[, -c(1,2)])
-rownames(tpm_filt_df) <- genes
-
-# Get transposed dataframe
-tpm_filt_df.t <- t(as.matrix(tpm_filt_df)) %>% as.data.frame() 
-colnames(tpm_filt_df.t) <- rownames(tpm_filt_df)
-tpm_filt_df.t <- cbind(Sample = colnames(tpm_filt_df), tpm_filt_df.t)
-
-# Save transposed dataframe
-fwrite(tpm_filt_df.t, tpm_filt_transposed_file)
-
-```
-
-```{r}
-rm(tpm_filt_df)
-rm(tpm_filt_df.t)
 
 ```
 

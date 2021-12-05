@@ -173,7 +173,7 @@ samples_subtissues_plot <- smtsd_samples_count %>%
     coord_flip() +
     xlab("") +
     theme_bw()
-ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/num_samples_vs_subtissues.png', plot=samples_subtissues_plot, type='cairo', dpi = 300)
+ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/num_samples_vs_subtissues.png', plot=samples_subtissues_plot, type='cairo', dpi = 300, height=8, width = 10)
 samples_subtissues_plot
 
 samples_tissues_plot <- smts_samples_count %>%
@@ -216,7 +216,7 @@ samples_subtissues_by_sex_plot <- smtsd_samples_count_by_sex %>%
     coord_flip() +
     xlab("") +
     theme_bw()
-ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/num_samples_vs_subtissues_by_sex.png', plot=samples_subtissues_by_sex_plot, type='cairo', dpi = 300)
+ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/num_samples_vs_subtissues_by_sex.png', plot=samples_subtissues_by_sex_plot, type='cairo', dpi = 300, height=8, width = 10)
 samples_subtissues_by_sex_plot
 
 samples_tissues_by_sex_plot <- smts_samples_count_by_sex %>%
@@ -401,7 +401,7 @@ rm(sd_expression_all_tissues)
 They seem to be isoforms or splicing variants of the same gene:
 
 ```{r}
-repeated_genes <- tpm_df$Description[duplicated(tpm_df$Description)]
+repeated_genes <- unique(tpm_df$Description[duplicated(tpm_df$Description)])
 length(repeated_genes)
 tpm_df[tpm_df$Description %in% repeated_genes[1:10],][,c("Name", "Description")][order(Description),]
 
