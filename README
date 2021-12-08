@@ -238,7 +238,11 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coe
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_responders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_responders_wto_N100_pval_0.05_top_0.5 -p 0.05 -t 0.5
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_responders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_responders_wto_N100_pval_0.05_top_1 -p 0.05 -t 1
 
+#### GTEx ####
 
+# All genes Whole Blood
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_with_wto_finding_pvalue_convergence_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Spleen_female -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Spleen_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_female
 
 # Copy results
 scp -r discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots_N100 /Users/quim/Desktop
