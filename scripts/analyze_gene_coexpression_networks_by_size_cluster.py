@@ -69,6 +69,9 @@ def analyze_gene_coexpression_networks_of_same_size(options):
     # Define queue parameters
     max_mem = config.get("Cluster", "max_mem")
     queue = config.get("Cluster", "cluster_queue") # debug, express, short, long, large
+    constraint = True
+    exclude = []
+    #exclude = ['d0012', 'd0123']
     modules = ['python/3.8.1', 'anaconda3']
     conda_environment = 'ScipherSampleSizeEnv'
     max_time_per_queue = {
@@ -111,7 +114,7 @@ def analyze_gene_coexpression_networks_of_same_size(options):
             else:
                 command = 'python {} -n {} -o {} -s {} -r {} -p {}'.format(script_file, networks_dir, output_dir, size, repetitions, pval_adj_cutoff)
             print(command)
-            submit_command_to_queue(command, max_jobs_in_queue=int(config.get("Cluster", "max_jobs_in_queue")), queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=True, conda_environment=conda_environment)
+            submit_command_to_queue(command, max_jobs_in_queue=int(config.get("Cluster", "max_jobs_in_queue")), queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude, conda_environment=conda_environment)
 
             l += 1
 
@@ -148,7 +151,7 @@ def create_directory(directory):
 # Cluster     #
 #-------------#
 
-def submit_command_to_queue(command, queue=None, max_jobs_in_queue=None, queue_file=None, queue_parameters={'max_mem':5000, 'queue':'short', 'max_time':'24:00:00', 'logs_dir':'/tmp', 'modules':['Python/3.6.2']}, dummy_dir="/tmp", script_name=None, constraint=False, conda_environment=None):
+def submit_command_to_queue(command, queue=None, max_jobs_in_queue=None, queue_file=None, queue_parameters={'max_mem':5000, 'queue':'short', 'max_time':'24:00:00', 'logs_dir':'/tmp', 'modules':['Python/3.6.2']}, dummy_dir="/tmp", script_name=None, constraint=False, exclude=[], conda_environment=None):
     """
     This function submits any {command} to a cluster {queue}.
 
@@ -190,6 +193,8 @@ def submit_command_to_queue(command, queue=None, max_jobs_in_queue=None, queue_f
                 fd.write('#SBATCH --mem={}\n'.format(queue_parameters['max_mem'])) # max memory
                 if constraint:
                     fd.write('#SBATCH --constraint="[cascadelake|zen2]"\n') # constraint to calculate on specific nodes
+                if len(exclude) > 0:
+                    fd.write('#SBATCH --exclude={}\n'.format(','.join(exclude))) # exclude specific nodes
                 fd.write('#SBATCH -o {}.out\n'.format(os.path.join(queue_parameters['logs_dir'], '%j_{}'.format(script_name)))) # standard output
                 fd.write('#SBATCH -e {}.err\n'.format(os.path.join(queue_parameters['logs_dir'], '%j_{}'.format(script_name)))) # standard error
                 for module in queue_parameters['modules']:

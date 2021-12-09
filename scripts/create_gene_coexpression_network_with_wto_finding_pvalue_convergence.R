@@ -1,5 +1,4 @@
 #!/usr/bin/env Rscript
-renv::init("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR")
 library(optparse)
 require(data.table)
 require(dplyr)
@@ -75,7 +74,7 @@ pval_cutoff = as.double(opt$pval_cutoff)
 # Read samples
 subsample = fread(samples_file)[, 1][[1]]
 
-# Read RNAseq dataset (rows = samples, columns = genes)
+# Read RNAseq dataset (rows = genes, columns = samples)
 rnaseq = fread(rnaseq_file)
 
 # Subset gene expression datast by samples in the samples file
@@ -85,6 +84,7 @@ rnaseq = rnaseq %>% select(c(colnames(rnaseq)[1], all_of(subsample)))
 gene.ids <- rnaseq[, 1][[1]]
 rnaseq <- as.matrix(rnaseq[, -c(1)])
 rownames(rnaseq) <- gene.ids
+
 #rnaseq = rnaseq[row.names(rnaseq) %in% sample(row.names(rnaseq), size=2000, replace=FALSE),] # Check example with less genes
 
 

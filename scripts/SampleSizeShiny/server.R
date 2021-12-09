@@ -1,7 +1,7 @@
 library(data.table)
 library(ggplot2)
 options(bitmapType='cairo')
-renv::restore("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR")
+#renv::restore("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR")
 
 # Read data
 input_dir <- '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out'
@@ -14,6 +14,8 @@ for(dataset in c('scipher_nonresponders', 'scipher_responders')){
     results_name = 'analysis_nonresponders_wto_N100'
   } else if (dataset == 'scipher_responders'){
     results_name = 'analysis_responders_wto_N100'
+  } else if (dataset == 'gtex'){
+    results_name = 'gtex'
   }
   for(pval in c(0.01, 0.05)){
     for(top_percent in c(0.1, 0.5, 1, 100)){

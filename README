@@ -16,21 +16,62 @@ scp -r /Users/quim/Documents/DATA/BioGroup/Scipher/data/bootstrap/responders dis
 CREATE RENV ENVIRONMENT IN THE CLUSTER
 ######################################
 
+##### CONDA #####
+
+# Install
+srun --partition=short --nodes=1 --cpus-per-task=1 --pty /bin/bash
+module load python/3.8.1
+module load R/4.0.3
+module load anaconda3/3.7
+conda create -n SampleSizeR r-essentials r-base
+source activate SampleSizeR
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("BiRewire")
+install.packages('devtools')
+devtools::install_github('RfastOfficial/Rfast')
+devtools::install_github('deisygysi/NetSci')
+BiocManager::install("WGCNA")
+install.packages('optparse')
+install.packages('dplyr')
+install.packages('RcppEigen')
+
+
+# Load
+srun --partition=short --nodes=1 --cpus-per-task=1 --pty /bin/bash
+module load python/3.8.1
+module load R/4.0.3
+module load anaconda3/3.7
+source activate SampleSizeR
+
+##### RENV #####
+
 srun --partition=short --nodes=1 --cpus-per-task=1 --pty /bin/bash
 module load R/4.0.3
 R
 install.packages("renv")
 renv::init("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR")
+renv::install("bioc::BiRewire")
+renv::install("RfastOfficial/Rfast")
+renv::install("deisygysi/NetSci")
+renv::install("optparse")
+renv::install("RcppEigen")
+renv::install("tidyr")
+renv::install("bioc::WGCNA")
+
+
 install.packages('devtools')
 if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 library(devtools)
+BiocManager::install("BiRewire")
+devtools::install_github('RfastOfficial/Rfast')
 install_github('deisygysi/NetSci')
 install.packages('optparse')
 install.packages('dplyr')
 install.packages('RcppEigen')
 BiocManager::install("WGCNA")
-install.packages('optparse')
+
 renv::snapshot() # To save the changes in the renv environment
 
 Include this line at the beginning of the R script:
@@ -111,6 +152,24 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coex
 # Using samples files
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Liver -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Liver -m wto
+
+#### GTEx ####
+
+# WTO CONVERGENCE: All genes - Spleen - Female
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_with_wto_finding_pvalue_convergence_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Spleen_female -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Spleen_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_female
+
+# WGCNA: All genes - Spleen
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Spleen_female -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Spleen_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_female -m wgcna
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Spleen_male -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Spleen_male.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_male -m wgcna
+
+# WGCNA: All genes - Whole Blood
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood_female -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Whole.Blood_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Whole.Blood_female -m wgcna
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood_male -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Whole.Blood_male.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Whole.Blood_male -m wgcna
+
+
 
 squeue -u j.aguirreplans
 sacct
@@ -238,12 +297,6 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coe
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_responders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_responders_wto_N100_pval_0.05_top_0.5 -p 0.05 -t 0.5
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_responders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_responders_wto_N100_pval_0.05_top_1 -p 0.05 -t 1
 
-#### GTEx ####
-
-# All genes Whole Blood
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_with_wto_finding_pvalue_convergence_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Spleen_female -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Spleen_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_female
-
 # Copy results
 scp -r discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots_N100 /Users/quim/Desktop
 
@@ -277,6 +330,7 @@ setwd('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts')
 runApp(SampleSizeShiny)
 
 or
+library(shiny)
 runApp('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny')
 
 
@@ -315,3 +369,6 @@ git pull origin master
 
 # Get personal token to authentificate for 2 factor authentification (in case it has expired):
 Go to Github > Settings > Developer Settings > Personal access tokens
+Token: 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
+
+

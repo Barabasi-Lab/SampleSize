@@ -48,6 +48,10 @@ def create_gene_coexpression_networks(options):
     """
 
     metric = options.metric
+    wto_n = 100
+    wto_delta = 0.2
+    wgcna_power = 6
+    wgcna_type = "signed"
 
     # Add "." to sys.path #
     src_path =  os.path.abspath(os.path.dirname(__file__))
@@ -77,7 +81,8 @@ def create_gene_coexpression_networks(options):
     constraint = True
     exclude = []
     #exclude = ['d0012', 'd0123']
-    modules = ['R/4.0.3']
+    modules = ['python/3.8.1', 'anaconda3', 'R/4.0.3']
+    conda_environment = 'SampleSizeR'
     max_time_per_queue = {
         'debug'   : '0:20:00',
         'express' : '0:60:00',
@@ -112,9 +117,9 @@ def create_gene_coexpression_networks(options):
         if not fileExist(output_file):
 
             #command = 'Rscript {}'.format(script_file)
-            command = 'Rscript {} -s {} -f {} -o {} -m {}'.format(script_file, samples_file, rnaseq_file, output_file, metric)
+            command = 'Rscript {} -s {} -f {} -o {} -m {} -n {} -d {} -p {} -t {}'.format(script_file, samples_file, rnaseq_file, output_file, metric, wto_n, wto_delta, wgcna_power, wgcna_type)
             print(command)
-            submit_command_to_queue(command, max_jobs_in_queue=int(config.get("Cluster", "max_jobs_in_queue")), queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude)
+            submit_command_to_queue(command, max_jobs_in_queue=int(config.get("Cluster", "max_jobs_in_queue")), queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude, conda_environment=conda_environment)
 
             l += 1
 
@@ -151,7 +156,7 @@ def create_directory(directory):
 # Cluster     #
 #-------------#
 
-def submit_command_to_queue(command, queue=None, max_jobs_in_queue=None, queue_file=None, queue_parameters={'max_mem':5000, 'queue':'short', 'max_time':'24:00:00', 'logs_dir':'/tmp', 'modules':['Python/3.6.2']}, dummy_dir="/tmp", script_name=None, constraint=False, exclude=[]):
+def submit_command_to_queue(command, queue=None, max_jobs_in_queue=None, queue_file=None, queue_parameters={'max_mem':5000, 'queue':'short', 'max_time':'24:00:00', 'logs_dir':'/tmp', 'modules':['Python/3.6.2']}, dummy_dir="/tmp", script_name=None, constraint=False, exclude=[], conda_environment=None):
     """
     This function submits any {command} to a cluster {queue}.
 
@@ -199,6 +204,8 @@ def submit_command_to_queue(command, queue=None, max_jobs_in_queue=None, queue_f
                 fd.write('#SBATCH -e {}.err\n'.format(os.path.join(queue_parameters['logs_dir'], '%j_{}'.format(script_name)))) # standard error
                 for module in queue_parameters['modules']:
                     fd.write('module load {}\n'.format(module)) # modules to load
+                if conda_environment:
+                    fd.write('source activate {}\n'.format(conda_environment))
                 fd.write('{}\n'.format(command)) # command
             os.system("sbatch {}".format(script)) # execute bash file
         else:

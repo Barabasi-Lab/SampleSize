@@ -19,7 +19,16 @@ ui <- fluidPage(
                         sidebarPanel(
                           radioButtons("dataset_topology", "Dataset:",
                                        c('RA non-responder patients (Scipher)' = 'scipher_nonresponders',
-                                         'RA responder patients (Scipher)' = 'scipher_responders')),
+                                         'RA responder patients (Scipher)' = 'scipher_responders',
+                                         'GTEx' = 'gtex'
+                                       )),
+                          radioButtons("method", "Method:",
+                                       c('wTO' = 'wto',
+                                         'WGCNA' = 'wgcna',
+                                         'ARACNE' = 'aracne',
+                                         'Pearson' = 'pearson',
+                                         'Spearman' = 'spearman'
+                                       )),
                           radioButtons("parameter_topology", "Parameter:",
                                        c('Nodes' = 'nodes',
                                          'Edges' = 'edges',
@@ -32,7 +41,7 @@ ui <- fluidPage(
                                          'Lost edges' = 'lost_edges',
                                          'Gained nodes' = 'gained_nodes',
                                          'Gained edges' = 'gained_edges')),
-                      radioButtons("pval_topology", "P-value:",
+                          radioButtons("pval_topology", "P-value:",
                                        c('0.01' = 0.01,
                                          '0.05' = 0.05,
                                          'Group' = 'group_topology_pval')),
@@ -42,7 +51,31 @@ ui <- fluidPage(
                                              '1%' = 1,
                                              '100%' = 100,
                                              'Group' = 'group_topology_top')),
-                          ),
+                          verbatimTextOutput(outputId = "gtex_tissue"),
+                          shinyWidgets::pickerInput(
+                            inputId = "tissue",
+                            label = "Tissue (if GTEx dataset)",
+                            choices = c("spleen", "whole blood"),
+                            options = list(
+                              `actions-box` = TRUE,
+                              size = 10,
+                              `selected-text-format` = "count > 1"
+                            ),
+                            selected = 'spleen',
+                            multiple = TRUE),
+                          verbatimTextOutput(outputId = "gtex_sex"),
+                          shinyWidgets::pickerInput(
+                            inputId = "sex",
+                            label = "Sex (if GTEx dataset)",
+                            choices = c("female", "male"),
+                            options = list(
+                              `actions-box` = TRUE,
+                              size = 10,
+                              `selected-text-format` = "count > 1"
+                            ),
+                            selected = 'female',
+                            multiple = TRUE)
+                        ),
                         
                         # Show boxplot of topological parameters
                         mainPanel(
@@ -65,9 +98,9 @@ ui <- fluidPage(
                                        '% disease genes in network' = 'percent_disease_genes_in_network',
                                        'Num. disease genes forming a LCC' = 'disease_genes_in_lcc',
                                        '% disease genes forming a LCC' = 'percent_disease_genes_in_lcc')),
-                    radioButtons("pval_disease_genes", "P-value:",
-                                     c('0.01' = 0.01,
-                                       '0.05' = 0.05)),
+                        radioButtons("pval_disease_genes", "P-value:",
+                                         c('0.01' = 0.01,
+                                           '0.05' = 0.05)),
                         radioButtons("top_disease_genes", "% of top scoring edges:",
                                      c('0.1%' = 0.1,
                                        '0.5%' = 0.5,

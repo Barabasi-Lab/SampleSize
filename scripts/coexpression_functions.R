@@ -6,7 +6,10 @@
 # Date: October 2021
 ################################################################################
 
-library(WGCNA)
+require(WGCNA)
+require(wTO)
+require(dplyr)
+require(data.table)
 
 ################################################################################
 
@@ -14,36 +17,17 @@ library(WGCNA)
 #'
 #'  Method to calculate correlation between genes from gene expression data.
 #'  
-#'  Based on the function calculate_correlation from K. Ovens in: 
-#'  https://github.com/klovens/compare/blob/master/coexpression_comparison.R
-#'  
-#'  @param rnaseq_df   RNAseq expression data frame
+#'  @param rnaseq   RNAseq expression data frame
 #'                     (columns are samples, rows are genes).
 #'  @param out_name The name of the file to write the correlations to.
-#'  @param cor_method The correlation method to use. Default is "pearson".
+#'  @param cor_method The correlation method to use. Spearman ("s", "spearman") or Pearson ("p", "pearson") correlation. Default is "pearson". 
 #'
-calculate_correlation <- function(rnaseq_df, out_name, cor_method="pearson"){
-  write("to\tfrom\tcor\tpval", file=out_name, append=FALSE)
-  for(i in 1:nrow(rnaseq_df)){
-    for(j in i:nrow(rnaseq_df)){
-      # do not require edge between the same gene (uninformative)
-      if (i == j){
-        c <- 0
-        pval <- 1
-      }
-      else{
-        c.res <- cor.test(x=as.numeric(rnaseq_df[i,]), y=as.numeric(rnaseq_df[j,]),method=cor_method, exact=FALSE)
-        c <- as.numeric(c.res$estimate)
-        pval <- c.res$p.value
-        #c <- cor(x=as.numeric(rnaseq_df[i,]), y=as.numeric(rnaseq_df[j,]),method=cor_method,  use="complete.obs")
-        if(is.na(c)){
-          c <- 1
-          pval <- 0
-        }
-        write(paste(rownames(rnaseq_df)[i],rownames(rnaseq_df)[j],c, pval,sep="\t"), file=out_name, append=TRUE)
-      }
-    }
-  }
+calculate_correlation <- function(rnaseq, out_name, cor_method="pearson"){
+  
+  correlation_result = CorrelationOverlap(Data = rnaseq, Overlap = row.names(rnaseq), method = "p") %>% as.data.frame() 
+  correlation_result = correlation_result %>% wTO.in.line() %>% rename(!!cor_method := "wTO")
+  fwrite(correlation_result, out_name)
+  
 }
 
 
@@ -53,15 +37,12 @@ calculate_correlation <- function(rnaseq_df, out_name, cor_method="pearson"){
 #'
 #'  Method to calculate correlation between genes from gene expression data.
 #'  
-#'  Based on the function calculate_correlation from K. Ovens in: 
-#'  https://github.com/klovens/compare/blob/master/coexpression_comparison.R
-#'  
-#'  @param rnaseq_df   RNAseq expression data frame
+#'  @param rnaseq   RNAseq expression data frame
 #'                     (columns are samples, rows are genes).
 #'  @param out_name The name of the file to write the correlations to.
 #'  @param cor_method The correlation method to use. Default is "pearson".
 #'
-#calculate_correlation_parallelized <- function(rnaseq_df, out_name, cor_method="pearson"){
+#calculate_correlation_parallelized <- function(rnaseq, out_name, cor_method="pearson"){
 #  write("to\tfrom\tcor\tpval", file=out_name, append=FALSE)
 #  res <- foreach(i = seq_len(ncol(rnaseq.t)),
 #                 .combine = rbind,
@@ -80,35 +61,17 @@ calculate_correlation <- function(rnaseq_df, out_name, cor_method="pearson"){
 #'  Method to calculate correlation between genes from gene expression data
 #'  using WGCNA.
 #'  
-#'  Based on the function calculate_correlation from K. Ovens in: 
-#'  https://github.com/klovens/compare/blob/master/coexpression_comparison.R
-#'  
-#'  @param rnaseq_df   RNAseq expression data frame
+#'  @param rnaseq   RNAseq expression data frame
 #'                     (columns are samples, rows are genes).
-#'  @param out_name The name of the file to write the correlations to.
-#'  @param cor_method The correlation method to use. Default is "pearson".
+#'  @param out_name The name of the file to write the network to.
+#'  @param type network type. Allowed values are (unique abbreviations of) "unsigned", "signed", "signed hybrid", "distance".
+#'  @param power soft thresholding power.
 #'
-calculate_correlation_WGCNA <- function(rnaseq_df, out_name, type="signed", power=12){
+calculate_correlation_WGCNA <- function(rnaseq, out_name, type="signed", power=6){
   
-  adjacency.res = adjacency(rnaseq_df, type=type, power = power)
+  adjacency.res = adjacency(rnaseq, type=type, power = power)
+  adjacency.res = adjacency.res %>% wTO.in.line() %>% rename(WGCNA=wTO)
+  fwrite(adjacency.res, out_name)
   
-  write("to\tfrom\tcor", file=out_name, append=FALSE)
-  for(i in 1:ncol(adjacency.res)){
-    for(j in i:nrow(adjacency.res)){
-      # do not require edge between the same gene (uninformative)
-      if (i == j){
-        c <- 0
-        #pval <- 1
-      }
-      else{
-        c <- adjacency.res[i,j]
-        #pval <- c.res$p.value
-        if(is.na(c)){
-          c <- 1
-          #pval <- 0
-        }
-        write(paste(colnames(adjacency.res)[i],rownames(adjacency.res)[j],c,sep="\t"), file=out_name, append=TRUE)
-      }
-    }
-  }
 }
+

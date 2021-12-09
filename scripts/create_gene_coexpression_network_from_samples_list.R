@@ -1,9 +1,9 @@
 #!/usr/bin/env Rscript
-renv::init("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR")
 library(optparse)
 require(dplyr)
 require(magrittr)
 require(data.table)
+require(wTO)
 set.seed(1510)
 
 #### READ ARGUMENTS ####
@@ -17,10 +17,16 @@ option_list = list(
   make_option(c("-m", "--metric"), type="character", default="wto", 
               help="metric (e.g., pearson, spearman, wto, wgcna) [default= %default]", metavar="character"),
   make_option(c("-n", "--wto_n"), type="integer", default=100, 
-              help="Number of wTO bootstrap repetitions to calculate the p-value [default= %default]", metavar="integer")
+              help="Number of wTO bootstrap repetitions to calculate the p-value [default= %default]", metavar="integer"),
+  make_option(c("-d", "--wto_delta"), type="double", default=0.2,
+              help="Value that defines the interval of confidence from which the p-values of the bootstrap repetitions are calculated [default= %default]", metavar="double"),
+  make_option(c("-p", "--wgcna_power"), type="integer", default=6, 
+              help="Number of wTO bootstrap repetitions to calculate the p-value [default= %default]", metavar="integer"),
+  make_option(c("-t", "--wgcna_type"), type="character", default="signed", 
+              help="Type of network to create with WGCNA [default= %default]", metavar="character")
 ); 
 # Example of execution
-# Rscript /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_network_from_samples_list.R -s /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Liver/RNAseq_samples_Liver_female_size_10_rep_1.txt -f /home/j.aguirreplans/Databases/GTEx/v8/GTEx_RNASeq_gene_tpm_filtered_t.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Liver/RNAseq_Liver_female_size_10_rep_1.net -m wto
+# Rscript /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_network_from_samples_list.R -s /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Liver/RNAseq_samples_Liver_female_size_10_rep_1.txt -f /home/j.aguirreplans/Databases/GTEx/v8/GTEx_RNASeq_gene_tpm_filtered_t.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Liver/RNAseq_Liver_female_size_10_rep_1.net -m wgcna
 
 # Read arguments
 opt_parser = OptionParser(option_list=option_list);
@@ -36,21 +42,26 @@ rnaseq_file = opt$rnaseq_file
 output_file = opt$output_file
 metric = opt$metric
 wto_n = strtoi(opt$wto_n)
+wto_delta = as.double(opt$wto_delta)
+wgcna_power = strtoi(opt$wgcna_power)
+wgcna_type = opt$wgcna_type
 
 #samples_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood_female/RNAseq_samples_Whole.Blood_female_size_10_rep_1.txt'
 #rnaseq_file = '/home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Whole.Blood_female.gct'
-#output_file = '/scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Whole.Blood_female/RNAseq_Whole.Blood_female_size_10_rep_1.net'
-#metric = 'wto'
+#output_file = '/scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/test/wto_RNAseq_Whole.Blood_female_size_10_rep_1_100_genes.net'
+#scripts.dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts'
+#metric = 'wgcna'
 #wto_n = 100
+#wto_delta = 0.2
+#wgcna_power = 6
+#wgcna_type = "signed"
 
 # Get scripts dir
 initial.options <- commandArgs(trailingOnly = FALSE)
 scripts.dir <- dirname(sub("--file=", "", initial.options[grep("--file=", initial.options)]))
 
 # Source needed files
-newwTO.file <- paste(scripts.dir, "99_newwTO.R", sep="/")
 coexpression.functions.file <- paste(scripts.dir, "coexpression_functions.R", sep="/")
-source(newwTO.file)
 source(coexpression.functions.file)
 
 
@@ -59,17 +70,18 @@ source(coexpression.functions.file)
 # Read samples
 subsample = fread(samples_file)[, 1][[1]]
 
-# Read RNAseq dataset (rows = samples, columns = genes)
+# Read RNAseq dataset (rows = genes, columns = samples)
 rnaseq = fread(rnaseq_file)
-#rnaseq <- rnaseq[, 1:100] # Check example with less genes
 
 # Subset gene expression datast by samples in the samples file
-rnaseq = rnaseq %>% filter(get(colnames(rnaseq)[1]) %in% subsample)
+rnaseq = rnaseq %>% select(c(colnames(rnaseq)[1], all_of(subsample)))
 
 # Remove the samples column and include it as "rownames"
-sample.ids <- rnaseq[, 1][[1]]
+gene.ids <- rnaseq[, 1][[1]]
 rnaseq <- as.matrix(rnaseq[, -c(1)])
-rownames(rnaseq) <- sample.ids
+rownames(rnaseq) <- gene.ids
+
+#rnaseq = rnaseq[row.names(rnaseq) %in% sample(row.names(rnaseq), size=100, replace=FALSE),] # Check example with less genes
 
 # Get transposed dataframe
 rnaseq.t <- t(as.matrix(rnaseq)) %>% as.data.frame()
@@ -80,19 +92,35 @@ rownames(rnaseq.t) <- colnames(rnaseq)
 #### RUN CO-EXPRESSION ####
 
 if((metric == 'spearman') | (metric == 'pearson')){
-  calculate_correlation(rnaseq.t, output_file, cor_method=metric)
+  
+  calculate_correlation(rnaseq, output_file, cor_method=metric)
+  
 } else if(metric == 'wgcna'){
-  calculate_correlation_WGCNA(rnaseq, output_file, type="signed", power=12)
+  
+  calculate_correlation_WGCNA(rnaseq.t, output_file, type=wgcna_type, power=wgcna_power)
+  
 } else if(metric == 'wto'){
+  
   # Function to calculate network using wTO faster
   prepare_wTO <- function(input, save, N=1000){
+    newwTO.file <- paste(scripts.dir, "99_newwTO.R", sep="/")
+    source(newwTO.file)
     wto = wTO.faster(Data = input, n = N)
     wto %>% fwrite(save)
     return(wto)
   }
+  
   # Run wTO
-  nR_wto <- prepare_wTO(input=rnaseq.t, save=output_file, N=wto_n)
+  #wto = prepare_wTO(input=rnaseq, save=output_file, N=wto_n)
+  wto = wTO.fast(Data = rnaseq, Overlap = row.names(rnaseq), method = "p",
+                 sign = "sign", delta = wto_delta, n = wto_n,
+                 method_resampling = "Bootstrap")
+  wto %>% fwrite(output_file)
+  
 } else {
+  
   stop('The metric introduced is not correct. Please introduce: pearson, spearman, wgcna or wto.')
+  
 }
+
 
