@@ -160,7 +160,7 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
       info_df$median = apply(tpm_tissue_sex_df[,-1], 1, median)
       info_df$zero_sum_counts = as.numeric(apply(tpm_tissue_sex_df[,-1], 1, function(i) sum(i == 0) )) # Number of times that the sum of the TPMs is equal to 0
       # Filter low expressed genes
-      info_filt_df = info_df[(info_df$sum > 0) & (info_df$mean > 0) & (info_df$median > 0) & (info_df$sd > 0) & (info_df$zero_sum_counts < dim(tpm_tissue_sex_df[, -1])[2]/2) ,]
+      info_filt_df = info_df[(info_df$sum > 0) & (info_df$mean > 0) & (info_df$median >= 1) & (info_df$sd > 0) & (info_df$zero_sum_counts < dim(tpm_tissue_sex_df[, -1])[2]/2) ,]
       tpm_tissue_sex_filt_df = tpm_tissue_sex_df[tpm_tissue_sex_df$Description %in% info_filt_df$Description,] %>% rename("Gene"="Description")
       print(dim(tpm_tissue_sex_filt_df))
       tpm_tissue_sex_filt_file = paste(tpm_filt_dir, paste("GTEx_RNASeq_", tissue, "_", sex, ".gct", sep=''), sep='/')

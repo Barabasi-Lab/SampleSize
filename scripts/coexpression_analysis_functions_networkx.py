@@ -91,9 +91,13 @@ def parse_significant_coexpression_network_from_wto_with_pandas(network_file, pv
     Columns of the wTO file: Node.1,Node.2,wTO,pval,pval.adj
     """
     network_df = pd.read_csv(network_file, sep=",")
-    network_df = network_df[network_df["pval.adj"] < pval_adj_cutoff]
+    if pval_adj_cutoff:
+        # Filter by adjusted p-value
+        network_df = network_df[network_df["pval.adj"] < pval_adj_cutoff]
     if top_scoring:
-        network_df = network_df.sort_values(by=['wTO'], ascending=False, key=abs).head(top_scoring)
+        # Sort by column 3 (index 2), corresponding to score (wTO, WGCNA, pearson, spearman...) and keep only the top scoring edges
+        network_df = network_df.sort_values(by=network_df[2], ascending=False, key=abs).head(top_scoring)
+    # Keep the filtered network
     network = nx.from_pandas_edgelist(network_df, 'Node.1', 'Node.2')
     return network
 

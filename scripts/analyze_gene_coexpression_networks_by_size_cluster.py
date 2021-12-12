@@ -25,8 +25,12 @@ def parse_options():
     # Directory arguments
     parser.add_option("-n", action="store", type="string", dest="networks_dir", help="Directory with the input networks", metavar="NETWORKS_DIR")
     parser.add_option("-o", action="store", type="string", dest="output_dir", help="Directory for the output files and plots", metavar="OUTPUT_DIR")
-    parser.add_option("-p", action="store", type="string", dest="pval_adj_cutoff", default=0.05, help="Cut-off of the adjusted p-value to consider an edge significant", metavar="PVAL_ADJ_CUTOFF")
+    parser.add_option("-p", action="store", type="float", dest="pval_adj_cutoff", default=0.05, help="Cut-off of the adjusted p-value to consider an edge significant", metavar="PVAL_ADJ_CUTOFF")
     parser.add_option("-t", action="store", type="string", dest="top_percent", default=None, help="Top percentage of edges to select. If None, all of them are selected.", metavar="TOP_PERCENT")
+    parser.add_option("-ms", action="store", type="integer", dest="max_num_samples", default=50, help="Maximum number of samples to analyze", metavar="MAX_NUM_SAMPLES")
+    parser.add_option("-mn", action="store", type="integer", dest="min_num_samples", default=10, help="Minimum number of samples to analyze", metavar="MIN_NUM_SAMPLES")
+    parser.add_option("-st", action="store", type="integer", dest="step", default=10, help="Number of samples between each sample size considered", metavar="STEP")
+    parser.add_option("-r", action="store", type="integer", dest="repetitions", default=10, help="Repetitions of each sample size", metavar="REPETITIONS")
 
     (options, args) = parser.parse_args()
 
@@ -90,11 +94,11 @@ def analyze_gene_coexpression_networks_of_same_size(options):
     # Run co-expression for all files
     pval_adj_cutoff = float(options.pval_adj_cutoff)
     top_percent = options.top_percent
-    repetitions = 10
-    step = 10
-    max_num_samples = 56
-    #max_num_samples = 20
-    size_list = list(range(10, max_num_samples+1, step))
+    repetitions = int(options.repetitions)
+    step = int(options.step)
+    min_num_samples = int(options.min_num_samples)
+    max_num_samples = int(options.max_num_samples)
+    size_list = list(range(min_num_samples, max_num_samples+1, step))
     for size in size_list:
 
         if limit: # Break the loop if a limit of jobs is introduced

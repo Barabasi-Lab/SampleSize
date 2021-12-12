@@ -520,7 +520,7 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
       info_df$median = apply(tpm_tissue_sex_df[,-1], 1, median)
       info_df$zero_sum_counts = as.numeric(apply(tpm_tissue_sex_df[,-1], 1, function(i) sum(i == 0) )) # Number of times that the sum of the TPMs is equal to 0
       # Filter low expressed genes
-      info_filt_df = info_df[(info_df$sum &gt; 0) &amp; (info_df$mean &gt; 0) &amp; (info_df$median &gt; 0) &amp; (info_df$sd &gt; 0) &amp; (info_df$zero_sum_counts &lt; dim(tpm_tissue_sex_df[, -1])[2]/2) ,]
+      info_filt_df = info_df[(info_df$sum &gt; 0) &amp; (info_df$mean &gt; 0) &amp; (info_df$median &gt;= 1) &amp; (info_df$sd &gt; 0) &amp; (info_df$zero_sum_counts &lt; dim(tpm_tissue_sex_df[, -1])[2]/2) ,]
       tpm_tissue_sex_filt_df = tpm_tissue_sex_df[tpm_tissue_sex_df$Description %in% info_filt_df$Description,] %&gt;% rename(&quot;Gene&quot;=&quot;Description&quot;)
       print(dim(tpm_tissue_sex_filt_df))
       tpm_tissue_sex_filt_file = paste(tpm_filt_dir, paste(&quot;GTEx_RNASeq_&quot;, tissue, &quot;_&quot;, sex, &quot;.gct&quot;, sep=''), sep='/')
@@ -545,385 +545,385 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 <pre><code>## [1] &quot;Adipose.Subcutaneous&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   437
-## [1] 16108   437
+## [1] 12639   437
 ## [1] &quot;Adipose.Subcutaneous&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655   216
-## [1] 16125   216
+## [1] 12586   216
 ## [1] &quot;Muscle.Skeletal&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   536
-## [1] 15676   536
+## [1] 10708   536
 ## [1] &quot;Muscle.Skeletal&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655   257
-## [1] 15665   257
+## [1] 10760   257
 ## [1] &quot;Artery.Tibial&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   446
-## [1] 15869   446
+## [1] 12287   446
 ## [1] &quot;Artery.Tibial&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655   207
-## [1] 15870   207
+## [1] 12261   207
 ## [1] &quot;Artery.Coronary&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   147
-## [1] 16123   147
+## [1] 12746   147
 ## [1] &quot;Artery.Coronary&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655    95
-## [1] 16093    95
+## [1] 12730    95
 ## [1] &quot;Heart.Atrial.Appendage&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   294
-## [1] 15994   294
+## [1] 11974   294
 ## [1] &quot;Heart.Atrial.Appendage&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655   137
-## [1] 15976   137
+## [1] 11928   137
 ## [1] &quot;Adipose.Visceral.Omentum&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   372
-## [1] 16160   372
+## [1] 12757   372
 ## [1] &quot;Adipose.Visceral.Omentum&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655   171
-## [1] 16130   171
+## [1] 12654   171
 ## [1] &quot;Uterus&quot;
 ## [1] &quot;male&quot;
 ## [1] &quot;Uterus&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655   142
-## [1] 16153   142
+## [1] 12903   142
 ## [1] &quot;Vagina&quot;
 ## [1] &quot;male&quot;
 ## [1] &quot;Vagina&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655   155
-## [1] 16281   155
+## [1] 13287   155
 ## [1] &quot;Breast.Mammary.Tissue&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   292
-## [1] 16248   292
+## [1] 12695   292
 ## [1] &quot;Breast.Mammary.Tissue&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655   169
-## [1] 16363   169
+## [1] 13263   169
 ## [1] &quot;Skin.Not.Sun.Exposed.Suprapubic&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   412
-## [1] 16343   412
+## [1] 12925   412
 ## [1] &quot;Skin.Not.Sun.Exposed.Suprapubic&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655   194
-## [1] 16317   194
+## [1] 12924   194
 ## [1] &quot;Minor.Salivary.Gland&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   116
-## [1] 16340   116
+## [1] 12952   116
 ## [1] &quot;Minor.Salivary.Gland&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655    48
-## [1] 16377    48
+## [1] 13087    48
 ## [1] &quot;Brain.Cortex&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   182
-## [1] 16303   182
+## [1] 12831   182
 ## [1] &quot;Brain.Cortex&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655    75
-## [1] 16285    75
+## [1] 12819    75
 ## [1] &quot;Adrenal.Gland&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   158
-## [1] 16070   158
+## [1] 12217   158
 ## [1] &quot;Adrenal.Gland&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655   102
-## [1] 16107   102
+## [1] 12273   102
 ## [1] &quot;Thyroid&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   435
-## [1] 16256   435
+## [1] 13258   435
 ## [1] &quot;Thyroid&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655   218
-## [1] 16300   218
+## [1] 13227   218
 ## [1] &quot;Lung&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   396
-## [1] 16323   396
+## [1] 13411   396
 ## [1] &quot;Lung&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655   182
-## [1] 16378   182
+## [1] 13478   182
 ## [1] &quot;Spleen&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   155
-## [1] 16194   155
+## [1] 12849   155
 ## [1] &quot;Spleen&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655    87
-## [1] 16197    87
+## [1] 12858    87
 ## [1] &quot;Pancreas&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   208
-## [1] 16057   208
+## [1] 11494   208
 ## [1] &quot;Pancreas&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655   122
-## [1] 16036   122
+## [1] 11397   122
 ## [1] &quot;Esophagus.Muscularis&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   339
-## [1] 16059   339
+## [1] 12496   339
 ## [1] &quot;Esophagus.Muscularis&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655   177
-## [1] 16046   177
+## [1] 12497   177
 ## [1] &quot;Esophagus.Mucosa&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   364
-## [1] 16145   364
+## [1] 12639   364
 ## [1] &quot;Esophagus.Mucosa&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655   191
-## [1] 16151   191
+## [1] 12649   191
 ## [1] &quot;Esophagus.Gastroesophageal.Junction&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   252
-## [1] 16083   252
+## [1] 12571   252
 ## [1] &quot;Esophagus.Gastroesophageal.Junction&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655   125
-## [1] 16042   125
+## [1] 12537   125
 ## [1] &quot;Stomach&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   228
-## [1] 16203   228
+## [1] 12558   228
 ## [1] &quot;Stomach&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655   132
-## [1] 16229   132
+## [1] 12609   132
 ## [1] &quot;Colon.Sigmoid&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   241
-## [1] 16142   241
+## [1] 12691   241
 ## [1] &quot;Colon.Sigmoid&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655   134
-## [1] 16172   134
+## [1] 12660   134
 ## [1] &quot;Small.Intestine.Terminal.Ileum&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   121
-## [1] 16402   121
+## [1] 13269   121
 ## [1] &quot;Small.Intestine.Terminal.Ileum&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655    68
-## [1] 16422    68
+## [1] 13259    68
 ## [1] &quot;Colon.Transverse&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   260
-## [1] 16348   260
+## [1] 13071   260
 ## [1] &quot;Colon.Transverse&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655   147
-## [1] 16372   147
+## [1] 13025   147
 ## [1] &quot;Prostate&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   246
-## [1] 16395   246
+## [1] 13421   246
 ## [1] &quot;Prostate&quot;
 ## [1] &quot;female&quot;
 ## [1] &quot;Testis&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   362
-## [1] 17267   362
+## [1] 14954   362
 ## [1] &quot;Testis&quot;
 ## [1] &quot;female&quot;
 ## [1] &quot;Nerve.Tibial&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   415
-## [1] 16209   415
+## [1] 13209   415
 ## [1] &quot;Nerve.Tibial&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655   197
-## [1] 16208   197
+## [1] 13154   197
 ## [1] &quot;Skin.Sun.Exposed.Lower.leg&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   461
-## [1] 16327   461
+## [1] 12995   461
 ## [1] &quot;Skin.Sun.Exposed.Lower.leg&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655   233
-## [1] 16312   233
+## [1] 12979   233
 ## [1] &quot;Heart.Left.Ventricle&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   295
-## [1] 15705   295
+## [1] 10926   295
 ## [1] &quot;Heart.Left.Ventricle&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655   138
-## [1] 15780   138
+## [1] 11093   138
 ## [1] &quot;Brain.Cerebellum&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   175
-## [1] 16208   175
+## [1] 12880   175
 ## [1] &quot;Brain.Cerebellum&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655    68
-## [1] 16215    68
+## [1] 12924    68
 ## [1] &quot;Cells.Cultured.fibroblasts&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   322
-## [1] 15395   322
+## [1] 11606   322
 ## [1] &quot;Cells.Cultured.fibroblasts&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655   171
-## [1] 15466   171
+## [1] 11585   171
 ## [1] &quot;Whole.Blood&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   493
-## [1] 15249   493
+## [1] 9556  493
 ## [1] &quot;Whole.Blood&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655   251
-## [1] 15280   251
+## [1] 9719  251
 ## [1] &quot;Artery.Aorta&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   280
-## [1] 16019   280
+## [1] 12550   280
 ## [1] &quot;Artery.Aorta&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655   153
-## [1] 16017   153
+## [1] 12564   153
 ## [1] &quot;Cells.EBV-transformed.lymphocytes&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   105
-## [1] 15810   105
+## [1] 10959   105
 ## [1] &quot;Cells.EBV-transformed.lymphocytes&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655    62
-## [1] 15837    62
+## [1] 10897    62
 ## [1] &quot;Pituitary&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   205
-## [1] 16512   205
+## [1] 13562   205
 ## [1] &quot;Pituitary&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655    80
-## [1] 16474    80
+## [1] 13483    80
 ## [1] &quot;Brain.Frontal.Cortex.BA9&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   154
-## [1] 16225   154
+## [1] 12806   154
 ## [1] &quot;Brain.Frontal.Cortex.BA9&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655    57
-## [1] 16234    57
+## [1] 12852    57
 ## [1] &quot;Brain.Caudate.basal.ganglia&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   184
-## [1] 16204   184
+## [1] 12642   184
 ## [1] &quot;Brain.Caudate.basal.ganglia&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655    64
-## [1] 16272    64
+## [1] 12612    64
 ## [1] &quot;Brain.Nucleus.accumbens.basal.ganglia&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   183
-## [1] 16243   183
+## [1] 12625   183
 ## [1] &quot;Brain.Nucleus.accumbens.basal.ganglia&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655    65
-## [1] 16208    65
+## [1] 12684    65
 ## [1] &quot;Brain.Putamen.basal.ganglia&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   157
-## [1] 16122   157
+## [1] 12287   157
 ## [1] &quot;Brain.Putamen.basal.ganglia&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655    50
-## [1] 16119    50
+## [1] 12264    50
 ## [1] &quot;Brain.Hypothalamus&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   148
-## [1] 16373   148
+## [1] 12928   148
 ## [1] &quot;Brain.Hypothalamus&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655    56
-## [1] 16389    56
+## [1] 12879    56
 ## [1] &quot;Brain.Spinal.cord.cervical.c-1&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   103
-## [1] 16169   103
+## [1] 12676   103
 ## [1] &quot;Brain.Spinal.cord.cervical.c-1&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655    58
-## [1] 16184    58
+## [1] 12621    58
 ## [1] &quot;Brain.Hippocampus&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   144
-## [1] 16234   144
+## [1] 12440   144
 ## [1] &quot;Brain.Hippocampus&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655    55
-## [1] 16212    55
+## [1] 12395    55
 ## [1] &quot;Brain.Anterior.cingulate.cortex.BA24&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   129
-## [1] 16211   129
+## [1] 12520   129
 ## [1] &quot;Brain.Anterior.cingulate.cortex.BA24&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655    49
-## [1] 16197    49
+## [1] 12555    49
 ## [1] &quot;Ovary&quot;
 ## [1] &quot;male&quot;
 ## [1] &quot;Ovary&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655   179
-## [1] 16141   179
+## [1] 12716   179
 ## [1] &quot;Brain.Cerebellar.Hemisphere&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   158
-## [1] 16133   158
+## [1] 12707   158
 ## [1] &quot;Brain.Cerebellar.Hemisphere&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655    59
-## [1] 16185    59
+## [1] 12678    59
 ## [1] &quot;Liver&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   162
-## [1] 15904   162
+## [1] 11152   162
 ## [1] &quot;Liver&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655    65
-## [1] 15878    65
+## [1] 11308    65
 ## [1] &quot;Brain.Substantia.nigra&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   102
-## [1] 16147   102
+## [1] 12427   102
 ## [1] &quot;Brain.Substantia.nigra&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655    39
-## [1] 16146    39
+## [1] 12422    39
 ## [1] &quot;Kidney.Cortex&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655    67
-## [1] 16261    67
+## [1] 12345    67
 ## [1] &quot;Kidney.Cortex&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655    20
-## [1] 16344    20
+## [1] 12516    20
 ## [1] &quot;Brain.Amygdala&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   108
-## [1] 16136   108
+## [1] 12324   108
 ## [1] &quot;Brain.Amygdala&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655    46
-## [1] 16222    46
+## [1] 12506    46
 ## [1] &quot;Cervix.Ectocervix&quot;
 ## [1] &quot;male&quot;
 ## [1] &quot;Cervix.Ectocervix&quot;
@@ -939,7 +939,7 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;Bladder&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655    15
-## [1] 16095    15
+## [1] 12959    15
 ## [1] &quot;Bladder&quot;
 ## [1] &quot;female&quot;
 ## [1] &quot;Kidney.Medulla&quot;
@@ -949,10 +949,7 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 <pre class="r"><code>rm(tpm_df)
 rm(tpm_tissue_sex_df)
 rm(tpm_tissue_sex_filt_df)
-rm(tpm_tissue_sex_filt_df.t)</code></pre>
-<pre><code>## Warning in rm(tpm_tissue_sex_filt_df.t): object 'tpm_tissue_sex_filt_df.t' not
-## found</code></pre>
-<pre class="r"><code>rm(info_df)
+rm(info_df)
 rm(info_filt_df)</code></pre>
 </div>
 

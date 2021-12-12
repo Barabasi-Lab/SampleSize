@@ -261,16 +261,17 @@ smts_subjects_count %>%
 
 ## Remove low expressed genes
 
-### Specific for whole blood
+### Specific for whole blood & female
 
 Let's analyze the distribution of TPMs specifically for Whole Blood.
 
 ```{r}
 tissue <- "Whole Blood"
-samples_tissue_df <- samples_df[(samples_df$SMTSD == tissue) & (samples_df$SAMPID %in% colnames(tpm_df)) ,]
-samples_tissue <- unique(samples_tissue_df$SAMPID)
-subjects_tissue <- unique(samples_tissue_df$SUBJID)
-tpm_tissue_df <- tpm_df %>% select(c("Name", "Description", samples_tissue))
+sex_id <- 2
+samples_tissue_sex_df = samples_df[(samples_df$SMTSD == tissue) & (samples_df$SEX == sex_id) & (samples_df$SAMPID %in% colnames(tpm_df)),]
+samples_tissue_sex <- unique(samples_tissue_sex_df$SAMPID)
+subjects_tissue_sex <- unique(samples_tissue_sex_df$SUBJID)
+tpm_tissue_df <- tpm_df %>% select(c("Name", "Description", samples_tissue_sex))
 
 ```
 
@@ -289,12 +290,12 @@ head(info_tissue_df)
 
 ```
 
-We keep the genes whose sum, standard deviation, mean or median expression is above 0.
-Also, we keep the genes whose expression is 0 in more than 50% of the samples (as in https://www.biostars.org/p/377059/):
+We remove the genes whose sum, standard deviation or mean expression is equal to 0, or median expression below 1.
+Also, we remove the genes whose expression is 0 in more than 50% of the samples (as in https://www.biostars.org/p/377059/):
 
 
 ```{r}
-info_tissue_filt_df = info_tissue_df[(info_tissue_df$sum > 0) & (info_tissue_df$mean > 0) & (info_tissue_df$median > 0) & (info_tissue_df$sd > 0) & (info_tissue_df$zero_sum_counts < dim(tpm_tissue_df[, -1])[2]/2) ,]
+info_tissue_filt_df = info_tissue_df[(info_tissue_df$sum > 0) & (info_tissue_df$mean > 0) & (info_tissue_df$median >= 1) & (info_tissue_df$sd > 0) & (info_tissue_df$zero_sum_counts < dim(tpm_tissue_df[, -1])[2]/2) ,]
 dim(info_tissue_filt_df)
 head(info_tissue_filt_df)
 
@@ -303,6 +304,13 @@ head(info_tissue_filt_df)
 Here we plot the distributions based on different metrics:
 
 ```{r}
+# Expression without filtering
+log_median_expression_specific_tissue_no_filt <- ggplot(info_tissue_df, aes(x=log2_median)) + 
+  geom_histogram(binwidth=1, fill="#69b3a2", color="#e9ecef", alpha=0.9) +
+  xlab("log2 median")
+ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/log_median_expression_specific_tissue_no_filtering.png', plot=log_median_expression_specific_tissue_no_filt, type='cairo', dpi = 300)
+log_median_expression_specific_tissue_no_filt
+
 log_median_expression_specific_tissue <- ggplot(info_tissue_filt_df, aes(x=log2_median)) + 
   geom_histogram(binwidth=1, fill="#69b3a2", color="#e9ecef", alpha=0.9) +
   xlab("log2 median")
@@ -360,12 +368,18 @@ dim(info_df)
 ```
 
 ```{r filter_low_expressed_genes_all_tissues}
-info_filt_df = info_df[(info_df$sum > 0) & (info_df$mean > 0) & (info_df$median > 0) & (info_df$sd > 0) & (info_df$zero_sum_counts < dim(tpm_df[, -1])[2]/2) ,]
+info_filt_df = info_df[(info_df$sum > 0) & (info_df$mean > 0) & (info_df$median >= 1) & (info_df$sd > 0) & (info_df$zero_sum_counts < dim(tpm_df[, -1])[2]/2) ,]
 dim(info_filt_df)
 
 ```
 
 ```{r plot_distribution_expression_all_tissues}
+log_median_expression_all_tissues_no_filt <- ggplot(info_df, aes(x=log2_median)) + 
+  geom_histogram(binwidth=1, fill="#69b3a2", color="#e9ecef", alpha=0.9) +
+  xlab("log2 median")
+ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/log_median_expression_all_tissues_no_filtering.png', plot=log_median_expression_all_tissues_no_filt, type='cairo', dpi = 300)
+log_median_expression_all_tissues_no_filt
+
 log_median_expression_all_tissues <- ggplot(info_filt_df, aes(x=log2_median)) + 
   geom_histogram(binwidth=1, fill="#69b3a2", color="#e9ecef", alpha=0.9) +
   xlab("log2 median")

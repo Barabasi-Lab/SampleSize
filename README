@@ -228,6 +228,7 @@ scp discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/\*.html /
 Results:
 
 scp discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/\* /Users/j.aguirreplans/Desktop/results_GTEx
+scp discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/\* /Users/quim/Desktop/results_GTEx
 
 
 #########################################

@@ -35,9 +35,10 @@ def parse_options():
     # Directory arguments
     parser.add_option("-n", action="store", type="string", dest="networks_dir", help="Directory with the input networks", metavar="NETWORKS_DIR")
     parser.add_option("-o", action="store", type="string", dest="output_dir", help="Directory for the output files and plots", metavar="OUTPUT_DIR")
+    parser.add_option("-g", action="store", type="string", dest="gene_expression_file", help="File containing the gene expression. It will be used to get the total number of genes", metavar="OUTPUT_DIR")
     parser.add_option("-s", action="store", type="string", dest="size", help="Sample size to analyze", metavar="SIZE")
     parser.add_option("-r", action="store", type="string", dest="repetitions", help="Number of repetitions to analyze", metavar="REPETITIONS")
-    parser.add_option("-p", action="store", type="string", dest="pval_adj_cutoff", default=0.05, help="Cut-off of the adjusted p-value to consider an edge significant", metavar="PVAL_ADJ_CUTOFF")
+    parser.add_option("-p", action="store", type="string", dest="pval_adj_cutoff", default=None, help="Cut-off of the adjusted p-value to consider an edge significant", metavar="PVAL_ADJ_CUTOFF")
     parser.add_option("-t", action="store", type="string", dest="top_percent", default=None, help="Top percentage of edges to select. If None, all of them are selected.", metavar="TOP_PERCENT")
 
     (options, args) = parser.parse_args()
@@ -67,15 +68,19 @@ def analyze_gene_coexpression_networks_of_same_size(options):
     ppi_dir = '/home/j.aguirreplans/data/PPI'
 
     # Parse all genes from gene expression data
-    gene_expression_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/bootstrap/nonresponders/RNAseq_NonResponders_all.txt'
-    #gene_expression_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/bootstrap/responders/RNAseq_Responders_all.txt'
-    gene_expression_df = pd.read_csv(gene_expression_file, sep='\t')
+    #gene_expression_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/bootstrap/nonresponders/RNAseq_NonResponders_all.txt'
+    gene_expression_file = options.gene_expression_file
+    #gene_expression_df = pd.read_csv(gene_expression_file, sep='\t')
+    #genes_dataset = gene_expression_df.columns[1:]
+    gene_expression_df = pd.read_csv(gene_expression_file, sep=",")
     genes_dataset = gene_expression_df.columns[1:]
 
     # Define parameters of bootstrap
     size = int(options.size)
     rep = int(options.repetitions)
-    pval_adj_cutoff = float(options.pval_adj_cutoff)
+    pval_adj_cutoff = options.pval_adj_cutoff
+    if pval_adj_cutoff:
+        pval_adj_cutoff = float(options.pval_adj_cutoff)
     top_percent = options.top_percent
     top_scoring = None
     if top_percent:
