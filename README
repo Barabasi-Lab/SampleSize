@@ -44,6 +44,31 @@ module load R/4.0.3
 module load anaconda3/3.7
 source activate SampleSizeR
 
+##### PACKRAT #####
+
+# Initialize the project
+srun --partition=short --nodes=1 --cpus-per-task=1 --pty /bin/bash
+module load R/4.0.3
+cd /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts
+mkdir SampleSizeR
+R
+install.packages("packrat")
+packrat::init("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR")
+
+# Install packages
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("BiRewire")
+install.packages('devtools')
+devtools::install_github('RfastOfficial/Rfast')
+devtools::install_github('deisygysi/NetSci')
+install.packages(c('optparse', 'tidyr'))
+install.packages('RcppEigen')
+BiocManager::install("WGCNA")
+
+# Save changes
+packrat::snapshot()
+
 ##### RENV #####
 
 srun --partition=short --nodes=1 --cpus-per-task=1 --pty /bin/bash
@@ -63,10 +88,9 @@ renv::install("bioc::WGCNA")
 install.packages('devtools')
 if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
-library(devtools)
 BiocManager::install("BiRewire")
 devtools::install_github('RfastOfficial/Rfast')
-install_github('deisygysi/NetSci')
+devtools::install_github('deisygysi/NetSci')
 install.packages('optparse')
 install.packages('dplyr')
 install.packages('RcppEigen')
@@ -224,6 +248,7 @@ Scripts:
 
 scp discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/\* /Users/j.aguirreplans/Dropbox/Postdoc/Projects/Scipher/SampleSize/scripts/
 scp discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/\*.html /Users/j.aguirreplans/Desktop/results_GTEx
+scp discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/\*.html /Users/quim/Desktop/results_GTEx
 
 Results:
 

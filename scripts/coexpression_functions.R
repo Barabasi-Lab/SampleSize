@@ -25,7 +25,7 @@ require(data.table)
 calculate_correlation <- function(rnaseq, out_name, cor_method="pearson"){
   
   correlation_result = CorrelationOverlap(Data = rnaseq, Overlap = row.names(rnaseq), method = "p") %>% as.data.frame() 
-  correlation_result = correlation_result %>% wTO.in.line() %>% rename(!!cor_method := "wTO")
+  #correlation_result = correlation_result %>% wTO.in.line() %>% rename(!!cor_method := "wTO")
   fwrite(correlation_result, out_name)
   
 }
@@ -68,10 +68,20 @@ calculate_correlation <- function(rnaseq, out_name, cor_method="pearson"){
 #'  @param power soft thresholding power.
 #'
 calculate_correlation_WGCNA <- function(rnaseq, out_name, type="signed", power=6){
+  # Information about differences between Adjacency matrix and TOM:
+  # https://www.researchgate.net/post/What_do_adjacency_matrix_and_Topology_Overlap_Matrix_from_WGCNA_package_tell_about_the_data
+  # WGCNA constructs two matrices, first it defines a correlation matrix up to a power beta so the degree distribution will fit a small-word network.
+  # This matrix given only information about the expression correlation between genes.
+  # WGCNA thinks that co-expression is not enough and the similarity between genes should be reflected at the expression and the network topology level.
+  # This is why it defines the TOM matrix which uses the co-expression Adjacency matrix and build another adjacency matrix that considers topological similarity.
+  # Normally the TOM matrix is the final result of WGCNA.
   
   adjacency.res = adjacency(rnaseq, type=type, power = power)
-  adjacency.res = adjacency.res %>% wTO.in.line() %>% rename(WGCNA=wTO)
-  fwrite(adjacency.res, out_name)
+  TOM = TOMsimilarity(adjacency.res, TOMType = type)
+  rownames(TOM) = rownames(adjacency.res)
+  colnames(TOM) = colnames(adjacency.res)
+  #TOM = TOM %>% wTO.in.line() %>% rename(WGCNA=wTO)
+  fwrite(TOM, out_name)
   
 }
 

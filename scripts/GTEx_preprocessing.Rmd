@@ -91,13 +91,13 @@ PPI_info_df = fread(ppi_info_file)
 head(PPI)
 head(PPI_info_df)
 PPI_symbol = left_join(PPI[,c("proteinA", "proteinB")], PPI_info_df[,c("GeneID", "Symbol")], by=c("proteinA"="GeneID")) %>% rename(proteinA_symbol=Symbol)
-PPI_symbol = left_join(PPI_symbol[,c("proteinA", "proteinB", "proteinA_symbol")], PPI_info_df[,c("GeneID", "Symbol")], by=c("proteinB"="GeneID")) %>% rename(proteinB_symbol=Symbol)
+PPI_symbol = left_join(PPI_symbol, PPI_info_df[,c("GeneID", "Symbol")], by=c("proteinB"="GeneID")) %>% rename(proteinB_symbol=Symbol)
 
 # Get unique links
 PPI_symbol = PPI_symbol %>% unique()
 dim(PPI_symbol)
 PPI_symbol = PPI_symbol %>%
-  filter(proteinA_symbol != "" & proteinB_symbol != "") %>%
+  filter((proteinA_symbol != "") & (proteinB_symbol != "")) %>%
   filter(proteinA_symbol != proteinB_symbol)
 dim(PPI_symbol)
 head(PPI_symbol)

@@ -1,8 +1,11 @@
 #!/usr/bin/env Rscript
+packrat::init("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR")
 library(optparse)
 require(data.table)
 require(dplyr)
 require(magrittr)
+library(Rcpp)
+library(Rfast)
 require(tidyr)
 require(wTO)
 set.seed(1510)
@@ -16,8 +19,6 @@ option_list = list(
   make_option(c("-o", "--output_wto_network"), type="character", default="gene_coexpression_network_wto.net", 
               help="output file [default= %default]", metavar="character"),
   make_option(c("-b", "--output_wto_bootstrap"), type="character", default="gene_coexpression_network_bootstrap.csv", 
-              help="output file [default= %default]", metavar="character"),
-  make_option(c("-u", "--output_corr_network"), type="character", default="gene_coexpression_network_pearson.net", 
               help="output file [default= %default]", metavar="character"),
   make_option(c("-n", "--n_max_iterations"), type="integer", default=300, 
               help="Number of maximum wTO bootstrap iterations to calculate the p-value [default= %default]", metavar="integer"),
@@ -46,7 +47,6 @@ samples_file = opt$samples_file
 rnaseq_file = opt$rnaseq_file
 output_wto_network = opt$output_wto_network
 output_wto_bootstrap = opt$output_wto_bootstrap
-output_corr_network = opt$output_corr_network
 n_max_iterations = strtoi(opt$n_max_iterations)
 n_edges_to_check = strtoi(opt$n_edges_to_check)
 delta = as.double(opt$delta)
@@ -55,9 +55,9 @@ pval_cutoff = as.double(opt$pval_cutoff)
 
 #samples_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood_female/RNAseq_samples_Whole.Blood_female_size_10_rep_1.txt'
 #rnaseq_file = '/home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Whole.Blood_female.gct'
+#scripts.dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts'
 #output_wto_network = '/scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/test/wto_Whole.Blood_female_size_10_rep_1.net'
 #output_wto_bootstrap = '/scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/test/wto_boot_Whole.Blood_female_size_10_rep_1.csv'
-#output_corr_network = '/scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/test/pearson_Whole.Blood_female_size_10_rep_1.net'
 #n_max_iterations = 300
 #n_edges_to_check = 50
 #delta = 0.2
@@ -65,8 +65,12 @@ pval_cutoff = as.double(opt$pval_cutoff)
 #pval_cutoff = 0.01
 
 # Get scripts dir
-#initial.options <- commandArgs(trailingOnly = FALSE)
-#scripts.dir <- dirname(sub("--file=", "", initial.options[grep("--file=", initial.options)]))
+initial.options <- commandArgs(trailingOnly = FALSE)
+scripts.dir <- dirname(sub("--file=", "", initial.options[grep("--file=", initial.options)]))
+
+# Source needed files
+matrixmult.file <- paste(scripts.dir, "99_matrixmult.cpp", sep="/")
+sourceCpp(matrixmult.file)
 
 
 #### READ DATASET ####
@@ -91,9 +95,13 @@ rownames(rnaseq) <- gene.ids
 #### RUN CO-EXPRESSION WITH WTO CHECKING P-VALUE CONVERGENCE IN EACH ITERATION ####
 
 # Define WTO function
-wTO = function(A){
-  A_TF = A
-  C = as.matrix(A) %*% t(A)
+wTO2 = function (A, sign = "sign") {
+  if (sign %in% c("abs", "absolute")) {
+    A = abs(A)
+  }
+  A = as.matrix(A)
+  A_TF = as.data.frame(subset(A, select = row.names(A)))
+  C = eigenMapMatMult(A, Rfast::transpose(A))
   W = C + A_TF
   K = matrix(NA, nrow(A_TF), ncol(A_TF))
   KI = rowSums(abs(A), na.rm = T)
@@ -196,14 +204,9 @@ plot_pvalue_convergence_for_edge = function(wto_results_df, edge_rowname, delta=
 # Calculate Pearson correlation
 A = CorrelationOverlap(Data = rnaseq, Overlap = row.names(rnaseq),
                        method = "p") %>% as.data.frame() 
-A_net = A %>% wTO.in.line() %>% rename(Pearson=wTO)
-
-# Save correlation in a file
-fwrite(A_net, output_corr_network)
-rm(A_net)
 
 # Calculate wTO scores for the samples
-wto_results_df = wTO(A) %>% wTO.in.line()
+wto_results_df = wTO2(A, sign="sign") %>% wTO.in.line()
 
 # Get the edges that we will check for convergence during iterations
 edges_for_convergence_checking = sample(row.names(wto_results_df), size=n_edges_to_check, replace=FALSE)
@@ -215,7 +218,7 @@ for (i in 1:n_max_iterations){
   A = CorrelationOverlap(Data =  rnaseq[, sample(1:ncol(rnaseq),
                                                       replace = TRUE)], Overlap = row.names(rnaseq),
                               method = "p") %>% as.data.frame()
-  wto_results_df <- inner_join(wto_results_df, wTO(A) %>% wTO.in.line() %>% rename_with(.fn = ~paste0("C_", i), .cols = "wTO"), by=c("Node.1" = "Node.1", "Node.2" = "Node.2"))
+  wto_results_df <- inner_join(wto_results_df, wTO2(A, sign="sign") %>% wTO.in.line() %>% rename_with(.fn = ~paste0("C_", i), .cols = "wTO"), by=c("Node.1" = "Node.1", "Node.2" = "Node.2"))
   results_below_butoff = check_pvalue_convergence_for_multiple_edges(wto_results_df, edges_for_convergence_checking, delta, pval_cutoff, n_pvals_to_check)
   #print(results_below_butoff$edges_with_sd_below_cutoff)
   #print(length(results_below_butoff$edges_with_sd_below_cutoff[results_below_butoff$edges_with_sd_below_cutoff == TRUE]))
@@ -232,7 +235,6 @@ fwrite(wto_results_df, output_wto_bootstrap)
 
 rm(rnaseq)
 rm(A)
-
 
 # Calculate the p-value of the network
 wto_network = wto_results_df %>%
@@ -259,49 +261,6 @@ fwrite(wto_network, output_wto_network)
 
 rm(wto_network)
 
-
-
-
-
-
-
-
 #plot_pvalue_convergence_for_edge(wto_results_df, edge_rowname=edges_for_convergence_checking[1], delta=0.2)
 #plot_pvalue_convergence_for_edge(wto_results_df, edge_rowname=edges_for_convergence_checking[2], delta=0.2)
-
-# Define function to check convergence for multiple edges
-# I could not finish it because I don't find a way to calculate the difference...
-check_pvalue_convergence_for_multiple_edges_without_loop = function(wto_results_df, edges_for_convergence_checking, delta=0.2, pval_cutoff=0.01, n_pvals_to_check=5){
-  
-  edges_with_sd_below_cutoff = c()
-  edges_with_diff_below_cutoff = c()
-  if ((ncol(wto_results_df)-3) >= n_pvals_to_check){
-    
-    wto_pval_results = wto_results_df %>%
-      filter(row.names(wto_results_df) %in% edges_for_convergence_checking) %>%
-      pivot_longer(
-        cols = starts_with("C_"),
-        names_to = "Iteration",
-        names_prefix = "C_",
-        values_to = "Iteration.wTO"
-      ) %>% 
-      # Transform iteration to numeric
-      mutate(across(Iteration, as.numeric)) %>% 
-      # Group by edge
-      group_by(Node.1, Node.2, wTO) %>% 
-      # Calculate p-value
-      mutate(p = calculate_if_score_falls_into_interval(wTO, Iteration.wTO, delta), prop = cumsum(p), pval = prop/Iteration) %>% 
-      # Get the last n p-values for each edge
-      filter(Iteration %in% ((max(Iteration)-n_pvals_to_check+1):max(Iteration))) %>%
-      mutate(sd = sd(pval)) %>%
-      select(Node.1, Node.2, wTO, Iteration, pval) %>%
-      ungroup()
-
-    return(list("edges_with_sd_below_cutoff" = edges_with_sd_below_cutoff, "edges_with_diff_below_cutoff" = edges_with_diff_below_cutoff))
-  } else {
-    return(list("edges_with_sd_below_cutoff" = c(FALSE), "edges_with_diff_below_cutoff" = c(FALSE)))
-  }
-
-}
-
 

@@ -81,7 +81,7 @@ gene.ids <- rnaseq[, 1][[1]]
 rnaseq <- as.matrix(rnaseq[, -c(1)])
 rownames(rnaseq) <- gene.ids
 
-#rnaseq = rnaseq[row.names(rnaseq) %in% sample(row.names(rnaseq), size=100, replace=FALSE),] # Check example with less genes
+#rnaseq = rnaseq[row.names(rnaseq) %in% sample(row.names(rnaseq), size=200, replace=FALSE),] # Check example with less genes
 
 # Get transposed dataframe
 rnaseq.t <- t(as.matrix(rnaseq)) %>% as.data.frame()

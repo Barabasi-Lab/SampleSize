@@ -35,6 +35,7 @@ tpm_file = paste(databases_dir, 'GTEx/v8/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1
 
 # Define output file
 samples_subjects_file = paste(databases_dir, 'GTEx/v8/GTEx_Annotations_SamplesSubjectsMerged.txt', sep='/')
+
 ```
 
 ```{r read_files}
@@ -257,6 +258,40 @@ smts_subjects_count %>%
     theme_bw()
 
 ```
+
+Count the number of samples per tissue:
+
+```{r tissue_sex_count}
+
+num_samples_per_tissue_df = data.frame(matrix(ncol=2,nrow=0, dimnames=list(NULL, c("tissue", "n"))))
+num_samples_per_tissue_sex_df = data.frame(matrix(ncol=3,nrow=0, dimnames=list(NULL, c("tissue", "sex", "n"))))
+sex_to_id = data.frame(row.names=c("male","female") , val=c(1,2))
+for (tissue in unique(samples_df$SMTSD.no.sp.char)){
+  tissue_samples = samples_df[samples_df$SMTSD.no.sp.char == tissue,]$SAMPID
+  num_samples_per_tissue_df = rbind(num_samples_per_tissue_df, data.frame(tissue=tissue, n=length(tissue_samples)))
+  for (sex in rownames(sex_to_id)){
+    sex_id = sex_to_id[sex,]
+    tissue_sex_samples = samples_df[(samples_df$SMTSD.no.sp.char == tissue) & (samples_df$SEX == sex_id),]$SAMPID
+    num_samples_per_tissue_sex_df = rbind(num_samples_per_tissue_sex_df, data.frame(tissue=tissue, sex=sex, n=length(tissue_sex_samples)))
+
+  }
+}
+
+# Tissues with more than 200 samples
+length(num_samples_per_tissue_df[num_samples_per_tissue_df$n > 200,]$tissue)
+# Tissues with 100-200 samples
+length(num_samples_per_tissue_df[(num_samples_per_tissue_df$n <= 200) & (num_samples_per_tissue_df$n >= 100),]$tissue)
+# Tissues with less than 100 samples
+length(num_samples_per_tissue_df[num_samples_per_tissue_df$n < 100,]$tissue)
+
+# Tissue-sex groups with more than 200 samples
+length(num_samples_per_tissue_sex_df[num_samples_per_tissue_sex_df$n > 200,]$tissue)
+# Tissue-sex groups with 100-200 samples
+length(num_samples_per_tissue_sex_df[(num_samples_per_tissue_sex_df$n <= 200) & (num_samples_per_tissue_sex_df$n >= 100),]$tissue)
+# Tissue-sex groups with less than 100 samples
+length(num_samples_per_tissue_sex_df[num_samples_per_tissue_sex_df$n < 100,]$tissue)
+```
+
 
 
 ## Remove low expressed genes

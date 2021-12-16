@@ -455,14 +455,14 @@ head(PPI)</code></pre>
 ## 5:  serpin family A member 3 protein-coding
 ## 6: arylacetamide deacetylase protein-coding</code></pre>
 <pre class="r"><code>PPI_symbol = left_join(PPI[,c(&quot;proteinA&quot;, &quot;proteinB&quot;)], PPI_info_df[,c(&quot;GeneID&quot;, &quot;Symbol&quot;)], by=c(&quot;proteinA&quot;=&quot;GeneID&quot;)) %&gt;% rename(proteinA_symbol=Symbol)
-PPI_symbol = left_join(PPI_symbol[,c(&quot;proteinA&quot;, &quot;proteinB&quot;, &quot;proteinA_symbol&quot;)], PPI_info_df[,c(&quot;GeneID&quot;, &quot;Symbol&quot;)], by=c(&quot;proteinB&quot;=&quot;GeneID&quot;)) %&gt;% rename(proteinB_symbol=Symbol)
+PPI_symbol = left_join(PPI_symbol, PPI_info_df[,c(&quot;GeneID&quot;, &quot;Symbol&quot;)], by=c(&quot;proteinB&quot;=&quot;GeneID&quot;)) %&gt;% rename(proteinB_symbol=Symbol)
 
 # Get unique links
 PPI_symbol = PPI_symbol %&gt;% unique()
 dim(PPI_symbol)</code></pre>
 <pre><code>## [1] 327924      4</code></pre>
 <pre class="r"><code>PPI_symbol = PPI_symbol %&gt;%
-  filter(proteinA_symbol != &quot;&quot; &amp; proteinB_symbol != &quot;&quot;) %&gt;%
+  filter((proteinA_symbol != &quot;&quot;) &amp; (proteinB_symbol != &quot;&quot;)) %&gt;%
   filter(proteinA_symbol != proteinB_symbol)
 dim(PPI_symbol)</code></pre>
 <pre><code>## [1] 322163      4</code></pre>
