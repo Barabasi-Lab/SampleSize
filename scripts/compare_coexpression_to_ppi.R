@@ -93,6 +93,19 @@ ppi_tissue_sex_filt_distances <- ppi_tissue_sex_filt_distances[order(rownames(pp
 # Convert the matrix to an in-line format and remove infinite distances (from different components)
 ppi_tissue_sex_filt_distances = ppi_tissue_sex_filt_distances %>% wTO.in.line() %>% rename(distances=wTO)
 ppi_tissue_sex_filt_distances = ppi_tissue_sex_filt_distances %>% filter(!(is.infinite(distances)))
+# Merge node topology properties with distances
+ppi_tissue_sex_filt_distances = left_join(ppi_tissue_sex_filt_distances, node_topology_info_df, by=c("Node.1" = "nodes")) %>% rename(local_clustering_coefficient.1=local_clustering_coefficient, degree_centrality.1=degree_centrality, betweenness_centrality.1=betweenness_centrality)
+ppi_tissue_sex_filt_distances = left_join(ppi_tissue_sex_filt_distances, node_topology_info_df, by=c("Node.2" = "nodes")) %>% rename(local_clustering_coefficient.2=local_clustering_coefficient, degree_centrality.2=degree_centrality, betweenness_centrality.2=betweenness_centrality)
+rm(node_topology_info_df)
+ppi_tissue_sex_filt_distances$local_clustering_coefficient.mean = rowMeans((ppi_tissue_sex_filt_distances %>% select(local_clustering_coefficient.1, local_clustering_coefficient.2)))
+ppi_tissue_sex_filt_distances$local_clustering_coefficient.1 = NULL
+ppi_tissue_sex_filt_distances$local_clustering_coefficient.2 = NULL
+ppi_tissue_sex_filt_distances$degree_centrality.mean = rowMeans((ppi_tissue_sex_filt_distances %>% select(degree_centrality.1, degree_centrality.2)))
+ppi_tissue_sex_filt_distances$degree_centrality.1 = NULL
+ppi_tissue_sex_filt_distances$degree_centrality.2 = NULL
+ppi_tissue_sex_filt_distances$betweenness_centrality.mean = rowMeans((ppi_tissue_sex_filt_distances %>% select(betweenness_centrality.1, betweenness_centrality.2)))
+ppi_tissue_sex_filt_distances$betweenness_centrality.1 = NULL
+ppi_tissue_sex_filt_distances$betweenness_centrality.2 = NULL
 
 # Read gene co-expression network
 tissue_sex_network_df = as.data.frame(fread(tissue_sex_network_file))
