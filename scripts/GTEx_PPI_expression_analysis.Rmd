@@ -1,0 +1,132 @@
+---
+title: "GTEx network filtering"
+author: "Joaquim Aguirre-Plans"
+date: "20/12/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Description
+
+Filter the gene co-expression networks created from GTEx RNAseq samples.
+
+```{r, message=FALSE}
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(igraph)
+library(mltools)
+library(wTO)
+set.seed(1510)
+```
+
+## Read files
+
+```{r define_files}
+# Define working directories
+databases_dir = '/home/j.aguirreplans/Databases'
+networks_dir = '/scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx'
+ppi_dir = '/home/j.aguirreplans/data/PPI'
+ppi_filt_dir = paste(ppi_dir, 'interactome_tissue_specific', sep='/')
+
+# Define input files
+samples_subjects_file = '/home/j.aguirreplans/Databases/GTEx/v8/GTEx_Annotations_SamplesSubjectsMerged.txt'
+
+```
+
+```{r read_files}
+# Read input files
+samples_df = fread(samples_subjects_file)
+
+```
+
+## Explore if there is a relationship between the topological parameters of the PPI network and a high co-expression
+
+```{r analyze_expression_ppis}
+metric = "aracne"
+#sex_to_id = data.frame(row.names=c("male","female") , val=c(1,2))
+sex_to_id = data.frame(row.names=c("female") , val=c(2))
+#tissues = c("Spleen", "Whole.Blood")
+tissues = c("Spleen")
+
+for (tissue in tissues){
+  for (sex in rownames(sex_to_id)){
+    sex_id = sex_to_id[sex,]
+    tissue_sex_samples = samples_df[(samples_df$SMTSD.no.sp.char == tissue) & (samples_df$SEX == sex_id),]$SAMPID
+    if (length(tissue_sex_samples) > 10){
+      # Read PPI network
+      ppi_tissue_sex_filt_file = paste(ppi_filt_dir, paste("interactome_2019_", tissue, "_", sex, ".csv", sep=''), sep='/')
+      ppi_tissue_sex_filt_df = fread(ppi_tissue_sex_filt_file) %>% select(proteinA_symbol, proteinB_symbol)
+      ppi_tissue_sex_filt_net = graph_from_data_frame(ppi_tissue_sex_filt_df, directed=F) %>% simplify()
+      # Calculate distances between pairs of nodes
+      ppi_tissue_sex_filt_distances = distances(ppi_tissue_sex_filt_net)
+      ppi_tissue_sex_filt_distances <- ppi_tissue_sex_filt_distances[order(rownames(ppi_tissue_sex_filt_distances)), order(colnames(ppi_tissue_sex_filt_distances))]
+      ppi_tissue_sex_filt_distances = ppi_tissue_sex_filt_distances %>% wTO.in.line() %>% rename(distances=wTO)
+      ppi_tissue_sex_filt_distances = ppi_tissue_sex_filt_distances %>% filter(!(is.infinite(distances)))
+      # Read tissue-sex network
+      tissue_sex_networks_dir = paste(networks_dir, paste(tissue, sex, sep="_"), sep='/')
+      tissue_sex_network_file = paste(tissue_sex_networks_dir, paste(metric, "_RNAseq_samples_", tissue, "_", sex, "_all_samples.net", sep=""), sep="/")
+      tissue_sex_network_df = as.data.frame(fread(tissue_sex_network_file))
+      rownames(tissue_sex_network_df) = colnames(tissue_sex_network_df)
+      tissue_sex_network_df <- tissue_sex_network_df[order(rownames(tissue_sex_network_df)), order(colnames(tissue_sex_network_df))]
+      tissue_sex_network_df = tissue_sex_network_df %>% wTO.in.line() %>% rename(score=wTO)
+      # Merge the two dataframes
+      ppi_gene_coexpression_merged_df <- inner_join(ppi_tissue_sex_filt_distances, tissue_sex_network_df, by=c("Node.1" = "Node.1", "Node.2" = "Node.2"))
+      # Calculate correlation
+      print(cor(x=ppi_gene_coexpression_merged_df$distances, y=ppi_gene_coexpression_merged_df$score, method="pearson"))
+      # Plot distribution of distances
+      #ggplot(ppi_gene_coexpression_merged_df, aes(x=distances)) +
+      #  geom_histogram( bins=10, fill="#69b3a2", color="#e9ecef", alpha=0.9)
+      # Plot distribution of expression
+      #ggplot(ppi_gene_coexpression_merged_df, aes(x=score)) +
+      #  geom_histogram( bins=10, fill="#69b3a2", color="#e9ecef", alpha=0.9)
+      # Calculate quantiles
+      print(quantile(ppi_gene_coexpression_merged_df$distances))
+      print(quantile(ppi_gene_coexpression_merged_df$score))
+      # Calculate expression and distance numbers
+      ppi_gene_coexpression_merged_df$score_discrete = ifelse( ppi_gene_coexpression_merged_df$score >= quantiles_score[[4]], '75%', ifelse( (ppi_gene_coexpression_merged_df$score >= quantiles_score[[3]]) & (ppi_gene_coexpression_merged_df$score < quantiles_score[[4]]), '50%', ifelse( (ppi_gene_coexpression_merged_df$score >= quantiles_score[[2]]) & (ppi_gene_coexpression_merged_df$score < quantiles_score[[3]]), '25%', '0%') ) )
+      table_score_distance = table(ppi_gene_coexpression_merged_df$score_discrete, ppi_gene_coexpression_merged_df$distances)
+      #           1        2        3        4        5        6        7
+      #0%     48315  4736636 12974886  2450612    78488     1103        3
+      #25%    56133  5267786 12889472  2035335    41092      224        0
+      #50%    58807  5494797 12856631  1848127    31475      206        0
+      #75%    65233  5788427 12751530  1661109    23634      110        0
+      
+      # Define positives and negatives
+      positives = ppi_gene_coexpression_merged_df %>% filter(distances < 2)
+      negatives = ppi_gene_coexpression_merged_df %>% filter(distances > 4)
+      mean_score = mean(ppi_gene_coexpression_merged_df$score)
+      print(length(positives$score))
+      print(length(negatives$score))
+      pred_df = data.frame(matrix(ncol=10,nrow=0, dimnames=list(NULL, c("rep", "TP", "FP", "TN", "FN", "TPR", "FPR", "accuracy", "F1", "MCC"))))
+      for (r in 1:1000){
+        print(r)
+        positive_set <- sample(rownames(positives), size=100, replace=FALSE)
+        negative_set <- sample(rownames(negatives), size=100, replace=FALSE)
+        positive_set = positives %>% slice(as.numeric(positive_set))
+        negative_set = negatives %>% slice(as.numeric(negative_set))
+        testing_set <- rbind(positive_set, negative_set)
+        TP = nrow(testing_set %>% filter((distances < 2) & (score >= mean_score)))
+        FP = nrow(testing_set %>% filter((distances < 2) & (score < mean_score)))
+        TN = nrow(testing_set %>% filter((distances > 4) & (score < mean_score)))
+        FN = nrow(testing_set %>% filter((distances > 4) & (score >= mean_score)))
+        TPR = ifelse((TP + FN) > 0, TP / (TP + FN), 0)
+        FPR = FP / (FP + TN)
+        accuracy = (TP + TN) / (TP + TN + FP + FN)
+        F1 = 2*TP / (2*TP + FP + FN)
+        MCC = mcc(TP=TP, FP=FP, TN=TN, FN=FN)
+        pred_df = rbind(pred_df, data.frame(rep=r, TP=TP, FP=FP, TN=TN, FN=FN, TPR=TPR, FPR=FPR, accuracy=accuracy, F1=F1, MCC=MCC))
+      }
+      pred_df %>% colMeans()
+    }
+  }
+}
+
+```
+
+
+
+

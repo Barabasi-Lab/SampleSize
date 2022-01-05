@@ -82,9 +82,68 @@ ui <- fluidPage(
                           plotOutput("topologyBoxPlot")
                         )
                       )
-                      
-                      
              ),
+             
+             tabPanel("Co-expressed PPIs",
+                      
+                      # Sidebar with a slider input for number of bins 
+                      sidebarLayout(
+                        sidebarPanel(
+                          radioButtons("dataset_coexpressed_ppis", "Dataset:",
+                                       c('GTEx' = 'gtex')),
+                          radioButtons("method_coexpressed_ppis", "Method:",
+                                       c('wTO' = 'wto',
+                                         'WGCNA' = 'wgcna',
+                                         'ARACNE' = 'aracne',
+                                         'Pearson' = 'pearson',
+                                         'Spearman' = 'spearman'
+                                       )),
+                          radioButtons("parameter_coexpressed_ppis", "Parameter:",
+                                       c('Accuracy' = 'accuracy',
+                                         'F1' = 'F1',
+                                         'MCC' = 'MCC',
+                                         'Correlation' = 'corr',
+                                         'TPR' = 'TPR',
+                                         'FPR' = 'FPR',
+                                         'TP' = 'TP',
+                                         'FP' = 'FP',
+                                         'TN' = 'TN',
+                                         'FN' = 'FN')),
+                          shinyWidgets::pickerInput(
+                            inputId = "coexpressed_ppis_gtex_tissues",
+                            label = "Tissue (if GTEx dataset)",
+                            choices = c("spleen", "whole blood"),
+                            options = list(
+                              `actions-box` = TRUE,
+                              size = 10,
+                              `selected-text-format` = "count > 1"
+                            ),
+                            selected = 'spleen',
+                            multiple = TRUE
+                          ),
+                          verbatimTextOutput(outputId = "coexpressed_ppis_gtex_tissues"),
+                          shinyWidgets::pickerInput(
+                            inputId = "coexpressed_ppis_gtex_sex",
+                            label = "Sex (if GTEx dataset)",
+                            choices = c("female", "male"),
+                            options = list(
+                              `actions-box` = TRUE,
+                              size = 10,
+                              `selected-text-format` = "count > 1"
+                            ),
+                            selected = 'female',
+                            multiple = TRUE
+                          ),
+                          verbatimTextOutput(outputId = "coexpressed_ppis_gtex_sex")
+                        ),
+                          
+                        # Show boxplot of topological parameters
+                        mainPanel(
+                          plotOutput("coexpressedPPIsBoxPlot")
+                        )
+                      )
+             ),
+             
              tabPanel("Disease genes",
 
                     # Sidebar with a slider input for number of bins 

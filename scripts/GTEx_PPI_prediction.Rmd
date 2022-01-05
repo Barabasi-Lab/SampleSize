@@ -18,6 +18,7 @@ library(data.table)
 library(dplyr)
 library(ggplot2)
 library(igraph)
+library(wTO)
 set.seed(1510)
 ```
 
@@ -26,7 +27,7 @@ set.seed(1510)
 ```{r define_files}
 # Define working directories
 databases_dir = '/home/j.aguirreplans/Databases'
-networks_dir = '/scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx_adj'
+networks_dir = '/scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx'
 ppi_dir = '/home/j.aguirreplans/data/PPI'
 ppi_filt_dir = paste(ppi_dir, 'interactome_tissue_specific', sep='/')
 
@@ -42,24 +43,31 @@ samples_df = fread(samples_subjects_file)
 ```
 
 ```{r predict_ppi}
+###
+### CHECK MINET VALIDATE() FUNCTION TO COMPARE NETWORK TO A REFERENCE NETWORK
+### It might be easier
+###
+
 roc_df = data.frame(matrix(ncol=7,nrow=0, dimnames=list(NULL, c("tissue", "sex", "size", "rep", "cutoff", "TPR", "FPR"))))
 metric = "wgcna"
-rep = 2
+rep = 1
 #rep = 10
+cutoffs_list = seq(0.1, 0.9, by = 0.1)
 #sex_to_id = data.frame(row.names=c("male","female") , val=c(1,2))
 sex_to_id = data.frame(row.names=c("female") , val=c(2))
 #tissues = c("Spleen", "Whole.Blood")
 tissues = c("Spleen")
 for (tissue in tissues){
   for (sex in rownames(sex_to_id)){
+    sex_id = sex_to_id[sex,]
+    
     # Get samples
     tissue_sex_samples = samples_df[(samples_df$SMTSD.no.sp.char == tissue) & (samples_df$SEX == sex_id),]$SAMPID
+    
     if (length(tissue_sex_samples) > 10){
       print(tissue)
       print(sex)
 
-      sex_id = sex_to_id[sex,]
-      
       # Define networks dir
       tissue_sex_networks_dir = paste(networks_dir, paste(tissue, sex, sep="_"), sep='/')
       
@@ -82,11 +90,12 @@ for (tissue in tissues){
 
           # Read gene co-expression network
           tissue_sex_network_file = paste(tissue_sex_networks_dir, paste(metric, "_RNAseq_samples_", tissue, "_", sex, "_size_", as.character(size), "_rep_", as.character(r), ".net", sep=""), sep="/")
-          tissue_sex_network_df = fread(tissue_sex_network_file)
-          cutoffs_list = seq(0.1, 0.9, by = 0.1)
+          tissue_sex_network_df = as.data.frame(fread(tissue_sex_network_file))
+          rownames(tissue_sex_network_df) = colnames(tissue_sex_network_df)
+          tissue_sex_network_df = tissue_sex_network_df %>% wTO.in.line() %>% rename(Score=wTO)
           for (cutoff in cutoffs_list){
             print(cutoff)
-            tissue_sex_network_filt_df = tissue_sex_network_df[tissue_sex_network_df$WGCNA > cutoff,] %>% select(Node.1, Node.2)
+            tissue_sex_network_filt_df = tissue_sex_network_df[tissue_sex_network_df$Score > cutoff,] %>% select(Node.1, Node.2)
             tissue_sex_network_filt_net = graph_from_data_frame(tissue_sex_network_filt_df, directed=F) %>% simplify()
             intersection_net = intersection(tissue_sex_network_filt_net, ppi_tissue_sex_filt_net)
             intersection_net = delete.vertices(intersection_net, which(degree(intersection_net)==0))

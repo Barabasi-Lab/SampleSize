@@ -32,10 +32,23 @@ install.packages('devtools')
 devtools::install_github('RfastOfficial/Rfast')
 devtools::install_github('deisygysi/NetSci')
 BiocManager::install("WGCNA")
+BiocManager::install("minet")
 install.packages('optparse')
 install.packages('dplyr')
 install.packages('RcppEigen')
 
+# Solve problem of Error in if (nzchar(SHLIB_LIBADD)): https://stackoverflow.com/questions/53813323/installing-r-packages-in-macos-mojave-error-in-if-nzcharshlib-libadd 
+
+# There are the following Makeconf files:
+find ~ -name Makeconf
+/home/j.aguirreplans/.conda/pkgs/r-pbdzmq-0.3_3-r36h5455479_1/lib/R/library/pbdZMQ/etc/Makeconf
+/home/j.aguirreplans/.conda/pkgs/r-base-3.6.1-haffb61f_2/lib/R/etc/Makeconf
+/home/j.aguirreplans/.conda/envs/SampleSizeR/lib/R/etc/Makeconf
+/home/j.aguirreplans/.conda/envs/SampleSizeR/lib/R/library/pbdZMQ/etc/Makeconf
+
+# The Makeconf file in /home/j.aguirreplans/.conda/envs/SampleSizeR/lib/R/etc/Makeconf is empty, so we substitute it for the one in /home/j.aguirreplans/.conda/envs/SampleSizeR/lib/R/etc/Makeconf
+mv /home/j.aguirreplans/.conda/envs/SampleSizeR/lib/R/etc/Makeconf /home/j.aguirreplans/.conda/envs/SampleSizeR/lib/R/etc/Makeconf.backup
+cp /home/j.aguirreplans/.conda/pkgs/r-base-3.6.1-haffb61f_2/lib/R/etc/Makeconf /home/j.aguirreplans/.conda/envs/SampleSizeR/lib/R/etc/Makeconf
 
 # Load
 srun --partition=short --nodes=1 --cpus-per-task=1 --pty /bin/bash
@@ -43,6 +56,10 @@ module load python/3.8.1
 module load R/4.0.3
 module load anaconda3/3.7
 source activate SampleSizeR
+
+# Deactivate
+conda deactivate
+
 
 ##### PACKRAT #####
 
@@ -64,10 +81,15 @@ devtools::install_github('RfastOfficial/Rfast')
 devtools::install_github('deisygysi/NetSci')
 install.packages(c('optparse', 'tidyr'))
 install.packages('RcppEigen')
+install.packages('mltools')
 BiocManager::install("WGCNA")
+BiocManager::install("minet")
 
 # Save changes
 packrat::snapshot()
+
+# Close project
+
 
 ##### RENV #####
 
@@ -101,6 +123,8 @@ renv::snapshot() # To save the changes in the renv environment
 Include this line at the beginning of the R script:
 renv::init("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR")
 
+Clear all variables in the environment:
+rm(list=ls())
 
 ########################################
 INSTALL R PACKAGES TO RUN IN THE CLUSTER
@@ -181,7 +205,14 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coex
 
 # WTO CONVERGENCE: All genes - Spleen - Female
 module load python/3.8.1
+# For the moment only 20 to try how much time do they take (2021/12/16, 17:14)
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_with_wto_finding_pvalue_convergence_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Spleen_female -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Spleen_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_female
+
+# WTO FASTER: All genes - Spleen
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Spleen_female -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Spleen_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_female -m wto
+# TO DO
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Spleen_male -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Spleen_male.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_male -m wto
 
 # WGCNA: All genes - Spleen
 module load python/3.8.1
@@ -192,6 +223,16 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coex
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood_female -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Whole.Blood_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Whole.Blood_female -m wgcna
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood_male -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Whole.Blood_male.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Whole.Blood_male -m wgcna
+
+# ARACNE: All genes - Spleen
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Spleen_female -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Spleen_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_female -m aracne
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Spleen_male -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Spleen_male.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_male -m aracne
+
+# ARACNE: All genes - Whole Blood
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood_female -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Whole.Blood_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Whole.Blood_female -m aracne
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood_male -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Whole.Blood_male.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Whole.Blood_male -m aracne
 
 
 
@@ -323,6 +364,19 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coe
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_responders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_responders_wto_N100_pval_0.05_top_0.5 -p 0.05 -t 0.5
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_responders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_responders_wto_N100_pval_0.05_top_1 -p 0.05 -t 1
 
+
+# GTEx: All genes - Spleen
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_female -p /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Spleen_female.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_GTEx/Spleen_female
+# TO DO
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_male -p /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Spleen_male.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_GTEx/Spleen_male
+
+# GTEx: All genes - Whole Blood
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Whole.Blood_female -p /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Whole.Blood_female.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_GTEx/Whole.Blood_female
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Whole.Blood_male -p /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Whole.Blood_male.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_GTEx/Whole.Blood_male
+
+
 # Copy results
 scp -r discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots_N100 /Users/quim/Desktop
 
@@ -382,6 +436,7 @@ sbatch /home/j.aguirreplans/Projects/Scipher/SampleSize/data/RA/scripts/data_imp
 UPDATE GITHUB
 #############
 
+# I don't know why it only works in the login node, not in the other ones
 # Go to the folder
 cd /home/j.aguirreplans/Projects/Scipher/SampleSize
 

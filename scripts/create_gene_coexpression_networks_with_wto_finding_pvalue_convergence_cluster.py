@@ -103,9 +103,9 @@ def create_gene_coexpression_networks(options):
 
         samples_file = os.path.join(input_dir, dataset)
         #dataset_name = 'test_{}'.format(str(l))
-        dataset_name = 'wto_{}'.format('.'.join(dataset.split('.')[:-1]))
+        dataset_name = 'wto_pval_conv_{}'.format('.'.join(dataset.split('.')[:-1]))
         output_file = os.path.join(output_dir, '{}.net'.format(dataset_name))
-        output_boot_file = os.path.join(output_dir, 'wto_bootstrap_{}.csv'.format(dataset_name))
+        output_boot_file = os.path.join(output_dir, 'wto_pval_conv_bootstrap_{}.csv'.format(dataset_name))
         n_max_iterations = 300
         n_edges_to_check = 50
         delta = 0.2
@@ -115,8 +115,8 @@ def create_gene_coexpression_networks(options):
         bash_script_name = '{}.sh'.format(dataset_name)
         bash_script_file = os.path.join(dummy_dir, bash_script_name)
 
-        #if not fileExist(bash_script_file):
-        if not fileExist(output_file):
+        if not fileExist(bash_script_file):
+        #if not fileExist(output_file):
 
             #command = 'Rscript {}'.format(script_file)
             command = 'Rscript {} -s {} -f {} -o {} -b {} -n {} -e {} -d {} -p {} -c {}'.format(script_file, samples_file, rnaseq_file, output_file, output_boot_file, n_max_iterations, n_edges_to_check, delta, n_pvals_to_check, pval_cutoff)

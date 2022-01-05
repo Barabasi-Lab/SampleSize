@@ -1,21 +1,47 @@
 library(data.table)
+library(dplyr)
 library(ggplot2)
 options(bitmapType='cairo')
 #renv::restore("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR")
 
 # Read data
 input_dir <- '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out'
+samples_subjects_file = '/home/j.aguirreplans/Databases/GTEx/v8/GTEx_Annotations_SamplesSubjectsMerged.txt'
+samples_df = fread(samples_subjects_file)
+tissues <- c("Spleen", "Whole.Blood")
+sex_to_id = data.frame(row.names=c("male","female") , val=c(1,2))
+rep = 10
 topology_df <- setNames(data.frame(matrix(ncol = 10, nrow = 0)), c('size', 'rep', 'nodes', 'edges', 'av_degree', 'av_path_length', 'av_clustering_coef', 'pval', 'top', 'dataset'))
 components_df <- setNames(data.frame(matrix(ncol = 7, nrow = 0)), c('size', 'rep', 'num_components', 'size_lcc', 'pval', 'top', 'dataset'))
 composition_df <- setNames(data.frame(matrix(ncol = 9, nrow = 0)), c('size', 'rep', 'lost_nodes', 'lost_edges', 'gained_nodes', 'gained_edges', 'pval', 'top', 'dataset'))
 disease_df <- setNames(data.frame(matrix(ncol = 10, nrow = 0)), c('size', 'rep', 'disease_class', 'total_disease_genes', 'total_disease_genes_in_dataset', 'disease_genes_in_network', 'lcc_size', 'pval', 'top', 'dataset'))
-for(dataset in c('scipher_nonresponders', 'scipher_responders')){
+coexpressed_ppis_df <- setNames(data.frame(matrix(ncol = 16, nrow = 0)), c("method", "tissue", "sex", "size", "rep", "TP", "FP", "TN", "FN", "TPR", "FPR", "accuracy", "F1", "MCC", "corr", "type_prediction"))
+for(dataset in c('scipher_nonresponders', 'scipher_responders', 'gtex')){
   if (dataset == 'scipher_nonresponders'){
     results_name = 'analysis_nonresponders_wto_N100'
   } else if (dataset == 'scipher_responders'){
     results_name = 'analysis_responders_wto_N100'
   } else if (dataset == 'gtex'){
-    results_name = 'gtex'
+    results_name = 'networks_GTEx'
+    for(tissue in tissues){
+      #tissue.no.sp.char = (samples_df %>% filter(SMTSD == tissue) %>% select(SMTSD.no.sp.char) %>% unique())[[1]]
+      for(sex in rownames(sex_to_id)){
+        sex_id = sex_to_id[sex,]
+        tissue_sex_samples = samples_df[(samples_df$SMTSD.no.sp.char == tissue) & (samples_df$SEX == sex_id),]$SAMPID
+        size_list <- seq(10, length(tissue_sex_samples), 10)
+        for(size in size_list){
+          for(r in 1:rep){
+            for(method in c('wto', 'wgcna', 'aracne')){
+              coexpressed_ppis_file <- paste(input_dir, '/', results_name, '/', tissue, '_', sex, '/', 'comparison_coexpression_ppi_', method, '_RNAseq_samples_', tissue, '_', sex, '_size_', size, '_rep_', r, '.txt', sep='') # comparison_coexpression_ppi_wgcna_RNAseq_samples_Spleen_female_size_50_rep_10.txt
+              if(file.exists(coexpressed_ppis_file)){
+                coexpressed_ppis_individual_df <- fread(coexpressed_ppis_file)
+                coexpressed_ppis_df <- rbind(coexpressed_ppis_df, cbind(data.frame(method=c(method, method), tissue=c(tissue, tissue), sex=c(sex, sex), size=c(size, size), rep=c(r, r)), coexpressed_ppis_individual_df))
+              }
+            }
+          }
+        }
+      }
+    }
   }
   for(pval in c(0.01, 0.05)){
     for(top_percent in c(0.1, 0.5, 1, 100)){
@@ -72,6 +98,7 @@ disease_df$percent_disease_genes_in_lcc = disease_df$lcc_size/disease_df$total_d
 # Parameter to label
 parameter2label <- list("nodes"="Nodes", "edges"="Edges", "av_degree"="Av. degree", "av_path_length", "Av. path length", "av_clustering_coef" = "Av. clust. coef.", "num_components" = "Num. of components", "size_lcc" = "Size of the LCC", 
                         "lost_nodes" = "Lost nodes", "lost_edges" = "Lost edges", "gained_nodes" = "Gained nodes", "gained_edges" = "Gained edges",
+                        "TP" = "TP", "FP" = "FP", "TN" = "TN", "FN" = "FN", "TPR"="TPR", "FPR"="FPR", "accuracy"="Accuracy", "F1"="F1", "MCC"="MCC", "corr"="Correlation",
                         "disease_genes_in_network" = "Num. disease genes in network", "percent_disease_genes_in_network" = "% disease genes in network", "lcc_size" = "Num. disease genes forming a LCC", "percent_disease_genes_in_lcc" = "% disease genes forming a LCC")
 
 # Define server logic required to draw a histogram
@@ -131,6 +158,29 @@ server <- function(input, output) {
   
   })
 
+  output$coexpressedPPIsBoxPlot <- renderPlot({
+    
+    # To plot using ggplot, have to convert the size vector into character (because if not, it plots a single box wtf)
+    coexpressed_ppis_df$size = as.character(coexpressed_ppis_df$size)
+    coexpressed_ppis_df$size <- factor(coexpressed_ppis_df$size , levels=as.character(as.numeric(unique(coexpressed_ppis_df$size))))
+    coexpressed_ppis_df$tissue = tolower(coexpressed_ppis_df$tissue)
+
+    get_gtex_tissues <- renderText(input$coexpressed_ppis_gtex_tissues, sep='___')
+    coexpressed_ppis_gtex_tissues <- c(unlist(strsplit(get_gtex_tissues(), split='___')))
+    get_gtex_sex <- renderText(input$coexpressed_ppis_gtex_sex, sep='___')
+    coexpressed_ppis_gtex_sex <- c(unlist(strsplit(get_gtex_sex(), split='___')))
+    print(coexpressed_ppis_gtex_tissues)
+    print(coexpressed_ppis_gtex_sex)
+
+    selected_coexpressed_ppis_df <- coexpressed_ppis_df %>% filter((type_prediction == "balanced") & (tissue %in% coexpressed_ppis_gtex_tissues) & (sex %in% coexpressed_ppis_gtex_sex) & (method == input$method_coexpressed_ppis))
+    #print(selected_coexpressed_ppis_df)
+    ggplot(selected_coexpressed_ppis_df, aes(x=size, y=.data[[input$parameter_coexpressed_ppis]], fill=rep)) + 
+      geom_boxplot() +
+      labs(x="Sample size", y = parameter2label[[input$parameter_coexpressed_ppis]]) +
+      theme(legend.position = "none")
+    
+  })
+  
   output$diseaseBoxPlot <- renderPlot({
     
     # To plot using ggplot, have to convert the size vector into character (because if not, it plots a single box wtf)

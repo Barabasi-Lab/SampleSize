@@ -52,6 +52,8 @@ def create_gene_coexpression_networks(options):
     wto_delta = 0.2
     wgcna_power = 6
     wgcna_type = "signed"
+    mi_estimator = "pearson"
+    aracne_eps = 0.1
 
     # Add "." to sys.path #
     src_path =  os.path.abspath(os.path.dirname(__file__))
@@ -82,7 +84,8 @@ def create_gene_coexpression_networks(options):
     exclude = []
     #exclude = ['d0012', 'd0123']
     modules = ['python/3.8.1', 'anaconda3', 'R/4.0.3']
-    conda_environment = 'SampleSizeR'
+    #conda_environment = 'SampleSizeR'
+    conda_environment = None
     max_time_per_queue = {
         'debug'   : '0:20:00',
         'express' : '0:60:00',
@@ -117,7 +120,7 @@ def create_gene_coexpression_networks(options):
         if not fileExist(output_file):
 
             #command = 'Rscript {}'.format(script_file)
-            command = 'Rscript {} -s {} -f {} -o {} -m {} -n {} -d {} -p {} -t {}'.format(script_file, samples_file, rnaseq_file, output_file, metric, wto_n, wto_delta, wgcna_power, wgcna_type)
+            command = 'Rscript {} -s {} -f {} -o {} -m {} -n {} -d {} -p {} -t {} -e {} -a {}'.format(script_file, samples_file, rnaseq_file, output_file, metric, wto_n, wto_delta, wgcna_power, wgcna_type, mi_estimator, aracne_eps)
             print(command)
             submit_command_to_queue(command, max_jobs_in_queue=int(config.get("Cluster", "max_jobs_in_queue")), queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude, conda_environment=conda_environment)
 
