@@ -455,7 +455,7 @@ cd /home/j.aguirreplans/Projects/Scipher/SampleSize
 
 # To add new changes:
 git add .
-git commit -m "Changes in the convergence calculation"
+git commit -m "Calculate networks for Scipher"
 git push origin master
 
 # To pull changes from the repository:
