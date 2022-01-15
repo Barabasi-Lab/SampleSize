@@ -1,0 +1,130 @@
+---
+title: "Scipher subsampling"
+author: "Joaquim Aguirre-Plans"
+date: "1/13/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Description
+
+Create subsamples of gene expression data from GTEx, with the aim of testing the effect of sample size in these subsamples.
+
+```{r, message=FALSE}
+library(data.table)
+library(dplyr)
+set.seed(1510)
+```
+
+## Read files
+
+```{r define_files}
+# Define working directories
+databases_dir = '/home/j.aguirreplans/Databases'
+ppi_dir = '/home/j.aguirreplans/data/PPI'
+deisy_dicts_dir = '/home/j.aguirreplans/data/DeisyDictionaries'
+data_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021'
+output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data'
+
+# Define input files and dirs
+metadata_RNA_file = paste(data_dir, '00_data/scipher_metadata_rnaseq_counts.csv', sep='/')
+metadata_RNA_0m_file = paste(data_dir, '00_data/scipher_metadata_rnaseq_counts_0m.csv', sep='/')
+
+```
+
+```{r read_files}
+# Read input files
+metadata_RNA = fread(metadata_RNA_file)
+metadata_RNA_0m = fread(metadata_RNA_0m_file)
+
+```
+
+## Subsampling
+
+```{r sampling_function, echo=FALSE, results='hide'}
+## Random sampling with replacement
+create_random_subsamples_with_replacement <- function(samples_list, size_list, rep, output_dir, output_file_name){
+  subsamples_df = data.frame(matrix(ncol=3,nrow=0, dimnames=list(NULL, c("size", "rep", "samples"))))
+  seed <- 1
+  for(size in size_list){
+    set.seed(seed)
+    seed <- seed + 1
+    for(r in 1:rep){
+      subsample <- sort(sample(samples_list, size=size, replace=TRUE))
+      subsample_df <- data.frame(samples=subsample)
+      output_file = paste(output_dir, paste(paste(output_file_name, 'size', size, 'rep', r, sep='_'), '.txt', sep=''), sep='/')
+      subsample_df %>% write.table(output_file, quote = F, sep='\t', row.names = F, col.names = T)
+      subsamples_df = rbind(subsamples_df, data.frame(size=size, rep=r, samples=paste(subsample, collapse = ';')))
+    }
+  }
+  return(subsamples_df)
+}
+
+```
+
+> Important to note: There are many samples that have the same Scipher_id, meaning that they come from the same patient. They only differ by the "batch", which can be either "seq_fac1" or "seq_fac2".
+
+
+```{r, echo=FALSE, results='hide'}
+# Select all samples
+all_samples = metadata_RNA$Scipher_id.visit.batch
+
+# Select all samples at baseline
+all_samples_baseline = metadata_RNA_0m$Scipher_id.visit.batch
+
+# Select one sample per patient at baseline
+sample_per_patient_baseline = c()
+for (patient in unique(metadata_RNA_0m$Scipher_id)){
+  samples_patient = metadata_RNA_0m[metadata_RNA_0m$Scipher_id == patient,]$Scipher_id.visit.batch
+  random_sample = sample(samples_patient, size=1, replace=FALSE)
+  sample_per_patient_baseline = c(sample_per_patient_baseline, random_sample)
+}
+
+# Get the responder and nonresponder samples from the previous list
+sample_per_patient_baseline_df = metadata_RNA_0m %>% filter(Scipher_id.visit.batch %in% sample_per_patient_baseline)
+
+# Responders are selected when they respond either in eular or acr50 and do not have any non-response
+#responder_euler_df = sample_per_patient_baseline_df %>% filter(( (eular_binary_3m == "responder") & (eular_binary_6m == "responder")) | ((eular_binary_3m == "responder") & (eular_binary_6m == "")) | ((eular_binary_3m == "") & (eular_binary_6m == "responder")) )
+responder_df = sample_per_patient_baseline_df %>% filter( (!(eular_binary_3m == "nonresponder")) & (!(eular_binary_6m == "nonresponder")) & (!(acr50_3m == "nonresponder")) & (!(acr50_6m == "nonresponder")) & ( (eular_binary_3m == "responder") | (eular_binary_6m == "responder") | (acr50_3m == "responder") | (acr50_6m == "responder") ) )
+sample_per_responder_baseline = responder_df$Scipher_id.visit.batch
+
+# Nonresponders are selected when they don't respond either in eular or acr50 and do not have any response
+#nonresponder_euler_df = sample_per_patient_baseline_df %>% filter(( (eular_binary_3m == "nonresponder") & (eular_binary_6m == "nonresponder")) | ((eular_binary_3m == "nonresponder") & (eular_binary_6m == "")) | ((eular_binary_3m == "") & (eular_binary_6m == "nonresponder")) )
+nonresponder_df = sample_per_patient_baseline_df %>% filter( (!(eular_binary_3m == "responder")) & (!(eular_binary_6m == "responder")) & (!(acr50_3m == "responder")) & (!(acr50_6m == "responder")) & ( (eular_binary_3m == "nonresponder") | (eular_binary_6m == "nonresponder") | (acr50_3m == "nonresponder") | (acr50_6m == "nonresponder") ) )
+sample_per_nonresponder_baseline = nonresponder_df$Scipher_id.visit.batch
+
+```
+
+We have selected different groups of samples according to different criteria:
+
+* All samples, no matter the visit or batch (`r length(all_samples)`)
+* All samples at baseline, no matter the batch (`r length(all_samples_baseline)`)
+* One sample per patient at baseline (`r length(sample_per_patient_baseline)`)
+* One sample per responder patient at baseline (`r length(sample_per_responder_baseline)`)
+* One sample per non-responder patient at baseline (`r length(sample_per_nonresponder_baseline)`)
+
+
+```{r, echo=FALSE, results='hide'}
+group_to_samples = list("all_samples"=all_samples, "all_samples_baseline"=all_samples_baseline, "sample_per_patient_baseline"=sample_per_patient_baseline, "responder_baseline"=sample_per_responder_baseline, "nonresponder_baseline"=sample_per_nonresponder_baseline)
+n_repetitions = 5
+
+for (group in names(group_to_samples)){
+  sampling_dir = paste(output_dir, 'sampling/Scipher/Dec2021/sampling_with_repetition', group, sep='/')
+  dir.create(sampling_dir, showWarnings = FALSE)
+  samples = group_to_samples[[group]]
+  size_list <- seq(10, length(samples), 10)
+  # Create a file with a list of all samples
+  all_samples_df <- data.frame(samples=samples)
+  output_file = paste(sampling_dir, paste('scipher_', group, '_all_samples.txt', sep=""), sep='/')
+  all_samples_df %>% write.table(output_file, quote = F, sep='\t', row.names = F, col.names = T)
+  # Create files with lists of subsamples
+  output_file_name = paste('scipher_', group, sep = "")
+  subsamples_df <- create_random_subsamples_with_replacement(samples_list=samples, size_list=size_list, rep=n_repetitions, output_dir=sampling_dir, output_file_name=output_file_name)
+
+}
+
+```
+

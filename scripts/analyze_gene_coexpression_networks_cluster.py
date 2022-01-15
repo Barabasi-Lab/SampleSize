@@ -78,8 +78,7 @@ def create_gene_coexpression_networks(options):
     max_time_per_queue = {
         'debug'   : '0:20:00',
         'express' : '0:60:00',
-        #'short'   : '24:00:00',
-        'short'   : '1:00:00',
+        'short'   : '24:00:00',
         'long'    : '5-0',
         'large'   : '6:00:00'
     }
@@ -116,6 +115,39 @@ def create_gene_coexpression_networks(options):
                 submit_command_to_queue(command, max_jobs_in_queue=int(config.get("Cluster", "max_jobs_in_queue")), queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude, conda_environment=conda_environment)
 
                 l += 1
+
+        if limit: # Break the loop if a limit of jobs is introduced
+            if l > limit:
+                print('The number of submitted jobs arrived to the limit of {}. The script will stop sending submissions!'.format(limit))
+                break
+        
+        # Run the analysis of stability
+        script_file = os.path.join(src_path, 'analyze_stability_coexpression_networks.R')
+        coexpression_file = os.path.join(input_dir, dataset)
+        # Check if there is the word size in the name of the dataset (meaning it is not the network from all samples)
+        if 'size' in dataset:
+            dataset_all_samples = dataset.split('size')[0] + 'all_samples.net'
+            coexpression_file_all_samples = os.path.join(input_dir, dataset_all_samples)
+            dataset_name = '{}'.format('.'.join(dataset.split('.')[:-1]))
+            output_difference_file = os.path.join(output_dir, 'analysis_score_difference_{}.txt'.format(dataset_name))
+            output_scores_file = os.path.join(output_dir, 'analysis_score_ranges_{}.txt'.format(dataset_name))
+            output_threshold_file = os.path.join(output_dir, 'analysis_score_thresholds_{}.txt'.format(dataset_name))
+            output_disease_file = os.path.join(output_dir, 'analysis_score_diseases_{}.txt'.format(dataset_name))
+            bash_script_name = 'analysis_stability_coexpression_networks_{}.sh'.format(dataset_name)
+            bash_script_file = os.path.join(dummy_dir, bash_script_name)
+
+            # Check that the network of all samples exist!
+            if fileExist(coexpression_file_all_samples):
+                #if not fileExist(bash_script_file):
+                if not fileExist(output_disease_file):
+
+                    if 'aracne' not in dataset_name:
+                        # Rscript /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_stability_coexpression_networks.R -c /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_female/wgcna_RNAseq_samples_Spleen_female_size_10_rep_2.net -a /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_female/wgcna_RNAseq_samples_Spleen_female_all_samples.net -p /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Spleen_female.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_GTEx/Spleen_female/analysis_score_difference_wgcna_RNAseq_samples_Spleen_female_size_10_rep_2.txt -s /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_GTEx/Spleen_female/analysis_score_ranges_wgcna_RNAseq_samples_Spleen_female_size_10_rep_2.txt -t /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_GTEx/Spleen_female/analysis_score_thresholds_wgcna_RNAseq_samples_Spleen_female_size_10_rep_2.txt
+                        command = 'Rscript {} -c {} -a {} -p {} -d {} -s {} -t {} -r {}'.format(script_file, coexpression_file, coexpression_file_all_samples, ppi_file, output_difference_file, output_scores_file, output_threshold_file, output_disease_file)
+                        print(command)
+                        submit_command_to_queue(command, max_jobs_in_queue=int(config.get("Cluster", "max_jobs_in_queue")), queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude, conda_environment=conda_environment)
+
+                        l += 1
 
     return
 

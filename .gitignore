@@ -6,6 +6,7 @@ logs/
 scripts/infomap
 scripts/SampleSizeR
 scripts/NetworkMedicineToolbox
+scripts/DeisyCode
 scripts/.RData
 scripts/.Rhistory
 
