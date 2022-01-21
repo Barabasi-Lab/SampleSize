@@ -34,12 +34,20 @@ data_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021'
 RNAseq_raw_file = paste(data_dir, '00_data/Network004_hg19_ucsc_counts_20211027.csv', sep='/')
 metadata_file = paste(data_dir, '00_data/RA-netk042021-10-25.xlsx', sep='/')
 ppi_network_symbol_file = paste(ppi_dir, 'interactome_2019_merged_symbols.csv', sep='/')
+mesh_file = paste(databases_dir, 'MeSH/mtrees2021.bin', sep='/')
+metadata_file = paste(data_dir, '00_data/RA-netk042021-10-25.xlsx', sep='/')
+disease_genes_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/Guney2016_GenesDisease.tsv"
+essential_genes_original_file = paste(databases_dir, 'OGEE/OGEE_esential_genes_20190416.txt', sep='/')
 
 # Define output files and dirs
 metadata_RNA_file = paste(data_dir, '00_data/scipher_metadata_rnaseq_counts.csv', sep='/')
 metadata_RNA_0m_file = paste(data_dir, '00_data/scipher_metadata_rnaseq_counts_0m.csv', sep='/')
 RNAseq_processed_file = paste(data_dir, '00_data/scipher_rnaseq_counts_processed.csv', sep='/')
 genes_dataset_file = paste(data_dir, '00_data/scipher_rnaseq_gene_info.csv', sep='/')
+disease_genes_info_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info.csv"
+disease_genes_info_scipher_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_scipher.csv"
+essential_genes_file = paste(databases_dir, 'OGEE/OGEE_esential_genes.csv', sep='/')
+essential_genes_scipher_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_esential_genes_scipher.csv'
 
 ```
 
@@ -216,6 +224,83 @@ metadata_RNA_0m %>%
   summarise(`#` = n()) %>%
   ungroup() %>%
   mutate(`%` = round((`#`/n()), 2))
+```
+
+
+## Prepare disease genes information dataset
+
+```{r}
+# Create a disease gene file containing MESH information
+if(!(file.exists(disease_genes_info_file))){
+  
+  # Parse MESH
+  mesh_df = fread(mesh_file, header=FALSE, col.names = c("concept", "concept.id"))
+  mesh_df$root.concept.id = substr(mesh_df$concept.id,1,3)
+  root.concepts = mesh_df %>% filter(concept.id==root.concept.id) %>% select(concept, concept.id) %>% rename("root.concept"="concept", "root.concept.id"="concept.id")
+  mesh_df = left_join(mesh_df, root.concepts, by=c("root.concept.id" = "root.concept.id"))
+  mesh_df$concept = tolower(mesh_df$concept)
+  mesh_df$root.concept = tolower(mesh_df$root.concept)
+  
+  # Parse disease2gene
+  processDisease2Genes = function(filepath) {
+    disease_genes_df=data.frame(matrix(ncol=2,nrow=0, dimnames=list(NULL, c("disease", "gene.id"))))
+    con = file(filepath, "r")
+    while ( TRUE ) {
+      line = readLines(con, n = 1)
+      if ( length(line) == 0 ) {
+        break
+      }
+      lineValues=strsplit(line, split="\t")[[1]]
+      disease=lineValues[2]
+      genes=lineValues[3:length(lineValues)]
+      disease2genes=data.frame(disease=disease,gene.id=genes)
+      disease_genes_df=rbind(disease_genes_df, disease2genes)
+    }
+    close(con)
+    return(disease_genes_df)
+  }
+  disease_genes_df = processDisease2Genes(disease_genes_file)
+  disease_genes_df$gene.id = as.numeric(disease_genes_df$gene.id)
+  
+  # Parse gene info
+  gene_info_file = '/home/j.aguirreplans/Databases/NCBIGene/Homo_sapiens.gene_info'
+  gene_info_df = fread(gene_info_file) %>% select(GeneID, Symbol)
+  gene_info_df$Symbol = toupper(gene_info_df$Symbol)
+  
+  # Merge disease2gene with gene info to include gene symbols
+  disease_genes_df = inner_join(disease_genes_df, gene_info_df, by=c("gene.id" = "GeneID")) %>% rename("gene"="Symbol")
+  
+  # Merge disease2gene table with MESH and output file
+  disease_genes_df = inner_join(disease_genes_df, mesh_df, by=c("disease" = "concept"))
+  disease_genes_df %>% fwrite(disease_genes_info_file)
+  
+} else {
+  disease_genes_df = fread(disease_genes_info_file)
+}
+
+```
+
+```{r}
+#disease_genes_scipher_df = disease_genes_df %>% filter(gene %in% names(RNAseq_processed))
+#disease_genes_scipher_df %>% fwrite(disease_genes_info_scipher_file)
+
+```
+
+## Prepare essencial genes dataset
+
+```{r}
+essential_genes_df = fread(essential_genes_original_file, header=TRUE) %>% rename("taxID"="#taxID")
+essential_genes_df = essential_genes_df %>% filter((taxID == 9606) & (essential=="E"))
+gene_info_df = fread(gene_info_file)
+gene_info_df = gene_info_df %>% separate_rows(dbXrefs, convert = TRUE) %>% select(Symbol, dbXrefs) %>% unique()
+essential_genes_df = essential_genes_df %>% left_join(gene_info_df, by=c("locus"="dbXrefs")) %>% rename("gene"="Symbol")
+essential_genes_df %>% fwrite(essential_genes_file)
+```
+
+```{r}
+#essential_genes_scipher_df = essential_genes_df %>% filter(gene %in% names(RNAseq_processed))
+#essential_genes_scipher_df %>% fwrite(essential_genes_scipher_file)
+
 ```
 
 

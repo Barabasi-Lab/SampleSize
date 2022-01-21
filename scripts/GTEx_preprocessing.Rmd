@@ -141,15 +141,21 @@ length(samples_df$SAMPID)
 We filter the low expressed genes for each tissue and sex:
 
 ```{r remove_low_expressed_genes_for_all_tissues}
-sex_to_id = data.frame(row.names=c("male","female") , val=c(1,2))
+sex_to_id = data.frame(row.names=c("male","female", "") , val=c(1,2,""))
 for (tissue in unique(samples_df$SMTSD.no.sp.char)){
   for (sex in rownames(sex_to_id)){
     print(tissue)
     print(sex)
-    sex_id = sex_to_id[sex,]
-    # Get TPM matrix of the tissue and sex
-    #samples_tissue = samples_df[samples_df$SMTSD.no.sp.char == tissue,]$SAMPID
-    samples_tissue_sex = samples_df[(samples_df$SMTSD.no.sp.char == tissue) & (samples_df$SEX == sex_id),]$SAMPID
+    if (sex == ""){
+      samples_tissue_sex = samples_df[samples_df$SMTSD.no.sp.char == tissue,]$SAMPID
+      tpm_tissue_sex_filt_file = paste(tpm_filt_dir, paste("GTEx_RNASeq_", tissue, ".gct", sep=''), sep='/')
+      ppi_tissue_sex_filt_file = paste(ppi_filt_dir, paste("interactome_2019_", tissue, ".csv", sep=''), sep='/')
+    } else {
+      sex_id = sex_to_id[sex,]
+      samples_tissue_sex = samples_df[(samples_df$SMTSD.no.sp.char == tissue) & (samples_df$SEX == sex_id),]$SAMPID
+      tpm_tissue_sex_filt_file = paste(tpm_filt_dir, paste("GTEx_RNASeq_", tissue, "_", sex, ".gct", sep=''), sep='/')
+      ppi_tissue_sex_filt_file = paste(ppi_filt_dir, paste("interactome_2019_", tissue, "_", sex, ".csv", sep=''), sep='/')
+    }
     if (length(samples_tissue_sex) > 10){
       tpm_tissue_sex_df = tpm_df %>% select(c("Description", all_of(samples_tissue_sex)))
       print(dim(tpm_tissue_sex_df))
@@ -163,8 +169,8 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
       info_filt_df = info_df[(info_df$sum > 0) & (info_df$mean > 0) & (info_df$median >= 1) & (info_df$sd > 0) & (info_df$zero_sum_counts < dim(tpm_tissue_sex_df[, -1])[2]/2) ,]
       tpm_tissue_sex_filt_df = tpm_tissue_sex_df[tpm_tissue_sex_df$Description %in% info_filt_df$Description,] %>% rename("Gene"="Description")
       print(dim(tpm_tissue_sex_filt_df))
-      tpm_tissue_sex_filt_file = paste(tpm_filt_dir, paste("GTEx_RNASeq_", tissue, "_", sex, ".gct", sep=''), sep='/')
       fwrite(tpm_tissue_sex_filt_df, tpm_tissue_sex_filt_file)
+      
       # Get transposed matrix
       #sample.ids <- tpm_tissue_sex_filt_df[, 1][[1]]
       #tpm_tissue_sex_filt_df <- as.matrix(tpm_tissue_sex_filt_df[, -c(1)])
@@ -177,7 +183,6 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
       
       # Filter low expressed genes in PPI
       ppi_tissue_sex_filt_df = PPI_symbol[(PPI_symbol$proteinA_symbol %in% info_filt_df$Description) & (PPI_symbol$proteinB_symbol %in% info_filt_df$Description),]
-      ppi_tissue_sex_filt_file = paste(ppi_filt_dir, paste("interactome_2019_", tissue, "_", sex, ".csv", sep=''), sep='/')
       fwrite(ppi_tissue_sex_filt_df, ppi_tissue_sex_filt_file)
     }
   }

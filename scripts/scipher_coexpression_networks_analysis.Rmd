@@ -1,0 +1,140 @@
+---
+title: "Scipher co-expression networks analysis"
+author: "Joaquim Aguirre-Plans"
+date: "1/15/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Description
+
+Analyze the co-expression networks created from the Scipher's gene expression dataset.
+
+```{r, message=FALSE, echo=FALSE, results='hide'}
+library(data.table)
+library(dplyr)
+library(igraph)
+library(ggplot2)
+library(wTO)
+set.seed(1510)
+```
+
+```{r define_files, echo=FALSE, results='hide'}
+# Define working directories
+databases_dir = '/home/j.aguirreplans/Databases'
+ppi_dir = '/home/j.aguirreplans/data/PPI'
+data_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021'
+networks_dir = '/scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher'
+
+# Define input files
+#metadata_RNA_file = paste(data_dir, '00_data/scipher_metadata_rnaseq_counts.csv', sep='/')
+#metadata_RNA_0m_file = paste(data_dir, '00_data/scipher_metadata_rnaseq_counts_0m.csv', sep='/')
+coexpression_network_file = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/all_samples/wgcna_scipher_all_samples_size_10_rep_1.net"
+coexpression_network_all_samples_file = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/all_samples/wgcna_scipher_all_samples_all_samples.net"
+ppi_network_symbol_file = paste(ppi_dir, 'interactome_2019_merged_symbols.csv', sep='/')
+ppi_df = fread(ppi_network_symbol_file) %>% select(proteinA_symbol, proteinB_symbol)
+ppi_net = graph_from_data_frame(ppi_df, directed=F) %>% simplify()
+
+```
+
+```{r read_coexpression_networks, echo=FALSE, results='hide'}
+# Read gene co-expression networks
+read_coexpression_network <- function(coexpression_network_file){
+  coexpression_network_df = as.data.frame(fread(coexpression_network_file))
+  if (!(grepl('wto', coexpression_network_file, fixed = TRUE))){
+    # Pass the matrix to the wTO in-line format
+    rownames(coexpression_network_df) = colnames(coexpression_network_df)
+    coexpression_network_df <- coexpression_network_df[order(rownames(coexpression_network_df)), order(colnames(coexpression_network_df))]
+    coexpression_network_df = coexpression_network_df %>% wTO.in.line() %>% rename(score=wTO)
+  } else {
+    coexpression_network_df = coexpression_network_df %>% rename(score=wTO)
+    coexpression_network_df = coexpression_network_df %>% filter(pval.adj < 0.05)
+  }
+  return(coexpression_network_df)
+}
+
+```
+
+```{r}
+coexpression_network_file = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/all_samples/wgcna_scipher_all_samples_size_10_rep_1.net"
+coexpression_network_df = read_coexpression_network(coexpression_network_file)
+
+coexpression_network_df %>% 
+  ggplot(aes(x=score)) + 
+  geom_histogram( binwidth=0.05, fill="#69b3a2", color="#e9ecef", alpha=0.9) + 
+  ggtitle("Distribution of co-expression (Sample size 10)") +
+  xlab("Co-expression score") + 
+  ylab("Counts")
+
+```
+
+Number of edges of the co-expression network of sample size 10 when we use the following thresholds:
+
+* 0.5: `r nrow(coexpression_network_df %>% filter(score > 0.5))`
+* 0.6: `r nrow(coexpression_network_df %>% filter(score > 0.6))`
+* 0.7: `r nrow(coexpression_network_df %>% filter(score > 0.7))`
+
+```{r}
+coexpression_network_file = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/all_samples/wgcna_scipher_all_samples_size_100_rep_1.net"
+rm(coexpression_network_df)
+coexpression_network_df = read_coexpression_network(coexpression_network_file)
+
+coexpression_network_df %>% 
+  ggplot(aes(x=score)) + 
+  geom_histogram( binwidth=0.05, fill="#69b3a2", color="#e9ecef", alpha=0.9) + 
+  ggtitle("Distribution of co-expression (Sample size 100)") +
+  xlab("Co-expression score") + 
+  ylab("Counts")
+
+```
+
+Number of edges of the co-expression network of sample size 100 when we use the following thresholds:
+
+* 0.5: `r nrow(coexpression_network_df %>% filter(score > 0.5))`
+* 0.6: `r nrow(coexpression_network_df %>% filter(score > 0.6))`
+* 0.7: `r nrow(coexpression_network_df %>% filter(score > 0.7))`
+
+```{r}
+coexpression_network_file = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/all_samples/wgcna_scipher_all_samples_size_300_rep_1.net"
+rm(coexpression_network_df)
+coexpression_network_df = read_coexpression_network(coexpression_network_file)
+
+coexpression_network_df %>% 
+  ggplot(aes(x=score)) + 
+  geom_histogram( binwidth=0.05, fill="#69b3a2", color="#e9ecef", alpha=0.9) + 
+  ggtitle("Distribution of co-expression (Sample size 300)") +
+  xlab("Co-expression score") + 
+  ylab("Counts")
+
+```
+
+Number of edges of the co-expression network of sample size 300 when we use the following thresholds:
+
+* 0.5: `r nrow(coexpression_network_df %>% filter(score > 0.5))`
+* 0.6: `r nrow(coexpression_network_df %>% filter(score > 0.6))`
+* 0.7: `r nrow(coexpression_network_df %>% filter(score > 0.7))`
+
+
+```{r}
+coexpression_network_file = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/all_samples/wgcna_scipher_all_samples_size_500_rep_1.net"
+rm(coexpression_network_df)
+coexpression_network_df = read_coexpression_network(coexpression_network_file)
+
+coexpression_network_df %>% 
+  ggplot(aes(x=score)) + 
+  geom_histogram( binwidth=0.05, fill="#69b3a2", color="#e9ecef", alpha=0.9) + 
+  ggtitle("Distribution of co-expression (Sample size 500)") +
+  xlab("Co-expression score") + 
+  ylab("Counts")
+
+```
+
+Number of edges of the co-expression network of sample size 500 when we use the following thresholds:
+
+* 0.5: `r nrow(coexpression_network_df %>% filter(score > 0.5))`
+* 0.6: `r nrow(coexpression_network_df %>% filter(score > 0.6))`
+* 0.7: `r nrow(coexpression_network_df %>% filter(score > 0.7))`
+

@@ -12,6 +12,32 @@ require(dplyr)
 require(data.table)
 require(minet)
 
+
+################################################################################
+
+#'  Calculate disparity filter algorithm from MA Sierra et al.
+#'
+#'  Method to calculate the disparity filter to remove spurious correlations.
+#'  
+#'  Function extracted from https://github.com/menchelab/MultiOme/blob/main/functions/sim_mat_functions.R
+#'  
+#'  @param weighted_adj_mat   Weighted adjacency matrix of correlation values.
+#'
+backbone_cal = function(weighted_adj_mat){
+  pval_mat = weighted_adj_mat
+  #====
+  message("Calculate weight and degree of all nodes")
+  W = colSums(weighted_adj_mat, na.rm = T)
+  k = apply(weighted_adj_mat, 2, function(x) sum(!is.na(x)))
+  #====
+  message("Calculate p-value from each connection")
+  for(i in 1:ncol(pval_mat)){
+    pval_mat[,i] = (1-(weighted_adj_mat[,i]/W[i]))^(k[i]-1)
+  }
+  return(pval_mat)
+}
+
+
 ################################################################################
 
 #'  Write correlation networks to file.
@@ -23,13 +49,29 @@ require(minet)
 #'  @param out_name The name of the file to write the correlations to.
 #'  @param cor_method The correlation method to use. Spearman ("s", "spearman") or Pearson ("p", "pearson") correlation. Default is "pearson". 
 #'
-calculate_correlation <- function(rnaseq, out_name, cor_method="pearson"){
+calculate_correlation <- function(rnaseq, out_name, cor_method="pearson", disparity_filter=TRUE, corr_threshold=NA, pval_threshold=NA){
   
   correlation_result = CorrelationOverlap(Data = rnaseq, Overlap = row.names(rnaseq), method = "p") %>% as.data.frame() 
-  #correlation_result = correlation_result %>% wTO.in.line() %>% rename(!!cor_method := "wTO")
+  
+  if (!(is.na(corr_threshold))){
+    correlation_result[abs(correlation_result) <= corr_threshold] = NA
+  }
+
+  if (isTRUE(disparity_filter)){
+    correlation_pval_mat = backbone_cal(correlation_result)
+    correlation_result = correlation_result %>% wTO.in.line() %>% rename(!!cor_method := "wTO")
+    correlation_pval_mat = correlation_pval_mat %>% wTO.in.line() %>% rename("pvalue" := "wTO")
+    correlation_result = correlation_result %>% inner_join(correlation_pval_mat)
+    rm(correlation_pval_mat)
+    if (!(is.na(pval_threshold))){
+      correlation_result = correlation_result %>% filter(pvalue < pval_threshold)
+    }
+  }
+  
   fwrite(correlation_result, out_name)
   
 }
+
 
 ################################################################################
 

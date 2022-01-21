@@ -104,7 +104,7 @@ rownames(rnaseq.t) <- colnames(rnaseq)
 
 if((metric == 'spearman') | (metric == 'pearson')){
   
-  calculate_correlation(rnaseq, output_file, cor_method=metric)
+  calculate_correlation(rnaseq, output_file, cor_method=metric, disparity_filter=TRUE, corr_threshold=NA, pval_threshold=NA)
   
 } else if((metric == 'mi') | (metric == 'mutual_information')){
   

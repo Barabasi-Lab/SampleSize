@@ -1,0 +1,192 @@
+---
+title: "Parse co-expression analysis results"
+author: "Joaquim Aguirre-Plans"
+date: "1/18/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Description
+
+Parse the results of the analysis of co-expression networks.
+
+```{r, message=FALSE, echo=FALSE, results='hide'}
+library(data.table)
+library(dplyr)
+set.seed(1510)
+```
+
+## Parse results
+
+
+```{r parse_results, echo=FALSE, results='hide'}
+# Input data
+input_dir <- '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out'
+
+# Input parameters
+tissues <- c("Spleen", "Whole.Blood")
+sex_to_id = data.frame(row.names=c("male","female","both") , val=c(1,2,""))
+scipher_dataset_to_results_name = data.frame(row.names=c("scipherold_responder","scipherold_nonresponder") , val=c("analysis_responders_wto_N100", "analysis_nonresponders_wto_N100"))
+
+# Define result dataframes
+topology_df <- setNames(data.frame(matrix(ncol = 10, nrow = 0)), c('size', 'rep', 'nodes', 'edges', 'av_degree', 'av_path_length', 'av_clustering_coef', 'pval', 'top', 'dataset'))
+components_df <- setNames(data.frame(matrix(ncol = 7, nrow = 0)), c('size', 'rep', 'num_components', 'size_lcc', 'pval', 'top', 'dataset'))
+composition_df <- setNames(data.frame(matrix(ncol = 9, nrow = 0)), c('size', 'rep', 'lost_nodes', 'lost_edges', 'gained_nodes', 'gained_edges', 'pval', 'top', 'dataset'))
+disease_df <- setNames(data.frame(matrix(ncol = 10, nrow = 0)), c('size', 'rep', 'disease_class', 'total_disease_genes', 'total_disease_genes_in_dataset', 'disease_genes_in_network', 'lcc_size', 'pval', 'top', 'dataset'))
+coexpressed_ppis_df <- setNames(data.frame(matrix(ncol = 18, nrow = 0)), c("method", "dataset", "type_dataset", "tissue", "sex", "size", "rep", "TP", "FP", "TN", "FN", "TPR", "FPR", "accuracy", "F1", "MCC", "corr", "type_prediction"))
+difference_df = data.frame(matrix(ncol=11,nrow=0, dimnames=list(NULL, c("method", "dataset", "type_dataset", "tissue", "sex", "size", "rep", "left.range", "right.range", "number.of.edges", "type_interaction"))))
+scores_df = data.frame(matrix(ncol=18,nrow=0, dimnames=list(NULL, c("method", "dataset", "type_dataset", "tissue", "sex", "size", "rep", "left.range", "right.range", "number.of.edges", "difference.mean", "score.subset.mean", "score.all.samples.mean", "distance.mean", "local_clustering_coefficient.mean", "degree_centrality.mean", "betweenness_centrality.mean", "type_interaction"))))
+threshold_results_df = data.frame(matrix(ncol=14,nrow=0, dimnames=list(NULL, c("method", "dataset", "type_dataset", "tissue", "sex", "size", "rep", "threshold", "number.of.edges.subset", "number.of.edges.all.samples", "number.of.edges.overlapped", "number.of.edges.lost", "number.of.edges.gained", "type_interaction"))))
+disease_results_df = data.frame(matrix(ncol=19,nrow=0, dimnames=list(NULL, c("method", "dataset", "type_dataset", "tissue", "sex", "size", "rep", "disease","disease_class","disease_genes_in_network", "num.edges", "distances", "local_clustering_coefficient.mean", "degree_centrality.mean", "betweenness_centrality.mean", "score.subset.network","score.all.samples.network","difference","type_interaction"))))
+
+for(dataset in c('gtex', 'scipher')){
+  if (dataset == 'scipher'){
+    # Parse results of the old dataset
+    for(scipher_dataset in c("scipherold_responder", "scipherold_nonresponder")){
+      results_name = scipher_dataset_to_results_name[scipher_dataset,]
+      for(pval in c(0.01, 0.05)){
+        for(top_percent in c(0.1, 0.5, 1, 100)){
+          cut_off_dir <- paste(input_dir, '/', results_name, '_pval_', pval, '_top_', top_percent, sep='')
+          for(size in c(10, 20, 30, 40, 50)){
+            topology_file <- paste(cut_off_dir, '/topology_size_', size, '.txt', sep='')
+            components_file <- paste(cut_off_dir, '/components_size_', size, '.txt', sep='')
+            composition_file <- paste(cut_off_dir, '/composition_size_', size, '.txt', sep='')
+            disease_file <- paste(cut_off_dir, '/disease_components_size_', size, '.txt', sep='')
+            if(file.exists(topology_file)){
+              small_topology_df <- fread(topology_file)
+              small_topology_df$pval <- pval
+              small_topology_df$top <- top_percent
+              small_topology_df$dataset <- dataset
+              topology_df <- rbind(topology_df, small_topology_df)
+            }
+            if(file.exists(components_file)){
+              small_components_df <- fread(components_file)
+              small_components_df$pval <- pval
+              small_components_df$top <- top_percent
+              small_components_df$dataset <- dataset
+              components_df <- rbind(components_df, small_components_df)
+            }
+            if(file.exists(composition_file)){
+              small_composition_df <- fread(composition_file)
+              small_composition_lost_df <- small_composition_df[small_composition_df$lost_or_gained == 'lost',][,c('size', 'rep', 'nodes', 'edges')]
+              colnames(small_composition_lost_df) <- c('size', 'rep', 'lost_nodes', 'lost_edges')
+              small_composition_gained_df <- small_composition_df[small_composition_df$lost_or_gained == 'gained',][,c('nodes', 'edges')]
+              colnames(small_composition_gained_df) <- c('gained_nodes', 'gained_edges')
+              small_composition2_df <- cbind(small_composition_lost_df, small_composition_gained_df)
+              small_composition2_df$pval <- pval
+              small_composition2_df$top <- top_percent
+              small_composition2_df$dataset <- dataset
+              composition_df <- rbind(composition_df, small_composition2_df)
+            }
+            if(file.exists(disease_file)){
+              small_disease_df <- fread(disease_file)
+              small_disease_df$pval <- pval
+              small_disease_df$top <- top_percent
+              small_disease_df$dataset <- dataset
+              disease_df <- rbind(disease_df, small_disease_df)
+            }
+          }
+        }
+      }
+    }
+  }
+  # Parse results of the new datasets
+  if (dataset == 'gtex'){
+    results_name = 'networks_GTEx'
+    results_list = c()
+    for(tissue in tissues){
+      for(sex in rownames(sex_to_id)){
+        if (sex == "both"){
+          result = tissue
+        } else {
+          result = paste(tissue, '_', sex, sep="")
+        }
+        results_list = c(results_list, result)
+      }
+    }
+  } else {
+    results_name = 'networks_scipher'
+    results_list = c("all_samples", "all_samples_baseline", "sample_per_patient_baseline", "responder_baseline", "nonresponder_baseline")
+  }
+  for(type_dataset in results_list){
+    if (dataset == "gtex"){
+      type_dataset_split = strsplit(type_dataset, split="_")[[1]]
+      if (length(type_dataset_split == 2)){
+        tissue = type_dataset_split[1]
+        sex = type_dataset_split[2]
+      } else {
+        tissue = type_dataset_split[1]
+        sex = "both"
+      }
+    } else {
+      tissue = NA
+      sex = NA
+    }
+    results_dir <- paste(input_dir, '/', results_name, '/', type_dataset, sep='')
+    result_files = list.files(results_dir)
+    for(result_file in result_files){
+      file_split = strsplit(gsub(".txt","",result_file), split="_")[[1]]
+      method = file_split[4]
+      size = file_split[(length(file_split)-2)]
+      r = file_split[(length(file_split))]
+      if(grepl("all_samples.txt", result_file, fixed = TRUE)){
+        size = "all"
+        r = NA
+      }
+      if(grepl("comparison_coexpression_ppi", result_file, fixed = TRUE)){
+        coexpressed_ppis_individual_df <- fread(paste(results_dir, result_file, sep="/"))
+        coexpressed_ppis_df <- rbind(coexpressed_ppis_df, cbind(data.frame(method=rep(method, nrow(coexpressed_ppis_individual_df)), dataset=rep(dataset, nrow(coexpressed_ppis_individual_df)), type_dataset=rep(type_dataset, nrow(coexpressed_ppis_individual_df)), tissue=rep(tissue, nrow(coexpressed_ppis_individual_df)), sex=rep(sex, nrow(coexpressed_ppis_individual_df)), size=rep(size, nrow(coexpressed_ppis_individual_df)), rep=rep(r, nrow(coexpressed_ppis_individual_df))), coexpressed_ppis_individual_df))
+      } else if(grepl("analysis_score_difference", result_file, fixed = TRUE)){
+        difference_individual_df <- fread(paste(results_dir, result_file, sep="/"))
+        difference_df <- rbind(difference_df, cbind(data.frame(method=rep(method, nrow(difference_individual_df)), dataset=rep(dataset, nrow(difference_individual_df)), type_dataset=rep(type_dataset, nrow(difference_individual_df)), tissue=rep(tissue, nrow(difference_individual_df)), sex=rep(sex, nrow(difference_individual_df)), size=rep(size, nrow(difference_individual_df)), rep=rep(r, nrow(difference_individual_df))), difference_individual_df))
+      } else if(grepl("analysis_score_ranges", result_file, fixed = TRUE)){
+        scores_individual_df <- fread(paste(results_dir, result_file, sep="/"))
+        scores_df <- rbind(scores_df, cbind(data.frame(method=rep(method, nrow(scores_individual_df)), dataset=rep(dataset, nrow(scores_individual_df)), type_dataset=rep(type_dataset, nrow(scores_individual_df)), tissue=rep(tissue, nrow(scores_individual_df)), sex=rep(sex, nrow(scores_individual_df)), size=rep(size, nrow(scores_individual_df)), rep=rep(r, nrow(scores_individual_df))), scores_individual_df))
+      } else if(grepl("analysis_score_thresholds", result_file, fixed = TRUE)){
+        threshold_results_individual_df <- fread(paste(results_dir, result_file, sep="/"))
+        threshold_results_df <- rbind(threshold_results_df, cbind(data.frame(method=rep(method, nrow(threshold_results_individual_df)), dataset=rep(dataset, nrow(threshold_results_individual_df)), type_dataset=rep(type_dataset, nrow(threshold_results_individual_df)), tissue=rep(tissue, nrow(threshold_results_individual_df)), sex=rep(sex, nrow(threshold_results_individual_df)), size=rep(size, nrow(threshold_results_individual_df)), rep=rep(r, nrow(threshold_results_individual_df))), threshold_results_individual_df))
+      } else if(grepl("analysis_score_diseases", result_file, fixed = TRUE)){
+        disease_results_individual_df <- fread(paste(results_dir, result_file, sep="/")) %>% select("disease","disease_class","disease_genes_in_network", "num.edges", "distances", "local_clustering_coefficient.mean", "degree_centrality.mean", "betweenness_centrality.mean", "score.subset.network","score.all.samples.network","difference","type_interaction")
+        disease_results_df <- rbind(disease_results_df, cbind(data.frame(method=rep(method, nrow(disease_results_individual_df)), dataset=rep(dataset, nrow(disease_results_individual_df)), type_dataset=rep(type_dataset, nrow(disease_results_individual_df)), tissue=rep(tissue, nrow(disease_results_individual_df)), sex=rep(sex, nrow(disease_results_individual_df)), size=rep(size, nrow(disease_results_individual_df)), rep=rep(r, nrow(disease_results_individual_df))), disease_results_individual_df))
+      }
+    }
+  }
+}
+
+topology_df <- cbind(topology_df, components_df[,c('num_components', 'size_lcc')], composition_df[,c('lost_nodes', 'lost_edges', 'gained_nodes', 'gained_edges')])
+
+# Calculate the percentage of disease genes in the network and in the LCC
+disease_df$percent_disease_genes_in_network = disease_df$disease_genes_in_network/disease_df$total_disease_genes_in_dataset*100
+disease_df$percent_disease_genes_in_lcc = disease_df$lcc_size/disease_df$total_disease_genes_in_dataset*100
+
+```
+
+
+```{r output_results, echo=FALSE, results='hide'}
+# Define output files
+output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/data_shiny_app'
+topology_file = paste(output_dir, 'topology_old_scipher.csv', sep='/')
+disease_file = paste(output_dir, 'disease_old_scipher.csv', sep='/')
+coexpressed_ppis_file = paste(output_dir, 'coexpressed_ppis.csv', sep='/')
+difference_file = paste(output_dir, 'difference.csv', sep='/')
+scores_file = paste(output_dir, 'scores.csv', sep='/')
+threshold_results_file = paste(output_dir, 'threshold.csv', sep='/')
+disease_results_file = paste(output_dir, 'disease.csv', sep='/')
+
+# Write results
+topology_df %>% fwrite(topology_file)
+disease_df %>% fwrite(disease_file)
+coexpressed_ppis_df %>% fwrite(coexpressed_ppis_file)
+difference_df %>% fwrite(difference_file)
+scores_df %>% fwrite(scores_file)
+threshold_results_df %>% fwrite(threshold_results_file)
+disease_results_df %>% fwrite(disease_results_file)
+
+```
+
+
+
+

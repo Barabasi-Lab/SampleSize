@@ -501,15 +501,21 @@ dim(tpm_df[,-1])</code></pre>
 <pre class="r"><code>length(samples_df$SAMPID)</code></pre>
 <pre><code>## [1] 17271</code></pre>
 <p>We filter the low expressed genes for each tissue and sex:</p>
-<pre class="r"><code>sex_to_id = data.frame(row.names=c(&quot;male&quot;,&quot;female&quot;) , val=c(1,2))
+<pre class="r"><code>sex_to_id = data.frame(row.names=c(&quot;male&quot;,&quot;female&quot;, &quot;&quot;) , val=c(1,2,&quot;&quot;))
 for (tissue in unique(samples_df$SMTSD.no.sp.char)){
   for (sex in rownames(sex_to_id)){
     print(tissue)
     print(sex)
-    sex_id = sex_to_id[sex,]
-    # Get TPM matrix of the tissue and sex
-    #samples_tissue = samples_df[samples_df$SMTSD.no.sp.char == tissue,]$SAMPID
-    samples_tissue_sex = samples_df[(samples_df$SMTSD.no.sp.char == tissue) &amp; (samples_df$SEX == sex_id),]$SAMPID
+    if (sex == &quot;&quot;){
+      samples_tissue_sex = samples_df[samples_df$SMTSD.no.sp.char == tissue,]$SAMPID
+      tpm_tissue_sex_filt_file = paste(tpm_filt_dir, paste(&quot;GTEx_RNASeq_&quot;, tissue, &quot;.gct&quot;, sep=''), sep='/')
+      ppi_tissue_sex_filt_file = paste(ppi_filt_dir, paste(&quot;interactome_2019_&quot;, tissue, &quot;.csv&quot;, sep=''), sep='/')
+    } else {
+      sex_id = sex_to_id[sex,]
+      samples_tissue_sex = samples_df[(samples_df$SMTSD.no.sp.char == tissue) &amp; (samples_df$SEX == sex_id),]$SAMPID
+      tpm_tissue_sex_filt_file = paste(tpm_filt_dir, paste(&quot;GTEx_RNASeq_&quot;, tissue, &quot;_&quot;, sex, &quot;.gct&quot;, sep=''), sep='/')
+      ppi_tissue_sex_filt_file = paste(ppi_filt_dir, paste(&quot;interactome_2019_&quot;, tissue, &quot;_&quot;, sex, &quot;.csv&quot;, sep=''), sep='/')
+    }
     if (length(samples_tissue_sex) &gt; 10){
       tpm_tissue_sex_df = tpm_df %&gt;% select(c(&quot;Description&quot;, all_of(samples_tissue_sex)))
       print(dim(tpm_tissue_sex_df))
@@ -523,8 +529,8 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
       info_filt_df = info_df[(info_df$sum &gt; 0) &amp; (info_df$mean &gt; 0) &amp; (info_df$median &gt;= 1) &amp; (info_df$sd &gt; 0) &amp; (info_df$zero_sum_counts &lt; dim(tpm_tissue_sex_df[, -1])[2]/2) ,]
       tpm_tissue_sex_filt_df = tpm_tissue_sex_df[tpm_tissue_sex_df$Description %in% info_filt_df$Description,] %&gt;% rename(&quot;Gene&quot;=&quot;Description&quot;)
       print(dim(tpm_tissue_sex_filt_df))
-      tpm_tissue_sex_filt_file = paste(tpm_filt_dir, paste(&quot;GTEx_RNASeq_&quot;, tissue, &quot;_&quot;, sex, &quot;.gct&quot;, sep=''), sep='/')
       fwrite(tpm_tissue_sex_filt_df, tpm_tissue_sex_filt_file)
+      
       # Get transposed matrix
       #sample.ids &lt;- tpm_tissue_sex_filt_df[, 1][[1]]
       #tpm_tissue_sex_filt_df &lt;- as.matrix(tpm_tissue_sex_filt_df[, -c(1)])
@@ -537,7 +543,6 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
       
       # Filter low expressed genes in PPI
       ppi_tissue_sex_filt_df = PPI_symbol[(PPI_symbol$proteinA_symbol %in% info_filt_df$Description) &amp; (PPI_symbol$proteinB_symbol %in% info_filt_df$Description),]
-      ppi_tissue_sex_filt_file = paste(ppi_filt_dir, paste(&quot;interactome_2019_&quot;, tissue, &quot;_&quot;, sex, &quot;.csv&quot;, sep=''), sep='/')
       fwrite(ppi_tissue_sex_filt_df, ppi_tissue_sex_filt_file)
     }
   }
@@ -550,6 +555,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655   216
 ## [1] 12586   216
+## [1] &quot;Adipose.Subcutaneous&quot;
+## [1] &quot;&quot;
+## [1] 17655   652
+## [1] 12628   652
 ## [1] &quot;Muscle.Skeletal&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   536
@@ -558,6 +567,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655   257
 ## [1] 10760   257
+## [1] &quot;Muscle.Skeletal&quot;
+## [1] &quot;&quot;
+## [1] 17655   792
+## [1] 10733   792
 ## [1] &quot;Artery.Tibial&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   446
@@ -566,6 +579,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655   207
 ## [1] 12261   207
+## [1] &quot;Artery.Tibial&quot;
+## [1] &quot;&quot;
+## [1] 17655   652
+## [1] 12283   652
 ## [1] &quot;Artery.Coronary&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   147
@@ -574,6 +591,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655    95
 ## [1] 12730    95
+## [1] &quot;Artery.Coronary&quot;
+## [1] &quot;&quot;
+## [1] 17655   241
+## [1] 12745   241
 ## [1] &quot;Heart.Atrial.Appendage&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   294
@@ -582,6 +603,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655   137
 ## [1] 11928   137
+## [1] &quot;Heart.Atrial.Appendage&quot;
+## [1] &quot;&quot;
+## [1] 17655   430
+## [1] 11972   430
 ## [1] &quot;Adipose.Visceral.Omentum&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   372
@@ -590,16 +615,28 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655   171
 ## [1] 12654   171
+## [1] &quot;Adipose.Visceral.Omentum&quot;
+## [1] &quot;&quot;
+## [1] 17655   542
+## [1] 12731   542
 ## [1] &quot;Uterus&quot;
 ## [1] &quot;male&quot;
 ## [1] &quot;Uterus&quot;
 ## [1] &quot;female&quot;
 ## [1] 17655   142
 ## [1] 12903   142
+## [1] &quot;Uterus&quot;
+## [1] &quot;&quot;
+## [1] 17655   142
+## [1] 12903   142
 ## [1] &quot;Vagina&quot;
 ## [1] &quot;male&quot;
 ## [1] &quot;Vagina&quot;
 ## [1] &quot;female&quot;
+## [1] 17655   155
+## [1] 13287   155
+## [1] &quot;Vagina&quot;
+## [1] &quot;&quot;
 ## [1] 17655   155
 ## [1] 13287   155
 ## [1] &quot;Breast.Mammary.Tissue&quot;
@@ -610,6 +647,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655   169
 ## [1] 13263   169
+## [1] &quot;Breast.Mammary.Tissue&quot;
+## [1] &quot;&quot;
+## [1] 17655   460
+## [1] 13015   460
 ## [1] &quot;Skin.Not.Sun.Exposed.Suprapubic&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   412
@@ -618,6 +659,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655   194
 ## [1] 12924   194
+## [1] &quot;Skin.Not.Sun.Exposed.Suprapubic&quot;
+## [1] &quot;&quot;
+## [1] 17655   605
+## [1] 12925   605
 ## [1] &quot;Minor.Salivary.Gland&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   116
@@ -626,6 +671,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655    48
 ## [1] 13087    48
+## [1] &quot;Minor.Salivary.Gland&quot;
+## [1] &quot;&quot;
+## [1] 17655   163
+## [1] 12995   163
 ## [1] &quot;Brain.Cortex&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   182
@@ -634,6 +683,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655    75
 ## [1] 12819    75
+## [1] &quot;Brain.Cortex&quot;
+## [1] &quot;&quot;
+## [1] 17655   256
+## [1] 12826   256
 ## [1] &quot;Adrenal.Gland&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   158
@@ -642,6 +695,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655   102
 ## [1] 12273   102
+## [1] &quot;Adrenal.Gland&quot;
+## [1] &quot;&quot;
+## [1] 17655   259
+## [1] 12247   259
 ## [1] &quot;Thyroid&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   435
@@ -650,6 +707,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655   218
 ## [1] 13227   218
+## [1] &quot;Thyroid&quot;
+## [1] &quot;&quot;
+## [1] 17655   652
+## [1] 13252   652
 ## [1] &quot;Lung&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   396
@@ -658,6 +719,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655   182
 ## [1] 13478   182
+## [1] &quot;Lung&quot;
+## [1] &quot;&quot;
+## [1] 17655   577
+## [1] 13428   577
 ## [1] &quot;Spleen&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   155
@@ -666,6 +731,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655    87
 ## [1] 12858    87
+## [1] &quot;Spleen&quot;
+## [1] &quot;&quot;
+## [1] 17655   241
+## [1] 12849   241
 ## [1] &quot;Pancreas&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   208
@@ -674,6 +743,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655   122
 ## [1] 11397   122
+## [1] &quot;Pancreas&quot;
+## [1] &quot;&quot;
+## [1] 17655   329
+## [1] 11469   329
 ## [1] &quot;Esophagus.Muscularis&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   339
@@ -682,6 +755,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655   177
 ## [1] 12497   177
+## [1] &quot;Esophagus.Muscularis&quot;
+## [1] &quot;&quot;
+## [1] 17655   515
+## [1] 12503   515
 ## [1] &quot;Esophagus.Mucosa&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   364
@@ -690,6 +767,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655   191
 ## [1] 12649   191
+## [1] &quot;Esophagus.Mucosa&quot;
+## [1] &quot;&quot;
+## [1] 17655   554
+## [1] 12649   554
 ## [1] &quot;Esophagus.Gastroesophageal.Junction&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   252
@@ -698,6 +779,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655   125
 ## [1] 12537   125
+## [1] &quot;Esophagus.Gastroesophageal.Junction&quot;
+## [1] &quot;&quot;
+## [1] 17655   376
+## [1] 12553   376
 ## [1] &quot;Stomach&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   228
@@ -706,6 +791,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655   132
 ## [1] 12609   132
+## [1] &quot;Stomach&quot;
+## [1] &quot;&quot;
+## [1] 17655   359
+## [1] 12579   359
 ## [1] &quot;Colon.Sigmoid&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   241
@@ -714,6 +803,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655   134
 ## [1] 12660   134
+## [1] &quot;Colon.Sigmoid&quot;
+## [1] &quot;&quot;
+## [1] 17655   374
+## [1] 12688   374
 ## [1] &quot;Small.Intestine.Terminal.Ileum&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   121
@@ -722,6 +815,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655    68
 ## [1] 13259    68
+## [1] &quot;Small.Intestine.Terminal.Ileum&quot;
+## [1] &quot;&quot;
+## [1] 17655   188
+## [1] 13271   188
 ## [1] &quot;Colon.Transverse&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   260
@@ -730,18 +827,30 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655   147
 ## [1] 13025   147
+## [1] &quot;Colon.Transverse&quot;
+## [1] &quot;&quot;
+## [1] 17655   406
+## [1] 13062   406
 ## [1] &quot;Prostate&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   246
 ## [1] 13421   246
 ## [1] &quot;Prostate&quot;
 ## [1] &quot;female&quot;
+## [1] &quot;Prostate&quot;
+## [1] &quot;&quot;
+## [1] 17655   246
+## [1] 13421   246
 ## [1] &quot;Testis&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   362
 ## [1] 14954   362
 ## [1] &quot;Testis&quot;
 ## [1] &quot;female&quot;
+## [1] &quot;Testis&quot;
+## [1] &quot;&quot;
+## [1] 17655   362
+## [1] 14954   362
 ## [1] &quot;Nerve.Tibial&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   415
@@ -750,6 +859,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655   197
 ## [1] 13154   197
+## [1] &quot;Nerve.Tibial&quot;
+## [1] &quot;&quot;
+## [1] 17655   611
+## [1] 13191   611
 ## [1] &quot;Skin.Sun.Exposed.Lower.leg&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   461
@@ -758,6 +871,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655   233
 ## [1] 12979   233
+## [1] &quot;Skin.Sun.Exposed.Lower.leg&quot;
+## [1] &quot;&quot;
+## [1] 17655   693
+## [1] 12997   693
 ## [1] &quot;Heart.Left.Ventricle&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   295
@@ -766,6 +883,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655   138
 ## [1] 11093   138
+## [1] &quot;Heart.Left.Ventricle&quot;
+## [1] &quot;&quot;
+## [1] 17655   432
+## [1] 10976   432
 ## [1] &quot;Brain.Cerebellum&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   175
@@ -774,6 +895,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655    68
 ## [1] 12924    68
+## [1] &quot;Brain.Cerebellum&quot;
+## [1] &quot;&quot;
+## [1] 17655   242
+## [1] 12900   242
 ## [1] &quot;Cells.Cultured.fibroblasts&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   322
@@ -782,6 +907,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655   171
 ## [1] 11585   171
+## [1] &quot;Cells.Cultured.fibroblasts&quot;
+## [1] &quot;&quot;
+## [1] 17655   492
+## [1] 11598   492
 ## [1] &quot;Whole.Blood&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   493
@@ -790,6 +919,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655   251
 ## [1] 9719  251
+## [1] &quot;Whole.Blood&quot;
+## [1] &quot;&quot;
+## [1] 17655   743
+## [1] 9608  743
 ## [1] &quot;Artery.Aorta&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   280
@@ -798,6 +931,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655   153
 ## [1] 12564   153
+## [1] &quot;Artery.Aorta&quot;
+## [1] &quot;&quot;
+## [1] 17655   432
+## [1] 12557   432
 ## [1] &quot;Cells.EBV-transformed.lymphocytes&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   105
@@ -806,6 +943,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655    62
 ## [1] 10897    62
+## [1] &quot;Cells.EBV-transformed.lymphocytes&quot;
+## [1] &quot;&quot;
+## [1] 17655   166
+## [1] 10941   166
 ## [1] &quot;Pituitary&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   205
@@ -814,6 +955,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655    80
 ## [1] 13483    80
+## [1] &quot;Pituitary&quot;
+## [1] &quot;&quot;
+## [1] 17655   284
+## [1] 13542   284
 ## [1] &quot;Brain.Frontal.Cortex.BA9&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   154
@@ -822,6 +967,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655    57
 ## [1] 12852    57
+## [1] &quot;Brain.Frontal.Cortex.BA9&quot;
+## [1] &quot;&quot;
+## [1] 17655   210
+## [1] 12818   210
 ## [1] &quot;Brain.Caudate.basal.ganglia&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   184
@@ -830,6 +979,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655    64
 ## [1] 12612    64
+## [1] &quot;Brain.Caudate.basal.ganglia&quot;
+## [1] &quot;&quot;
+## [1] 17655   247
+## [1] 12637   247
 ## [1] &quot;Brain.Nucleus.accumbens.basal.ganglia&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   183
@@ -838,6 +991,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655    65
 ## [1] 12684    65
+## [1] &quot;Brain.Nucleus.accumbens.basal.ganglia&quot;
+## [1] &quot;&quot;
+## [1] 17655   247
+## [1] 12642   247
 ## [1] &quot;Brain.Putamen.basal.ganglia&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   157
@@ -846,6 +1003,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655    50
 ## [1] 12264    50
+## [1] &quot;Brain.Putamen.basal.ganglia&quot;
+## [1] &quot;&quot;
+## [1] 17655   206
+## [1] 12292   206
 ## [1] &quot;Brain.Hypothalamus&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   148
@@ -854,6 +1015,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655    56
 ## [1] 12879    56
+## [1] &quot;Brain.Hypothalamus&quot;
+## [1] &quot;&quot;
+## [1] 17655   203
+## [1] 12906   203
 ## [1] &quot;Brain.Spinal.cord.cervical.c-1&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   103
@@ -862,6 +1027,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655    58
 ## [1] 12621    58
+## [1] &quot;Brain.Spinal.cord.cervical.c-1&quot;
+## [1] &quot;&quot;
+## [1] 17655   160
+## [1] 12672   160
 ## [1] &quot;Brain.Hippocampus&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   144
@@ -870,6 +1039,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655    55
 ## [1] 12395    55
+## [1] &quot;Brain.Hippocampus&quot;
+## [1] &quot;&quot;
+## [1] 17655   198
+## [1] 12429   198
 ## [1] &quot;Brain.Anterior.cingulate.cortex.BA24&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   129
@@ -878,10 +1051,18 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655    49
 ## [1] 12555    49
+## [1] &quot;Brain.Anterior.cingulate.cortex.BA24&quot;
+## [1] &quot;&quot;
+## [1] 17655   177
+## [1] 12528   177
 ## [1] &quot;Ovary&quot;
 ## [1] &quot;male&quot;
 ## [1] &quot;Ovary&quot;
 ## [1] &quot;female&quot;
+## [1] 17655   179
+## [1] 12716   179
+## [1] &quot;Ovary&quot;
+## [1] &quot;&quot;
 ## [1] 17655   179
 ## [1] 12716   179
 ## [1] &quot;Brain.Cerebellar.Hemisphere&quot;
@@ -892,6 +1073,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655    59
 ## [1] 12678    59
+## [1] &quot;Brain.Cerebellar.Hemisphere&quot;
+## [1] &quot;&quot;
+## [1] 17655   216
+## [1] 12699   216
 ## [1] &quot;Liver&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   162
@@ -900,6 +1085,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655    65
 ## [1] 11308    65
+## [1] &quot;Liver&quot;
+## [1] &quot;&quot;
+## [1] 17655   226
+## [1] 11195   226
 ## [1] &quot;Brain.Substantia.nigra&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   102
@@ -908,6 +1097,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655    39
 ## [1] 12422    39
+## [1] &quot;Brain.Substantia.nigra&quot;
+## [1] &quot;&quot;
+## [1] 17655   140
+## [1] 12432   140
 ## [1] &quot;Kidney.Cortex&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655    67
@@ -916,6 +1109,10 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655    20
 ## [1] 12516    20
+## [1] &quot;Kidney.Cortex&quot;
+## [1] &quot;&quot;
+## [1] 17655    86
+## [1] 12392    86
 ## [1] &quot;Brain.Amygdala&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655   108
@@ -924,28 +1121,44 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
 ## [1] &quot;female&quot;
 ## [1] 17655    46
 ## [1] 12506    46
+## [1] &quot;Brain.Amygdala&quot;
+## [1] &quot;&quot;
+## [1] 17655   153
+## [1] 12370   153
 ## [1] &quot;Cervix.Ectocervix&quot;
 ## [1] &quot;male&quot;
 ## [1] &quot;Cervix.Ectocervix&quot;
 ## [1] &quot;female&quot;
+## [1] &quot;Cervix.Ectocervix&quot;
+## [1] &quot;&quot;
 ## [1] &quot;Fallopian.Tube&quot;
 ## [1] &quot;male&quot;
 ## [1] &quot;Fallopian.Tube&quot;
 ## [1] &quot;female&quot;
+## [1] &quot;Fallopian.Tube&quot;
+## [1] &quot;&quot;
 ## [1] &quot;Cervix.Endocervix&quot;
 ## [1] &quot;male&quot;
 ## [1] &quot;Cervix.Endocervix&quot;
 ## [1] &quot;female&quot;
+## [1] &quot;Cervix.Endocervix&quot;
+## [1] &quot;&quot;
 ## [1] &quot;Bladder&quot;
 ## [1] &quot;male&quot;
 ## [1] 17655    15
 ## [1] 12959    15
 ## [1] &quot;Bladder&quot;
 ## [1] &quot;female&quot;
+## [1] &quot;Bladder&quot;
+## [1] &quot;&quot;
+## [1] 17655    22
+## [1] 12911    22
 ## [1] &quot;Kidney.Medulla&quot;
 ## [1] &quot;male&quot;
 ## [1] &quot;Kidney.Medulla&quot;
-## [1] &quot;female&quot;</code></pre>
+## [1] &quot;female&quot;
+## [1] &quot;Kidney.Medulla&quot;
+## [1] &quot;&quot;</code></pre>
 <pre class="r"><code>rm(tpm_df)
 rm(tpm_tissue_sex_df)
 rm(tpm_tissue_sex_filt_df)

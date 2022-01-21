@@ -18,11 +18,39 @@ ui <- fluidPage(
                       sidebarLayout(
                         sidebarPanel(
                           radioButtons("dataset_topology", "Dataset:",
-                                       c('RA non-responder patients (Scipher)' = 'scipher_nonresponders',
-                                         'RA responder patients (Scipher)' = 'scipher_responders',
-                                         'GTEx' = 'gtex'
-                                       )),
-                          radioButtons("method", "Method:",
+                                       c('GTEx' = 'gtex',
+                                         'Scipher' = 'scipher'
+                                       ),
+                                       selected='scipher'),
+                          verbatimTextOutput(outputId = "gtex_tissue"),
+                          shinyWidgets::pickerInput(
+                            inputId = "tissue",
+                            label = "Tissue (if GTEx dataset)",
+                            choices = c("spleen", "whole blood"),
+                            options = list(
+                              `actions-box` = TRUE,
+                              size = 10,
+                              `selected-text-format` = "count > 1"
+                            ),
+                            selected = 'spleen',
+                            multiple = TRUE),
+                          verbatimTextOutput(outputId = "gtex_sex"),
+                          shinyWidgets::pickerInput(
+                            inputId = "sex",
+                            label = "Sex (if GTEx dataset)",
+                            choices = c("female", "male", "both"),
+                            options = list(
+                              `actions-box` = TRUE,
+                              size = 10,
+                              `selected-text-format` = "count > 1"
+                            ),
+                            selected = 'female',
+                            multiple = TRUE),
+                          selectInput("topology_scipher_dataset", label = "Type of Scipher dataset (if Scipher dataset):", 
+                                      choices = list("all samples" = "all_samples", "all samples at baseline" = "all_samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
+                                      selected = "scipherold_responder"
+                          ),
+                        radioButtons("method", "Method:",
                                        c('wTO' = 'wto',
                                          'WGCNA' = 'wgcna',
                                          'ARACNE' = 'aracne',
@@ -50,31 +78,7 @@ ui <- fluidPage(
                                              '0.5%' = 0.5,
                                              '1%' = 1,
                                              '100%' = 100,
-                                             'Group' = 'group_topology_top')),
-                          verbatimTextOutput(outputId = "gtex_tissue"),
-                          shinyWidgets::pickerInput(
-                            inputId = "tissue",
-                            label = "Tissue (if GTEx dataset)",
-                            choices = c("spleen", "whole blood"),
-                            options = list(
-                              `actions-box` = TRUE,
-                              size = 10,
-                              `selected-text-format` = "count > 1"
-                            ),
-                            selected = 'spleen',
-                            multiple = TRUE),
-                          verbatimTextOutput(outputId = "gtex_sex"),
-                          shinyWidgets::pickerInput(
-                            inputId = "sex",
-                            label = "Sex (if GTEx dataset)",
-                            choices = c("female", "male"),
-                            options = list(
-                              `actions-box` = TRUE,
-                              size = 10,
-                              `selected-text-format` = "count > 1"
-                            ),
-                            selected = 'female',
-                            multiple = TRUE)
+                                             'Group' = 'group_topology_top'))
                         ),
                         
                         # Show boxplot of topological parameters
@@ -91,7 +95,39 @@ ui <- fluidPage(
                       sidebarLayout(
                         sidebarPanel(
                           radioButtons("dataset_coexpressed_ppis", "Dataset:",
-                                       c('GTEx' = 'gtex')),
+                                       c('GTEx' = 'gtex',
+                                         'Scipher' = 'scipher'
+                                       )),
+                          shinyWidgets::pickerInput(
+                            inputId = "coexpressed_ppis_gtex_tissues",
+                            label = "Tissue (if GTEx dataset)",
+                            choices = c("spleen", "whole blood"),
+                            options = list(
+                              `actions-box` = TRUE,
+                              size = 10,
+                              `selected-text-format` = "count > 1"
+                            ),
+                            selected = 'spleen',
+                            multiple = TRUE
+                          ),
+                          verbatimTextOutput(outputId = "coexpressed_ppis_gtex_tissues"),
+                          shinyWidgets::pickerInput(
+                            inputId = "coexpressed_ppis_gtex_sex",
+                            label = "Sex (if GTEx dataset)",
+                            choices = c("female", "male", "both"),
+                            options = list(
+                              `actions-box` = TRUE,
+                              size = 10,
+                              `selected-text-format` = "count > 1"
+                            ),
+                            selected = 'female',
+                            multiple = TRUE
+                          ),
+                          verbatimTextOutput(outputId = "coexpressed_ppis_gtex_sex"),
+                          selectInput("type_scipher_dataset_coexpressed_ppis", label = "Type of Scipher dataset (if Scipher dataset):", 
+                                      choices = list("all samples" = "all_samples", "all samples at baseline" = "all_samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
+                                      selected = "all_samples"
+                          ),
                           radioButtons("method_coexpressed_ppis", "Method:",
                                        c('wTO' = 'wto',
                                          'WGCNA' = 'wgcna',
@@ -114,33 +150,7 @@ ui <- fluidPage(
                                        c('Short distance' = 'balanced',
                                          'Short distance & high clustering' = 'clustering',
                                          'Short distance & high degree' = 'degree',
-                                         'Short distance & high betweenness' = 'betweenness')),
-                          shinyWidgets::pickerInput(
-                            inputId = "coexpressed_ppis_gtex_tissues",
-                            label = "Tissue (if GTEx dataset)",
-                            choices = c("spleen", "whole blood"),
-                            options = list(
-                              `actions-box` = TRUE,
-                              size = 10,
-                              `selected-text-format` = "count > 1"
-                            ),
-                            selected = 'spleen',
-                            multiple = TRUE
-                          ),
-                          verbatimTextOutput(outputId = "coexpressed_ppis_gtex_tissues"),
-                          shinyWidgets::pickerInput(
-                            inputId = "coexpressed_ppis_gtex_sex",
-                            label = "Sex (if GTEx dataset)",
-                            choices = c("female", "male"),
-                            options = list(
-                              `actions-box` = TRUE,
-                              size = 10,
-                              `selected-text-format` = "count > 1"
-                            ),
-                            selected = 'female',
-                            multiple = TRUE
-                          ),
-                          verbatimTextOutput(outputId = "coexpressed_ppis_gtex_sex")
+                                         'Short distance & high betweenness' = 'betweenness'))
                         ),
                           
                         # Show boxplot of topological parameters
@@ -157,7 +167,39 @@ ui <- fluidPage(
                       sidebarLayout(
                         sidebarPanel(
                           radioButtons("dataset_stability", "Dataset:",
-                                       c('GTEx' = 'gtex')),
+                                       c('GTEx' = 'gtex',
+                                         'Scipher' = 'scipher'
+                                       )),
+                          shinyWidgets::pickerInput(
+                            inputId = "stability_gtex_tissues",
+                            label = "Tissue (if GTEx dataset)",
+                            choices = c("spleen", "whole blood"),
+                            options = list(
+                              `actions-box` = TRUE,
+                              size = 10,
+                              `selected-text-format` = "count > 1"
+                            ),
+                            selected = 'spleen',
+                            multiple = TRUE
+                          ),
+                          verbatimTextOutput(outputId = "stability_gtex_tissues"),
+                          shinyWidgets::pickerInput(
+                            inputId = "stability_gtex_sex",
+                            label = "Sex (if GTEx dataset)",
+                            choices = c("female", "male", "both"),
+                            options = list(
+                              `actions-box` = TRUE,
+                              size = 10,
+                              `selected-text-format` = "count > 1"
+                            ),
+                            selected = 'female',
+                            multiple = TRUE
+                          ),
+                          verbatimTextOutput(outputId = "stability_gtex_sex"),
+                          selectInput("type_scipher_dataset_stability", label = "Type of Scipher dataset (if Scipher dataset):", 
+                                      choices = list("all samples" = "all_samples", "all samples at baseline" = "all_samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
+                                      selected = "all_samples"
+                          ),
                           radioButtons("method_stability", "Method:",
                                        c('wTO' = 'wto',
                                          'WGCNA' = 'wgcna',
@@ -189,33 +231,7 @@ ui <- fluidPage(
                           radioButtons("stability_group_by", "Group by:",
                                        c('Type of interaction' = 'group_type_interaction',
                                          'Range of co-expression score difference' = 'group_difference_range',
-                                         'Not group' = 'no_group')),
-                          shinyWidgets::pickerInput(
-                            inputId = "stability_gtex_tissues",
-                            label = "Tissue (if GTEx dataset)",
-                            choices = c("spleen", "whole blood"),
-                            options = list(
-                              `actions-box` = TRUE,
-                              size = 10,
-                              `selected-text-format` = "count > 1"
-                            ),
-                            selected = 'spleen',
-                            multiple = TRUE
-                          ),
-                          verbatimTextOutput(outputId = "stability_gtex_tissues"),
-                          shinyWidgets::pickerInput(
-                            inputId = "stability_gtex_sex",
-                            label = "Sex (if GTEx dataset)",
-                            choices = c("female", "male"),
-                            options = list(
-                              `actions-box` = TRUE,
-                              size = 10,
-                              `selected-text-format` = "count > 1"
-                            ),
-                            selected = 'female',
-                            multiple = TRUE
-                          ),
-                          verbatimTextOutput(outputId = "stability_gtex_sex")
+                                         'Not group' = 'no_group'))
                         ),
                         
                         # Show boxplot of topological parameters
@@ -233,7 +249,39 @@ ui <- fluidPage(
                         sidebarLayout(
                           sidebarPanel(
                             radioButtons("dataset_scores", "Dataset:",
-                                         c('GTEx' = 'gtex')),
+                                         c('GTEx' = 'gtex',
+                                           'Scipher' = 'scipher'
+                                         )),
+                            shinyWidgets::pickerInput(
+                              inputId = "scores_gtex_tissues",
+                              label = "Tissue (if GTEx dataset)",
+                              choices = c("spleen", "whole blood"),
+                              options = list(
+                                `actions-box` = TRUE,
+                                size = 10,
+                                `selected-text-format` = "count > 1"
+                              ),
+                              selected = 'spleen',
+                              multiple = TRUE
+                            ),
+                            verbatimTextOutput(outputId = "scores_gtex_tissues"),
+                            shinyWidgets::pickerInput(
+                              inputId = "scores_gtex_sex",
+                              label = "Sex (if GTEx dataset)",
+                              choices = c("female", "male", "both"),
+                              options = list(
+                                `actions-box` = TRUE,
+                                size = 10,
+                                `selected-text-format` = "count > 1"
+                              ),
+                              selected = 'female',
+                              multiple = TRUE
+                            ),
+                            verbatimTextOutput(outputId = "scores_gtex_sex"),
+                            selectInput("type_scipher_dataset_scores", label = "Type of Scipher dataset (if Scipher dataset):", 
+                                        choices = list("all samples" = "all_samples", "all samples at baseline" = "all_samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
+                                        selected = "all_samples"
+                            ),
                             radioButtons("method_scores", "Method:",
                                          c('wTO' = 'wto',
                                            'WGCNA' = 'wgcna',
@@ -271,33 +319,7 @@ ui <- fluidPage(
                                                               "0.8 to 0.9" = "0.8-0.9",
                                                               "0.9 to 1" = "0.9-1"
                                                ),
-                                               selected = "group"),
-                            shinyWidgets::pickerInput(
-                              inputId = "scores_gtex_tissues",
-                              label = "Tissue (if GTEx dataset)",
-                              choices = c("spleen", "whole blood"),
-                              options = list(
-                                `actions-box` = TRUE,
-                                size = 10,
-                                `selected-text-format` = "count > 1"
-                              ),
-                              selected = 'spleen',
-                              multiple = TRUE
-                            ),
-                            verbatimTextOutput(outputId = "scores_gtex_tissues"),
-                            shinyWidgets::pickerInput(
-                              inputId = "scores_gtex_sex",
-                              label = "Sex (if GTEx dataset)",
-                              choices = c("female", "male"),
-                              options = list(
-                                `actions-box` = TRUE,
-                                size = 10,
-                                `selected-text-format` = "count > 1"
-                              ),
-                              selected = 'female',
-                              multiple = TRUE
-                            ),
-                            verbatimTextOutput(outputId = "scores_gtex_sex")
+                                               selected = "group")
                           ),
                           
                           # Show boxplot of topological parameters
@@ -313,7 +335,39 @@ ui <- fluidPage(
                         sidebarLayout(
                           sidebarPanel(
                             radioButtons("dataset_scores_thresholds", "Dataset:",
-                                         c('GTEx' = 'gtex')),
+                                         c('GTEx' = 'gtex',
+                                           'Scipher' = 'scipher'
+                                         )),
+                            shinyWidgets::pickerInput(
+                              inputId = "scores_thresholds_gtex_tissues",
+                              label = "Tissue (if GTEx dataset)",
+                              choices = c("spleen", "whole blood"),
+                              options = list(
+                                `actions-box` = TRUE,
+                                size = 10,
+                                `selected-text-format` = "count > 1"
+                              ),
+                              selected = 'spleen',
+                              multiple = TRUE
+                            ),
+                            verbatimTextOutput(outputId = "scores_thresholds_gtex_tissues"),
+                            shinyWidgets::pickerInput(
+                              inputId = "scores_thresholds_gtex_sex",
+                              label = "Sex (if GTEx dataset)",
+                              choices = c("female", "male", "both"),
+                              options = list(
+                                `actions-box` = TRUE,
+                                size = 10,
+                                `selected-text-format` = "count > 1"
+                              ),
+                              selected = 'female',
+                              multiple = TRUE
+                            ),
+                            verbatimTextOutput(outputId = "scores_thresholds_gtex_sex"),
+                            selectInput("type_scipher_dataset_scores_thresholds", label = "Type of Scipher dataset (if Scipher dataset):", 
+                                        choices = list("all samples" = "all_samples", "all samples at baseline" = "all_samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
+                                        selected = "all_samples"
+                            ),
                             radioButtons("method_scores_thresholds", "Method:",
                                          c('wTO' = 'wto',
                                            'WGCNA' = 'wgcna',
@@ -344,33 +398,7 @@ ui <- fluidPage(
                                                               "0.8" = "0.8",
                                                               "0.9" = "0.9"
                                                ),
-                                               selected = "group"),
-                            shinyWidgets::pickerInput(
-                              inputId = "scores_thresholds_gtex_tissues",
-                              label = "Tissue (if GTEx dataset)",
-                              choices = c("spleen", "whole blood"),
-                              options = list(
-                                `actions-box` = TRUE,
-                                size = 10,
-                                `selected-text-format` = "count > 1"
-                              ),
-                              selected = 'spleen',
-                              multiple = TRUE
-                            ),
-                            verbatimTextOutput(outputId = "scores_thresholds_gtex_tissues"),
-                            shinyWidgets::pickerInput(
-                              inputId = "scores_thresholds_gtex_sex",
-                              label = "Sex (if GTEx dataset)",
-                              choices = c("female", "male"),
-                              options = list(
-                                `actions-box` = TRUE,
-                                size = 10,
-                                `selected-text-format` = "count > 1"
-                              ),
-                              selected = 'female',
-                              multiple = TRUE
-                            ),
-                            verbatimTextOutput(outputId = "scores_thresholds_gtex_sex")
+                                               selected = "group")
                           ),
                           
                           # Show boxplot of topological parameters
@@ -390,7 +418,9 @@ ui <- fluidPage(
                         sidebarLayout(
                           sidebarPanel(
                             radioButtons("dataset_disease_genes_by_score", "Dataset:",
-                                         c('GTEx' = 'gtex')),
+                                         c('GTEx' = 'gtex',
+                                           'Scipher' = 'scipher'
+                                         )),
                             radioButtons("method_disease_genes_by_score", "Method:",
                                          c('wTO' = 'wto',
                                            'WGCNA' = 'wgcna',
@@ -522,7 +552,7 @@ ui <- fluidPage(
                             shinyWidgets::pickerInput(
                               inputId = "disease_genes_by_score_gtex_sex",
                               label = "Sex (if GTEx dataset)",
-                              choices = c("female", "male"),
+                              choices = c("female", "male", "both"),
                               options = list(
                                 `actions-box` = TRUE,
                                 size = 10,
@@ -531,7 +561,11 @@ ui <- fluidPage(
                               selected = 'female',
                               multiple = TRUE
                             ),
-                            verbatimTextOutput(outputId = "disease_genes_by_score_gtex_sex")
+                            verbatimTextOutput(outputId = "disease_genes_by_score_gtex_sex"),
+                            selectInput("type_scipher_dataset_disease_genes_by_score", label = "Type of Scipher dataset (if Scipher dataset):", 
+                                        choices = list("all samples" = "all_samples", "all samples at baseline" = "all_samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
+                                        selected = "all_samples"
+                            )
                           ),
                           
                           # Show boxplot of topological parameters
@@ -548,8 +582,9 @@ ui <- fluidPage(
                       sidebarLayout(
                         sidebarPanel(
                           radioButtons("dataset_disease_genes", "Dataset:",
-                                       c('RA non-responder patients (Scipher)' = 'scipher_nonresponders',
-                                         'RA responder patients (Scipher)' = 'scipher_responders')),
+                                       c('GTEx' = 'gtex',
+                                         'Scipher' = 'scipher'
+                                       )),
                           radioButtons("method_disease_genes", "Method:",
                                        c('wTO' = 'wto',
                                          'WGCNA' = 'wgcna',

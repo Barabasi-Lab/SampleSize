@@ -98,56 +98,80 @@ def create_gene_coexpression_networks(options):
                 print('The number of submitted jobs arrived to the limit of {}. The script will stop sending submissions!'.format(limit))
                 break
 
-        script_file = os.path.join(src_path, 'compare_coexpression_to_ppi.R')
+        script_file = os.path.join(src_path, 'analyze_coexpression_network_by_top_scoring_edges.R')
         coexpression_file = os.path.join(input_dir, dataset)
         dataset_name = '{}'.format('.'.join(dataset.split('.')[:-1]))
-        output_file = os.path.join(output_dir, 'comparison_coexpression_ppi_{}.txt'.format(dataset_name))
-        bash_script_name = 'comparison_coexpression_ppi_{}.sh'.format(dataset_name)
+        bash_script_name = 'analyze_coexpression_network_by_top_scoring_edges_{}.sh'.format(dataset_name)
         bash_script_file = os.path.join(dummy_dir, bash_script_name)
+        output_topology_file = os.path.join(output_dir, '{}_{}'.format(dataset_name, 'analysis_topology.txt'))
+        output_disease_genes_file = os.path.join(output_dir, '{}_{}'.format(dataset_name, 'analysis_disease_genes.txt'))
+        output_essential_genes_file = os.path.join(output_dir, '{}_{}'.format(dataset_name, 'analysis_essential_genes.txt'))
 
         #if not fileExist(bash_script_file):
-        if not fileExist(output_file):
+        if not fileExist(output_disease_genes_file):
 
-            if 'aracne' not in dataset_name:
-                # Rscript /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/compare_coexpression_to_ppi.R -c /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Spleen_female.csv -p /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Spleen_female.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_GTEx/Spleen_female/wgcna_RNAseq_samples_Spleen_female_all_samples.net/comparison_coexpression_ppi.txt
-                command = 'Rscript {} -c {} -p {} -o {}'.format(script_file, coexpression_file, ppi_file, output_file)
-                print(command)
-                submit_command_to_queue(command, max_jobs_in_queue=int(config.get("Cluster", "max_jobs_in_queue")), queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude, conda_environment=conda_environment)
+            # Rscript /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_coexpression_network_by_top_scoring_edges.R -c /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/all_samples/wto_scipher_all_samples_size_270_rep_4.net -t /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_scipher/all_samples/wto_scipher_all_samples_size_270_rep_4_analysis_topology.txt -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_scipher/all_samples/wto_scipher_all_samples_size_270_rep_4_analysis_disease_genes.txt -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_scipher/all_samples/wto_scipher_all_samples_size_270_rep_4_analysis_essential_genes.txt
+            command = 'Rscript {} -c {} -t {} -d {} -e {}'.format(script_file, coexpression_file, output_topology_file, output_disease_genes_file, output_essential_genes_file)
+            print(command)
+            submit_command_to_queue(command, max_jobs_in_queue=int(config.get("Cluster", "max_jobs_in_queue")), queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude, conda_environment=conda_environment)
 
-                l += 1
-
-        if limit: # Break the loop if a limit of jobs is introduced
-            if l > limit:
-                print('The number of submitted jobs arrived to the limit of {}. The script will stop sending submissions!'.format(limit))
-                break
+            l += 1
         
-        # Run the analysis of stability
-        script_file = os.path.join(src_path, 'analyze_stability_coexpression_networks.R')
-        coexpression_file = os.path.join(input_dir, dataset)
-        # Check if there is the word size in the name of the dataset (meaning it is not the network from all samples)
-        if 'size' in dataset:
-            dataset_all_samples = dataset.split('size')[0] + 'all_samples.net'
-            coexpression_file_all_samples = os.path.join(input_dir, dataset_all_samples)
-            dataset_name = '{}'.format('.'.join(dataset.split('.')[:-1]))
-            output_difference_file = os.path.join(output_dir, 'analysis_score_difference_{}.txt'.format(dataset_name))
-            output_scores_file = os.path.join(output_dir, 'analysis_score_ranges_{}.txt'.format(dataset_name))
-            output_threshold_file = os.path.join(output_dir, 'analysis_score_thresholds_{}.txt'.format(dataset_name))
-            output_disease_file = os.path.join(output_dir, 'analysis_score_diseases_{}.txt'.format(dataset_name))
-            bash_script_name = 'analysis_stability_coexpression_networks_{}.sh'.format(dataset_name)
-            bash_script_file = os.path.join(dummy_dir, bash_script_name)
+        # if limit: # Break the loop if a limit of jobs is introduced
+        #     if l > limit:
+        #         print('The number of submitted jobs arrived to the limit of {}. The script will stop sending submissions!'.format(limit))
+        #         break
 
-            # Check that the network of all samples exist!
-            if fileExist(coexpression_file_all_samples):
-                #if not fileExist(bash_script_file):
-                if not fileExist(output_disease_file):
+        # script_file = os.path.join(src_path, 'compare_coexpression_to_ppi.R')
+        # coexpression_file = os.path.join(input_dir, dataset)
+        # dataset_name = '{}'.format('.'.join(dataset.split('.')[:-1]))
+        # output_file = os.path.join(output_dir, 'comparison_coexpression_ppi_{}.txt'.format(dataset_name))
+        # bash_script_name = 'comparison_coexpression_ppi_{}.sh'.format(dataset_name)
+        # bash_script_file = os.path.join(dummy_dir, bash_script_name)
 
-                    if 'aracne' not in dataset_name:
-                        # Rscript /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_stability_coexpression_networks.R -c /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_female/wgcna_RNAseq_samples_Spleen_female_size_10_rep_2.net -a /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_female/wgcna_RNAseq_samples_Spleen_female_all_samples.net -p /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Spleen_female.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_GTEx/Spleen_female/analysis_score_difference_wgcna_RNAseq_samples_Spleen_female_size_10_rep_2.txt -s /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_GTEx/Spleen_female/analysis_score_ranges_wgcna_RNAseq_samples_Spleen_female_size_10_rep_2.txt -t /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_GTEx/Spleen_female/analysis_score_thresholds_wgcna_RNAseq_samples_Spleen_female_size_10_rep_2.txt
-                        command = 'Rscript {} -c {} -a {} -p {} -d {} -s {} -t {} -r {}'.format(script_file, coexpression_file, coexpression_file_all_samples, ppi_file, output_difference_file, output_scores_file, output_threshold_file, output_disease_file)
-                        print(command)
-                        submit_command_to_queue(command, max_jobs_in_queue=int(config.get("Cluster", "max_jobs_in_queue")), queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude, conda_environment=conda_environment)
+        # #if not fileExist(bash_script_file):
+        # if not fileExist(output_file):
 
-                        l += 1
+        #     if 'aracne' not in dataset_name:
+        #         # Rscript /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/compare_coexpression_to_ppi.R -c /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Spleen_female.csv -p /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Spleen_female.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_GTEx/Spleen_female/wgcna_RNAseq_samples_Spleen_female_all_samples.net/comparison_coexpression_ppi.txt
+        #         command = 'Rscript {} -c {} -p {} -o {}'.format(script_file, coexpression_file, ppi_file, output_file)
+        #         print(command)
+        #         submit_command_to_queue(command, max_jobs_in_queue=int(config.get("Cluster", "max_jobs_in_queue")), queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude, conda_environment=conda_environment)
+
+        #         l += 1
+
+        # if limit: # Break the loop if a limit of jobs is introduced
+        #     if l > limit:
+        #         print('The number of submitted jobs arrived to the limit of {}. The script will stop sending submissions!'.format(limit))
+        #         break
+        
+        # # Run the analysis of stability
+        # script_file = os.path.join(src_path, 'analyze_stability_coexpression_networks.R')
+        # coexpression_file = os.path.join(input_dir, dataset)
+        # # Check if there is the word size in the name of the dataset (meaning it is not the network from all samples)
+        # if 'size' in dataset:
+        #     dataset_all_samples = dataset.split('size')[0] + 'all_samples.net'
+        #     coexpression_file_all_samples = os.path.join(input_dir, dataset_all_samples)
+        #     dataset_name = '{}'.format('.'.join(dataset.split('.')[:-1]))
+        #     output_difference_file = os.path.join(output_dir, 'analysis_score_difference_{}.txt'.format(dataset_name))
+        #     output_scores_file = os.path.join(output_dir, 'analysis_score_ranges_{}.txt'.format(dataset_name))
+        #     output_threshold_file = os.path.join(output_dir, 'analysis_score_thresholds_{}.txt'.format(dataset_name))
+        #     output_disease_file = os.path.join(output_dir, 'analysis_score_diseases_{}.txt'.format(dataset_name))
+        #     bash_script_name = 'analysis_stability_coexpression_networks_{}.sh'.format(dataset_name)
+        #     bash_script_file = os.path.join(dummy_dir, bash_script_name)
+
+        #     # Check that the network of all samples exist!
+        #     if fileExist(coexpression_file_all_samples):
+        #         #if not fileExist(bash_script_file):
+        #         if not fileExist(output_disease_file):
+
+        #             if 'aracne' not in dataset_name:
+        #                 # Rscript /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_stability_coexpression_networks.R -c /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_female/wgcna_RNAseq_samples_Spleen_female_size_10_rep_2.net -a /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_female/wgcna_RNAseq_samples_Spleen_female_all_samples.net -p /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Spleen_female.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_GTEx/Spleen_female/analysis_score_difference_wgcna_RNAseq_samples_Spleen_female_size_10_rep_2.txt -s /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_GTEx/Spleen_female/analysis_score_ranges_wgcna_RNAseq_samples_Spleen_female_size_10_rep_2.txt -t /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_GTEx/Spleen_female/analysis_score_thresholds_wgcna_RNAseq_samples_Spleen_female_size_10_rep_2.txt
+        #                 command = 'Rscript {} -c {} -a {} -p {} -d {} -s {} -t {} -r {}'.format(script_file, coexpression_file, coexpression_file_all_samples, ppi_file, output_difference_file, output_scores_file, output_threshold_file, output_disease_file)
+        #                 print(command)
+        #                 submit_command_to_queue(command, max_jobs_in_queue=int(config.get("Cluster", "max_jobs_in_queue")), queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude, conda_environment=conda_environment)
+
+        #                 l += 1
 
     return
 

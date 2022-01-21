@@ -62,6 +62,7 @@ read_coexpression_network <- function(coexpression_network_file){
     coexpression_network_df = coexpression_network_df %>% rename(score=wTO)
     coexpression_network_df = coexpression_network_df %>% filter(pval.adj < 0.05)
   }
+  return(coexpression_network_df)
 }
 
 tissue_sex_network_df = read_coexpression_network(tissue_sex_network_file) %>% rename("score.subset.network" = "score")
