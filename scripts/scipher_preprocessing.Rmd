@@ -272,6 +272,11 @@ if(!(file.exists(disease_genes_info_file))){
   
   # Merge disease2gene table with MESH and output file
   disease_genes_df = inner_join(disease_genes_df, mesh_df, by=c("disease" = "concept"))
+
+  # Make columns without special characgters  
+  disease_genes_df$disease.no.sp.char <- gsub(' ', '.', gsub(', ', '.', gsub('-', '.', gsub('[\\(\\)]', '', disease_genes_df$disease))))
+  disease_genes_df$root.concept.no.sp.char <- gsub(' ', '.', gsub(', ', '.', gsub('-', '.', gsub('[\\(\\)]', '', disease_genes_df$root.concept))))
+
   disease_genes_df %>% fwrite(disease_genes_info_file)
   
 } else {

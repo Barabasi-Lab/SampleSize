@@ -404,23 +404,24 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coe
 
 # GTEx: All genes - Spleen
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_female -p /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Spleen_female.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_GTEx/Spleen_female
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_female -p /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Spleen_female.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Spleen_female
 # TO DO
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_male -p /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Spleen_male.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_GTEx/Spleen_male
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_male -p /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Spleen_male.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Spleen_male
 
 # GTEx: All genes - Whole Blood
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Whole.Blood_female -p /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Whole.Blood_female.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_GTEx/Whole.Blood_female
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Whole.Blood_male -p /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Whole.Blood_male.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_GTEx/Whole.Blood_male
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Whole.Blood_female -p /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Whole.Blood_female.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Whole.Blood_female
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Whole.Blood_male -p /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Whole.Blood_male.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Whole.Blood_male
 #TO DO
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Whole.Blood -p /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Whole.Blood.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_GTEx/Whole.Blood
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Whole.Blood -p /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Whole.Blood.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Whole.Blood -n /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_gtex/Whole.Blood
 
 
 #### SCIPHER (NEW DATASET) ####
 
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/all_samples -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_scipher/all_samples
-
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/all_samples -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_scipher/all_samples -n /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_scipher/all_samples
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_scipher/all_samples
+# output networks: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_scipher/all_samples
 
 # Copy results
 scp -r discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots_N100 /Users/quim/Desktop

@@ -22,7 +22,487 @@ ui <- fluidPage(
                                          'Scipher' = 'scipher'
                                        ),
                                        selected='scipher'),
-                          verbatimTextOutput(outputId = "gtex_tissue"),
+                          verbatimTextOutput(outputId = "topology_gtex_tissues"),
+                          shinyWidgets::pickerInput(
+                            inputId = "topology_gtex_tissues",
+                            label = "Tissue (if GTEx dataset)",
+                            choices = c("spleen", "whole blood"),
+                            options = list(
+                              `actions-box` = TRUE,
+                              size = 10,
+                              `selected-text-format` = "count > 1"
+                            ),
+                            selected = 'whole blood',
+                            multiple = TRUE),
+                          verbatimTextOutput(outputId = "topology_gtex_sex"),
+                          shinyWidgets::pickerInput(
+                            inputId = "topology_gtex_sex",
+                            label = "Sex (if GTEx dataset)",
+                            choices = c("female", "male", "both"),
+                            options = list(
+                              `actions-box` = TRUE,
+                              size = 10,
+                              `selected-text-format` = "count > 1"
+                            ),
+                            selected = 'both',
+                            multiple = TRUE),
+                          selectInput("type_scipher_dataset_topology", label = "Type of Scipher dataset (if Scipher dataset):", 
+                                      choices = list("all samples" = "all_samples", "all samples at baseline" = "all_samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
+                                      selected = "all_samples"
+                          ),
+                        radioButtons("method_topology", "Method:",
+                                       c('wTO' = 'wto',
+                                         'WGCNA' = 'wgcna',
+                                         'ARACNE' = 'aracne',
+                                         'Pearson' = 'pearson',
+                                         'Spearman' = 'spearman'
+                                       ), selected = 'spearman'
+                                     ),
+                          radioButtons("parameter_topology", "Parameter:",
+                                       c('Num. nodes' = 'num_nodes',
+                                         'Num. edges' = 'num_edges',
+                                         'Av. degree' = 'av_degree',
+                                         'Av. path length' = 'av_path_length',
+                                         'Av. clust. coef.' = 'av_clustering_coef',
+                                         'Num. components' = 'num_components',
+                                         'Nodes of the LCC' = 'num_lcc_nodes',
+                                         'Edges of the LCC' = 'num_lcc_edges',
+                                         'LCC z-score' = 'lcc_z',
+                                         'LCC p-value' = 'lcc_pvalue',
+                                         'LCC log(p-value)' = 'log_lcc_pvalue',
+                                         'Maximum k-core' = 'max_k',
+                                         'Num. nodes in main core' = 'num_main_core_nodes',
+                                         'Num. edges in main core' = 'num_main_core_edges')),
+                          radioButtons("pvalue_threshold_topology", "Number of top scoring edges:",
+                                           c('0.05' = 0.05,
+                                             '0.01' = 0.01,
+                                             'Group' = 'group_topology_pvalue_threshold'))
+                        ),
+                        
+                        # Show boxplot of topological parameters
+                        mainPanel(
+                          plotOutput("topologyBoxPlot")
+                        )
+                      )
+             ),
+
+             
+             tabPanel("Essentiality",
+                      
+                      # Sidebar with a slider input for number of bins 
+                      sidebarLayout(
+                        sidebarPanel(
+                          radioButtons("dataset_essentiality", "Dataset:",
+                                       c('GTEx' = 'gtex',
+                                         'Scipher' = 'scipher'
+                                       ),
+                                       selected='scipher'),
+                          verbatimTextOutput(outputId = "essentiality_gtex_tissues"),
+                          shinyWidgets::pickerInput(
+                            inputId = "essentiality_gtex_tissues",
+                            label = "Tissue (if GTEx dataset)",
+                            choices = c("spleen", "whole blood"),
+                            options = list(
+                              `actions-box` = TRUE,
+                              size = 10,
+                              `selected-text-format` = "count > 1"
+                            ),
+                            selected = 'whole blood',
+                            multiple = TRUE),
+                          verbatimTextOutput(outputId = "essentiality_gtex_sex"),
+                          shinyWidgets::pickerInput(
+                            inputId = "essentiality_gtex_sex",
+                            label = "Sex (if GTEx dataset)",
+                            choices = c("female", "male", "both"),
+                            options = list(
+                              `actions-box` = TRUE,
+                              size = 10,
+                              `selected-text-format` = "count > 1"
+                            ),
+                            selected = 'both',
+                            multiple = TRUE),
+                          selectInput("type_scipher_dataset_essentiality", label = "Type of Scipher dataset (if Scipher dataset):", 
+                                      choices = list("all samples" = "all_samples", "all samples at baseline" = "all_samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
+                                      selected = "all_samples"
+                          ),
+                          radioButtons("method_essentiality", "Method:",
+                                       c('wTO' = 'wto',
+                                         'WGCNA' = 'wgcna',
+                                         'ARACNE' = 'aracne',
+                                         'Pearson' = 'pearson',
+                                         'Spearman' = 'spearman'
+                                       ), selected = 'spearman'
+                                       ),
+                          radioButtons("parameter_essentiality", "Parameter:",
+                                       c('Num. essential nodes' = 'num_essential_genes',
+                                         'Fraction of essential edges' = 'fraction_essential_genes',
+                                         'Num. components' = 'num_components',
+                                         'Num. nodes of the LCC' = 'num_essential_lcc_nodes',
+                                         'Fraction of essential genes in the LCC' = 'fraction_essential_lcc_nodes',
+                                         'Num. edges of the LCC' = 'num_lcc_edges',
+                                         'LCC z-score' = 'lcc_z',
+                                         'LCC p-value' = 'lcc_pvalue',
+                                         'LCC log(p-value)' = 'log_lcc_pvalue')),
+                          radioButtons("pvalue_threshold_essentiality", "Number of top scoring edges:",
+                                       c('0.05' = 0.05,
+                                         '0.01' = 0.01,
+                                         'Group' = 'group_essentiality_pvalue_threshold'))
+                        ),
+                        
+                        # Show boxplot of topological parameters
+                        mainPanel(
+                          plotOutput("essentialityBoxPlot")
+                        )
+                      )
+             ),
+             
+             
+             navbarMenu("Disease genes",
+                        
+                        tabPanel("By thresholds",
+                                 
+                                 # Sidebar with a slider input for number of bins 
+                                 sidebarLayout(
+                                   sidebarPanel(
+                                     radioButtons("dataset_disease_genes", "Dataset:",
+                                                  c('GTEx' = 'gtex',
+                                                    'Scipher' = 'scipher'
+                                                  ), selected = "scipher"
+                                                  ),
+                                     shinyWidgets::pickerInput(
+                                       inputId = "disease_genes_gtex_tissues",
+                                       label = "Tissue (if GTEx dataset)",
+                                       choices = c("spleen", "whole blood"),
+                                       options = list(
+                                         `actions-box` = TRUE,
+                                         size = 10,
+                                         `selected-text-format` = "count > 1"
+                                       ),
+                                       selected = 'whole blood',
+                                       multiple = TRUE
+                                     ),
+                                     verbatimTextOutput(outputId = "disease_genes_gtex_tissues"),
+                                     shinyWidgets::pickerInput(
+                                       inputId = "disease_genes_gtex_sex",
+                                       label = "Sex (if GTEx dataset)",
+                                       choices = c("female", "male", "both"),
+                                       options = list(
+                                         `actions-box` = TRUE,
+                                         size = 10,
+                                         `selected-text-format` = "count > 1"
+                                       ),
+                                       selected = 'both',
+                                       multiple = TRUE
+                                     ),
+                                     verbatimTextOutput(outputId = "disease_genes_gtex_sex"),
+                                     selectInput("type_scipher_dataset_disease_genes", label = "Type of Scipher dataset (if Scipher dataset):", 
+                                                 choices = list("all samples" = "all_samples", "all samples at baseline" = "all_samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
+                                                 selected = "all_samples"
+                                     ),
+                                     radioButtons("method_disease_genes", "Method:",
+                                                  c('wTO' = 'wto',
+                                                    'WGCNA' = 'wgcna',
+                                                    'ARACNE' = 'aracne',
+                                                    'Pearson' = 'pearson',
+                                                    'Spearman' = 'spearman'
+                                                  ), selected = 'spearman'
+                                                  ),
+                                     radioButtons("parameter_disease_genes", "Parameter:",
+                                                  c('Num. disease genes in network' = 'num_disease_genes',
+                                                    'Fraction disease genes in network' = 'fraction_disease_genes',
+                                                    'Num. components of disease genes' = 'num_disease_components',
+                                                    'Num. disease genes forming a LCC' = 'num_disease_lcc_nodes',
+                                                    'Fraction of disease genes forming a LCC' = 'fraction_disease_lcc_nodes',
+                                                    'Num. edges of the disease gene LCC' = 'num_disease_lcc_edges',
+                                                    'Disease gene LCC z-score' = 'disease_lcc_z',
+                                                    'Disease gene LCC p-value' = 'disease_lcc_pvalue',
+                                                    'Disease gene LCC log(p-value)' = 'log_disease_lcc_pvalue')),
+                                 radioButtons("pvalue_threshold_disease_genes", "Number of top scoring edges:",
+                                              c('0.05' = 0.05,
+                                                '0.01' = 0.01)),
+                                     radioButtons("group_by", "Group by:",
+                                                  c('Disease' = 'group_disease',
+                                                    'Disease class' = 'group_disease_class',
+                                                    'P-value' = 'group_disease_pvalue',
+                                                    'Not group' = 'no_group')),
+                                     shinyWidgets::pickerInput(
+                                       inputId = "immune",
+                                       label = "Immune system diseases",
+                                       choices = c("immune system diseases", "arthritis, rheumatoid", "asthma", "graves disease", "multiple sclerosis"),
+                                       options = list(
+                                         `actions-box` = TRUE,
+                                         size = 10,
+                                         `selected-text-format` = "count > 1"
+                                       ),
+                                       selected = 'arthritis, rheumatoid',
+                                       multiple = TRUE
+                                     ),
+                                     verbatimTextOutput(outputId = "diseases_immune"),
+                                     shinyWidgets::pickerInput(
+                                       inputId = "cardiovascular",
+                                       label = "Cardiovascular diseases",
+                                       choices = c("cardiovascular diseases", "arrhythmias, cardiac", "cardiomyopathies", "heart arrest", "myocardial ischemia"),
+                                       options = list(
+                                         `actions-box` = TRUE,
+                                         size = 10,
+                                         `selected-text-format` = "count > 1"
+                                       ),
+                                       #selected = 'heart arrest',
+                                       multiple = TRUE
+                                     ),
+                                     verbatimTextOutput(outputId = "diseases_cardiovascular"),
+                                     shinyWidgets::pickerInput(
+                                       inputId = "nervous",
+                                       label = "Nervous system diseases",
+                                       choices = c("nervous system diseases", "alzheimer disease", "epilepsy", "parkinson disease"),
+                                       options = list(
+                                         `actions-box` = TRUE,
+                                         size = 10,
+                                         `selected-text-format` = "count > 1"
+                                       ),
+                                       #selected = 'alzheimer disease',
+                                       multiple = TRUE
+                                     ),
+                                     verbatimTextOutput(outputId = "diseases_nervous"),
+                                     shinyWidgets::pickerInput(
+                                       inputId = "neoplasms",
+                                       label = "Neoplasms",
+                                       choices = c("neoplasms", "breast neoplasms", "colorectal neoplasm", "kidney neoplasms", "leukemia, myeloid", "lung neoplasms"),
+                                       options = list(
+                                         `actions-box` = TRUE,
+                                         size = 10,
+                                         `selected-text-format` = "count > 1"
+                                       ),
+                                       #selected = 'breast neoplasms',
+                                       multiple = TRUE
+                                     ),
+                                     verbatimTextOutput(outputId = "diseases_neoplasms"),
+                                     shinyWidgets::pickerInput(
+                                       inputId = "digestive",
+                                       label = "Digestive system diseases",
+                                       choices = c("digestive system diseases", "crohn disease", "cholestasis", "liver cirrhosis", "gastroenteritis"),
+                                       options = list(
+                                         `actions-box` = TRUE,
+                                         size = 10,
+                                         `selected-text-format` = "count > 1"
+                                       ),
+                                       #selected = 'liver cirrhosis',
+                                       multiple = TRUE
+                                     ),
+                                     verbatimTextOutput(outputId = "diseases_digestive"),
+                                     shinyWidgets::pickerInput(
+                                       inputId = "nutritional",
+                                       label = "Nutritional and metabolic diseases",
+                                       choices = c("nutritional and metabolic diseases", "amyotrophic lateral sclerosis", "celiac disease", "diabetes mellitus, type 1", "diabetes mellitus, type 2", "obesity"),
+                                       options = list(
+                                         `actions-box` = TRUE,
+                                         size = 10,
+                                         `selected-text-format` = "count > 1"
+                                       ),
+                                       #selected = 'diabetes mellitus, type 2',
+                                       multiple = TRUE
+                                     ),
+                                     verbatimTextOutput(outputId = "diseases_nutritional"),
+                                     shinyWidgets::pickerInput(
+                                       inputId = "endocrine",
+                                       label = "Endocrine system diseases",
+                                       choices = c("endocrine system diseases", "diabetes mellitus, type 2", "hyperthyroidism", "goiter"),
+                                       options = list(
+                                         `actions-box` = TRUE,
+                                         size = 10,
+                                         `selected-text-format` = "count > 1"
+                                       ),
+                                       #selected = 'hyperthyroidism',
+                                       multiple = TRUE
+                                     ),
+                                     verbatimTextOutput(outputId = "diseases_endocrine"),
+                                   ),
+                                   
+                                   # Show boxplot of topological parameters
+                                   mainPanel(
+                                     plotOutput("diseaseBoxPlot")
+                                   )
+                                 )
+                        ),
+                        
+                        tabPanel("By score",
+                                 
+                                 # Sidebar with a slider input for number of bins 
+                                 sidebarLayout(
+                                   sidebarPanel(
+                                     radioButtons("dataset_disease_genes_by_score", "Dataset:",
+                                                  c('GTEx' = 'gtex',
+                                                    'Scipher' = 'scipher'
+                                                  )),
+                                     radioButtons("method_disease_genes_by_score", "Method:",
+                                                  c('wTO' = 'wto',
+                                                    'WGCNA' = 'wgcna',
+                                                    'ARACNE' = 'aracne',
+                                                    'Pearson' = 'pearson',
+                                                    'Spearman' = 'spearman'
+                                                  )),
+                                     radioButtons("metric_disease_genes_by_score", "Evaluation metric:",
+                                                  c('Difference' = 'difference',
+                                                    'Number of edges' = 'num.edges',
+                                                    'Co-expression (network from subset of samples)' = 'score.subset.mean',
+                                                    'Co-expression (network from all samples)' = 'score.all.samples.mean',
+                                                    'Distance' = 'distances',
+                                                    'Local clustering coeff.' = 'local_clustering_coefficient.mean',
+                                                    'Degree' = 'degree_centrality.mean',
+                                                    'Betweenness centrality' = 'betweenness_centrality.mean'
+                                                  )),
+                                     radioButtons("disease_genes_by_score_group_by", "Group by:",
+                                                  c('Disease' = 'group_disease',
+                                                    'Disease class' = 'group_disease_class',
+                                                    'P-value' = 'group_disease_pval',
+                                                    '% of top scoring edges' = 'group_disease_top',
+                                                    'Not group' = 'no_group')),
+                                     shinyWidgets::pickerInput(
+                                       inputId = "disease_genes_by_score_immune",
+                                       label = "Immune system diseases",
+                                       choices = c("immune system diseases", "arthritis, rheumatoid", "asthma", "graves disease", "multiple sclerosis"),
+                                       options = list(
+                                         `actions-box` = TRUE,
+                                         size = 10,
+                                         `selected-text-format` = "count > 1"
+                                       ),
+                                       selected = 'arthritis, rheumatoid',
+                                       multiple = TRUE
+                                     ),
+                                     verbatimTextOutput(outputId = "disease_genes_by_score_immune"),
+                                     shinyWidgets::pickerInput(
+                                       inputId = "disease_genes_by_score_cardiovascular",
+                                       label = "Cardiovascular diseases",
+                                       choices = c("cardiovascular diseases", "arrhythmias, cardiac", "cardiomyopathies", "heart arrest", "myocardial ischemia"),
+                                       options = list(
+                                         `actions-box` = TRUE,
+                                         size = 10,
+                                         `selected-text-format` = "count > 1"
+                                       ),
+                                       selected = 'arrhythmias, cardiac',
+                                       multiple = TRUE
+                                     ),
+                                     verbatimTextOutput(outputId = "disease_genes_by_score_cardiovascular"),
+                                     shinyWidgets::pickerInput(
+                                       inputId = "disease_genes_by_score_nervous",
+                                       label = "Nervous system diseases",
+                                       choices = c("nervous system diseases", "alzheimer disease", "epilepsy", "parkinson disease"),
+                                       options = list(
+                                         `actions-box` = TRUE,
+                                         size = 10,
+                                         `selected-text-format` = "count > 1"
+                                       ),
+                                       selected = 'alzheimer disease',
+                                       multiple = TRUE
+                                     ),
+                                     verbatimTextOutput(outputId = "disease_genes_by_score_nervous"),
+                                     shinyWidgets::pickerInput(
+                                       inputId = "disease_genes_by_score_neoplasms",
+                                       label = "Neoplasms",
+                                       choices = c("neoplasms", "breast neoplasms", "colorectal neoplasm", "kidney neoplasms", "leukemia, myeloid", "lung neoplasms"),
+                                       options = list(
+                                         `actions-box` = TRUE,
+                                         size = 10,
+                                         `selected-text-format` = "count > 1"
+                                       ),
+                                       selected = 'breast neoplasms',
+                                       multiple = TRUE
+                                     ),
+                                     verbatimTextOutput(outputId = "disease_genes_by_score_neoplasms"),
+                                     shinyWidgets::pickerInput(
+                                       inputId = "disease_genes_by_score_digestive",
+                                       label = "Digestive system diseases",
+                                       choices = c("digestive system diseases", "crohn disease", "cholestasis", "liver cirrhosis", "gastroenteritis"),
+                                       options = list(
+                                         `actions-box` = TRUE,
+                                         size = 10,
+                                         `selected-text-format` = "count > 1"
+                                       ),
+                                       #selected = 'liver cirrhosis',
+                                       multiple = TRUE
+                                     ),
+                                     verbatimTextOutput(outputId = "disease_genes_by_score_digestive"),
+                                     shinyWidgets::pickerInput(
+                                       inputId = "disease_genes_by_score_nutritional",
+                                       label = "Nutritional and metabolic diseases",
+                                       choices = c("nutritional and metabolic diseases", "amyotrophic lateral sclerosis", "celiac disease", "diabetes mellitus, type 1", "diabetes mellitus, type 2", "obesity"),
+                                       options = list(
+                                         `actions-box` = TRUE,
+                                         size = 10,
+                                         `selected-text-format` = "count > 1"
+                                       ),
+                                       #selected = 'diabetes mellitus, type 2',
+                                       multiple = TRUE
+                                     ),
+                                     verbatimTextOutput(outputId = "disease_genes_by_score_nutritional"),
+                                     shinyWidgets::pickerInput(
+                                       inputId = "disease_genes_by_score_endocrine",
+                                       label = "Endocrine system diseases",
+                                       choices = c("endocrine system diseases", "diabetes mellitus, type 2", "hyperthyroidism", "goiter"),
+                                       options = list(
+                                         `actions-box` = TRUE,
+                                         size = 10,
+                                         `selected-text-format` = "count > 1"
+                                       ),
+                                       #selected = 'hyperthyroidism',
+                                       multiple = TRUE
+                                     ),
+                                     verbatimTextOutput(outputId = "disease_genes_by_score_endocrine"),
+                                     
+                                     shinyWidgets::pickerInput(
+                                       inputId = "disease_genes_by_score_gtex_tissues",
+                                       label = "Tissue (if GTEx dataset)",
+                                       choices = c("spleen", "whole blood"),
+                                       options = list(
+                                         `actions-box` = TRUE,
+                                         size = 10,
+                                         `selected-text-format` = "count > 1"
+                                       ),
+                                       selected = 'whole blood',
+                                       multiple = TRUE
+                                     ),
+                                     verbatimTextOutput(outputId = "disease_genes_by_score_gtex_tissues"),
+                                     shinyWidgets::pickerInput(
+                                       inputId = "disease_genes_by_score_gtex_sex",
+                                       label = "Sex (if GTEx dataset)",
+                                       choices = c("female", "male", "both"),
+                                       options = list(
+                                         `actions-box` = TRUE,
+                                         size = 10,
+                                         `selected-text-format` = "count > 1"
+                                       ),
+                                       selected = 'both',
+                                       multiple = TRUE
+                                     ),
+                                     verbatimTextOutput(outputId = "disease_genes_by_score_gtex_sex"),
+                                     selectInput("type_scipher_dataset_disease_genes_by_score", label = "Type of Scipher dataset (if Scipher dataset):", 
+                                                 choices = list("all samples" = "all_samples", "all samples at baseline" = "all_samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
+                                                 selected = "all_samples"
+                                     )
+                                     
+                                   ),
+                                   
+                                   # Show boxplot of topological parameters
+                                   mainPanel(
+                                     plotOutput("diseaseByScoreBoxPlot")
+                                   )
+                                 )
+                        )
+             ),
+             
+             
+             
+             tabPanel("Similarity",
+                      
+                      # Sidebar with a slider input for number of bins 
+                      sidebarLayout(
+                        sidebarPanel(
+                          radioButtons("dataset_similarity", "Dataset:",
+                                       c('GTEx' = 'gtex',
+                                         'Scipher' = 'scipher'
+                                       ),
+                                       selected='scipher'),
+                          verbatimTextOutput(outputId = "similarity_gtex_tissues"),
                           shinyWidgets::pickerInput(
                             inputId = "tissue",
                             label = "Tissue (if GTEx dataset)",
@@ -32,9 +512,9 @@ ui <- fluidPage(
                               size = 10,
                               `selected-text-format` = "count > 1"
                             ),
-                            selected = 'spleen',
+                            selected = 'whole blood',
                             multiple = TRUE),
-                          verbatimTextOutput(outputId = "gtex_sex"),
+                          verbatimTextOutput(outputId = "similarity_gtex_sex"),
                           shinyWidgets::pickerInput(
                             inputId = "sex",
                             label = "Sex (if GTEx dataset)",
@@ -44,49 +524,43 @@ ui <- fluidPage(
                               size = 10,
                               `selected-text-format` = "count > 1"
                             ),
-                            selected = 'female',
+                            selected = 'both',
                             multiple = TRUE),
-                          selectInput("topology_scipher_dataset", label = "Type of Scipher dataset (if Scipher dataset):", 
+                          selectInput("type_scipher_dataset_similarity", label = "Type of Scipher dataset (if Scipher dataset):", 
                                       choices = list("all samples" = "all_samples", "all samples at baseline" = "all_samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
-                                      selected = "scipherold_responder"
+                                      selected = "all_samples"
                           ),
-                        radioButtons("method", "Method:",
+                          radioButtons("method_similarity", "Method:",
                                        c('wTO' = 'wto',
                                          'WGCNA' = 'wgcna',
                                          'ARACNE' = 'aracne',
                                          'Pearson' = 'pearson',
                                          'Spearman' = 'spearman'
-                                       )),
-                          radioButtons("parameter_topology", "Parameter:",
-                                       c('Nodes' = 'nodes',
-                                         'Edges' = 'edges',
-                                         'Av. degree' = 'av_degree',
-                                         'Av. path length' = 'av_path_length',
-                                         'Av. clust. coef.' = 'av_clustering_coef',
-                                         'Num. of components' = 'num_components',
-                                         'Size of the LCC' = 'size_lcc',
-                                         'Lost nodes' = 'lost_nodes',
-                                         'Lost edges' = 'lost_edges',
-                                         'Gained nodes' = 'gained_nodes',
-                                         'Gained edges' = 'gained_edges')),
-                          radioButtons("pval_topology", "P-value:",
-                                       c('0.01' = 0.01,
-                                         '0.05' = 0.05,
-                                         'Group' = 'group_topology_pval')),
-                          radioButtons("top_topology", "% of top scoring edges:",
-                                           c('0.1%' = 0.1,
-                                             '0.5%' = 0.5,
-                                             '1%' = 1,
-                                             '100%' = 100,
-                                             'Group' = 'group_topology_top'))
+                                       ), selected = 'spearman'
+                          ),
+                          radioButtons("parameter_similarity", "Parameter:",
+                                       c('Overlap index' = 'overlapindex',
+                                         'Jaccard index' = 'jaccardIndex'
+                                         ), selected = 'overlapindex'),
+                          radioButtons("type_analysis_similarity", "Type of analysis:",
+                                       c('Network' = 'subgraphs',
+                                         'Main core' = 'main_core',
+                                         'Essential genes' = 'essential_genes',
+                                         'RA genes' = 'disease_genes'
+                                       ), selected = 'subgraphs'),
+                          radioButtons("pvalue_threshold_similarity", "Number of top scoring edges:",
+                                       c('0.05' = 0.05,
+                                         '0.01' = 0.01))
                         ),
                         
                         # Show boxplot of topological parameters
-                        mainPanel(
-                          plotOutput("topologyBoxPlot")
+                        fluidRow(
+                          column(6, plotOutput("similarityBoxPlot")),
+                          column(6, plotOutput("comparisonBoxPlot"))
                         )
                       )
              ),
+             
              
              
              tabPanel("Co-expressed PPIs",
@@ -97,7 +571,8 @@ ui <- fluidPage(
                           radioButtons("dataset_coexpressed_ppis", "Dataset:",
                                        c('GTEx' = 'gtex',
                                          'Scipher' = 'scipher'
-                                       )),
+                                       ), selected = 'scipher'
+                                       ),
                           shinyWidgets::pickerInput(
                             inputId = "coexpressed_ppis_gtex_tissues",
                             label = "Tissue (if GTEx dataset)",
@@ -107,7 +582,7 @@ ui <- fluidPage(
                               size = 10,
                               `selected-text-format` = "count > 1"
                             ),
-                            selected = 'spleen',
+                            selected = 'whole blood',
                             multiple = TRUE
                           ),
                           verbatimTextOutput(outputId = "coexpressed_ppis_gtex_tissues"),
@@ -120,7 +595,7 @@ ui <- fluidPage(
                               size = 10,
                               `selected-text-format` = "count > 1"
                             ),
-                            selected = 'female',
+                            selected = 'both',
                             multiple = TRUE
                           ),
                           verbatimTextOutput(outputId = "coexpressed_ppis_gtex_sex"),
@@ -134,7 +609,8 @@ ui <- fluidPage(
                                          'ARACNE' = 'aracne',
                                          'Pearson' = 'pearson',
                                          'Spearman' = 'spearman'
-                                       )),
+                                       ), selected = 'wgcna'
+                                       ),
                           radioButtons("metric_coexpressed_ppis", "Evaluation metric:",
                                        c('Accuracy' = 'accuracy',
                                          'F1' = 'F1',
@@ -179,7 +655,7 @@ ui <- fluidPage(
                               size = 10,
                               `selected-text-format` = "count > 1"
                             ),
-                            selected = 'spleen',
+                            selected = 'whole blood',
                             multiple = TRUE
                           ),
                           verbatimTextOutput(outputId = "stability_gtex_tissues"),
@@ -192,7 +668,7 @@ ui <- fluidPage(
                               size = 10,
                               `selected-text-format` = "count > 1"
                             ),
-                            selected = 'female',
+                            selected = 'both',
                             multiple = TRUE
                           ),
                           verbatimTextOutput(outputId = "stability_gtex_sex"),
@@ -261,7 +737,7 @@ ui <- fluidPage(
                                 size = 10,
                                 `selected-text-format` = "count > 1"
                               ),
-                              selected = 'spleen',
+                              selected = 'whole blood',
                               multiple = TRUE
                             ),
                             verbatimTextOutput(outputId = "scores_gtex_tissues"),
@@ -274,7 +750,7 @@ ui <- fluidPage(
                                 size = 10,
                                 `selected-text-format` = "count > 1"
                               ),
-                              selected = 'female',
+                              selected = 'both',
                               multiple = TRUE
                             ),
                             verbatimTextOutput(outputId = "scores_gtex_sex"),
@@ -347,7 +823,7 @@ ui <- fluidPage(
                                 size = 10,
                                 `selected-text-format` = "count > 1"
                               ),
-                              selected = 'spleen',
+                              selected = 'whole blood',
                               multiple = TRUE
                             ),
                             verbatimTextOutput(outputId = "scores_thresholds_gtex_tissues"),
@@ -360,7 +836,7 @@ ui <- fluidPage(
                                 size = 10,
                                 `selected-text-format` = "count > 1"
                               ),
-                              selected = 'female',
+                              selected = 'both',
                               multiple = TRUE
                             ),
                             verbatimTextOutput(outputId = "scores_thresholds_gtex_sex"),
@@ -407,310 +883,9 @@ ui <- fluidPage(
                           )
                         )
                )
-             ),
+             )
              
              
-             navbarMenu("Disease genes",
-                        
-               tabPanel("By score",
-                        
-                        # Sidebar with a slider input for number of bins 
-                        sidebarLayout(
-                          sidebarPanel(
-                            radioButtons("dataset_disease_genes_by_score", "Dataset:",
-                                         c('GTEx' = 'gtex',
-                                           'Scipher' = 'scipher'
-                                         )),
-                            radioButtons("method_disease_genes_by_score", "Method:",
-                                         c('wTO' = 'wto',
-                                           'WGCNA' = 'wgcna',
-                                           'ARACNE' = 'aracne',
-                                           'Pearson' = 'pearson',
-                                           'Spearman' = 'spearman'
-                                         )),
-                            radioButtons("metric_disease_genes_by_score", "Evaluation metric:",
-                                         c('Difference' = 'difference',
-                                           'Number of edges' = 'num.edges',
-                                           'Co-expression (network from subset of samples)' = 'score.subset.mean',
-                                           'Co-expression (network from all samples)' = 'score.all.samples.mean',
-                                           'Distance' = 'distances',
-                                           'Local clustering coeff.' = 'local_clustering_coefficient.mean',
-                                           'Degree' = 'degree_centrality.mean',
-                                           'Betweenness centrality' = 'betweenness_centrality.mean'
-                                         )),
-                            radioButtons("disease_genes_by_score_group_by", "Group by:",
-                                         c('Disease' = 'group_disease',
-                                           'Disease class' = 'group_disease_class',
-                                           'P-value' = 'group_disease_pval',
-                                           '% of top scoring edges' = 'group_disease_top',
-                                           'Not group' = 'no_group')),
-                            shinyWidgets::pickerInput(
-                              inputId = "disease_genes_by_score_immune",
-                              label = "Immune system diseases",
-                              choices = c("immune system diseases", "arthritis, rheumatoid", "asthma", "graves disease", "multiple sclerosis"),
-                              options = list(
-                                `actions-box` = TRUE,
-                                size = 10,
-                                `selected-text-format` = "count > 1"
-                              ),
-                              selected = 'arthritis, rheumatoid',
-                              multiple = TRUE
-                            ),
-                            verbatimTextOutput(outputId = "disease_genes_by_score_immune"),
-                            shinyWidgets::pickerInput(
-                              inputId = "disease_genes_by_score_cardiovascular",
-                              label = "Cardiovascular diseases",
-                              choices = c("cardiovascular diseases", "arrhythmias, cardiac", "cardiomyopathies", "heart arrest", "myocardial ischemia"),
-                              options = list(
-                                `actions-box` = TRUE,
-                                size = 10,
-                                `selected-text-format` = "count > 1"
-                              ),
-                              selected = 'arrhythmias, cardiac',
-                              multiple = TRUE
-                            ),
-                            verbatimTextOutput(outputId = "disease_genes_by_score_cardiovascular"),
-                            shinyWidgets::pickerInput(
-                              inputId = "disease_genes_by_score_nervous",
-                              label = "Nervous system diseases",
-                              choices = c("nervous system diseases", "alzheimer disease", "epilepsy", "parkinson disease"),
-                              options = list(
-                                `actions-box` = TRUE,
-                                size = 10,
-                                `selected-text-format` = "count > 1"
-                              ),
-                              selected = 'alzheimer disease',
-                              multiple = TRUE
-                            ),
-                            verbatimTextOutput(outputId = "disease_genes_by_score_nervous"),
-                            shinyWidgets::pickerInput(
-                              inputId = "disease_genes_by_score_neoplasms",
-                              label = "Neoplasms",
-                              choices = c("neoplasms", "breast neoplasms", "colorectal neoplasm", "kidney neoplasms", "leukemia, myeloid", "lung neoplasms"),
-                              options = list(
-                                `actions-box` = TRUE,
-                                size = 10,
-                                `selected-text-format` = "count > 1"
-                              ),
-                              selected = 'breast neoplasms',
-                              multiple = TRUE
-                            ),
-                            verbatimTextOutput(outputId = "disease_genes_by_score_neoplasms"),
-                            shinyWidgets::pickerInput(
-                              inputId = "disease_genes_by_score_digestive",
-                              label = "Digestive system diseases",
-                              choices = c("digestive system diseases", "crohn disease", "cholestasis", "liver cirrhosis", "gastroenteritis"),
-                              options = list(
-                                `actions-box` = TRUE,
-                                size = 10,
-                                `selected-text-format` = "count > 1"
-                              ),
-                              #selected = 'liver cirrhosis',
-                              multiple = TRUE
-                            ),
-                            verbatimTextOutput(outputId = "disease_genes_by_score_digestive"),
-                            shinyWidgets::pickerInput(
-                              inputId = "disease_genes_by_score_nutritional",
-                              label = "Nutritional and metabolic diseases",
-                              choices = c("nutritional and metabolic diseases", "amyotrophic lateral sclerosis", "celiac disease", "diabetes mellitus, type 1", "diabetes mellitus, type 2", "obesity"),
-                              options = list(
-                                `actions-box` = TRUE,
-                                size = 10,
-                                `selected-text-format` = "count > 1"
-                              ),
-                              #selected = 'diabetes mellitus, type 2',
-                              multiple = TRUE
-                            ),
-                            verbatimTextOutput(outputId = "disease_genes_by_score_nutritional"),
-                            shinyWidgets::pickerInput(
-                              inputId = "disease_genes_by_score_endocrine",
-                              label = "Endocrine system diseases",
-                              choices = c("endocrine system diseases", "diabetes mellitus, type 2", "hyperthyroidism", "goiter"),
-                              options = list(
-                                `actions-box` = TRUE,
-                                size = 10,
-                                `selected-text-format` = "count > 1"
-                              ),
-                              #selected = 'hyperthyroidism',
-                              multiple = TRUE
-                            ),
-                            verbatimTextOutput(outputId = "disease_genes_by_score_endocrine"),
-                            
-                            shinyWidgets::pickerInput(
-                              inputId = "disease_genes_by_score_gtex_tissues",
-                              label = "Tissue (if GTEx dataset)",
-                              choices = c("spleen", "whole blood"),
-                              options = list(
-                                `actions-box` = TRUE,
-                                size = 10,
-                                `selected-text-format` = "count > 1"
-                              ),
-                              selected = 'spleen',
-                              multiple = TRUE
-                            ),
-                            verbatimTextOutput(outputId = "disease_genes_by_score_gtex_tissues"),
-                            shinyWidgets::pickerInput(
-                              inputId = "disease_genes_by_score_gtex_sex",
-                              label = "Sex (if GTEx dataset)",
-                              choices = c("female", "male", "both"),
-                              options = list(
-                                `actions-box` = TRUE,
-                                size = 10,
-                                `selected-text-format` = "count > 1"
-                              ),
-                              selected = 'female',
-                              multiple = TRUE
-                            ),
-                            verbatimTextOutput(outputId = "disease_genes_by_score_gtex_sex"),
-                            selectInput("type_scipher_dataset_disease_genes_by_score", label = "Type of Scipher dataset (if Scipher dataset):", 
-                                        choices = list("all samples" = "all_samples", "all samples at baseline" = "all_samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
-                                        selected = "all_samples"
-                            )
-                          ),
-                          
-                          # Show boxplot of topological parameters
-                          mainPanel(
-                            plotOutput("diseaseByScoreBoxPlot")
-                          )
-                        )
-               ),
-               
-               
-               tabPanel("By thresholds",
-  
-                      # Sidebar with a slider input for number of bins 
-                      sidebarLayout(
-                        sidebarPanel(
-                          radioButtons("dataset_disease_genes", "Dataset:",
-                                       c('GTEx' = 'gtex',
-                                         'Scipher' = 'scipher'
-                                       )),
-                          radioButtons("method_disease_genes", "Method:",
-                                       c('wTO' = 'wto',
-                                         'WGCNA' = 'wgcna',
-                                         'ARACNE' = 'aracne',
-                                         'Pearson' = 'pearson',
-                                         'Spearman' = 'spearman'
-                                       )),
-                          radioButtons("parameter_disease_genes", "Parameter:",
-                                       c('Num. disease genes in network' = 'disease_genes_in_network',
-                                         '% disease genes in network' = 'percent_disease_genes_in_network',
-                                         'Num. disease genes forming a LCC' = 'disease_genes_in_lcc',
-                                         '% disease genes forming a LCC' = 'percent_disease_genes_in_lcc')),
-                          radioButtons("pval_disease_genes", "P-value:",
-                                           c('0.01' = 0.01,
-                                             '0.05' = 0.05)),
-                          radioButtons("top_disease_genes", "% of top scoring edges:",
-                                       c('0.1%' = 0.1,
-                                         '0.5%' = 0.5,
-                                         '1%' = 1,
-                                         '100%' = 100)),
-                          radioButtons("group_by", "Group by:",
-                                       c('Disease' = 'group_disease',
-                                         'Disease class' = 'group_disease_class',
-                                         'P-value' = 'group_disease_pval',
-                                         '% of top scoring edges' = 'group_disease_top',
-                                         'Not group' = 'no_group')),
-                          shinyWidgets::pickerInput(
-                            inputId = "immune",
-                            label = "Immune system diseases",
-                            choices = c("immune system diseases", "arthritis, rheumatoid", "asthma", "graves disease", "multiple sclerosis"),
-                            options = list(
-                              `actions-box` = TRUE,
-                              size = 10,
-                              `selected-text-format` = "count > 1"
-                            ),
-                            selected = 'arthritis, rheumatoid',
-                            multiple = TRUE
-                          ),
-                          verbatimTextOutput(outputId = "diseases_immune"),
-                          shinyWidgets::pickerInput(
-                            inputId = "cardiovascular",
-                            label = "Cardiovascular diseases",
-                            choices = c("cardiovascular diseases", "arrhythmias, cardiac", "cardiomyopathies", "heart arrest", "myocardial ischemia"),
-                            options = list(
-                              `actions-box` = TRUE,
-                              size = 10,
-                              `selected-text-format` = "count > 1"
-                            ),
-                            selected = 'heart arrest',
-                            multiple = TRUE
-                          ),
-                          verbatimTextOutput(outputId = "diseases_cardiovascular"),
-                          shinyWidgets::pickerInput(
-                            inputId = "nervous",
-                            label = "Nervous system diseases",
-                            choices = c("nervous system diseases", "alzheimer disease", "epilepsy", "parkinson disease"),
-                            options = list(
-                              `actions-box` = TRUE,
-                              size = 10,
-                              `selected-text-format` = "count > 1"
-                            ),
-                            selected = 'alzheimer disease',
-                            multiple = TRUE
-                          ),
-                          verbatimTextOutput(outputId = "diseases_nervous"),
-                          shinyWidgets::pickerInput(
-                            inputId = "neoplasms",
-                            label = "Neoplasms",
-                            choices = c("neoplasms", "breast neoplasms", "colorectal neoplasm", "kidney neoplasms", "leukemia, myeloid", "lung neoplasms"),
-                            options = list(
-                              `actions-box` = TRUE,
-                              size = 10,
-                              `selected-text-format` = "count > 1"
-                            ),
-                            selected = 'breast neoplasms',
-                            multiple = TRUE
-                          ),
-                          verbatimTextOutput(outputId = "diseases_neoplasms"),
-                          shinyWidgets::pickerInput(
-                            inputId = "digestive",
-                            label = "Digestive system diseases",
-                            choices = c("digestive system diseases", "crohn disease", "cholestasis", "liver cirrhosis", "gastroenteritis"),
-                            options = list(
-                              `actions-box` = TRUE,
-                              size = 10,
-                              `selected-text-format` = "count > 1"
-                            ),
-                            #selected = 'liver cirrhosis',
-                            multiple = TRUE
-                          ),
-                          verbatimTextOutput(outputId = "diseases_digestive"),
-                          shinyWidgets::pickerInput(
-                            inputId = "nutritional",
-                            label = "Nutritional and metabolic diseases",
-                            choices = c("nutritional and metabolic diseases", "amyotrophic lateral sclerosis", "celiac disease", "diabetes mellitus, type 1", "diabetes mellitus, type 2", "obesity"),
-                            options = list(
-                              `actions-box` = TRUE,
-                              size = 10,
-                              `selected-text-format` = "count > 1"
-                            ),
-                            #selected = 'diabetes mellitus, type 2',
-                            multiple = TRUE
-                          ),
-                          verbatimTextOutput(outputId = "diseases_nutritional"),
-                          shinyWidgets::pickerInput(
-                            inputId = "endocrine",
-                            label = "Endocrine system diseases",
-                            choices = c("endocrine system diseases", "diabetes mellitus, type 2", "hyperthyroidism", "goiter"),
-                            options = list(
-                              `actions-box` = TRUE,
-                              size = 10,
-                              `selected-text-format` = "count > 1"
-                            ),
-                            #selected = 'hyperthyroidism',
-                            multiple = TRUE
-                          ),
-                          verbatimTextOutput(outputId = "diseases_endocrine"),
-                        ),
-  
-                        # Show boxplot of topological parameters
-                        mainPanel(
-                          plotOutput("diseaseBoxPlot")
-                        )
-                      )
-               )
-            )
   )
   
 )

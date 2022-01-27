@@ -1,0 +1,108 @@
+---
+title: "Untitled"
+author: "Joaquim Aguirre-Plans"
+date: "1/24/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(data.table)
+library(dplyr)
+library(igraph)
+set.seed(1510)
+```
+
+```{r}
+network_small_sample_size_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_scipher/all_samples/main_core/spearman_scipher_all_samples_size_10_rep_1_edges_100000_main_core_subgraph.txt"
+network_large_sample_size_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_scipher/all_samples/main_core/spearman_scipher_all_samples_size_580_rep_1_edges_100000_main_core_subgraph.txt"
+network_small_sample_size = read_graph(file = network_small_sample_size_file, format = "graphml")
+network_large_sample_size = read_graph(file = network_large_sample_size_file, format = "graphml")
+
+```
+
+```{r, echo=FALSE}
+V(network_small_sample_size)$degree <- degree(network_small_sample_size)
+V(network_large_sample_size)$degree <- degree(network_large_sample_size)
+all_degrees = c(V(network_small_sample_size)$degree, V(network_large_sample_size)$degree)
+uni_all <- seq( min(all_degrees), max(all_degrees))
+colors <- data.frame( color = heat.colors(length(uni_all), rev = T),
+                      levels = uni_all)
+```
+
+```{r, echo=FALSE}
+V(network_small_sample_size)$color <- colors$color[match(V(network_small_sample_size)$degree, colors$levels)]
+V(network_small_sample_size)$label <- V(network_small_sample_size)$degree
+plot(
+  network_small_sample_size,
+  vertex.size     = degree(network_small_sample_size)/10 +1,
+  vertex.label    = NA,
+  vertex.label.cex=0.5,
+  mode = "fruchtermanreingold",
+  main="Main core of network from 10 samples"
+  )
+```
+
+```{r, echo=FALSE}
+V(network_large_sample_size)$color <- colors$color[match(V(network_large_sample_size)$degree, colors$levels)]
+V(network_large_sample_size)$label <- V(network_large_sample_size)$degree
+V(network_large_sample_size)$label[V(network_large_sample_size)$label == 0] <- NA
+plot(
+  network_large_sample_size,
+  #vertex.size     = degree(network_large_sample_size)/10 +1,
+  vertex.label    = NA,
+  vertex.label.cex=0.5,
+  mode = "fruchtermanreingold",
+  main="Main core of network from 580 samples"
+  )
+```
+
+```{r}
+network_small_sample_size_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_scipher/all_samples/disease_genes/spearman_scipher_all_samples_size_10_rep_1_edges_100000_disease_genes_subgraphs/arthritis.rheumatoid.txt"
+network_large_sample_size_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_scipher/all_samples/disease_genes/spearman_scipher_all_samples_size_580_rep_1_edges_100000_disease_genes_subgraphs/arthritis.rheumatoid.txt"
+network_small_sample_size = read_graph(file = network_small_sample_size_file, format = "graphml")
+network_large_sample_size = read_graph(file = network_large_sample_size_file, format = "graphml")
+
+```
+
+```{r, echo=FALSE}
+V(network_small_sample_size)$degree <- degree(network_small_sample_size)
+V(network_large_sample_size)$degree <- degree(network_large_sample_size)
+all_degrees = c(V(network_small_sample_size)$degree, V(network_large_sample_size)$degree)
+uni_all <- seq( min(all_degrees), max(all_degrees))
+colors <- data.frame( color = heat.colors(length(uni_all), rev = T),
+                      levels = uni_all)
+```
+
+```{r, echo=FALSE}
+V(network_small_sample_size)$color <- colors$color[match(V(network_small_sample_size)$degree, colors$levels)]
+V(network_small_sample_size)$label <- V(network_small_sample_size)$degree
+V(network_small_sample_size)$label[V(network_small_sample_size)$label == 0] <- NA
+plot(
+  network_small_sample_size,
+  #vertex.size     = degree(network_small_sample_size)/10 +1,
+  vertex.label    = NA,
+  vertex.label.cex=0.5,
+  mode = "fruchtermanreingold",
+  main="Rheumatoid arthritis subgraph of network from 10 samples"
+  )
+```
+
+
+```{r, echo=FALSE}
+V(network_large_sample_size)$color <- colors$color[match(V(network_large_sample_size)$degree, colors$levels)]
+V(network_large_sample_size)$label <- V(network_large_sample_size)$degree
+V(network_large_sample_size)$label[V(network_large_sample_size)$label == 0] <- NA
+plot(
+  network_large_sample_size,
+  #vertex.size     = degree(network_large_sample_size)/10 +1,
+  vertex.label    = NA,
+  vertex.label.cex=0.5,
+  mode = "fruchtermanreingold",
+  main="Rheumatoid arthritis subgraph of network from 580 samples"
+  )
+```
+

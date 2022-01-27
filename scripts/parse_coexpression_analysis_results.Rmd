@@ -21,7 +21,6 @@ set.seed(1510)
 
 ## Parse results
 
-
 ```{r parse_results, echo=FALSE, results='hide'}
 # Input data
 input_dir <- '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out'
@@ -32,6 +31,74 @@ sex_to_id = data.frame(row.names=c("male","female","both") , val=c(1,2,""))
 scipher_dataset_to_results_name = data.frame(row.names=c("scipherold_responder","scipherold_nonresponder") , val=c("analysis_responders_wto_N100", "analysis_nonresponders_wto_N100"))
 
 # Define result dataframes
+topology_df = data.frame(matrix(ncol=21,nrow=0, dimnames=list(NULL, c("method", "dataset", "type_dataset", "tissue", "sex", "size", "rep", "edge_threshold", "num_nodes", "num_edges", "av_degree", "av_path_length", "av_clustering_coef", "num_components", "num_lcc_nodes", "num_lcc_edges", "lcc_z", "lcc_pvalue", "max_k", "num_main_core_nodes", "num_main_core_edges"))))
+essential_gene_results_df = data.frame(matrix(ncol=16,nrow=0, dimnames=list(NULL, c("method", "dataset", "type_dataset", "tissue", "sex", "size", "rep", "edge_threshold", "num_essential_genes", "fraction_essential_genes", "num_components", "num_lcc_nodes", "fraction_essential_lcc_nodes", "num_lcc_edges", "lcc_z", "lcc_pvalue"))))
+disease_gene_results_df <- setNames(data.frame(matrix(ncol = 18, nrow = 0)), c("method", "dataset", "type_dataset", "tissue", "sex", "size", "rep", 'edge_threshold', 'disease', 'disease_class', 'num_disease_genes', 'fraction_disease_genes', 'num_disease_components', 'num_disease_lcc_nodes', 'fraction_disease_lcc_nodes', 'num_disease_lcc_edges', "disease_lcc_z", "disease_lcc_pvalue"))
+
+for(dataset in c('scipher', 'gtex')){
+  types_dataset = list.files(paste(input_dir, paste("analysis_", dataset, sep=""), sep="/"))
+  for(type_dataset in types_dataset){
+    if (dataset == "gtex"){
+      type_dataset_split = strsplit(type_dataset, split="_")[[1]]
+      if (length(type_dataset_split == 2)){
+        tissue = type_dataset_split[1]
+        sex = type_dataset_split[2]
+      } else {
+        tissue = type_dataset_split[1]
+        sex = "both"
+      }
+    } else {
+      tissue = NA
+      sex = NA
+    }
+    result_files = list.files(paste(input_dir, paste("analysis_", dataset, sep=""), type_dataset, sep="/"))
+    for(result_file in result_files){
+      input_file = paste(input_dir, paste("analysis_", dataset, sep=""), type_dataset, result_file, sep="/")
+      info_file = gsub("_analysis_topology.txt|_analysis_essential_genes.txt|_analysis_disease_genes.txt","",result_file)
+      file_split = strsplit(info_file, split="_")[[1]]
+      method = file_split[1]
+      edge_threshold = as.numeric(file_split[(length(file_split))])
+      size = file_split[(length(file_split)-4)]
+      r = file_split[(length(file_split))-2]
+      if(r=="samples"){
+        size = "all"
+        r = NA
+      } else {
+        size = as.numeric(size)
+        r = as.numeric(r)
+      }
+      individual_df <- fread(input_file)
+      if(grepl("analysis_topology", result_file, fixed = TRUE)){
+        topology_df <- rbind(topology_df, cbind(data.frame(method=rep(method, nrow(individual_df)), dataset=rep(dataset, nrow(individual_df)), type_dataset=rep(type_dataset, nrow(individual_df)), tissue=rep(tissue, nrow(individual_df)), sex=rep(sex, nrow(individual_df)), size=rep(size, nrow(individual_df)), rep=rep(r, nrow(individual_df))), individual_df))
+      } else if(grepl("analysis_essential_genes", result_file, fixed = TRUE)){
+        essential_gene_results_df <- rbind(essential_gene_results_df, cbind(data.frame(method=rep(method, nrow(individual_df)), dataset=rep(dataset, nrow(individual_df)), type_dataset=rep(type_dataset, nrow(individual_df)), tissue=rep(tissue, nrow(individual_df)), sex=rep(sex, nrow(individual_df)), size=rep(size, nrow(individual_df)), rep=rep(r, nrow(individual_df))), individual_df))
+      } else if(grepl("analysis_disease_genes", result_file, fixed = TRUE)){
+        disease_gene_results_df <- rbind(disease_gene_results_df, cbind(data.frame(method=rep(method, nrow(individual_df)), dataset=rep(dataset, nrow(individual_df)), type_dataset=rep(type_dataset, nrow(individual_df)), tissue=rep(tissue, nrow(individual_df)), sex=rep(sex, nrow(individual_df)), size=rep(size, nrow(individual_df)), rep=rep(r, nrow(individual_df))), individual_df))
+      }
+    }
+  }
+}
+```
+
+
+
+```{r output_results, echo=FALSE, results='hide'}
+# Define output files
+output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/data_shiny_app'
+topology_file = paste(output_dir, 'analysis_topology.csv', sep='/')
+disease_genes_file = paste(output_dir, 'analysis_disease_genes.csv', sep='/')
+essential_genes_file = paste(output_dir, 'analysis_essential_genes.csv', sep='/')
+
+# Write results
+topology_df %>% fwrite(topology_file)
+essential_gene_results_df %>% fwrite(essential_genes_file)
+disease_gene_results_df %>% fwrite(disease_genes_file)
+
+```
+
+
+
+```{r, echo=FALSE, results='hide', eval = FALSE}
 topology_df <- setNames(data.frame(matrix(ncol = 10, nrow = 0)), c('size', 'rep', 'nodes', 'edges', 'av_degree', 'av_path_length', 'av_clustering_coef', 'pval', 'top', 'dataset'))
 components_df <- setNames(data.frame(matrix(ncol = 7, nrow = 0)), c('size', 'rep', 'num_components', 'size_lcc', 'pval', 'top', 'dataset'))
 composition_df <- setNames(data.frame(matrix(ncol = 9, nrow = 0)), c('size', 'rep', 'lost_nodes', 'lost_edges', 'gained_nodes', 'gained_edges', 'pval', 'top', 'dataset'))
@@ -95,7 +162,7 @@ for(dataset in c('gtex', 'scipher')){
   }
   # Parse results of the new datasets
   if (dataset == 'gtex'){
-    results_name = 'networks_GTEx'
+    results_name = 'analysis_gtex'
     results_list = c()
     for(tissue in tissues){
       for(sex in rownames(sex_to_id)){
@@ -108,7 +175,7 @@ for(dataset in c('gtex', 'scipher')){
       }
     }
   } else {
-    results_name = 'networks_scipher'
+    results_name = 'analysis_scipher'
     results_list = c("all_samples", "all_samples_baseline", "sample_per_patient_baseline", "responder_baseline", "nonresponder_baseline")
   }
   for(type_dataset in results_list){
@@ -165,7 +232,7 @@ disease_df$percent_disease_genes_in_lcc = disease_df$lcc_size/disease_df$total_d
 ```
 
 
-```{r output_results, echo=FALSE, results='hide'}
+```{r, echo=FALSE, results='hide', eval = FALSE}
 # Define output files
 output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/data_shiny_app'
 topology_file = paste(output_dir, 'topology_old_scipher.csv', sep='/')

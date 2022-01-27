@@ -50,16 +50,16 @@ if(grepl('wto', coexpression_network_file, fixed = TRUE)){
   coexpression_df = coexpression_df %>% filter(pval.adj < 0.05)
   #score_quantile = quantile(abs(ppi_gene_coexpression_merged_df$score), probs=c(0.8, 0.9))
 } else if((grepl('spearman', coexpression_network_file, fixed = TRUE))){
-  score_threshold_list = c(0.6, 0.7, 0.75)
+  score_threshold_list = c(0.6, 0.65, 0.7, 0.75)
   coexpression_df = coexpression_df %>% rename("score"="spearman")
   coexpression_df = coexpression_df %>% filter(pvalue < 0.05)
 } else if((grepl('pearson', coexpression_network_file, fixed = TRUE))){
-  score_threshold_list = c(0.6, 0.7, 0.75)
+  score_threshold_list = c(0.6, 0.65, 0.7, 0.75)
   coexpression_df = coexpression_df %>% rename("score"="pearson")
   coexpression_df = coexpression_df %>% filter(pvalue < 0.05)
 } else if((grepl('wgcna', coexpression_network_file, fixed = TRUE))){
   require(WGCNA)
-  score_threshold_list = c("hard", 0.3, 0.5, 0.6, 0.65)
+  score_threshold_list = c("hard", 0.3, 0.4, 0.5, 0.6)
   # Calculate hard threshold
   hard_threshold = pickHardThreshold(coexpression_df, RsquaredCut = 0.80)
   # Pass the matrix to the wTO in-line format

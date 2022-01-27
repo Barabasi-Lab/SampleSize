@@ -85,7 +85,7 @@ subsample = fread(samples_file)[, 1][[1]]
 rnaseq = fread(rnaseq_file)
 
 # Subset gene expression datast by samples in the samples file
-rnaseq = rnaseq %>% select(c(colnames(rnaseq)[1], all_of(subsample)))
+rnaseq = rnaseq %>% dplyr::select(c(colnames(rnaseq)[1], all_of(subsample)))
 
 # Remove the samples column and include it as "rownames"
 gene.ids <- rnaseq[, 1][[1]]

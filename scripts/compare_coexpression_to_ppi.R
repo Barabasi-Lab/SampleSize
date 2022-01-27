@@ -38,7 +38,7 @@ ppi_tissue_sex_filt_file = opt$ppi_file
 output_file = opt$output_file
 
 #tissue_sex_network_file = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_female/wto_RNAseq_samples_Spleen_female_all_samples.net"
-#tissue_sex_network_file = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_female/wgcna_RNAseq_samples_Spleen_female_all_samples.net"
+#tissue_sex_network_file = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/all_samples/wgcna_scipher_all_samples_size_100_rep_1.net"
 #ppi_tissue_sex_filt_file = "/home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Spleen_female.csv"
 #output_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_GTEx/Spleen_female/wto_RNAseq_samples_Spleen_female_all_samples.net"
 #output_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_GTEx/Spleen_female/comparison_coexpression_ppi_wto_RNAseq_samples_Spleen_female_all_samples.net"
@@ -123,6 +123,13 @@ if (!(grepl('wto', tissue_sex_network_file, fixed = TRUE))){
 ppi_gene_coexpression_merged_df <- inner_join(ppi_tissue_sex_filt_distances, tissue_sex_network_df, by=c("Node.1" = "Node.1", "Node.2" = "Node.2"))
 rm(ppi_tissue_sex_filt_distances)
 rm(tissue_sex_network_df)
+
+ppi_gene_coexpression_merged_df %>% 
+  ggplot(aes(x=distances, y=score)) +
+  geom_point() +
+  geom_smooth(method=lm , color="red", fill="#69b3a2", se=TRUE) +
+  theme_linedraw()
+  
 
 # Calculate correlation between co-expression scores and distances
 corr_distance_score = cor(x=ppi_gene_coexpression_merged_df$distances, y=ppi_gene_coexpression_merged_df$score, method="pearson")
