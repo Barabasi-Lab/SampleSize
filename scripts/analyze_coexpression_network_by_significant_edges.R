@@ -11,28 +11,26 @@ library(NetSci)
 
 #### READ ARGUMENTS ####
 option_list = list(
-  make_option(c("-a", "--coexpression_network_file"), type="character", 
+  make_option(c("-c", "--coexpression_network_file"), type="character", 
               help="Co-expression network file", metavar="character"),
-  make_option(c("-b", "--pvalue_threshold"), type="double", default = 0.05,
+  make_option(c("-o", "--output_results_dir"), type="character", default="./results", 
+              help="Output results directory [default= %default]", metavar="character"),
+  make_option(c("-s", "--output_subgraphs_dir"), type="character", default="./subgraphs", 
+              help="Output networks directory [default= %default]", metavar="character"),
+  make_option(c("-f", "--file_name"), type="character", default="./subgraphs", 
+              help="File name [default= %default]", metavar="character"),
+  make_option(c("-t", "--threshold"), type="double", default = 0.05,
               help="P-value threshold", metavar="double"),
-  make_option(c("-c", "--disease_genes_file"), type="character", default = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info.csv",
+  make_option(c("-i", "--disparity_threshold"), type="character", default=NA, 
+              help="Disparity p-value [default= %default]", metavar="character"),
+  make_option(c("-p", "--ppi_file"), type="character", default = "/home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv",
+              help="File containing the protein-protein interaction network", metavar="character"),
+  make_option(c("-d", "--disease_genes_file"), type="character", default = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_scipher.csv",
               help="File containing the disease genes in the expression dataset", metavar="character"),
-  make_option(c("-d", "--essential_genes_file"), type="character", default = "/home/j.aguirreplans/Databases/OGEE/OGEE_esential_genes.csv",
+  make_option(c("-e", "--essential_genes_file"), type="character", default = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_esential_genes_scipher.csv",
               help="File containing the essential genes in the expression dataset", metavar="character"),
-  make_option(c("-e", "--output_subgraph"), type="character", default="network.txt", 
-              help="Output network filtered [default= %default]", metavar="character"),
-  make_option(c("-f", "--output_main_core_subgraph"), type="character", default="main_core.txt", 
-              help="Output main core subgraph [default= %default]", metavar="character"),
-  make_option(c("-g", "--output_disease_genes_subgraph_dir"), type="character", default="disease_subgraphs", 
-              help="Output directory to store disease module subraphs [default= %default]", metavar="character"),
-  make_option(c("-i", "--output_essential_genes_subgraph"), type="character", default="main_core.txt", 
-              help="Output essential genes subgraph [default= %default]", metavar="character"),
-  make_option(c("-j", "--output_topology_file"), type="character", default="analysis_topology.txt", 
-              help="Output topology file [default= %default]", metavar="character"),
-  make_option(c("-k", "--output_disease_genes_file"), type="character", default="analysis_essential_genes.txt", 
-              help="Output disease genes file [default= %default]", metavar="character"),
-  make_option(c("-l", "--output_essential_genes_file"), type="character", default="analysis_disease_genes.txt", 
-              help="Output essential genes file [default= %default]", metavar="character")
+  make_option(c("-g", "--genes_dataset_file"), type="character", default = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_gene_info.csv",
+              help="File containing the genes in the expression dataset", metavar="character")
 ); 
 # Example of execution
 # Rscript /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_coexpression_network_by_significant_edges.R -c /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Spleen_female.csv 
@@ -48,152 +46,252 @@ if (is.null(opt$coexpression_network_file)){
 }
 
 coexpression_network_file = opt$coexpression_network_file
-pvalue_threshold = as.double(opt$pvalue_threshold)
+output_results_dir = opt$output_results_dir
+output_subgraphs_dir = opt$output_subgraphs_dir
+file_name = opt$file_name
+threshold = as.double(opt$threshold)
+disparity_threshold = opt$disparity_threshold
+ppi_file = opt$ppi_file
 disease_genes_file = opt$disease_genes_file
 essential_genes_file = opt$essential_genes_file
-output_subgraph = opt$output_subgraph
-output_main_core_subgraph = opt$output_main_core_subgraph
-output_essential_genes_subgraph = opt$output_essential_genes_subgraph
-output_disease_genes_subgraph_dir = opt$output_disease_genes_subgraph_dir
-output_topology_file = opt$output_topology_file
-output_disease_genes_file = opt$output_disease_genes_file
-output_essential_genes_file = opt$output_essential_genes_file
+genes_dataset_file = opt$genes_dataset_file
 
+#coexpression_network_file = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete_dataset/aracne_scipher_complete_dataset_size_100_rep_1.net"
 #coexpression_network_file = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/all_samples/wgcna_scipher_all_samples_size_100_rep_1.net"
 #coexpression_network_file = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/all_samples/spearman_scipher_all_samples_size_100_rep_1.net"
+#coexpression_network_file = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Whole.Blood/aracne_scipher_all_samples_size_100_rep_1.net"
+#output_results_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_scipher/all_samples"
+#output_subgraphs_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_scipher/all_samples"
+#file_name = "spearman_scipher_all_samples_size_100_rep_1_pvalue_0.05_disp_None"
 #output_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_scipher/all_samples/analysis_by_top_scoring_edges_wgcna_scipher_all_samples_size_100_rep_1.txt"
-#disease_genes_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info.csv"
-#essential_genes_file = "/home/j.aguirreplans/Databases/OGEE/OGEE_esential_genes.csv"
+#ppi_file = "/home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv"
+#disease_genes_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_scipher.csv"
+#essential_genes_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_esential_genes_scipher.csv"
+#genes_dataset_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_gene_info.csv"
 
-read_coexpression_network <- function(coexpression_network_file, pvalue_threshold=0.05, RsquaredCut=0.80){
-  cut = pvalue_threshold
-  coexpression_network_df = as.data.frame(fread(coexpression_network_file))
-  if(grepl('wto', coexpression_network_file, fixed = TRUE)){
-    coexpression_network_df = coexpression_network_df %>% rename("score"="wTO")
-    coexpression_network_df = coexpression_network_df %>% filter(pval.adj < cut) %>% dplyr::select(Node.1, Node.2, score)
-  } else if((grepl('spearman', coexpression_network_file, fixed = TRUE))){
-    coexpression_network_df = coexpression_network_df %>% rename("score"="spearman")
-    coexpression_network_df = coexpression_network_df %>% filter(pvalue < cut) %>% dplyr::select(Node.1, Node.2, score)
-  } else if((grepl('pearson', coexpression_network_file, fixed = TRUE))){
-    coexpression_network_df = coexpression_network_df %>% rename("score"="pearson")
-    coexpression_network_df = coexpression_network_df %>% filter(pvalue < cut) %>% dplyr::select(Node.1, Node.2, score)
-  } else if((grepl('wgcna', coexpression_network_file, fixed = TRUE))){
-    library(WGCNA)
-    rownames(coexpression_network_df) = colnames(coexpression_network_df)
-    coexpression_network_df <- coexpression_network_df[order(rownames(coexpression_network_df)), order(colnames(coexpression_network_df))]
-    hard_threshold = WGCNA::pickHardThreshold(coexpression_network_df, RsquaredCut = RsquaredCut)
-    if (is.na(hard_threshold$cutEstimate)){
-      cut = hard_threshold$fitIndices[hard_threshold$fitIndices$SFT.R.sq == max(hard_threshold$fitIndices$SFT.R.sq),]$Cut
-    } else {
-      cut = hard_threshold$cutEstimate
+
+# Define output result files
+output_topology_file = paste(output_results_dir, "/", file_name, "_analysis_topology.txt", sep="")
+output_ppi_file = paste(output_results_dir, "/", file_name, "_analysis_ppi.txt", sep="")
+output_disease_genes_file = paste(output_results_dir, "/", file_name, "_analysis_disease_genes.txt", sep="")
+output_essential_genes_file = paste(output_results_dir, "/", file_name, "_analysis_essential_genes.txt", sep="")
+
+# Define output subgraphs
+output_subgraph = paste(output_subgraphs_dir, "/subgraphs/", file_name, "_subgraph.txt", sep="")
+output_main_core_subgraph = paste(output_subgraphs_dir, "/main_core/", file_name, "_main_core_subgraph.txt", sep="")
+output_ppi_subgraph = paste(output_subgraphs_dir, "/ppi/", file_name, "_ppi_subgraph.txt", sep="")
+output_ppi_main_core_subgraph = paste(output_subgraphs_dir, "/ppi_main_core/", file_name, "_ppi_main_core_subgraph.txt", sep="")
+output_disease_genes_subgraph_dir = paste(output_subgraphs_dir, "/disease_genes/", file_name, "_disease_genes_subgraphs", sep="")
+output_essential_genes_subgraph = paste(output_subgraphs_dir, "/essential_genes/", file_name, "_essential_genes_subgraph.txt", sep="")
+
+
+# Find method name in file name
+file_split = strsplit(coexpression_network_file, split="/")[[1]]
+file_name = file_split[length(file_split)]
+file_split = strsplit(file_name, split="_")[[1]]
+method = file_split[1]
+
+
+# Read gene co-expression network
+read_coexpression_network <- function(coexpression_network_file, method, threshold){
+  
+  # Read file
+  coexpression_df = as.data.frame(fread(coexpression_network_file))
+  
+  # If method is aracne or wgcna, transform matrix to dataframe of pairs of genes
+  if((method == "aracne") | (method == "wgcna")){
+    rownames(coexpression_df) = colnames(coexpression_df)
+    coexpression_df = coexpression_df[order(rownames(coexpression_df)), order(colnames(coexpression_df))]
+    coexpression_df = coexpression_df %>% wTO.in.line() %>% rename(score=wTO)
+    if(method == "aracne"){
+      threshold = 0
     }
-    coexpression_network_df = coexpression_network_df %>% wTO.in.line() %>% rename(score=wTO)
-    coexpression_network_df = coexpression_network_df %>% filter(abs(score) > cut)
-  } else if((grepl('aracne', coexpression_network_file, fixed = TRUE))){
-    cut = 0
-    rownames(coexpression_network_df) = colnames(coexpression_network_df)
-    coexpression_network_df <- coexpression_network_df[order(rownames(coexpression_network_df)), order(colnames(coexpression_network_df))]
-    coexpression_network_df = coexpression_network_df %>% wTO.in.line() %>% rename(score=wTO)
-    coexpression_network_df = coexpression_network_df %>% filter(abs(score) > cut)
+    coexpression_df = coexpression_df %>% filter(abs(score) > threshold)
   } else {
-    stop("Unknown co-expression network method!")
+    if(method == "wto"){
+      coexpression_df = coexpression_df %>% rename("score"= "wTO")
+    }
+    coexpression_df = coexpression_df %>% dplyr::select(Node.1, Node.2, score, pval.adj) %>% filter(pval.adj < threshold)
   }
-  return(list("network" = coexpression_network_df, "cut" = cut))
-}
+  
+  return(coexpression_df)
+}  
+
+start_time <- Sys.time()
+print("Reading co-expression network")
+coexpression_df = read_coexpression_network(coexpression_network_file=coexpression_network_file, method=method, threshold=threshold)
+genes_dataset = (fread(genes_dataset_file) %>% filter(enough_counts == TRUE))$symbol
+end_time <- Sys.time()
+time_diff = end_time - start_time
+print(time_diff)
 
 
-coexpression_df = read_coexpression_network(coexpression_network_file=coexpression_network_file, pvalue_threshold=pvalue_threshold, RsquaredCut=0.80)
-cut = coexpression_df$cut
-coexpression_df = coexpression_df$network
-genes_network = unique(c(as.vector(coexpression_df$Node.1), as.vector(coexpression_df$Node.2)))
-disease_genes_df = fread(disease_genes_file)
-disease_genes_df = disease_genes_df %>% filter(gene %in% genes_network)
-essential_genes = unique(fread(essential_genes_file)$gene)
-essential_genes = essential_genes[essential_genes %in% genes_network]
+# Read other datasets
+# Select diseases with more than 19 genes
+disease_genes_df = fread(disease_genes_file) %>% filter(hgnc_symbol %in% genes_dataset) %>% unique() %>% 
+  group_by(DiseaseName) %>%
+  mutate(TotalDiseaseGenesDataset = n()) %>%
+  filter(TotalDiseaseGenesDataset > 19) %>%
+  ungroup()
+essential_genes = unique((fread(essential_genes_file) %>% filter(gene %in% genes_dataset))$gene)
+ppi_df = fread(ppi_file) %>% dplyr::select(proteinA_symbol, proteinB_symbol) %>% filter((proteinA_symbol %in% genes_dataset) & (proteinB_symbol %in% genes_dataset))
+ppi_net = graph_from_data_frame(ppi_df, directed=F) %>% simplify()
+k_core = coreness(ppi_net)
+max_k = max(k_core)
+ppi_main_core = induced.subgraph(ppi_net, vids = names(k_core[k_core==max_k]))
 
-
-# Define result dataframes
-topology_df = data.frame(matrix(ncol=14,nrow=0, dimnames=list(NULL, c("cut", "num_nodes", "num_edges", "av_degree", "av_path_length", "av_clustering_coef", "num_components", "num_lcc_nodes", "num_lcc_edges", "lcc_z", "lcc_pvalue", "max_k", "num_main_core_nodes", "num_main_core_edges"))))
-essential_gene_results_df = data.frame(matrix(ncol=9,nrow=0, dimnames=list(NULL, c("cut", "num_essential_genes", "fraction_essential_genes", "num_components", "num_lcc_nodes", "fraction_essential_lcc_nodes", "num_lcc_edges", "lcc_z", "lcc_pvalue"))))
-disease_gene_results_df <- setNames(data.frame(matrix(ncol = 11, nrow = 0)), c('cut', 'disease', 'disease_class', 'num_disease_genes', 'fraction_disease_genes', 'num_disease_components', 'num_disease_lcc_nodes', 'fraction_disease_lcc_nodes', 'num_disease_lcc_edges', "disease_lcc_z", "disease_lcc_pvalue"))
 
 # Get network in igraph format
 coexpression_net = graph_from_data_frame((coexpression_df %>% rename("weight"="score")), directed=F) %>% simplify()
 
-# Output network
-coexpression_df %>% fwrite(output_subgraph)
 
-# Calculate topological parameters
-num_nodes = gorder(coexpression_net)
-num_edges = gsize(coexpression_net)
-av_degree = mean(degree(coexpression_net))
-av_path_length = mean_distance(coexpression_net)
-av_clustering_coef = transitivity(coexpression_net)
+# Define result dataframes
+topology_df = data.frame(matrix(ncol=15,nrow=0, dimnames=list(NULL, c("threshold", "disparity", "num_nodes", "num_edges", "av_degree", "av_path_length", "av_clustering_coef", "num_components", "num_lcc_nodes", "num_lcc_edges", "lcc_z", "lcc_pvalue", "max_k", "num_main_core_nodes", "num_main_core_edges"))))
+ppi_results_df = data.frame(matrix(ncol=10,nrow=0, dimnames=list(NULL, c("threshold", "disparity", "num_ppi_nodes", "num_ppi_edges", "fraction_ppi_nodes", "fraction_ppi_edges", "num_ppi_main_core_nodes", "num_ppi_main_core_edges", "fraction_ppi_main_core_nodes", "fraction_ppi_main_core_edges"))))
+disease_gene_results_df <- setNames(data.frame(matrix(ncol = 13, nrow = 0)), c('threshold', 'disparity', 'disease', 'disease_class', 'num_disease_genes', 'num_disease_edges', 'fraction_disease_genes', 'num_disease_components', 'num_disease_lcc_nodes', 'num_disease_lcc_edges', 'fraction_disease_lcc_nodes', "disease_lcc_z", "disease_lcc_pvalue"))
+essential_gene_results_df = data.frame(matrix(ncol=11,nrow=0, dimnames=list(NULL, c("threshold", "disparity", "num_essential_genes", "num_essential_edges", "fraction_essential_genes", "num_components", "num_lcc_nodes", "num_lcc_edges", "fraction_essential_lcc_nodes", "lcc_z", "lcc_pvalue"))))
 
-# Components analysis
-components_net = components(coexpression_net)
-lcc = induced.subgraph(coexpression_net, vids = V(coexpression_net)[components_net$membership == which.max(components_net$csize)] )
-num_lcc_nodes = gorder(lcc)
-num_lcc_edges = gsize(lcc)
-lcc_sig = LCC_Significance(N = 1000, 
-                           Targets = V(lcc)$name, 
-                           G = coexpression_net)
 
-# K-core analysis
-k_core = coreness(coexpression_net)
-max_k = max(k_core)
-main_core = induced.subgraph(coexpression_net, vids = names(k_core[k_core==max_k]))
-num_main_core_nodes = gorder(main_core)
-num_main_core_edges = gsize(main_core)
+# Calculate topology analysis
+start_time <- Sys.time()
+print("Calculating topology")
+if(!(file.exists(output_topology_file))){
+  
+  # Output network
+  coexpression_df %>% fwrite(output_subgraph)
+  
+  # Calculate topological parameters
+  num_nodes = gorder(coexpression_net)
+  num_edges = gsize(coexpression_net)
+  av_degree = mean(degree(coexpression_net))
+  av_path_length = mean_distance(coexpression_net)
+  av_clustering_coef = transitivity(coexpression_net)
+  
+  # Components analysis
+  components_net = components(coexpression_net)
+  lcc = induced.subgraph(coexpression_net, vids = V(coexpression_net)[components_net$membership == which.max(components_net$csize)] )
+  num_lcc_nodes = gorder(lcc)
+  num_lcc_edges = gsize(lcc)
+  lcc_sig = LCC_Significance(N = 1000, 
+                             Targets = V(lcc)$name, 
+                             G = coexpression_net)
+  
+  # K-core analysis
+  k_core = coreness(coexpression_net)
+  max_k = max(k_core)
+  main_core = induced.subgraph(coexpression_net, vids = names(k_core[k_core==max_k]))
+  num_main_core_nodes = gorder(main_core)
+  num_main_core_edges = gsize(main_core)
+  
+  topology_df = rbind(topology_df, data.frame(threshold=threshold, disparity=disparity_threshold, num_nodes=num_nodes, num_edges=num_edges, av_degree=av_degree, av_path_length=av_path_length, av_clustering_coef=av_clustering_coef, num_components=components_net$no, num_lcc_nodes=num_lcc_nodes, num_lcc_edges=num_lcc_edges, lcc_z=lcc_sig$Z, lcc_pvalue=lcc_sig$emp_p, max_k=max_k, num_main_core_nodes=num_main_core_nodes, num_main_core_edges=num_main_core_edges))
+  
+  # Output main core subgraph
+  write_graph(main_core, output_main_core_subgraph, "graphml")
+  
+  # Create output topology file
+  topology_df %>% fwrite(output_topology_file)
+  
+}
+end_time <- Sys.time()
+time_diff = end_time - start_time
+print(time_diff)
 
-topology_df = rbind(topology_df, data.frame(cut=cut, num_nodes=num_nodes, num_edges=num_edges, av_degree=av_degree, av_path_length=av_path_length, av_clustering_coef=av_clustering_coef, num_components=components_net$no, num_lcc_nodes=num_lcc_nodes, num_lcc_edges=num_lcc_edges, lcc_z=lcc_sig$Z, lcc_pvalue=lcc_sig$emp_p, max_k=max_k, num_main_core_nodes=num_main_core_nodes, num_main_core_edges=num_main_core_edges))
 
-# Output main core subgraph
-write_graph(main_core, output_main_core_subgraph, "graphml")
+# Calculate PPI analysis
+start_time <- Sys.time()
+print("Calculating PPI")
+if(!(file.exists(output_ppi_file))){
+  
+  # Select PPIs in co-expression network
+  coexpression_ppi_df = inner_join(coexpression_df, ppi_df, by=c("Node.1"="proteinA_symbol", "Node.2"="proteinB_symbol"))
+  coexpression_ppi_main_core_df = coexpression_ppi_df %>% filter((Node.1 %in% V(ppi_main_core)$name) & (Node.2 %in% V(ppi_main_core)$name))
+  coexpression_ppi_net = graph_from_data_frame(coexpression_ppi_df, directed=F) %>% simplify()
+  coexpression_ppi_main_core_net = graph_from_data_frame(coexpression_ppi_main_core_df, directed=F) %>% simplify()
+  
+  # Write result networks
+  coexpression_ppi_df %>% fwrite(output_ppi_subgraph)
+  coexpression_ppi_main_core_df %>% fwrite(output_ppi_main_core_subgraph)
 
-# Essential genes analysis
-essential_genes_in_network = essential_genes[essential_genes %in% V(coexpression_net)$name]
-essential_subgraph = induced.subgraph(coexpression_net, vids=essential_genes_in_network)
-essential_components = components(essential_subgraph)
-essential_lcc = induced.subgraph(essential_subgraph, vids = V(essential_subgraph)[essential_components$membership == which.max(essential_components$csize)] )
-num_essential_lcc_nodes = gorder(essential_lcc)
-num_essential_lcc_edges = gsize(essential_lcc)
-essential_lcc_sig = LCC_Significance(N = 1000, Targets = V(essential_lcc)$name, G = coexpression_net)
-essential_gene_results_df = rbind(essential_gene_results_df, data.frame(cut=cut, num_essential_genes=length(essential_genes_in_network), fraction_essential_genes=length(essential_genes_in_network)/length(essential_genes), num_components=essential_components$no, num_essential_lcc_nodes=num_essential_lcc_nodes, fraction_essential_lcc_nodes=num_essential_lcc_nodes/length(essential_genes), num_lcc_edges=num_essential_lcc_edges, lcc_z=essential_lcc_sig$Z, lcc_pvalue=essential_lcc_sig$emp_p))
+  # Write result dataframes
+  ppi_results_df = rbind(ppi_results_df, data.frame(threshold=threshold, disparity=disparity_threshold, num_ppi_nodes=gorder(coexpression_ppi_net), num_ppi_edges=gsize(coexpression_ppi_net), fraction_ppi_nodes=gorder(coexpression_ppi_net)/gorder(ppi_net), fraction_ppi_edges=gsize(coexpression_ppi_net)/gsize(ppi_net), num_ppi_main_core_nodes=gorder(coexpression_ppi_main_core_net), num_ppi_main_core_edges=gsize(coexpression_ppi_main_core_net), fraction_ppi_main_core_nodes=gorder(coexpression_ppi_main_core_net)/gorder(ppi_main_core), fraction_ppi_main_core_edges=gsize(coexpression_ppi_main_core_net)/gsize(ppi_main_core)))
+  ppi_results_df %>% fwrite(output_ppi_file)
+}
+end_time <- Sys.time()
+time_diff = end_time - start_time
+print(time_diff)
 
-# Output essential genes subgraph
-write_graph(essential_subgraph, output_essential_genes_subgraph, "graphml")
 
-# Disease genes analysis
-dir.create(output_disease_genes_subgraph_dir, showWarnings = FALSE)
-for (disease in sort(unique(disease_genes_df$disease))){
-  disease_selected_df = disease_genes_df %>% filter(disease == !!disease)
-  disease_selected_genes = unique(disease_selected_df$gene)
-  disease_selected_genes_in_network = disease_selected_genes[disease_selected_genes %in% V(coexpression_net)$name]
-  if (length(disease_selected_genes) > 19){
+# Calculate disease gene analysis
+start_time <- Sys.time()
+print("Calculating disease genes")
+if(!(file.exists(output_disease_genes_file))){
+  
+  # Disease genes analysis
+  dir.create(output_disease_genes_subgraph_dir, showWarnings = FALSE)
+  selected_diseases = c("alzheimer disease", "arthritis rheumatoid", "cardiomyopathies", "diabetes mellitus type 2")
+  #for (disease in sort(unique(disease_genes_df$DiseaseName))){
+  for (disease in selected_diseases){
+    disease_selected_df = disease_genes_df %>% filter(DiseaseName == !!disease)
+    disease_selected_genes = unique(disease_selected_df$hgnc_symbol)
+    disease_selected_genes_in_network = disease_selected_genes[disease_selected_genes %in% V(coexpression_net)$name]
     disease_subgraph = induced.subgraph(coexpression_net, vids=disease_selected_genes_in_network)
-    disease_components = components(disease_subgraph)
-    disease_lcc = induced.subgraph(disease_subgraph, vids = V(disease_subgraph)[disease_components$membership == which.max(disease_components$csize)] )
+    disease_net_df = coexpression_df %>% filter((Node.1 %in% V(disease_subgraph)$name) & (Node.2 %in% V(disease_subgraph)$name))
+    num_disease_genes_subgraph = length(unique(c(disease_net_df$Node.1, disease_net_df$Node.2)))
+    disease_components = igraph::components(disease_subgraph)
+    disease_lcc = igraph::induced.subgraph(disease_subgraph, vids = V(disease_subgraph)[disease_components$membership == which.max(disease_components$csize)] )
     num_disease_lcc_nodes = gorder(disease_lcc)
     num_disease_lcc_edges = gsize(disease_lcc)
     disease_lcc_sig = LCC_Significance(N = 1000, Targets = V(disease_lcc)$name, G = coexpression_net)
-    disease_selected_classes = unique(disease_selected_df$root.concept)
+    disease_selected_classes = strsplit(unique(disease_selected_df$DescriptorName), split="|", fixed=TRUE)[[1]]
     
-    disease_net_df = coexpression_df %>% filter((Node.1 %in% V(disease_subgraph)$name) & (Node.2 %in% V(disease_subgraph)$name))
-    disease_name_no_sp_char = unique((disease_genes_df %>% filter(disease == !!disease))$disease.no.sp.char)
+    disease_name_no_sp_char = unique((disease_genes_df %>% filter(DiseaseName == !!disease))$DiseaseName.no.sp.char)
     output_disease_genes_network_file = paste(output_disease_genes_subgraph_dir, paste(disease_name_no_sp_char, ".txt", sep=""), sep="/")
     write_graph(disease_subgraph, output_disease_genes_network_file, "graphml")
     
     for (disease_selected_class in disease_selected_classes){
-      disease_gene_results_df = rbind(disease_gene_results_df, data.frame(cut=cut, disease=disease, disease_class=disease_selected_class, num_disease_genes=length(disease_selected_genes_in_network), fraction_disease_genes=length(disease_selected_genes_in_network)/length(disease_selected_genes), num_disease_components=disease_components$no, num_disease_lcc_nodes=num_disease_lcc_nodes, fraction_disease_lcc_nodes=num_disease_lcc_nodes/length(disease_selected_genes), num_disease_lcc_edges=num_disease_lcc_edges, disease_lcc_z=disease_lcc_sig$Z, disease_lcc_pvalue=disease_lcc_sig$emp_p))
+      disease_gene_results_df = rbind(disease_gene_results_df, data.frame(threshold=threshold, disparity=disparity_threshold, disease=disease, disease_class=disease_selected_class, 
+                                                                          num_disease_genes=num_disease_genes_subgraph, num_disease_edges=gsize(disease_subgraph), 
+                                                                          fraction_disease_genes=num_disease_genes_subgraph/length(disease_selected_genes), 
+                                                                          num_disease_components=disease_components$no, num_disease_lcc_nodes=num_disease_lcc_nodes, num_disease_lcc_edges=num_disease_lcc_edges, 
+                                                                          fraction_disease_lcc_nodes=num_disease_lcc_nodes/length(disease_selected_genes),
+                                                                          disease_lcc_z=disease_lcc_sig$Z, disease_lcc_pvalue=disease_lcc_sig$emp_p))
     }
   }
+  
+  # Create output disease genes file
+  disease_gene_results_df %>% fwrite(output_disease_genes_file)
+  
 }
+end_time <- Sys.time()
+time_diff = end_time - start_time
+print(time_diff)
 
 
-# Create output file
-topology_df %>% fwrite(output_topology_file)
-essential_gene_results_df %>% fwrite(output_essential_genes_file)
-disease_gene_results_df %>% fwrite(output_disease_genes_file)
+start_time <- Sys.time()
+print("Calculating essential genes")
+if(!(file.exists(output_essential_genes_file))){
+  
+  # Essential genes analysis
+  essential_genes_in_network = essential_genes[essential_genes %in% V(coexpression_net)$name]
+  essential_subgraph = induced.subgraph(coexpression_net, vids=essential_genes_in_network)
+  essential_subgraph_df = coexpression_df %>% filter((Node.1 %in% V(essential_subgraph)$name) & (Node.2 %in% V(essential_subgraph)$name))
+  num_essential_genes_subgraph = length(unique(c(essential_subgraph_df$Node.1, essential_subgraph_df$Node.2)))
+  rm(essential_subgraph_df)
+  essential_components = components(essential_subgraph)
+  essential_lcc = induced.subgraph(essential_subgraph, vids = V(essential_subgraph)[essential_components$membership == which.max(essential_components$csize)] )
+  num_essential_lcc_nodes = gorder(essential_lcc)
+  num_essential_lcc_edges = gsize(essential_lcc)
+  essential_lcc_sig = LCC_Significance(N = 1000, Targets = V(essential_lcc)$name, G = coexpression_net)
+  essential_gene_results_df = rbind(essential_gene_results_df, data.frame(threshold=threshold, disparity=disparity_threshold, num_essential_genes=num_essential_genes_subgraph, num_essential_edges=gsize(essential_subgraph), fraction_essential_genes=num_essential_genes_subgraph/length(essential_genes), num_components=essential_components$no, num_lcc_nodes=num_essential_lcc_nodes, num_lcc_edges=num_essential_lcc_edges, fraction_essential_lcc_nodes=num_essential_lcc_nodes/length(essential_genes), lcc_z=essential_lcc_sig$Z, lcc_pvalue=essential_lcc_sig$emp_p))
 
+  # Output essential genes subgraph
+  write_graph(essential_subgraph, output_essential_genes_subgraph, "graphml")
+  
+  # Create output essential genes file
+  essential_gene_results_df %>% fwrite(output_essential_genes_file)
+  
+}
+end_time <- Sys.time()
+time_diff = end_time - start_time
+print(time_diff)
 

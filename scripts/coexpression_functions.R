@@ -10,6 +10,8 @@ require(WGCNA)
 require(wTO)
 require(dplyr)
 require(data.table)
+require(Hmisc)
+require(igraph)
 require(minet)
 
 
@@ -50,7 +52,7 @@ backbone_cal = function(weighted_adj_mat){
 #'  @param cor_method The correlation method to use. Spearman ("s", "spearman") or Pearson ("p", "pearson") correlation. Default is "pearson". 
 #'
 calculate_correlation <- function(rnaseq, out_name, cor_method="pearson", disparity_filter=TRUE, corr_threshold=NA, pval_threshold=NA){
-  
+
   correlation_result = CorrelationOverlap(Data = rnaseq, Overlap = row.names(rnaseq), method = "p") %>% as.data.frame() 
   
   if (!(is.na(corr_threshold))){
@@ -60,13 +62,60 @@ calculate_correlation <- function(rnaseq, out_name, cor_method="pearson", dispar
   if (isTRUE(disparity_filter)){
     correlation_pval_mat = backbone_cal(correlation_result)
     correlation_result = correlation_result %>% wTO.in.line() %>% rename(!!cor_method := "wTO")
-    correlation_pval_mat = correlation_pval_mat %>% wTO.in.line() %>% rename("pvalue" := "wTO")
+    correlation_pval_mat = correlation_pval_mat %>% wTO.in.line() %>% rename("pval" := "wTO")
     correlation_result = correlation_result %>% inner_join(correlation_pval_mat)
     rm(correlation_pval_mat)
     if (!(is.na(pval_threshold))){
-      correlation_result = correlation_result %>% filter(pvalue < pval_threshold)
+      correlation_result = correlation_result %>% filter(pval < pval_threshold)
     }
   }
+  
+  fwrite(correlation_result, out_name)
+  
+}
+
+
+################################################################################
+
+#'  Write correlation networks to file and includes calculation of p-value.
+#'
+#'  Method to calculate correlation and p-value between genes from gene expression data.
+#'  
+#'  @param rnaseq   RNAseq expression data frame
+#'                     (columns are samples, rows are genes).
+#'  @param out_name The name of the file to write the correlations to.
+#'  @param cor_method The correlation method to use. Spearman ("s", "spearman") or Pearson ("p", "pearson") correlation. Default is "pearson". 
+#'  @param correction_method Method to correct p-value for multiple testing. Options: "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr". Default is "bonferroni". 
+#'
+calculate_correlation_and_pvalue <- function(rnaseq, out_name, cor_method="spearman", correction_method="bonferroni", disparity_filter=FALSE, disparity_filter_pval_threshold=0.05){
+  
+  correlation_result <- rcorr(as.matrix(rnaseq), type=cor_method)
+  correlation_result_mat = correlation_result$r
+  correlation_pval_mat = correlation_result$P %>% wTO.in.line() %>% rename("pval" := "wTO")
+  correlation_result = correlation_result$r %>% wTO.in.line() %>% rename("score" := "wTO")
+  correlation_result = correlation_result %>% inner_join(correlation_pval_mat)
+  rm(correlation_pval_mat)
+  correlation_result$pval.adj = p.adjust(correlation_result$pval, method=correction_method)
+  
+  if (isTRUE(disparity_filter)){
+    # Calculate disparity p-value without filtering
+    correlation_disp_mat = backbone_cal(correlation_result_mat)
+    correlation_disp_mat = correlation_disp_mat %>% wTO.in.line() %>% rename("disp.pval" := "wTO")
+    correlation_result = correlation_result %>% left_join(correlation_disp_mat)
+    rm(correlation_disp_mat)
+    rm(correlation_result_mat)
+    correlation_result_filt = correlation_result
+    correlation_result_filt[correlation_result_filt$pval.adj >= disparity_filter_pval_threshold,]$score = NA
+    correlation_result_filt = correlation_result_filt %>% rename("weight" := "score") %>% dplyr::select(Node.1, Node.2, weight)
+    correlation_result_mat = graph_from_data_frame(correlation_result_filt)
+    correlation_result_mat = as.data.frame(as.matrix(as_adjacency_matrix(correlation_result_mat, attr="weight")))
+    correlation_disp_mat = backbone_cal(correlation_result_mat)
+    rm(correlation_result_mat)
+    correlation_disp_mat = correlation_disp_mat %>% wTO.in.line() %>% rename(!!paste("disp.pval.after.filt.",disparity_filter_pval_threshold,sep="") := "wTO")
+    correlation_result = correlation_result %>% left_join(correlation_disp_mat)
+    rm(correlation_disp_mat)
+  }
+  #correlation_result = correlation_result %>% rename(!!cor_method := "score")
   
   fwrite(correlation_result, out_name)
   
@@ -140,7 +189,7 @@ calculate_network_WGCNA <- function(rnaseq, out_name, type="signed", power=6){
 #'  @param estimator Name of the entropy estimator to be used. The package can use the four mutual information estimators implemented in the package "infotheo": "mi.empirical", "mi.mm", "mi.shrink", "mi.sg" and three estimators based on correlation: "pearson","spearman","kendall"(default:"spearman") - see details.
 #'  @param eps Numeric value indicating the threshold used when removing an edge : for each triplet of nodes (i,j,k), the weakest edge, say (ij), is removed if its weight is below min{(ik),(jk)}-eps - see references.
 #'
-calculate_network_ARACNE <- function(rnaseq, out_name, estimator="pearson", eps=0.1){
+calculate_network_ARACNE <- function(rnaseq, out_name, estimator="pearson", eps=0){
   # Information about how to calculate a network using ARACNE with the minet package:
   # https://www.biostars.org/p/123084/
   # First, we use the function build.mim to calculate the mutual information matrix:

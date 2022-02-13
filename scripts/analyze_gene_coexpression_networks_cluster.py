@@ -25,12 +25,15 @@ def parse_options():
     # Directory arguments
     parser.add_option("-i", action="store", type="string", dest="input_dir", help="Directory with the input datasets", metavar="NETWORKS_DIR")
     parser.add_option("-p", action="store", type="string", dest="ppi_file", help="File with the PPI network", metavar="PPI_FILE")
+    parser.add_option("-d", action="store", type="string", dest="disease_genes_file", help="File with the disease-gene associations", metavar="DISEASE_GENES_FILE")
+    parser.add_option("-e", action="store", type="string", dest="essential_genes_file", help="File with the essential genes", metavar="ESSENTIAL_GENES_FILE")
+    parser.add_option("-g", action="store", type="string", dest="genes_dataset_file", help="File with the essential genes", metavar="GENES_DATASET_FILE")
     parser.add_option("-o", action="store", type="string", dest="output_analysis_dir", help="Directory for the output analysis", metavar="OUTPUT_ANALYSIS_DIR")
     parser.add_option("-n", action="store", type="string", dest="output_networks_dir", help="Directory for the output networks", metavar="OUTPUT_NETWORKS_DIR")
 
     (options, args) = parser.parse_args()
 
-    if options.input_dir is None or options.ppi_file is None or options.output_analysis_dir is None or options.output_networks_dir is None:
+    if options.input_dir is None or options.ppi_file is None or options.disease_genes_file is None or options.essential_genes_file is None or options.genes_dataset_file is None or options.output_analysis_dir is None or options.output_networks_dir is None:
         parser.error("missing arguments: type option \"-h\" for help")
 
     return options
@@ -60,6 +63,9 @@ def create_gene_coexpression_networks(options):
     data_dir = os.path.join(src_path, '../data')
     input_dir = options.input_dir
     ppi_file = options.ppi_file
+    disease_genes_file = options.disease_genes_file
+    essential_genes_file = options.essential_genes_file
+    genes_dataset_file = options.genes_dataset_file
     output_analysis_dir = options.output_analysis_dir
     create_directory(output_analysis_dir)
     output_networks_dir = options.output_networks_dir
@@ -93,56 +99,78 @@ def create_gene_coexpression_networks(options):
 
     # Run co-expression for all files
     datasets = [f for f in os.listdir(input_dir) if fileExist(os.path.join(input_dir, f))]
+    sizes = [str(size) for size in range(20, 1020, 20)]
 
     for dataset in sorted(datasets):
 
+        dataset_short = dataset.replace('.net', '')
+        dataset_info = dataset_short.split("_")
+        method = dataset_info[0]
+        size = dataset_info[-3]
+        rep = dataset_info[-1]
 
         script_file = os.path.join(src_path, 'analyze_coexpression_network_by_significant_edges.R')
         coexpression_file = os.path.join(input_dir, dataset)
         
         dataset_names = []
-        if (('spearman' in dataset) or ('pearson' in dataset) or ('wto' in dataset)):
-            pvalue_thresholds = [0.05, 0.01]
-            for pvalue_threshold in pvalue_thresholds:
-                dataset_name = '{}_pvalue_{}'.format('.'.join(dataset.split('.')[:-1]), str(pvalue_threshold))
-                dataset_names.append((dataset_name, pvalue_threshold))
-        else:
-            pvalue_threshold = 0.05
-            dataset_name = '{}'.format('.'.join(dataset.split('.')[:-1]))
-            dataset_names.append((dataset_name, pvalue_threshold))
+        if size in sizes:
+            if (method in ["pearson", "spearman"]):
+                thresholds = [0.05, 0.001]
+                disparity_pvalues = [None]
+                for threshold in thresholds:
+                    for disparity in disparity_pvalues:
+                        dataset_name = '{}_threshold_{}_disp_{}'.format(dataset_short, str(threshold), disparity)
+                        dataset_names.append((dataset_name, threshold, disparity))
+            elif (method == "wto"):
+                thresholds = [0.05, 0.001]
+                disparity = None
+                for threshold in thresholds:
+                    dataset_name = '{}_threshold_{}_disp_{}'.format(dataset_short, str(threshold), disparity)
+                    dataset_names.append((dataset_name, threshold, disparity))
+            else:
+                threshold = 0
+                disparity = None
+                dataset_name = '{}_threshold_{}_disp_{}'.format(dataset_short, str(threshold), disparity)
+                dataset_names.append((dataset_name, threshold, disparity))
         
-        for dataset_name, pvalue_threshold in dataset_names:
+            for dataset_name, threshold, disparity in dataset_names:
 
-            if limit: # Break the loop if a limit of jobs is introduced
-                if l > limit:
-                    print('The number of submitted jobs arrived to the limit of {}. The script will stop sending submissions!'.format(limit))
-                    break
-            
-            bash_script_name = 'analyze_coexpression_network_by_significant_edges_{}.sh'.format(dataset_name)
-            bash_script_file = os.path.join(dummy_dir, bash_script_name)
-            create_directory(os.path.join(output_networks_dir, 'subgraphs'))
-            create_directory(os.path.join(output_networks_dir, 'main_core'))
-            create_directory(os.path.join(output_networks_dir, 'disease_genes'))
-            create_directory(os.path.join(output_networks_dir, 'essential_genes'))
-            output_subgraph = os.path.join(output_networks_dir, 'subgraphs/{}_{}'.format(dataset_name, 'subgraph.txt'))
-            output_main_core_subgraph = os.path.join(output_networks_dir, 'main_core/{}_{}'.format(dataset_name, 'main_core_subgraph.txt'))
-            output_disease_genes_subgraph_dir = os.path.join(output_networks_dir, 'disease_genes/{}_{}'.format(dataset_name, 'disease_genes_subgraphs'))
-            create_directory(output_disease_genes_subgraph_dir)
-            output_essential_genes_subgraph = os.path.join(output_networks_dir, 'essential_genes/{}_{}'.format(dataset_name, 'essential_genes_subgraph.txt'))
-            output_topology_file = os.path.join(output_analysis_dir, '{}_{}'.format(dataset_name, 'analysis_topology.txt'))
-            output_disease_genes_file = os.path.join(output_analysis_dir, '{}_{}'.format(dataset_name, 'analysis_disease_genes.txt'))
-            output_essential_genes_file = os.path.join(output_analysis_dir, '{}_{}'.format(dataset_name, 'analysis_essential_genes.txt'))
+                if limit: # Break the loop if a limit of jobs is introduced
+                    if l > limit:
+                        print('The number of submitted jobs arrived to the limit of {}. The script will stop sending submissions!'.format(limit))
+                        sys.exit(0)
+                
+                bash_script_name = 'analyze_coexpression_network_by_significant_edges_{}.sh'.format(dataset_name)
+                bash_script_file = os.path.join(dummy_dir, bash_script_name)
+                create_directory(os.path.join(output_networks_dir, 'subgraphs'))
+                create_directory(os.path.join(output_networks_dir, 'main_core'))
+                create_directory(os.path.join(output_networks_dir, 'ppi'))
+                create_directory(os.path.join(output_networks_dir, 'ppi_main_core'))
+                create_directory(os.path.join(output_networks_dir, 'disease_genes'))
+                create_directory(os.path.join(output_networks_dir, 'essential_genes'))
+                output_disease_genes_subgraph_dir = os.path.join(output_networks_dir, 'disease_genes/{}_{}'.format(dataset_name, 'disease_genes_subgraphs'))
+                create_directory(output_disease_genes_subgraph_dir)
+                output_topology_file = os.path.join(output_analysis_dir, '{}_{}'.format(dataset_name, 'analysis_topology.txt'))
+                output_disease_genes_file = os.path.join(output_analysis_dir, '{}_{}'.format(dataset_name, 'analysis_disease_genes.txt'))
+                output_essential_genes_file = os.path.join(output_analysis_dir, '{}_{}'.format(dataset_name, 'analysis_essential_genes.txt'))
+                output_ppi_file = os.path.join(output_analysis_dir, '{}_{}'.format(dataset_name, 'analysis_ppi.txt'))
 
-            #if not fileExist(bash_script_file):
-            if not fileExist(output_disease_genes_file):
+                if ((method in ["pearson", "spearman", "wto", "aracne"]) and (threshold in [0, 0.001, 0.05])):
+                #if ((method in ["pearson", "aracne"]) and (threshold in [0, 0.05, 0.001])):
 
-                # Rscript /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_coexpression_network_by_top_scoring_edges.R -c /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/all_samples/wto_scipher_all_samples_size_270_rep_4.net -t /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_scipher/all_samples/wto_scipher_all_samples_size_270_rep_4_analysis_topology.txt -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_scipher/all_samples/wto_scipher_all_samples_size_270_rep_4_analysis_disease_genes.txt -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_scipher/all_samples/wto_scipher_all_samples_size_270_rep_4_analysis_essential_genes.txt
-                command = 'Rscript {} -a {} -b {} -e {} -f {} -g {} -i {} -j {} -k {} -l {}'.format(script_file, coexpression_file, pvalue_threshold, output_subgraph, output_main_core_subgraph, output_disease_genes_subgraph_dir, output_essential_genes_subgraph, output_topology_file, output_disease_genes_file, output_essential_genes_file)
-                print(command)
-                print(l)
-                submit_command_to_queue(command, max_jobs_in_queue=int(config.get("Cluster", "max_jobs_in_queue")), queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude, conda_environment=conda_environment)
+                    #if not fileExist(bash_script_file):
+                    if ((not fileExist(output_topology_file)) or (not fileExist(output_essential_genes_file))):
 
-                l += 1
+                        if disparity:
+                            command = 'Rscript {} -c {} -o {} -s {} -f {} -t {} -i {} -p {} -d {} -e {} -g {}'.format(script_file, coexpression_file, output_analysis_dir, output_networks_dir, dataset_name, threshold, disparity, ppi_file, disease_genes_file, essential_genes_file, genes_dataset_file)
+                        else:
+                            command = 'Rscript {} -c {} -o {} -s {} -f {} -t {} -p {} -d {} -e {} -g {}'.format(script_file, coexpression_file, output_analysis_dir, output_networks_dir, dataset_name, threshold, ppi_file, disease_genes_file, essential_genes_file, genes_dataset_file)
+                        print(dataset_name, threshold, disparity)
+                        print(command)
+                        print(l)
+                        submit_command_to_queue(command, max_jobs_in_queue=int(config.get("Cluster", "max_jobs_in_queue")), queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude, conda_environment=conda_environment)
+
+                        l += 1
         
         # if limit: # Break the loop if a limit of jobs is introduced
         #     if l > limit:

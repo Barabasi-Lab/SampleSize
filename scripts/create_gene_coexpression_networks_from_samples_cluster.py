@@ -53,7 +53,8 @@ def create_gene_coexpression_networks(options):
     wgcna_power = 6
     wgcna_type = "signed"
     mi_estimator = "pearson"
-    aracne_eps = 0.1
+    aracne_eps = 0
+    correction_method = "bonferroni"
 
     # Add "." to sys.path #
     src_path =  os.path.abspath(os.path.dirname(__file__))
@@ -101,30 +102,39 @@ def create_gene_coexpression_networks(options):
 
     # Run co-expression for all files
     datasets = [f for f in os.listdir(input_dir) if fileExist(os.path.join(input_dir, f))]
+    sizes = [str(size) for size in range(10, 1100, 20)]
+    reps = [str(rep) for rep in range(5, 11, 1)]
 
     for dataset in sorted(datasets):
 
-        if limit: # Break the loop if a limit of jobs is introduced
-            if l > limit:
-                print('The number of submitted jobs arrived to the limit of {}. The script will stop sending submissions!'.format(limit))
-                break
+        size = dataset.replace('.txt', '').split("_")[-3]
+        rep = dataset.replace('.txt', '').split("_")[-1]
 
-        samples_file = os.path.join(input_dir, dataset)
-        #dataset_name = 'test_{}'.format(str(l))
-        dataset_name = '{}_{}'.format(metric, '.'.join(dataset.split('.')[:-1]))
-        output_file = os.path.join(output_dir, '{}.net'.format(dataset_name))
-        bash_script_name = '{}.sh'.format(dataset_name)
-        bash_script_file = os.path.join(dummy_dir, bash_script_name)
+        if ((size not in sizes) and (rep not in reps)):
 
-        #if not fileExist(bash_script_file):
-        if not fileExist(output_file):
+            if limit: # Break the loop if a limit of jobs is introduced
+                if l > limit:
+                    print('The number of submitted jobs arrived to the limit of {}. The script will stop sending submissions!'.format(limit))
+                    break
 
-            #command = 'Rscript {}'.format(script_file)
-            command = 'Rscript {} -s {} -f {} -o {} -m {} -n {} -d {} -p {} -t {} -e {} -a {}'.format(script_file, samples_file, rnaseq_file, output_file, metric, wto_n, wto_delta, wgcna_power, wgcna_type, mi_estimator, aracne_eps)
-            print(command)
-            submit_command_to_queue(command, max_jobs_in_queue=int(config.get("Cluster", "max_jobs_in_queue")), queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude, conda_environment=conda_environment)
+            samples_file = os.path.join(input_dir, dataset)
+            #dataset_name = 'test_{}'.format(str(l))
+            dataset_name = '{}_{}'.format(metric, '.'.join(dataset.split('.')[:-1]))
+            output_file = os.path.join(output_dir, '{}.net'.format(dataset_name))
+            bash_script_name = '{}.sh'.format(dataset_name)
+            bash_script_file = os.path.join(dummy_dir, bash_script_name)
 
-            l += 1
+            #if not fileExist(bash_script_file):
+            if not fileExist(output_file):
+
+                #command = 'Rscript {}'.format(script_file)
+                command = 'Rscript {} -s {} -f {} -o {} -m {} -n {} -d {} -p {} -t {} -e {} -a {} -c {}'.format(script_file, samples_file, rnaseq_file, output_file, metric, wto_n, wto_delta, wgcna_power, wgcna_type, mi_estimator, aracne_eps, correction_method)
+                print(command)
+                print(size, rep)
+                print(l)
+                submit_command_to_queue(command, max_jobs_in_queue=int(config.get("Cluster", "max_jobs_in_queue")), queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude, conda_environment=conda_environment)
+
+                l += 1
 
     return
 

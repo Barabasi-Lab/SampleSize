@@ -17,8 +17,10 @@ Preprocess Scipher data (version v8).
 library(data.table)
 library(dplyr)
 library(ggplot2)
+require(magrittr)
 library(tidyr)
 set.seed(1510)
+`%ni%` <- Negate(`%in%`)
 ```
 
 ## Read files
@@ -32,21 +34,25 @@ data_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021'
 
 # Define input files
 RNAseq_raw_file = paste(data_dir, '00_data/Network004_hg19_ucsc_counts_20211027.csv', sep='/')
-metadata_file = paste(data_dir, '00_data/RA-netk042021-10-25.xlsx', sep='/')
+metadata_raw_file = paste(data_dir, '00_data/RA-netk042021-10-25.xlsx', sep='/')
+RNA_metadata_file = paste(data_dir, '00_data/RNA_metadata.csv', sep='/')
+gene_names_dict_file = paste(deisy_dicts_dir, 'Gene_Names_Dic.csv', sep='/')
+gene_names_cat_file = paste(deisy_dicts_dir, 'Gene_Names_Cat.csv', sep='/')
+gene_type_file = paste(deisy_dicts_dir, 'gene_type.csv', sep='/')
 ppi_network_symbol_file = paste(ppi_dir, 'interactome_2019_merged_symbols.csv', sep='/')
 mesh_file = paste(databases_dir, 'MeSH/mtrees2021.bin', sep='/')
-metadata_file = paste(data_dir, '00_data/RA-netk042021-10-25.xlsx', sep='/')
-disease_genes_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/Guney2016_GenesDisease.tsv"
+disease_genes_file_old = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/Guney2016_GenesDisease.tsv"
+disease_genes_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/GDA_Data_Clean_Filtered_GeneNames.csv"
 essential_genes_original_file = paste(databases_dir, 'OGEE/OGEE_esential_genes_20190416.txt', sep='/')
+gene_info_file = paste(databases_dir, 'NCBIGene/Homo_sapiens.gene_info', sep='/')
 
 # Define output files and dirs
-metadata_RNA_file = paste(data_dir, '00_data/scipher_metadata_rnaseq_counts.csv', sep='/')
-metadata_RNA_0m_file = paste(data_dir, '00_data/scipher_metadata_rnaseq_counts_0m.csv', sep='/')
+RNA_metadata_processed_file = paste(data_dir, '00_data/scipher_metadata_rnaseq_counts.csv', sep='/')
+RNA_metadata_processed_0m_file = paste(data_dir, '00_data/scipher_metadata_rnaseq_counts_0m.csv', sep='/')
 RNAseq_processed_file = paste(data_dir, '00_data/scipher_rnaseq_counts_processed.csv', sep='/')
 genes_dataset_file = paste(data_dir, '00_data/scipher_rnaseq_gene_info.csv', sep='/')
-disease_genes_info_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info.csv"
-disease_genes_info_scipher_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_scipher.csv"
-essential_genes_file = paste(databases_dir, 'OGEE/OGEE_esential_genes.csv', sep='/')
+disease_genes_info_file_old = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2015_scipher.csv"
+disease_genes_info_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_scipher.csv"
 essential_genes_scipher_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_esential_genes_scipher.csv'
 
 ```
@@ -72,49 +78,65 @@ The `RNAseq_raw` contains `r ncol(RNAseq_raw)` features, from `r nrow(RNAseq_raw
 We filter the genes in the RNAseq keeping only the ones that have known gene symbol.
 
 ```{r read_genes, echo=FALSE, results='hide'}
-# Filter genes with symbol information
-gene_info_file = paste(databases_dir, 'NCBIGene/Homo_sapiens.gene_info', sep='/')
-gene_info_df = fread(gene_info_file)
-#gene_info_df = gene_info_df %>% separate_rows(Synonyms, convert = TRUE)
-gene_info_df$Symbol = toupper(gene_info_df$Symbol)
-gene_info_df$Synonyms = toupper(gene_info_df$Synonyms)
+#gene_info_file = paste(databases_dir, 'NCBIGene/Homo_sapiens.gene_info', sep='/')
+#gene_info_df = fread(gene_info_file)
+##gene_info_df = gene_info_df %>% separate_rows(Synonyms, convert = TRUE)
+#gene_info_df$Symbol = toupper(gene_info_df$Symbol)
+#gene_info_df$Synonyms = toupper(gene_info_df$Synonyms)
 
+# Read genes with known annotation from the dictionary extracted from HGNC
+gene_type_df = fread(gene_type_file) %>% unique()
+gene_type_df$symbol = toupper(gene_type_df$symbol)
+table(gene_type_df$gene_type)
+length(unique(gene_type_df$symbol))
+
+# Select genes from the initial RNAseq dataset with known annotation
 names(RNAseq_raw)[9:length(names(RNAseq_raw))] = toupper(names(RNAseq_raw)[9:length(names(RNAseq_raw))])
-genes_dataset = names(RNAseq_raw)[9:length(names(RNAseq_raw))]
-genes_dataset_df = data.frame(Name=genes_dataset, Symbol=genes_dataset) %>% inner_join((gene_info_df %>% dplyr::select(Symbol, GeneID)), by="Symbol") %>% unique()
+genes_dataset_raw = unique(names(RNAseq_raw)[9:length(names(RNAseq_raw))])
+print(length(genes_dataset_raw))
+
+# Read RNA metadata processed and select the clean dataset of genes
+RNA_metadata = fread(RNA_metadata_file)
+genes_dataset_clean = unique(toupper(names(RNA_metadata)[53:length(names(RNA_metadata))]))
+print(length(genes_dataset_clean))
+
+# Merge both gene datasets with dataframe of gene categories
+genes_dataset_raw_df = gene_type_df %>% filter(symbol %in% genes_dataset_raw) %>% unique()
+print(length(unique(genes_dataset_raw_df$symbol)))
+genes_dataset_clean_df = gene_type_df %>% filter(symbol %in% genes_dataset_clean) %>% unique()
+print(length(unique(genes_dataset_clean_df$symbol)))
+table(genes_dataset_clean_df$gene_type)
+round(prop.table(table(genes_dataset_clean_df$gene_type))*100,2)
+
+#genes_dataset_df = data.frame(Name=genes_dataset, Symbol=genes_dataset) %>% inner_join((gene_info_df %>% dplyr::select(Symbol, GeneID)), by="Symbol") %>% unique()
 #gene_synonyms_dataset = genes_dataset[(toupper(genes_dataset) %in% toupper(unique(gene_info_df$Synonyms))) & !(toupper(genes_dataset) %in% toupper(unique(gene_info_df$Symbol)))]
 #gene_synonyms_dataset_df = data.frame(Gene=gene_synonyms_dataset, Synonyms=toupper(gene_synonyms_dataset)) %>% inner_join((gene_info_df %>% dplyr::select(Symbol, Synonyms, GeneID)), by="Synonyms") %>% unique()
 
-genes_not_symbol = genes_dataset[(!genes_dataset %in% unique(genes_dataset_df$Name))]
+genes_not_symbol = genes_dataset_raw[(!genes_dataset_raw %in% unique(genes_dataset_clean_df$symbol))]
+print(genes_not_symbol[1:20])
+print(length(genes_not_symbol))
 #genes_not_symbol = genes_not_symbol[(!(toupper(gsub("_", "", genes_not_symbol))) %in% toupper(all_genes_and_synonyms))]
 
-gene_names_dict_file = paste(deisy_dicts_dir, 'Gene_Names_Dic.csv', sep='/')
-gene_names_dict = fread(gene_names_dict_file)
-gene_names_dict$Symbol = toupper(gene_names_dict$Symbol)
-gene_names_dict$Alias = toupper(gene_names_dict$Alias)
-gene_names_dict = inner_join(gene_names_dict, (gene_info_df %>% select(Symbol, GeneID)), by="Symbol")
-gene_names_dict_dataset_df = data.frame(Alias=genes_not_symbol) %>% inner_join((gene_names_dict), by="Alias") %>% unique()
-genes_dataset_df = rbind(genes_dataset_df, (gene_names_dict_dataset_df %>% filter(!(Symbol %in% genes_dataset_df$Symbol)) %>% rename("Name"="Alias")))
-fwrite(genes_dataset_df, genes_dataset_file)
-
-genes_not_symbol = genes_dataset[!(genes_dataset %in% unique(genes_dataset_df$Name))]
-
-RNA = RNAseq_raw %>% select(genes_dataset_df$Name)
+RNA = RNA_metadata %>% select(genes_dataset_clean_df$symbol)
 
 ```
 
-We end up having `r ncol(RNA)` features, from `r nrow(RNA)` samples
+In the raw dataset, we have `r length(genes_dataset_raw)` unique genes.
 
-There are also `r length(genes_not_symbol)` genes without a symbol known in NCBI gene database. Here we show several of these genes:
+After selecting the genes that have known annotations in HGNC, we ended up with `r length(genes_dataset_clean)` unique genes.
+
+We end up having `r ncol(RNA)` genes, from `r nrow(RNA)` samples
+
+There are also `r length(genes_not_symbol)` genes without known annotations in HGNC. Here we show several of these genes:
 
 ```{r genes_without_symbol, echo=FALSE}
-genes_not_symbol[1:100]
+genes_not_symbol[1:20]
 
 ```
 
 ```{r read_metadata, echo=FALSE, results='hide'}
 # Read file with metadata
-metadata = readxl::read_xlsx(metadata_file)
+metadata = readxl::read_xlsx(metadata_raw_file)
 
 ```
 
@@ -148,13 +170,25 @@ keep = data.frame(Gene = c(names(sumG),
         group_by(Gene) %>% 
         summarise(., n = n()) %>% 
         filter(n >= 3)
+
+genes_dataset_clean_df$enough_counts = ifelse(genes_dataset_clean_df$symbol %in% keep$Gene, TRUE, FALSE)
+fwrite(genes_dataset_clean_df, genes_dataset_file)
+
+genes_keep_df = genes_dataset_clean_df %>% filter(enough_counts == TRUE)
+print(length(unique(genes_keep_df$symbol)))
+table(genes_keep_df$gene_type)
+round(prop.table(table(genes_keep_df$gene_type))*100,2)
+
 rm(RNA)
+
+
 
 ```
 
 ```{r, echo=FALSE, results='hide'}
-RNAseq_processed = RNAseq_raw %>% select(names(RNAseq_raw)[1:7], keep$Gene)
-rm(RNAseq_raw)
+scipherid_visit_batch = paste(RNA_metadata$Scipher_id, RNA_metadata$visit, RNA_metadata$batch, sep=".")
+RNA_metadata = cbind(data.frame(Scipher_id.visit.batch=scipherid_visit_batch), RNA_metadata)
+RNAseq_processed = RNA_metadata %>% select(c("Scipher_id.visit.batch", "Scipher_id", "visit", "batch", keep$Gene))
 RNAseq_processed_t = t(as.matrix(RNAseq_processed %>% select(Scipher_id.visit.batch, keep$Gene))) %>% as.data.frame()
 genes = rownames(RNAseq_processed_t[2:nrow(RNAseq_processed_t),])
 samples = as.character(RNAseq_processed_t[1,])
@@ -170,15 +204,16 @@ We end up having `r length(keep$Gene)` genes and `r nrow(RNAseq_processed)` samp
 ## Combining the dataset
 
 ```{r, echo=FALSE, results='hide'}
-metadata = metadata %>% 
-  rename(CRP_metadata = CRP)
-
-metadata_RNA = dplyr::inner_join(metadata, RNAseq_processed)
-fwrite(metadata_RNA, metadata_RNA_file)
+#RNA_metadata_processed = dplyr::inner_join(metadata, RNAseq_processed)
+RNA_metadata_processed = dplyr::inner_join((RNA_metadata %>% dplyr::select(names(RNA_metadata)[1:53])), RNAseq_processed)
+fwrite(RNA_metadata_processed, RNA_metadata_processed_file)
 
 ```
 
 ```{r, echo=FALSE, results='hide', warning=FALSE, message=FALSE}
+metadata = metadata %>% 
+  rename(CRP_metadata = CRP)
+
 metadata_response = 
   metadata %>%
   select(Scipher_id, visit, 
@@ -187,7 +222,7 @@ metadata_response =
               values_from = c(eular_binary, acr50))
 ```
 
-When combining the metadata with the RNAseq we have, in total, `r nrow(metadata_RNA)` samples from `r length(unique(metadata_RNA$Scipher_id))` individuals. Out of those, **`r nrow(metadata_RNA[metadata_RNA$visit == "0m", ])`** samples from `r length(unique(metadata_RNA[metadata_RNA$visit == "0m", ]$Scipher_id))` individuals are at baseline.
+When combining the metadata with the RNAseq we have, in total, `r nrow(RNA_metadata_processed)` samples from `r length(unique(RNA_metadata_processed$Scipher_id))` individuals. Out of those, **`r nrow(RNA_metadata_processed[RNA_metadata_processed$visit == "0m", ])`** samples from `r length(unique(RNA_metadata_processed[RNA_metadata_processed$visit == "0m", ]$Scipher_id))` individuals are at baseline.
 
 > Important to note: The key to both data sets is the combination of `Scipher_id` and `visit`. Do not join using `CRP`.
 
@@ -197,13 +232,13 @@ We focus here on the data we have in the baseline.
 RNAseq_processed_0m = RNAseq_processed %>%
   filter(visit == "0m")
 
-metadata_RNA_0m = dplyr::inner_join(metadata_response, RNAseq_processed_0m)
-fwrite(metadata_RNA_0m, metadata_RNA_0m_file)
+RNA_metadata_processed_0m = dplyr::inner_join(metadata_response, RNAseq_processed_0m)
+fwrite(RNA_metadata_processed_0m, RNA_metadata_processed_0m_file)
 
 ```
 
 ```{r, echo=FALSE, results='asis'}
-metadata_RNA_0m %>% 
+RNA_metadata_processed_0m %>% 
   group_by(eular_binary_3m) %>% 
   summarise(`#` = n()) %>%
   ungroup() %>%
@@ -211,7 +246,7 @@ metadata_RNA_0m %>%
 ```
 
 ```{r, echo=FALSE, results='asis'}
-metadata_RNA_0m %>% 
+RNA_metadata_processed_0m %>% 
   group_by(eular_binary_6m) %>% 
   summarise(`#` = n()) %>%
   ungroup() %>%
@@ -219,7 +254,7 @@ metadata_RNA_0m %>%
 ```
 
 ```{r, echo=FALSE, results='asis', warning=FALSE, message=FALSE}
-metadata_RNA_0m %>% 
+RNA_metadata_processed_0m %>% 
   group_by(eular_binary_3m, eular_binary_6m) %>%
   summarise(`#` = n()) %>%
   ungroup() %>%
@@ -229,9 +264,11 @@ metadata_RNA_0m %>%
 
 ## Prepare disease genes information dataset
 
+Prepare the version of 2015:
+
 ```{r}
 # Create a disease gene file containing MESH information
-if(!(file.exists(disease_genes_info_file))){
+if(!(file.exists(disease_genes_info_file_old))){
   
   # Parse MESH
   mesh_df = fread(mesh_file, header=FALSE, col.names = c("concept", "concept.id"))
@@ -259,11 +296,10 @@ if(!(file.exists(disease_genes_info_file))){
     close(con)
     return(disease_genes_df)
   }
-  disease_genes_df = processDisease2Genes(disease_genes_file)
+  disease_genes_df = processDisease2Genes(disease_genes_file_old)
   disease_genes_df$gene.id = as.numeric(disease_genes_df$gene.id)
   
   # Parse gene info
-  gene_info_file = '/home/j.aguirreplans/Databases/NCBIGene/Homo_sapiens.gene_info'
   gene_info_df = fread(gene_info_file) %>% select(GeneID, Symbol)
   gene_info_df$Symbol = toupper(gene_info_df$Symbol)
   
@@ -273,23 +309,59 @@ if(!(file.exists(disease_genes_info_file))){
   # Merge disease2gene table with MESH and output file
   disease_genes_df = inner_join(disease_genes_df, mesh_df, by=c("disease" = "concept"))
 
-  # Make columns without special characgters  
+  # Make columns without special characters  
   disease_genes_df$disease.no.sp.char <- gsub(' ', '.', gsub(', ', '.', gsub('-', '.', gsub('[\\(\\)]', '', disease_genes_df$disease))))
   disease_genes_df$root.concept.no.sp.char <- gsub(' ', '.', gsub(', ', '.', gsub('-', '.', gsub('[\\(\\)]', '', disease_genes_df$root.concept))))
 
-  disease_genes_df %>% fwrite(disease_genes_info_file)
+  disease_genes_df %>% fwrite(disease_genes_info_file_old)
   
 } else {
-  disease_genes_df = fread(disease_genes_info_file)
+  disease_genes_df = fread(disease_genes_info_file_old)
 }
 
 ```
 
+
+Prepare the version of 2022:
+
 ```{r}
-#disease_genes_scipher_df = disease_genes_df %>% filter(gene %in% names(RNAseq_processed))
-#disease_genes_scipher_df %>% fwrite(disease_genes_info_scipher_file)
+# Create a disease gene file containing MESH information
+if(!(file.exists(disease_genes_info_file))){
+  
+  GDA = fread(disease_genes_file)
+  GDA[is.na(GDA)]<-0
+  GDA$Symbol = toupper(GDA$hgnc_symbol)
+  GDA$DiseaseName = tolower(GDA$DiseaseName)
+  GDA$DescriptorName = tolower(GDA$DescriptorName)
+  GDA %<>% 
+    filter(Strong > 0 | 
+             Weak > 0 |
+             Incompatible > 0) %>%
+    mutate(DiseaseName = NewName) %>%
+    filter(DescriptorName %ni% c("Behavioral Disciplines and Activities")) %>%
+    mutate(MESHID_remove = stringr::str_detect(TreeNumber, pattern = "C22|C25|F04")) %>%
+    mutate(MESHID_remove = ifelse(TreeNumber == "F01", TRUE,MESHID_remove)) %>%
+    filter(!(MESHID_remove)) %>%
+    select(DiseaseName, hgnc_symbol, DescriptorName) %>% 
+    #filter(hgnc_symbol %in% V(gPPInc)$name) %>% 
+    unique() %>% 
+    mutate(gene_in_dataset = ifelse(hgnc_symbol %in% genes_keep_df$symbol, TRUE, FALSE))
+    #group_by(DiseaseName) %>%
+    #mutate(Total_Genes = n()) %>%
+    #filter(Total_Genes > 10)
+
+    # Make columns without special characters  
+  GDA$DiseaseName.no.sp.char <- gsub(' ', '.', gsub(', ', '.', gsub('-', '.', gsub('[\\(\\)]', '', GDA$DiseaseName))))
+  GDA$DescriptorName.no.sp.char <- gsub(' ', '.', gsub(', ', '.', gsub('-', '.', gsub('[\\(\\)]', '', GDA$DescriptorName))))
+  
+  GDA %>% fwrite(disease_genes_info_file)
+  
+} else {
+  GDA = fread(disease_genes_info_file)
+}
 
 ```
+
 
 ## Prepare essencial genes dataset
 
@@ -299,13 +371,9 @@ essential_genes_df = essential_genes_df %>% filter((taxID == 9606) & (essential=
 gene_info_df = fread(gene_info_file)
 gene_info_df = gene_info_df %>% separate_rows(dbXrefs, convert = TRUE) %>% select(Symbol, dbXrefs) %>% unique()
 essential_genes_df = essential_genes_df %>% left_join(gene_info_df, by=c("locus"="dbXrefs")) %>% rename("gene"="Symbol")
-essential_genes_df %>% fwrite(essential_genes_file)
+essential_genes_df$gene_in_dataset = ifelse(essential_genes_df$gene %in% genes_keep_df$symbol, TRUE, FALSE)
+essential_genes_df %>% fwrite(essential_genes_scipher_file)
 ```
 
-```{r}
-#essential_genes_scipher_df = essential_genes_df %>% filter(gene %in% names(RNAseq_processed))
-#essential_genes_scipher_df %>% fwrite(essential_genes_scipher_file)
-
-```
 
 

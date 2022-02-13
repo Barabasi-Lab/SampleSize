@@ -31,9 +31,9 @@ sex_to_id = data.frame(row.names=c("male","female","both") , val=c(1,2,""))
 scipher_dataset_to_results_name = data.frame(row.names=c("scipherold_responder","scipherold_nonresponder") , val=c("analysis_responders_wto_N100", "analysis_nonresponders_wto_N100"))
 
 # Define result dataframes
-topology_df = data.frame(matrix(ncol=21,nrow=0, dimnames=list(NULL, c("method", "dataset", "type_dataset", "tissue", "sex", "size", "rep", "edge_threshold", "num_nodes", "num_edges", "av_degree", "av_path_length", "av_clustering_coef", "num_components", "num_lcc_nodes", "num_lcc_edges", "lcc_z", "lcc_pvalue", "max_k", "num_main_core_nodes", "num_main_core_edges"))))
-essential_gene_results_df = data.frame(matrix(ncol=16,nrow=0, dimnames=list(NULL, c("method", "dataset", "type_dataset", "tissue", "sex", "size", "rep", "edge_threshold", "num_essential_genes", "fraction_essential_genes", "num_components", "num_lcc_nodes", "fraction_essential_lcc_nodes", "num_lcc_edges", "lcc_z", "lcc_pvalue"))))
-disease_gene_results_df <- setNames(data.frame(matrix(ncol = 18, nrow = 0)), c("method", "dataset", "type_dataset", "tissue", "sex", "size", "rep", 'edge_threshold', 'disease', 'disease_class', 'num_disease_genes', 'fraction_disease_genes', 'num_disease_components', 'num_disease_lcc_nodes', 'fraction_disease_lcc_nodes', 'num_disease_lcc_edges', "disease_lcc_z", "disease_lcc_pvalue"))
+topology_df = data.frame(matrix(ncol=22,nrow=0, dimnames=list(NULL, c("method", "dataset", "type_dataset", "tissue", "sex", "size", "rep", "cut", "disparity", "num_nodes", "num_edges", "av_degree", "av_path_length", "av_clustering_coef", "num_components", "num_lcc_nodes", "num_lcc_edges", "lcc_z", "lcc_pvalue", "max_k", "num_main_core_nodes", "num_main_core_edges"))))
+essential_gene_results_df = data.frame(matrix(ncol=17,nrow=0, dimnames=list(NULL, c("method", "dataset", "type_dataset", "tissue", "sex", "size", "rep", "cut", "disparity", "num_essential_genes", "fraction_essential_genes", "num_components", "num_lcc_nodes", "fraction_essential_lcc_nodes", "num_lcc_edges", "lcc_z", "lcc_pvalue"))))
+disease_gene_results_df <- setNames(data.frame(matrix(ncol = 19, nrow = 0)), c("method", "dataset", "type_dataset", "tissue", "sex", "size", "rep", 'cut', "disparity", 'disease', 'disease_class', 'num_disease_genes', 'fraction_disease_genes', 'num_disease_components', 'num_disease_lcc_nodes', 'fraction_disease_lcc_nodes', 'num_disease_lcc_edges', "disease_lcc_z", "disease_lcc_pvalue"))
 
 for(dataset in c('scipher', 'gtex')){
   types_dataset = list.files(paste(input_dir, paste("analysis_", dataset, sep=""), sep="/"))
@@ -56,10 +56,17 @@ for(dataset in c('scipher', 'gtex')){
       input_file = paste(input_dir, paste("analysis_", dataset, sep=""), type_dataset, result_file, sep="/")
       info_file = gsub("_analysis_topology.txt|_analysis_essential_genes.txt|_analysis_disease_genes.txt","",result_file)
       file_split = strsplit(info_file, split="_")[[1]]
-      method = file_split[1]
-      edge_threshold = as.numeric(file_split[(length(file_split))])
-      size = file_split[(length(file_split)-4)]
-      r = file_split[(length(file_split))-2]
+      if (("pvalue" %in% file_split) | ("edges" %in% file_split)){
+        method = file_split[1]
+        cut = as.numeric(file_split[(length(file_split))-2])
+        disparity = as.numeric(file_split[(length(file_split))])
+        size = file_split[(length(file_split)-6)]
+        r = file_split[(length(file_split))-4]
+      } else {
+        method = file_split[1]
+        size = file_split[(length(file_split)-2)]
+        r = file_split[(length(file_split))]
+      }
       if(r=="samples"){
         size = "all"
         r = NA
@@ -68,6 +75,10 @@ for(dataset in c('scipher', 'gtex')){
         r = as.numeric(r)
       }
       individual_df <- fread(input_file)
+      #if (!("disparity" %in% names(individual_df))){
+      #  individual_df = cbind((individual_df %>% dplyr::select(cut)), data.frame(disparity=NA), (individual_df %>% dplyr::select(-cut)))
+      #  individual_df %>% fwrite(input_file)
+      #}
       if(grepl("analysis_topology", result_file, fixed = TRUE)){
         topology_df <- rbind(topology_df, cbind(data.frame(method=rep(method, nrow(individual_df)), dataset=rep(dataset, nrow(individual_df)), type_dataset=rep(type_dataset, nrow(individual_df)), tissue=rep(tissue, nrow(individual_df)), sex=rep(sex, nrow(individual_df)), size=rep(size, nrow(individual_df)), rep=rep(r, nrow(individual_df))), individual_df))
       } else if(grepl("analysis_essential_genes", result_file, fixed = TRUE)){
@@ -176,7 +187,7 @@ for(dataset in c('gtex', 'scipher')){
     }
   } else {
     results_name = 'analysis_scipher'
-    results_list = c("all_samples", "all_samples_baseline", "sample_per_patient_baseline", "responder_baseline", "nonresponder_baseline")
+    results_list = c("complete_dataset", "samples_baseline", "sample_per_patient_baseline", "responder_baseline", "nonresponder_baseline")
   }
   for(type_dataset in results_list){
     if (dataset == "gtex"){

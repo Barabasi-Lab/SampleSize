@@ -50,15 +50,15 @@ ui <- fluidPage(
                                       choices = list("all samples" = "all_samples", "all samples at baseline" = "all_samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
                                       selected = "all_samples"
                           ),
-                        radioButtons("method_topology", "Method:",
-                                       c('wTO' = 'wto',
-                                         'WGCNA' = 'wgcna',
-                                         'ARACNE' = 'aracne',
-                                         'Pearson' = 'pearson',
-                                         'Spearman' = 'spearman'
-                                       ), selected = 'spearman'
-                                     ),
-                          radioButtons("parameter_topology", "Parameter:",
+                        checkboxGroupInput("method_topology", label = "Method:", 
+                                           c('wTO' = 'wto',
+                                             'WGCNA' = 'wgcna',
+                                             'ARACNE' = 'aracne',
+                                             'Pearson' = 'pearson',
+                                             'Spearman' = 'spearman'
+                                           ), selected = 'spearman'
+                        ),
+                        radioButtons("parameter_topology", "Parameter:",
                                        c('Num. nodes' = 'num_nodes',
                                          'Num. edges' = 'num_edges',
                                          'Av. degree' = 'av_degree',
@@ -73,10 +73,14 @@ ui <- fluidPage(
                                          'Maximum k-core' = 'max_k',
                                          'Num. nodes in main core' = 'num_main_core_nodes',
                                          'Num. edges in main core' = 'num_main_core_edges')),
-                          radioButtons("pvalue_threshold_topology", "Number of top scoring edges:",
-                                           c('0.05' = 0.05,
-                                             '0.01' = 0.01,
-                                             'Group' = 'group_topology_pvalue_threshold'))
+                        checkboxGroupInput("pvalue_threshold_topology", label = "P-value threshold:", 
+                                           choices = c('0.05' = "0.05-NA",
+                                                       '0.01' = "0.01-NA",
+                                                       '0.05, disparity 0.05' = "0.05-0.05",
+                                                       '0.01, disparity 0.05' = "0.01-0.05"),
+                                           selected = "0.05-NA",
+                                           ),
+                          shinyWidgets::materialSwitch(inputId = "log_topology", label = "Turn log scale:", status="primary")
                         ),
                         
                         # Show boxplot of topological parameters
@@ -135,7 +139,7 @@ ui <- fluidPage(
                                        ),
                           radioButtons("parameter_essentiality", "Parameter:",
                                        c('Num. essential nodes' = 'num_essential_genes',
-                                         'Fraction of essential edges' = 'fraction_essential_genes',
+                                         'Fraction of essential genes' = 'fraction_essential_genes',
                                          'Num. components' = 'num_components',
                                          'Num. nodes of the LCC' = 'num_essential_lcc_nodes',
                                          'Fraction of essential genes in the LCC' = 'fraction_essential_lcc_nodes',
@@ -143,10 +147,13 @@ ui <- fluidPage(
                                          'LCC z-score' = 'lcc_z',
                                          'LCC p-value' = 'lcc_pvalue',
                                          'LCC log(p-value)' = 'log_lcc_pvalue')),
-                          radioButtons("pvalue_threshold_essentiality", "Number of top scoring edges:",
-                                       c('0.05' = 0.05,
-                                         '0.01' = 0.01,
-                                         'Group' = 'group_essentiality_pvalue_threshold'))
+                          radioButtons("pvalue_threshold_essentiality", "P-value threshold",
+                                       c('0.05' = "0.05-NA",
+                                         '0.01' = "0.01-NA",
+                                         '0.05, disparity 0.05' = "0.05-0.05",
+                                         '0.01, disparity 0.05' = "0.01-0.05",
+                                         'Group' = 'group_essentiality_pvalue_threshold')),
+                          shinyWidgets::materialSwitch(inputId = "log_essentiality", label = "Turn log scale:", status="primary")
                         ),
                         
                         # Show boxplot of topological parameters
@@ -217,9 +224,11 @@ ui <- fluidPage(
                                                     'Disease gene LCC z-score' = 'disease_lcc_z',
                                                     'Disease gene LCC p-value' = 'disease_lcc_pvalue',
                                                     'Disease gene LCC log(p-value)' = 'log_disease_lcc_pvalue')),
-                                 radioButtons("pvalue_threshold_disease_genes", "Number of top scoring edges:",
-                                              c('0.05' = 0.05,
-                                                '0.01' = 0.01)),
+                                 radioButtons("pvalue_threshold_disease_genes", "P-value threshold",
+                                              c('0.05' = "0.05-NA",
+                                                '0.01' = "0.01-NA",
+                                                '0.05, disparity 0.05' = "0.05-0.05",
+                                                '0.01, disparity 0.05' = "0.01-0.05")),
                                      radioButtons("group_by", "Group by:",
                                                   c('Disease' = 'group_disease',
                                                     'Disease class' = 'group_disease_class',
@@ -316,6 +325,7 @@ ui <- fluidPage(
                                        multiple = TRUE
                                      ),
                                      verbatimTextOutput(outputId = "diseases_endocrine"),
+                                     shinyWidgets::materialSwitch(inputId = "log_diseases", label = "Turn log scale:", status="primary")
                                    ),
                                    
                                    # Show boxplot of topological parameters
@@ -548,7 +558,7 @@ ui <- fluidPage(
                                          'Essential genes' = 'essential_genes',
                                          'RA genes' = 'disease_genes'
                                        ), selected = 'subgraphs'),
-                          radioButtons("pvalue_threshold_similarity", "Number of top scoring edges:",
+                          radioButtons("pvalue_threshold_similarity", "P-value threshold",
                                        c('0.05' = 0.05,
                                          '0.01' = 0.01))
                         ),

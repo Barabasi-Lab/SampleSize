@@ -70,10 +70,10 @@ create_random_subsamples_with_replacement <- function(samples_list, size_list, r
 
 ```{r, echo=FALSE, results='hide'}
 # Select all samples
-all_samples = metadata_RNA$Scipher_id.visit.batch
+complete_dataset = metadata_RNA$Scipher_id.visit.batch
 
 # Select all samples at baseline
-all_samples_baseline = metadata_RNA_0m$Scipher_id.visit.batch
+samples_baseline = metadata_RNA_0m$Scipher_id.visit.batch
 
 # Select one sample per patient at baseline
 sample_per_patient_baseline = c()
@@ -87,28 +87,28 @@ for (patient in unique(metadata_RNA_0m$Scipher_id)){
 sample_per_patient_baseline_df = metadata_RNA_0m %>% filter(Scipher_id.visit.batch %in% sample_per_patient_baseline)
 
 # Responders are selected when they respond either in eular or acr50 and do not have any non-response
-#responder_euler_df = sample_per_patient_baseline_df %>% filter(( (eular_binary_3m == "responder") & (eular_binary_6m == "responder")) | ((eular_binary_3m == "responder") & (eular_binary_6m == "")) | ((eular_binary_3m == "") & (eular_binary_6m == "responder")) )
-responder_df = sample_per_patient_baseline_df %>% filter( (!(eular_binary_3m == "nonresponder")) & (!(eular_binary_6m == "nonresponder")) & (!(acr50_3m == "nonresponder")) & (!(acr50_6m == "nonresponder")) & ( (eular_binary_3m == "responder") | (eular_binary_6m == "responder") | (acr50_3m == "responder") | (acr50_6m == "responder") ) )
-sample_per_responder_baseline = responder_df$Scipher_id.visit.batch
+responder_euler_df = sample_per_patient_baseline_df %>% filter(( (eular_binary_3m == "responder") & (eular_binary_6m == "responder")) | ((eular_binary_3m == "responder") & (eular_binary_6m == "")) | ((eular_binary_3m == "") & (eular_binary_6m == "responder")) )
+#responder_df = sample_per_patient_baseline_df %>% filter( (!(eular_binary_3m == "nonresponder")) & (!(eular_binary_6m == "nonresponder")) & (!(acr50_3m == "nonresponder")) & (!(acr50_6m == "nonresponder")) & ( (eular_binary_3m == "responder") | (eular_binary_6m == "responder") | (acr50_3m == "responder") | (acr50_6m == "responder") ) )
+sample_per_responder_baseline = responder_euler_df$Scipher_id.visit.batch
 
 # Nonresponders are selected when they don't respond either in eular or acr50 and do not have any response
-#nonresponder_euler_df = sample_per_patient_baseline_df %>% filter(( (eular_binary_3m == "nonresponder") & (eular_binary_6m == "nonresponder")) | ((eular_binary_3m == "nonresponder") & (eular_binary_6m == "")) | ((eular_binary_3m == "") & (eular_binary_6m == "nonresponder")) )
-nonresponder_df = sample_per_patient_baseline_df %>% filter( (!(eular_binary_3m == "responder")) & (!(eular_binary_6m == "responder")) & (!(acr50_3m == "responder")) & (!(acr50_6m == "responder")) & ( (eular_binary_3m == "nonresponder") | (eular_binary_6m == "nonresponder") | (acr50_3m == "nonresponder") | (acr50_6m == "nonresponder") ) )
-sample_per_nonresponder_baseline = nonresponder_df$Scipher_id.visit.batch
+nonresponder_euler_df = sample_per_patient_baseline_df %>% filter(( (eular_binary_3m == "nonresponder") & (eular_binary_6m == "nonresponder")) | ((eular_binary_3m == "nonresponder") & (eular_binary_6m == "")) | ((eular_binary_3m == "") & (eular_binary_6m == "nonresponder")) )
+#nonresponder_df = sample_per_patient_baseline_df %>% filter( (!(eular_binary_3m == "responder")) & (!(eular_binary_6m == "responder")) & (!(acr50_3m == "responder")) & (!(acr50_6m == "responder")) & ( (eular_binary_3m == "nonresponder") | (eular_binary_6m == "nonresponder") | (acr50_3m == "nonresponder") | (acr50_6m == "nonresponder") ) )
+sample_per_nonresponder_baseline = nonresponder_euler_df$Scipher_id.visit.batch
 
 ```
 
 We have selected different groups of samples according to different criteria:
 
-* All samples, no matter the visit or batch (`r length(all_samples)`)
-* All samples at baseline, no matter the batch (`r length(all_samples_baseline)`)
+* All samples, no matter the visit or batch (`r length(complete_dataset)`)
+* All samples at baseline, no matter the batch (`r length(samples_baseline)`)
 * One sample per patient at baseline (`r length(sample_per_patient_baseline)`)
 * One sample per responder patient at baseline (`r length(sample_per_responder_baseline)`)
 * One sample per non-responder patient at baseline (`r length(sample_per_nonresponder_baseline)`)
 
 
 ```{r, echo=FALSE, results='hide'}
-group_to_samples = list("all_samples"=all_samples, "all_samples_baseline"=all_samples_baseline, "sample_per_patient_baseline"=sample_per_patient_baseline, "responder_baseline"=sample_per_responder_baseline, "nonresponder_baseline"=sample_per_nonresponder_baseline)
+group_to_samples = list("complete_dataset"=complete_dataset, "samples_baseline"=samples_baseline, "sample_per_patient_baseline"=sample_per_patient_baseline, "responder_baseline"=sample_per_responder_baseline, "nonresponder_baseline"=sample_per_nonresponder_baseline)
 n_repetitions = 5
 
 for (group in names(group_to_samples)){

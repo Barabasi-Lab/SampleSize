@@ -3,9 +3,11 @@ library(dplyr)
 library(ggplot2)
 options(bitmapType='cairo')
 #renv::restore("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR")
+#shiny::runApp('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny')
 
 # Read input data
-input_dir <- '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/data_shiny_app'
+input_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/data_shiny_app'
+plots_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots_shiny'
 topology_file = paste(input_dir, 'analysis_topology.csv', sep='/')
 disease_genes_file = paste(input_dir, 'analysis_disease_genes.csv', sep='/')
 essential_genes_file = paste(input_dir, 'analysis_essential_genes.csv', sep='/')
@@ -39,6 +41,9 @@ disease_genes_df$disease_lcc_pvalue[disease_genes_df$disease_lcc_pvalue == 0] = 
 disease_genes_df$log_disease_lcc_pvalue = log(disease_genes_df$disease_lcc_pvalue)
 essential_genes_df$lcc_pvalue[essential_genes_df$lcc_pvalue == 0] = 0.0000001
 essential_genes_df$log_lcc_pvalue = log(essential_genes_df$lcc_pvalue)
+topology_df$cut_disparity = paste(topology_df$cut, topology_df$disparity, sep="-")
+essential_genes_df$cut_disparity = paste(essential_genes_df$cut, essential_genes_df$disparity, sep="-")
+disease_genes_df$cut_disparity = paste(disease_genes_df$cut, disease_genes_df$disparity, sep="-")
 network_similarity_df$overlapindex[is.na(network_similarity_df$overlapindex)] = 0.0
 network_comparison_df$overlapindex[is.na(network_comparison_df$overlapindex)] = 0.0
 
@@ -54,7 +59,7 @@ parameter2label <- list("nodes"="Nodes", "edges"="Edges", "av_degree"="Av. degre
                         "num_nodes" = "Number of nodes", "num_edges" = "Number of edges", "num_lcc_nodes" = "Number of nodes in the LCC", "num_lcc_edges" = "Number of edges in the LCC", "lcc_z" = "LCC significance z-score", "lcc_pvalue" = "LCC significance p-value", "log_lcc_pvalue" = "LCC significance log(p-value)",
                         "max_k" = "Maximum k-core", "num_main_core_nodes" = "Number of nodes in the main core", "num_main_core_edges" = "Number of edges in the main core",
                         "num_essential_genes" = "Number of essential genes", "fraction_essential_genes" = "Fraction of essential genes", "num_essential_lcc_nodes" = "Number of essential genes forming a LCC", "fraction_essential_lcc_nodes" = "Fraction of essential genes forming a LCC", 
-                        "num_disease_genes" = "Number of disease genes", "fraction_disease_genes" = "Fraction of disease genes", "num_disease_components" = "Number of components formed by genes of the disease", "num_disease_lcc_nodes" = "Number of nodes of the LCC formed by genes of the disease", "fraction_disease_lcc_nodes" = "Fraction of genes in the LCC of the disease", "num_disease_lcc_edges" = "Number of edges of the LCC formed by genes of the disease", "disease_lcc_z" = "Significance z-score of the disease LCC", "disease_lcc_pvalue" = "Significance p-value of the disease LCC", "log_disease_lcc_pvalue" = "Significance log(p-value) of the disease LCC",
+                        "num_disease_genes" = "Number of disease genes", "fraction_disease_genes" = "Fraction of disease genes", "num_disease_components" = "Number of disease gene components", "num_disease_lcc_nodes" = "Number of disease genes in the LCC", "fraction_disease_lcc_nodes" = "Fraction of disease genes in the LCC", "num_disease_lcc_edges" = "Number of disease gene edges in the LCC", "disease_lcc_z" = "Significance z-score of the disease LCC", "disease_lcc_pvalue" = "Significance p-value of the disease LCC", "log_disease_lcc_pvalue" = "Significance log(p-value) of the disease LCC",
                         "overlapindex" = "Overlap index", "jaccardIndex" = "Jaccard index")
 
 # Define server logic required to draw a histogram
@@ -64,7 +69,7 @@ server <- function(input, output) {
     
     # To plot using ggplot, have to convert the size vector into character (because if not, it plots a single box wtf)
     topology_df$size = as.character(topology_df$size)
-    topology_df$cut = as.character(topology_df$cut)
+    topology_df$cut_disparity = as.character(topology_df$cut_disparity)
     topology_df$tissue = tolower(topology_df$tissue)
 
     get_gtex_tissues <- renderText(input$topology_gtex_tissues, sep='___')
@@ -75,62 +80,117 @@ server <- function(input, output) {
     
     # Filter by dataset
     if (input$dataset_topology == "gtex"){
-      selected_topology_df = topology_df %>% filter((dataset == input$dataset_topology) & (tissue %in% topology_gtex_tissues) & (sex %in% topology_gtex_sex) & (method == input$method_topology))
+      selected_topology_df = topology_df %>% filter((dataset == input$dataset_topology) & (tissue %in% topology_gtex_tissues) & (sex %in% topology_gtex_sex))
+      # Formula to determine the number of pairs without repetition: n * (n-1) / 2 https://math.stackexchange.com/questions/2214839/exactly-how-does-the-equation-nn-1-2-determine-the-number-of-pairs-of-a-given 
+      max_number_links = 46152029
     } else {
-      selected_topology_df = topology_df %>% filter((dataset == input$dataset_topology) & (type_dataset == input$type_scipher_dataset_topology) & (method == input$method_topology))
+      selected_topology_df = topology_df %>% filter((dataset == input$dataset_topology) & (type_dataset == input$type_scipher_dataset_topology))
+      max_number_links = 98287210
     }
     
-    # Filter samples if there are too many
+    # Filter by method
+    if (length(input$method_topology) > 1){
+      selected_topology_df = selected_topology_df %>% filter((method %in% input$method_topology))
+      if(!("aracne" %in% input$method_topology)){
+        if (length(input$pvalue_threshold_topology) > 1){
+          selected_topology_df = selected_topology_df %>% filter(cut_disparity %in% input$pvalue_threshold_topology)
+        } else {
+          selected_topology_df = selected_topology_df %>% filter(cut_disparity == input$pvalue_threshold_topology)
+        }
+      } else {
+        selected_topology_df = selected_topology_df %>% filter((method == "aracne") | ((!(method == "aracne")) & (cut_disparity == input$pvalue_threshold_topology)))
+      }
+    } else {
+      selected_topology_df = selected_topology_df %>% filter((method == input$method_topology))
+      if(!(input$method_topology == "aracne")){
+        if (length(input$pvalue_threshold_topology) > 1){
+          selected_topology_df = selected_topology_df %>% filter(cut_disparity %in% input$pvalue_threshold_topology)
+        } else {
+          selected_topology_df = selected_topology_df %>% filter(cut_disparity == input$pvalue_threshold_topology)
+        }
+      }
+    }
+    
+    # Reduce number of samples displayed if necessary
     sizes = as.numeric(as.vector(selected_topology_df$size[!(selected_topology_df$size == "all")]))
     if (max(sizes) > 500){
       selected_topology_df = selected_topology_df %>% filter(size %in% c(seq(20, max(sizes), 20), "all"))
     }
     selected_topology_df$size <- factor(selected_topology_df$size , levels=c(as.character(sort(as.integer(unique(selected_topology_df$size[!(selected_topology_df$size == "all")])))), "all"))
-    
+
     # Calculate mean
     selected_topology_by_size_df = selected_topology_df %>%
-      group_by(size, cut) %>%
+      group_by(method, size, cut_disparity) %>%
       summarise_at(vars(input$parameter_topology), list(mean=mean, median=median, sd=sd, var=var)) %>%
       arrange(size)
     selected_topology_by_size_df$mean.upper = selected_topology_by_size_df$mean + selected_topology_by_size_df$var
     selected_topology_by_size_df$mean.lower = selected_topology_by_size_df$mean - selected_topology_by_size_df$var
-
+    
     # Plot using ggplot
-    if(input$method_topology %in% c("spearman", "pearson", "wto")){
-      if(isTruthy(input$pvalue_threshold_topology == 'group_topology_pvalue_threshold')){
-        ggplot(selected_topology_df, aes(x=size, y=selected_topology_df[[input$parameter_topology]], fill=cut)) + 
-          geom_violin(alpha=0.5) +
-          geom_jitter(col=rgb(0.4,0.4,0.8,0.6), pch=16 , cex=1.3, size=1, alpha=0.9) +
+    if (length(input$method_topology) > 1){
+      print(selected_topology_df)
+      topology_plot = ggplot(selected_topology_df, aes(x=size, y=selected_topology_df[[input$parameter_topology]], fill=method)) +
+        geom_line(data = selected_topology_by_size_df,
+                  aes(x = size, y = mean, group=method, col=method),
+                  lwd=1)
+    } else {
+      if (length(input$pvalue_threshold_topology) > 1){
+        topology_plot = ggplot(selected_topology_df, aes(x=size, y=selected_topology_df[[input$parameter_topology]], fill=cut_disparity)) + 
+          #scale_x_discrete(limits = levels(selected_topology_df$size)) +
+          guides(fill=guide_legend(title="")) +
           geom_line(data = selected_topology_by_size_df,
-                    aes(x = size, y = mean, group=cut, col=cut),
-                    lwd=1) +
-          theme_linedraw() +
-          labs(x="Sample size", y = parameter2label[[input$parameter_topology]])
+                    aes(x = size, y = mean, group=cut_disparity, col=cut_disparity),
+                    lwd=1)
       } else {
-        selected_topology_df = selected_topology_df %>% filter(cut == input$pvalue_threshold_topology)
-        selected_topology_by_size_df = selected_topology_by_size_df %>% filter(cut == input$pvalue_threshold_topology)
-        ggplot(selected_topology_df, aes(x=size, y=selected_topology_df[[input$parameter_topology]])) + 
-          geom_violin(alpha=0.5) +
-          scale_x_discrete(limits = levels(selected_topology_df$size)) +
-          geom_jitter(col=rgb(0.4,0.4,0.8,0.6), pch=16 , cex=1.3, size=1, alpha=0.9) +
+        topology_plot = ggplot(selected_topology_df, aes(x=size, y=selected_topology_df[[input$parameter_topology]])) + 
+          #scale_x_discrete(limits = levels(selected_topology_df$size)) +
+          guides(fill=guide_legend(title="")) +
           geom_line(data = selected_topology_by_size_df,
                     aes(x = size, y = mean, group=1),
-                    col=2, lwd=1) +
-          theme_linedraw() +
-          labs(x="Sample size", y = parameter2label[[input$parameter_topology]])
+                    col=2, lwd=1)
       }
-    } else {
-      ggplot(selected_topology_df, aes(x=size, y=selected_topology_df[[input$parameter_topology]])) + 
-        geom_violin(alpha=0.5) +
-        geom_jitter(col=rgb(0.4,0.4,0.8,0.6), pch=16 , cex=1.3, size=1, alpha=0.9) +
-        geom_line(data = selected_topology_by_size_df,
-                  aes(x = size, y = mean, group=1),
-                  col=2, lwd=1) +
-        theme_linedraw() +
-        labs(x="Sample size", y = parameter2label[[input$parameter_topology]])
     }
 
-    #plot(selected_network_similarity_df$size, selected_network_similarity_df[[input$parameter_similarity]],col=rgb(0.4,0.4,0.8,0.6),pch=16 , cex=1.3, xlab="Sample Size", ylab=parameter2label[[input$parameter_similarity]], main="Similarity between networks with same sample size") 
+    # Add maximum number of links
+    if (input$parameter_topology == "num_edges"){
+      #topology_plot = topology_plot + 
+        #geom_hline(yintercept=max_number_links, col=2, lwd=1)
+    }
+        
+    # Transform to log scale
+    if (isTruthy(input$log_topology)){
+      topology_plot = topology_plot + 
+        scale_y_log10() + 
+        labs(x="Number of samples", y = paste("Log10(", parameter2label[[input$parameter_topology]], ")", sep=""))
+    } else {
+      topology_plot = topology_plot + 
+        labs(x="Number of samples", y = parameter2label[[input$parameter_topology]])
+    }
+    
+    # Show plot
+    topology_plot = topology_plot + 
+      geom_violin(alpha=0.5) +
+      #geom_jitter(col=rgb(0.4,0.4,0.8,0.6), pch=16 , cex=1.3, size=1, alpha=0.9) +
+      theme_linedraw() +
+      theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom")
+      
+    topology_plot_file = paste(plots_dir, "/topology_", paste(input$method_topology, input$dataset_topology, input$type_scipher_dataset_topology, input$parameter_topology, input$pvalue_threshold_topology, sep="_"), ".png", sep="")
+    if(!(file.exists(topology_plot_file))){
+      #print(topology_plot_file)
+      ggsave(
+        topology_plot_file,
+        topology_plot,
+        device="png",
+        dpi = 1200,
+        width = 15000,
+        height = 5000,
+        units = c("px")
+      )
+    }
+    
+    topology_plot
+    
+    #plot(selected_network_similarity_df$size, selected_network_similarity_df[[input$parameter_similarity]],col=rgb(0.4,0.4,0.8,0.6),pch=16 , cex=1.3, xlab="Number of samples", ylab=parameter2label[[input$parameter_similarity]], main="Similarity between networks with same number of samples") 
     #lines(selected_network_similarity_by_size$size, selected_network_similarity_by_size$mean, col=2, lwd=2 )  
     #polygon(c(selected_network_similarity_by_size$size, rev(selected_network_similarity_by_size$size)), c(selected_network_similarity_by_size$mean.upper, rev(selected_network_similarity_by_size$mean.lower)), col = rgb(0.7,0.7,0.7,0.4) , border = NA)
 
@@ -141,7 +201,7 @@ server <- function(input, output) {
     
     # To plot using ggplot, have to convert the size vector into character (because if not, it plots a single box wtf)
     essential_genes_df$size = as.character(essential_genes_df$size)
-    essential_genes_df$cut = as.character(essential_genes_df$cut)
+    essential_genes_df$cut_disparity = as.character(essential_genes_df$cut_disparity)
     essential_genes_df$tissue = tolower(essential_genes_df$tissue)
     
     get_gtex_tissues <- renderText(input$essentiality_gtex_tissues, sep='___')
@@ -166,7 +226,7 @@ server <- function(input, output) {
     
     # Calculate mean
     selected_essential_genes_by_size_df = selected_essential_genes_df %>%
-      group_by(size, cut) %>%
+      group_by(size, cut_disparity) %>%
       summarise_at(vars(input$parameter_essentiality), list(mean=mean, median=median, sd=sd, var=var)) %>%
       arrange(size)
     selected_essential_genes_by_size_df$mean.upper = selected_essential_genes_by_size_df$mean + selected_essential_genes_by_size_df$var
@@ -175,38 +235,43 @@ server <- function(input, output) {
     # Plot using ggplot
     if(input$method_essentiality %in% c("spearman", "pearson", "wto")){
       if(isTruthy(input$pvalue_threshold_essentiality == 'group_essentiality_pvalue_threshold')){
-        ggplot(selected_essential_genes_df, aes(x=size, y=selected_essential_genes_df[[input$parameter_essentiality]], fill=cut)) + 
-          geom_violin(alpha=0.5) +
-          geom_jitter(col=rgb(0.4,0.4,0.8,0.6), pch=16 , cex=1.3, size=1, alpha=0.9) +
+        essentiality_plot = ggplot(selected_essential_genes_df, aes(x=size, y=selected_essential_genes_df[[input$parameter_essentiality]], fill=cut_disparity)) + 
           geom_line(data = selected_essential_genes_by_size_df,
-                    aes(x = size, y = mean, group=cut, col=cut),
-                    lwd=1) +
-          theme_linedraw() +
-          labs(x="Sample size", y = parameter2label[[input$parameter_essentiality]])
+                    aes(x = size, y = mean, group=cut_disparity, col=cut_disparity),
+                    lwd=1)
       } else {
-        selected_essential_genes_df = selected_essential_genes_df %>% filter(cut == input$pvalue_threshold_essentiality)
-        selected_essential_genes_by_size_df = selected_essential_genes_by_size_df %>% filter(cut == input$pvalue_threshold_essentiality)
-        ggplot(selected_essential_genes_df, aes(x=size, y=selected_essential_genes_df[[input$parameter_essentiality]])) + 
-          scale_x_discrete(limits = levels(selected_essential_genes_df$size)) +
-          geom_violin(alpha=0.5) +
-          geom_jitter(col=rgb(0.4,0.4,0.8,0.6), pch=16 , cex=1.3, size=1, alpha=0.9) +
+        selected_essential_genes_df = selected_essential_genes_df %>% filter(cut_disparity == input$pvalue_threshold_essentiality)
+        selected_essential_genes_by_size_df = selected_essential_genes_by_size_df %>% filter(cut_disparity == input$pvalue_threshold_essentiality)
+        essentiality_plot = ggplot(selected_essential_genes_df, aes(x=size, y=selected_essential_genes_df[[input$parameter_essentiality]])) + 
+          #scale_x_discrete(limits = levels(selected_essential_genes_df$size)) +
           geom_line(data = selected_essential_genes_by_size_df,
                     aes(x = size, y = mean, group=1),
-                    col=2, lwd=1) +
-          theme_linedraw() +
-          labs(x="Sample size", y = parameter2label[[input$parameter_essentiality]])
+                    col=2, lwd=1)
       }
     } else {
-      ggplot(selected_essential_genes_df, aes(x=size, y=selected_essential_genes_df[[input$parameter_essentiality]])) + 
-        geom_violin(alpha=0.5) +
-        geom_jitter(col=rgb(0.4,0.4,0.8,0.6), pch=16 , cex=1.3, size=1, alpha=0.9) +
+      essentiality_plot = ggplot(selected_essential_genes_df, aes(x=size, y=selected_essential_genes_df[[input$parameter_essentiality]])) + 
         geom_line(data = selected_essential_genes_by_size_df,
                   aes(x = size, y = mean, group=1),
-                  col=2, lwd=1) +
-        theme_linedraw() +
-        labs(x="Sample size", y = parameter2label[[input$parameter_essentiality]])
+                  col=2, lwd=1)
+    }
+
+    # Transform to log scale
+    if (isTruthy(input$log_essentiality)){
+      essentiality_plot = essentiality_plot + 
+        scale_y_log10() + 
+        labs(x="Number of samples", y = paste("Log(", parameter2label[[input$parameter_essentiality]], ")", sep=""))
+    } else {
+      essentiality_plot = essentiality_plot + 
+        labs(x="Number of samples", y = parameter2label[[input$parameter_essentiality]])
     }
     
+    # Show plot
+    essentiality_plot = essentiality_plot + 
+      geom_violin(alpha=0.5) +
+      #geom_jitter(col=rgb(0.4,0.4,0.8,0.6), pch=16 , cex=1.3, size=1, alpha=0.9) +
+      theme_linedraw() +
+      theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom")
+    essentiality_plot
     
   })
   
@@ -215,7 +280,7 @@ server <- function(input, output) {
     
     # To plot using ggplot, have to convert the size vector into character (because if not, it plots a single box wtf)
     disease_genes_df$size = as.character(disease_genes_df$size)
-    disease_genes_df$cut = as.character(disease_genes_df$cut)
+    disease_genes_df$cut_disparity = as.character(disease_genes_df$cut_disparity)
     disease_genes_df$tissue = tolower(disease_genes_df$tissue)
     
     get_gtex_tissues <- renderText(input$disease_genes_gtex_tissues, sep='___')
@@ -239,7 +304,7 @@ server <- function(input, output) {
     get_nutritional <- renderText(input$nutritional, sep='___')
     diseases_nutritional <- unlist(strsplit(get_nutritional(), split='___'))
     selected_diseases <- c(diseases_digestive, diseases_nutritional, diseases_nervous, diseases_neoplasms, diseases_immune, diseases_endocrine, diseases_cardiovascular)
-    
+
     # Filter by dataset
     if (input$dataset_disease_genes == "gtex"){
       selected_disease_genes_df = disease_genes_df %>% filter((dataset == input$dataset_disease_genes) & (tissue %in% disease_genes_gtex_tissues) & (sex %in% disease_genes_gtex_sex) & (disease %in% selected_diseases) & (method == input$method_disease_genes))
@@ -256,7 +321,7 @@ server <- function(input, output) {
     
     # Calculate mean
     selected_disease_genes_by_size_df = selected_disease_genes_df %>%
-      group_by(size, disease, cut) %>%
+      group_by(size, disease, disease_class, cut_disparity) %>%
       summarise_at(vars(input$parameter_disease_genes), list(mean=mean, median=median, sd=sd, var=var)) %>%
       arrange(size)
     selected_disease_genes_by_size_df$mean.upper = selected_disease_genes_by_size_df$mean + selected_disease_genes_by_size_df$var
@@ -266,48 +331,50 @@ server <- function(input, output) {
     #print(input$group_by)
     if((isTruthy(input$group_by == 'group_disease_pvalue')) & (input$method_disease_genes %in% c("spearman", "pearson", "wto"))){
       selected_disease_genes_df <- selected_disease_genes_df[(selected_disease_genes_df$dataset == input$dataset_disease_genes),]
-      ggplot(selected_disease_genes_df, aes(x=size, y=selected_disease_genes_df[[input$parameter_disease_genes]], fill=cut)) + 
-        geom_violin(alpha=0.5) +
-        geom_jitter(col=rgb(0.4,0.4,0.8,0.6), pch=16 , cex=1.3, size=1, alpha=0.9) +
+      disease_genes_plot = ggplot(selected_disease_genes_df, aes(x=size, y=selected_disease_genes_df[[input$parameter_disease_genes]], fill=cut_disparity)) + 
         geom_line(data = selected_disease_genes_by_size_df,
-                  aes(x = size, y = mean, group=cut, col=cut),
-                  lwd=1) +
-        theme_linedraw() +
-        labs(x="Sample size", y = parameter2label[[input$parameter_disease_genes]])
-    } else if(isTruthy(input$group_by == 'group_disease')){
-      selected_disease_genes_df <- selected_disease_genes_df[(selected_disease_genes_df$dataset == input$dataset_disease_genes) & (selected_disease_genes_df$cut == input$pvalue_threshold_disease_genes),]
-      selected_disease_genes_by_size_df = selected_disease_genes_by_size_df %>% filter(cut == input$pvalue_threshold_disease_genes)
-      ggplot(selected_disease_genes_df, aes(x=size, y=selected_disease_genes_df[[input$parameter_disease_genes]], fill=disease)) + 
-        geom_violin(alpha=0.5) +
-        geom_jitter(col=rgb(0.4,0.4,0.8,0.6), pch=16 , cex=1.3, size=1, alpha=0.9) +
-        geom_line(data = selected_disease_genes_by_size_df,
-                  aes(x = size, y = mean, group=disease, col=disease),
-                  lwd=1) +
-        theme_linedraw() +
-        labs(x="Sample size", y = parameter2label[[input$parameter_disease_genes]])
-    } else if(isTruthy(input$group_by == 'group_disease_class')){
-      selected_disease_genes_df <- selected_disease_genes_df[(selected_disease_genes_df$dataset == input$dataset_disease_genes) & (selected_disease_genes_df$cut == input$pvalue_threshold_disease_genes),]
-      selected_disease_genes_by_size_df = selected_disease_genes_by_size_df %>% filter(cut == input$pvalue_threshold_disease_genes)
-      ggplot(selected_disease_genes_df, aes(x=size, y=selected_disease_genes_df[[input$parameter_disease_genes]], fill=disease_class)) + 
-        geom_violin(alpha=0.5) +
-        geom_jitter(col=rgb(0.4,0.4,0.8,0.6), pch=16 , cex=1.3, size=1, alpha=0.9) +
-        geom_line(data = selected_disease_genes_by_size_df,
-                  aes(x = size, y = mean, group=disease_class, col=disease_class),
-                  lwd=1) +
-        theme_linedraw() +
-        labs(x="Sample size", y = parameter2label[[input$parameter_disease_genes]])
+                  aes(x = size, y = mean, group=cut_disparity, col=cut_disparity),
+                  lwd=1)
     } else {
-      selected_disease_genes_df <- selected_disease_genes_df[(selected_disease_genes_df$dataset == input$dataset_disease_genes) & (selected_disease_genes_df$cut == input$pvalue_threshold_disease_genes),]
-      selected_disease_genes_by_size_df = selected_disease_genes_by_size_df %>% filter(cut == input$pvalue_threshold_disease_genes)
-      ggplot(selected_disease_genes_df, aes(x=size, y=selected_disease_genes_df[[input$parameter_disease_genes]])) + 
-        geom_violin(alpha=0.5) +
-        geom_jitter(col=rgb(0.4,0.4,0.8,0.6), pch=16 , cex=1.3, size=1, alpha=0.9) +
-        geom_line(data = selected_disease_genes_by_size_df,
-                  aes(x = size, y = mean, group=1),
-                  col=2, lwd=1) +
-        theme_linedraw() +
-        labs(x="Sample size", y = parameter2label[[input$parameter_disease_genes]])
+      if (isTruthy(input$method_disease_genes %in% c("spearman", "pearson", "wto"))){
+        selected_disease_genes_df <- selected_disease_genes_df[selected_disease_genes_df$cut_disparity == input$pvalue_threshold_disease_genes,]
+        selected_disease_genes_by_size_df = selected_disease_genes_by_size_df %>% filter(cut_disparity == input$pvalue_threshold_disease_genes)
+      }
+      if(isTruthy(input$group_by == 'group_disease')){
+        disease_genes_plot = ggplot(selected_disease_genes_df, aes(x=size, y=selected_disease_genes_df[[input$parameter_disease_genes]], fill=disease)) + 
+          geom_line(data = selected_disease_genes_by_size_df,
+                    aes(x = size, y = mean, group=disease, col=disease),
+                    lwd=1)
+      } else if(isTruthy(input$group_by == 'group_disease_class')){
+        disease_genes_plot = ggplot(selected_disease_genes_df, aes(x=size, y=selected_disease_genes_df[[input$parameter_disease_genes]], fill=disease_class)) + 
+          geom_line(data = selected_disease_genes_by_size_df,
+                    aes(x = size, y = mean, group=disease_class, col=disease_class),
+                    lwd=1)
+      } else {
+        disease_genes_plot = ggplot(selected_disease_genes_df, aes(x=size, y=selected_disease_genes_df[[input$parameter_disease_genes]])) + 
+          geom_line(data = selected_disease_genes_by_size_df,
+                    aes(x = size, y = mean, group=1),
+                    col=2, lwd=1)
+      }
     }
+    
+    # Transform to log scale
+    if (isTruthy(input$log_diseases)){
+      disease_genes_plot = disease_genes_plot + 
+        scale_y_log10() + 
+        labs(x="Number of samples", y = paste("Log(", parameter2label[[input$parameter_disease_genes]], ")", sep=""))
+    } else {
+      disease_genes_plot = disease_genes_plot + 
+        labs(x="Number of samples", y = parameter2label[[input$parameter_disease_genes]])
+    }
+    
+    # Show plot
+    disease_genes_plot = disease_genes_plot + 
+      geom_violin(alpha=0.5) +
+      #geom_jitter(col=rgb(0.4,0.4,0.8,0.6), pch=16 , cex=1.3, size=1, alpha=0.9) +
+      theme_linedraw() +
+      theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom")
+    disease_genes_plot
     
   })
   
@@ -359,29 +426,29 @@ server <- function(input, output) {
       selected_disease_results_df <- selected_disease_results_df[selected_disease_results_df$disease %in% selected_diseases,]
       ggplot(selected_disease_results_df, aes(x=size, y=.data[[input$metric_disease_genes_by_score]], fill=pval)) + 
         geom_boxplot() +
-        labs(x="Sample size", y = parameter2label[[input$metric_disease_genes_by_score]])
+        labs(x="Number of samples", y = parameter2label[[input$metric_disease_genes_by_score]])
     } else if(isTruthy(input$disease_genes_by_score_group_by == 'group_disease_top')){
       selected_disease_results_df <- selected_disease_results_df[(selected_disease_results_df$disease %in% selected_diseases) & (selected_disease_results_df$pval == input$pval_disease_genes),]
       ggplot(selected_disease_results_df, aes(x=size, y=.data[[input$metric_disease_genes_by_score]], fill=top_percent)) + 
         geom_boxplot() +
-        labs(x="Sample size", y = parameter2label[[input$metric_disease_genes_by_score]])
+        labs(x="Number of samples", y = parameter2label[[input$metric_disease_genes_by_score]])
     } else if(isTruthy(input$disease_genes_by_score_group_by == 'group_disease')){
       selected_disease_results_df <- selected_disease_results_df[selected_disease_results_df$disease %in% selected_diseases,]
       print(dataset)
       print(selected_disease_results_df)
       ggplot(selected_disease_results_df, aes(x=size, y=.data[[input$metric_disease_genes_by_score]], fill=disease)) + 
         geom_boxplot() +
-        labs(x="Sample size", y = parameter2label[[input$metric_disease_genes_by_score]])
+        labs(x="Number of samples", y = parameter2label[[input$metric_disease_genes_by_score]])
     } else if(isTruthy(input$disease_genes_by_score_group_by == 'group_disease_class')){
       selected_disease_results_df <- selected_disease_results_df[(selected_disease_results_df$disease %in% selected_diseases) & (selected_disease_results_df$pval == input$pval_disease_genes) & (selected_disease_results_df$top == input$top_disease_genes),]
       ggplot(selected_disease_results_df, aes(x=size, y=.data[[input$metric_disease_genes_by_score]], fill=disease_class)) + 
         geom_boxplot() +
-        labs(x="Sample size", y = parameter2label[[input$metric_disease_genes_by_score]])
+        labs(x="Number of samples", y = parameter2label[[input$metric_disease_genes_by_score]])
     } else {
       selected_disease_results_df <- selected_disease_results_df[(selected_disease_results_df$disease %in% selected_diseases) & (selected_disease_results_df$pval == input$pval_disease_genes) & (selected_disease_results_df$top == input$top_disease_genes),]
       ggplot(selected_disease_results_df, aes(x=size, y=.data[[input$metric_disease_genes_by_score]])) + 
         geom_boxplot() +
-        labs(x="Sample size", y = parameter2label[[input$metric_disease_genes_by_score]])
+        labs(x="Number of samples", y = parameter2label[[input$metric_disease_genes_by_score]])
     }
     
   })
@@ -417,7 +484,7 @@ server <- function(input, output) {
     selected_network_similarity_by_size$mean.lower = selected_network_similarity_by_size$mean - selected_network_similarity_by_size$var
     
     # Figure based on https://www.r-graph-gallery.com/45-confidence-interval-around-polynomial-curve-fitting.html
-    plot(selected_network_similarity_df$size, selected_network_similarity_df[[input$parameter_similarity]],col=rgb(0.4,0.4,0.8,0.6),pch=16 , cex=1.3, xlab="Sample Size", ylab=parameter2label[[input$parameter_similarity]], main="Similarity between networks with same sample size") 
+    plot(selected_network_similarity_df$size, selected_network_similarity_df[[input$parameter_similarity]],col=rgb(0.4,0.4,0.8,0.6),pch=16 , cex=1.3, xlab="Number of samples", ylab=parameter2label[[input$parameter_similarity]], main="Similarity between networks with same number of samples") 
     lines(selected_network_similarity_by_size$size, selected_network_similarity_by_size$mean, col=2, lwd=2 )  
     polygon(c(selected_network_similarity_by_size$size, rev(selected_network_similarity_by_size$size)), c(selected_network_similarity_by_size$mean.upper, rev(selected_network_similarity_by_size$mean.lower)), col = rgb(0.7,0.7,0.7,0.4) , border = NA)
     
@@ -454,7 +521,7 @@ server <- function(input, output) {
     selected_network_comparison_all_samples_by_size$mean.upper = selected_network_comparison_all_samples_by_size$mean + selected_network_comparison_all_samples_by_size$var
     selected_network_comparison_all_samples_by_size$mean.lower = selected_network_comparison_all_samples_by_size$mean - selected_network_comparison_all_samples_by_size$var
     
-    plot(selected_network_comparison_df$size, selected_network_comparison_df[[input$parameter_similarity]],col=rgb(0.4,0.4,0.8,0.6),pch=16 , cex=1.3, xlab="Sample Size", ylab=parameter2label[[input$parameter_similarity]], main="Similarity between subsample networks and the network with all the samples") 
+    plot(selected_network_comparison_df$size, selected_network_comparison_df[[input$parameter_similarity]],col=rgb(0.4,0.4,0.8,0.6),pch=16 , cex=1.3, xlab="Number of samples", ylab=parameter2label[[input$parameter_similarity]], main="Similarity between subsample networks and the network with all the samples") 
     lines(selected_network_comparison_all_samples_by_size$size, selected_network_comparison_all_samples_by_size$mean, col=2, lwd=2 )  
     polygon(c(selected_network_comparison_all_samples_by_size$size, rev(selected_network_comparison_all_samples_by_size$size)), c(selected_network_comparison_all_samples_by_size$mean.upper, rev(selected_network_comparison_all_samples_by_size$mean.lower)), col = rgb(0.7,0.7,0.7,0.4) , border = NA)
     
@@ -503,7 +570,7 @@ server <- function(input, output) {
                 aes(x = size, y = mean, group=1),
                 col=2, lwd=1) +
       theme_linedraw() +
-      labs(x="Sample size", y = parameter2label[[input$metric_coexpressed_ppis]])
+      labs(x="Number of samples", y = parameter2label[[input$metric_coexpressed_ppis]])
 
   })
 
@@ -531,21 +598,21 @@ server <- function(input, output) {
       selected_difference_df <- selected_difference_df %>% filter((type_interaction != "all") & (range == input$difference_range_stability))
       ggplot(selected_difference_df, aes(x=size, y=.data[[input$metric_stability]], fill=type_interaction)) + 
         geom_boxplot() +
-        labs(x="Sample size", y = parameter2label[[input$metric_stability]]) +
+        labs(x="Number of samples", y = parameter2label[[input$metric_stability]]) +
         guides(fill=guide_legend(title="Type of interaction"))
     } else if(isTruthy(input$stability_group_by == 'group_difference_range')){
       selected_difference_df <- selected_difference_df %>% filter((range != "0-Inf") & (type_interaction == input$type_interaction_stability))
       #print(selected_difference_df)
       ggplot(selected_difference_df, aes(x=size, y=.data[[input$metric_stability]], fill=range)) + 
         geom_boxplot() +
-        labs(x="Sample size", y = parameter2label[[input$metric_stability]]) + 
+        labs(x="Number of samples", y = parameter2label[[input$metric_stability]]) + 
         guides(fill=guide_legend(title="Co-expression difference range"))
     } else {
       selected_difference_df <- selected_difference_df %>% filter((type_interaction == input$type_interaction_stability) & (range == input$difference_range_stability))
       #print(selected_difference_df)
       ggplot(selected_difference_df, aes(x=size, y=.data[[input$metric_stability]])) + 
         geom_boxplot() +
-        labs(x="Sample size", y = parameter2label[[input$metric_stability]])
+        labs(x="Number of samples", y = parameter2label[[input$metric_stability]])
     }
     
   })
@@ -576,13 +643,13 @@ server <- function(input, output) {
         selected_scores_df <- selected_scores_df %>% filter(type_interaction != "all")
         ggplot(selected_scores_df, aes(x=size, y=.data[[input$metric_scores]], fill=type_interaction)) + 
           geom_boxplot() +
-          labs(x="Sample size", y = parameter2label[[input$metric_scores]]) +
+          labs(x="Number of samples", y = parameter2label[[input$metric_scores]]) +
           guides(fill=guide_legend(title="Type of interaction"))
       } else {
         selected_scores_df <- selected_scores_df %>% filter((type_interaction != "all") & (range == input$score_range))
         ggplot(selected_scores_df, aes(x=size, y=.data[[input$metric_scores]], fill=type_interaction)) + 
           geom_boxplot() +
-          labs(x="Sample size", y = parameter2label[[input$metric_scores]]) +
+          labs(x="Number of samples", y = parameter2label[[input$metric_scores]]) +
           guides(fill=guide_legend(title="Type of interaction"))
       }
     } else {
@@ -591,7 +658,7 @@ server <- function(input, output) {
         #print(selected_scores_df)
         ggplot(selected_scores_df, aes(x=size, y=.data[[input$metric_scores]], fill=range)) + 
           geom_boxplot() +
-          labs(x="Sample size", y = parameter2label[[input$metric_scores]]) +
+          labs(x="Number of samples", y = parameter2label[[input$metric_scores]]) +
           guides(fill=guide_legend(title="Co-expression score range"))
       } else {
         if (length(input$score_range) > 1){
@@ -599,14 +666,14 @@ server <- function(input, output) {
           #print(selected_scores_df)
           ggplot(selected_scores_df, aes(x=size, y=.data[[input$metric_scores]], fill=range)) + 
             geom_boxplot() +
-            labs(x="Sample size", y = parameter2label[[input$metric_scores]]) +
+            labs(x="Number of samples", y = parameter2label[[input$metric_scores]]) +
             guides(fill=guide_legend(title="Co-expression score range"))
         } else {
           selected_scores_df <- selected_scores_df %>% filter((type_interaction == input$type_interaction_scores) & (range == input$score_range))
           #print(selected_scores_df)
           ggplot(selected_scores_df, aes(x=size, y=.data[[input$metric_scores]])) + 
             geom_boxplot() +
-            labs(x="Sample size", y = parameter2label[[input$metric_scores]])
+            labs(x="Number of samples", y = parameter2label[[input$metric_scores]])
         }
       }
     }
@@ -641,20 +708,20 @@ server <- function(input, output) {
       #print(selected_threshold_results_df)
       ggplot(selected_threshold_results_df, aes(x=size, y=.data[[input$metric_scores_thresholds]], fill=threshold)) + 
         geom_boxplot() +
-        labs(x="Sample size", y = parameter2label[[input$metric_scores_thresholds]])
+        labs(x="Number of samples", y = parameter2label[[input$metric_scores_thresholds]])
     } else {
       if (length(input$score_thresholds) > 1){
         selected_threshold_results_df <- selected_threshold_results_df %>% filter((type_interaction == input$type_interaction_scores_thresholds) & (threshold %in% input$score_thresholds))
         #print(selected_threshold_results_df)
         ggplot(selected_threshold_results_df, aes(x=size, y=.data[[input$metric_scores_thresholds]], fill=threshold)) + 
           geom_boxplot() +
-          labs(x="Sample size", y = parameter2label[[input$metric_scores_thresholds]])
+          labs(x="Number of samples", y = parameter2label[[input$metric_scores_thresholds]])
       } else {
         selected_threshold_results_df <- selected_threshold_results_df %>% filter((type_interaction == input$type_interaction_scores_thresholds) & (threshold == input$score_thresholds))
         #print(selected_threshold_results_df)
         ggplot(selected_threshold_results_df, aes(x=size, y=.data[[input$metric_scores_thresholds]])) + 
           geom_boxplot() +
-          labs(x="Sample size", y = parameter2label[[input$metric_scores_thresholds]])
+          labs(x="Number of samples", y = parameter2label[[input$metric_scores_thresholds]])
       }
     }
     
