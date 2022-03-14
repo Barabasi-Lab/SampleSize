@@ -100,6 +100,8 @@ def create_gene_coexpression_networks(options):
     # Run co-expression for all files
     datasets = [f for f in os.listdir(input_dir) if fileExist(os.path.join(input_dir, f))]
     sizes = [str(size) for size in range(20, 1020, 20)]
+    reps = [str(rep) for rep in range(1, 6, 1)]
+    #reps = ['1', '2', '3']
 
     for dataset in sorted(datasets):
 
@@ -113,7 +115,7 @@ def create_gene_coexpression_networks(options):
         coexpression_file = os.path.join(input_dir, dataset)
         
         dataset_names = []
-        if size in sizes:
+        if size in sizes and rep in reps:
             if (method in ["pearson", "spearman"]):
                 thresholds = [0.05, 0.001]
                 disparity_pvalues = [None]
@@ -156,7 +158,7 @@ def create_gene_coexpression_networks(options):
                 output_ppi_file = os.path.join(output_analysis_dir, '{}_{}'.format(dataset_name, 'analysis_ppi.txt'))
 
                 if ((method in ["pearson", "spearman", "wto", "aracne"]) and (threshold in [0, 0.001, 0.05])):
-                #if ((method in ["pearson", "aracne"]) and (threshold in [0, 0.05, 0.001])):
+                #if ((method in ["pearson", "spearman", "aracne", "wto"]) and (threshold in [0, 0.05])):
 
                     #if not fileExist(bash_script_file):
                     if ((not fileExist(output_topology_file)) or (not fileExist(output_essential_genes_file))):

@@ -1,0 +1,486 @@
+---
+title: "GTEx analysis"
+author: "Joaquim Aguirre-Plans"
+date: "23/11/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Description
+
+Analyze GTEx data (version v8).
+
+```{r, message=FALSE}
+library(data.table)
+library(dplyr)
+library(forcats)
+library(ggplot2)
+set.seed(1510)
+```
+
+## Read files
+
+```{r define_files}
+# Define working directories
+databases_dir = '/home/j.aguirreplans/Databases'
+#databases_dir = '/Users/j.aguirreplans/Databases'
+
+# Define input files
+subjects_file = paste(databases_dir, 'GTEx/v8/GTEx_Analysis_v8_Annotations_SubjectPhenotypesDS.txt', sep='/')
+samples_file = paste(databases_dir, 'GTEx/v8/GTEx_Analysis_v8_Annotations_SampleAttributesDS.txt', sep='/')
+tpm_file = paste(databases_dir, 'GTEx/v8/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_tpm.gct', sep='/')
+
+# Define output file
+samples_subjects_file = paste(databases_dir, 'GTEx/v8/GTEx_Annotations_SamplesSubjectsMerged.txt', sep='/')
+
+```
+
+```{r read_files}
+# Read input files
+subjects_df = fread(subjects_file)
+samples_df = fread(samples_file)
+tpm_df = fread(tpm_file)
+
+```
+
+### TPM information
+
+The TPM data is organized os that the rows are the tpm values for each gene, and the columns are samples.
+
+```{r}
+tpm_df[1:5,1:5]
+
+```
+
+### Subjects information
+
+The subjects dataframe contains parameters that describe the subjects of the dataset:
+
+* SUBJID: Subject ID.
+* SEX: The value is either 1 (Male) or 2 (Female).
+* AGE: Elapsed time since birth in years. The format is in ranges of 10 years (e.g., 50-59).
+* DTHHRY: Description of the type of death using the Hardy Scale.
+** 1: Violent and fast death.
+** 2: Fast death of natural causes (with sudden death from a myocardial infraction as a model cause).
+** 3: Intermediate death after a terminal phase of 1 to 24 hrs. Patients were ill but death was unexpected.
+** 4: Slow death after a long illness, with a terminal phase longer than 1 day (commonly cancer or chronic pulmonary disease).
+** 0: Ventilator case (cases on a ventilator immediately before death).
+
+```{r}
+table(subjects_df$SEX)
+table(subjects_df$AGE)
+table(subjects_df$DTHHRDY)
+subject_ids <- unique(subjects_df$SUBJID)
+print(length(subject_ids))
+head(subjects_df)
+
+```
+
+
+
+### Samples information
+
+The samples dataframe contains parameters that describe the samples of the dataset:
+
+* SAMPID: Sample ID.
+* SMTS: Tissue type, area from which the tissue was taken.
+* SMTSD: Tissue Type, more specific detail of tissue type
+
+```{r}
+print(length(unique(samples_df$SAMPID)))
+head(samples_df)
+
+```
+
+We filter the samples by just keeping the ones present in the TPM data:
+
+```{r keep_only_samples_in_expression_data}
+samples_df <- samples_df[samples_df$SAMPID %in% colnames(tpm_df),]
+print(length(unique(samples_df$SAMPID)))
+head(samples_df)
+
+```
+
+We add a column with subject ID by splitting the sample ID:
+
+```{r add_subject_id_column_to_samples_df}
+# Add column with subject ID 
+# sample ID --> GTEX-14753-1626-SM-5NQ9L
+# subject ID --> GTEX-14753
+# info --> https://sites.google.com/broadinstitute.org/gtex-faqs/home
+donor_ids <- list()
+i = 1
+for(sample_id in samples_df$SAMPID){
+  split_list <- unlist(strsplit(sample_id, "-", fixed = TRUE))
+  donor_id <- paste(split_list[1], split_list[2], sep='-')
+  donor_ids[i] <- donor_id
+  i<- i+1
+}
+samples_df$SUBJID <- unlist(donor_ids)
+
+```
+
+We merge samples and subjects dataframes:
+
+```{r merge_samples_subjects_info}
+samples_df <- merge(x = samples_df, y = subjects_df, by = "SUBJID", all = FALSE)
+
+```
+
+We keep only columns of interest:
+
+```{r}
+samples_df <- samples_df[,c("SAMPID", "SUBJID", "SEX", "AGE", "DTHHRDY", "SMTS", "SMTSD")]
+
+```
+
+We create tissue names without special characters:
+
+```{r}
+samples_df$SMTS.no.sp.char <- gsub(' ', '.', gsub(' - ', '.', gsub('[\\(\\)]', '', samples_df$SMTS)))
+samples_df$SMTSD.no.sp.char <- gsub(' ', '.', gsub(' - ', '.', gsub('[\\(\\)]', '', samples_df$SMTSD)))
+
+```
+
+We remove samples without cause of death:
+
+```{r}
+samples_df <- samples_df[!(is.na(samples_df$DTHHRDY)),]
+print(length(unique(samples_df$SAMPID)))
+print(length(unique(samples_df$SUBJID)))
+head(samples_df)
+fwrite(samples_df, samples_subjects_file)
+
+```
+
+
+## Analyze the number of samples and subjects per tissue
+
+We check how many samples per tissue we have:
+
+```{r}
+smtsd_samples_count <- samples_df %>% count(SMTSD)
+smts_samples_count <- samples_df %>% count(SMTS)
+```
+
+```{r}
+samples_subtissues_plot <- smtsd_samples_count %>%
+  mutate(SMTSD = fct_reorder(SMTSD, n)) %>%
+  ggplot( aes(x=SMTSD, y=n)) +
+    geom_bar(stat="identity", fill="#f68060", alpha=.6, width=.4) +
+    coord_flip() +
+    xlab("") +
+    theme_bw()
+ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/num_samples_vs_subtissues.png', plot=samples_subtissues_plot, type='cairo', dpi = 300, height=8, width = 10)
+samples_subtissues_plot
+
+samples_tissues_plot <- smts_samples_count %>%
+  mutate(SMTS = fct_reorder(SMTS, n)) %>%
+  ggplot( aes(x=SMTS, y=n)) +
+    geom_bar(stat="identity", fill="#f68060", alpha=.6, width=.4) +
+    coord_flip() +
+    xlab("") +
+    theme_bw()
+ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/num_samples_vs_tissues.png', plot=samples_tissues_plot, type='cairo', dpi = 300)
+samples_tissues_plot
+
+```
+
+Check samples per tissue separating by sex:
+
+```{r}
+samples_male_df <- samples_df[samples_df$SEX == 1,]
+samples_female_df <- samples_df[samples_df$SEX == 2,]
+smtsd_samples_count_male <- samples_male_df %>% count(SMTSD)
+smtsd_samples_count_female <- samples_female_df %>% count(SMTSD)
+smtsd_samples_count_male$sex <- "Male"
+smtsd_samples_count_female$sex <- "Female"
+smts_samples_count_male <- samples_male_df %>% count(SMTS)
+smts_samples_count_female <- samples_female_df %>% count(SMTS)
+smts_samples_count_male$sex <- "Male"
+smts_samples_count_female$sex <- "Female"
+#smtsd_samples_count_by_sex <- merge(x = smtsd_samples_count_male, y = smtsd_samples_count_female, by = "SMTSD", all = TRUE) %>% mutate(n_male=replace(n_male, is.na(n_male), 0)) %>% mutate(n_female=replace(n_female, is.na(n_female), 0))
+#smts_samples_count_by_sex <- merge(x = smts_samples_count_male, y = smts_samples_count_female, by = "SMTS", all = TRUE) %>% mutate(n_male=replace(n_male, is.na(n_male), 0)) %>% mutate(n_female=replace(n_female, is.na(n_female), 0))
+smtsd_samples_count_by_sex <- rbind(smtsd_samples_count_male, smtsd_samples_count_female)
+smts_samples_count_by_sex <- rbind(smts_samples_count_male, smts_samples_count_female)
+
+```
+
+```{r}
+samples_subtissues_by_sex_plot <- smtsd_samples_count_by_sex %>%
+  mutate(SMTSD = fct_reorder(SMTSD, n)) %>%
+  ggplot( aes(x=SMTSD, y=n, fill=sex)) +
+    geom_bar(position="dodge", stat="identity", alpha=.6, width=.4) +
+    coord_flip() +
+    xlab("") +
+    theme_bw()
+ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/num_samples_vs_subtissues_by_sex.png', plot=samples_subtissues_by_sex_plot, type='cairo', dpi = 300, height=8, width = 10)
+samples_subtissues_by_sex_plot
+
+samples_tissues_by_sex_plot <- smts_samples_count_by_sex %>%
+  mutate(SMTS = fct_reorder(SMTS, n)) %>%
+  ggplot( aes(x=SMTS, y=n, fill=sex)) +
+    geom_bar(position="dodge", stat="identity", alpha=.6, width=.4) +
+    coord_flip() +
+    xlab("") +
+    theme_bw()
+ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/num_samples_vs_tissues_by_sex.png', plot=samples_tissues_by_sex_plot, type='cairo', dpi = 300)
+samples_tissues_by_sex_plot
+
+```
+
+Check how many subjects per tissue we have:
+
+```{r}
+subjects_with_tissues_df <- samples_df[,c("SUBJID", "SEX", "AGE", "DTHHRDY", "SMTS", "SMTSD")] %>% distinct()
+smtsd_subjects_count <- subjects_with_tissues_df %>% count(SMTSD)
+smts_subjects_count <- subjects_with_tissues_df[,c("SUBJID", "SEX", "AGE", "DTHHRDY", "SMTS")]  %>% distinct() %>% count(SMTS)
+```
+
+```{r}
+smtsd_subjects_count %>%
+  mutate(SMTSD = fct_reorder(SMTSD, n)) %>%
+  ggplot( aes(x=SMTSD, y=n)) +
+    geom_bar(stat="identity", fill="#f68060", alpha=.6, width=.4) +
+    coord_flip() +
+    xlab("") +
+    theme_bw()
+
+smts_subjects_count %>%
+  mutate(SMTS = fct_reorder(SMTS, n)) %>%
+  ggplot( aes(x=SMTS, y=n)) +
+    geom_bar(stat="identity", fill="#f68060", alpha=.6, width=.4) +
+    coord_flip() +
+    xlab("") +
+    theme_bw()
+
+```
+
+Count the number of samples per tissue:
+
+```{r tissue_sex_count}
+
+num_samples_per_tissue_df = data.frame(matrix(ncol=2,nrow=0, dimnames=list(NULL, c("tissue", "n"))))
+num_samples_per_tissue_sex_df = data.frame(matrix(ncol=3,nrow=0, dimnames=list(NULL, c("tissue", "sex", "n"))))
+sex_to_id = data.frame(row.names=c("male","female") , val=c(1,2))
+for (tissue in unique(samples_df$SMTSD.no.sp.char)){
+  tissue_samples = samples_df[samples_df$SMTSD.no.sp.char == tissue,]$SAMPID
+  num_samples_per_tissue_df = rbind(num_samples_per_tissue_df, data.frame(tissue=tissue, n=length(tissue_samples)))
+  for (sex in rownames(sex_to_id)){
+    sex_id = sex_to_id[sex,]
+    tissue_sex_samples = samples_df[(samples_df$SMTSD.no.sp.char == tissue) & (samples_df$SEX == sex_id),]$SAMPID
+    num_samples_per_tissue_sex_df = rbind(num_samples_per_tissue_sex_df, data.frame(tissue=tissue, sex=sex, n=length(tissue_sex_samples)))
+
+  }
+}
+
+# Tissues with more than 200 samples
+length(num_samples_per_tissue_df[num_samples_per_tissue_df$n > 200,]$tissue)
+# Tissues with 100-200 samples
+length(num_samples_per_tissue_df[(num_samples_per_tissue_df$n <= 200) & (num_samples_per_tissue_df$n >= 100),]$tissue)
+# Tissues with less than 100 samples
+length(num_samples_per_tissue_df[num_samples_per_tissue_df$n < 100,]$tissue)
+
+# Tissue-sex groups with more than 200 samples
+length(num_samples_per_tissue_sex_df[num_samples_per_tissue_sex_df$n > 200,]$tissue)
+# Tissue-sex groups with 100-200 samples
+length(num_samples_per_tissue_sex_df[(num_samples_per_tissue_sex_df$n <= 200) & (num_samples_per_tissue_sex_df$n >= 100),]$tissue)
+# Tissue-sex groups with less than 100 samples
+length(num_samples_per_tissue_sex_df[num_samples_per_tissue_sex_df$n < 100,]$tissue)
+```
+
+
+
+## Remove low expressed genes
+
+### Specific for whole blood & female
+
+Let's analyze the distribution of TPMs specifically for Whole Blood.
+
+```{r}
+tissue <- "Whole Blood"
+sex_id <- 2
+samples_tissue_sex_df = samples_df[(samples_df$SMTSD == tissue) & (samples_df$SEX == sex_id) & (samples_df$SAMPID %in% colnames(tpm_df)),]
+samples_tissue_sex <- unique(samples_tissue_sex_df$SAMPID)
+subjects_tissue_sex <- unique(samples_tissue_sex_df$SUBJID)
+tpm_tissue_df <- tpm_df %>% select(c("Name", "Description", samples_tissue_sex))
+
+```
+
+First, we calculate the median, mean, sum and standard deviation of the expression of each gene:
+
+```{r}
+info_tissue_df = data.frame(Name=tpm_tissue_df$Name, Description=tpm_tissue_df$Description, median=apply(tpm_tissue_df[,-1:-2], 1, median))
+info_tissue_df$log2_median = log2(info_tissue_df$median)
+info_tissue_df$mean = rowMeans(tpm_tissue_df[,-1:-2])
+info_tissue_df$log2_mean = log2(info_tissue_df$mean)
+info_tissue_df$sum = rowSums(tpm_tissue_df[,-1:-2])
+info_tissue_df$sd = apply(tpm_tissue_df[,-1:-2], 1, sd)
+info_tissue_df$zero_sum_counts = as.numeric(apply(tpm_tissue_df[,-1:-2], 1, function(i) sum(i == 0) )) # Number of times that the sum of the TPMs is equal to 0
+dim(info_tissue_df)
+head(info_tissue_df)
+
+```
+
+We remove the genes whose sum, standard deviation or mean expression is equal to 0, or median expression below 1.
+Also, we remove the genes whose expression is 0 in more than 50% of the samples (as in https://www.biostars.org/p/377059/):
+
+
+```{r}
+info_tissue_filt_df = info_tissue_df[(info_tissue_df$sum > 0) & (info_tissue_df$mean > 0) & (info_tissue_df$median >= 1) & (info_tissue_df$sd > 0) & (info_tissue_df$zero_sum_counts < dim(tpm_tissue_df[, -1])[2]/2) ,]
+dim(info_tissue_filt_df)
+head(info_tissue_filt_df)
+
+```
+
+Here we plot the distributions based on different metrics:
+
+```{r}
+# Expression without filtering
+log_median_expression_specific_tissue_no_filt <- ggplot(info_tissue_df, aes(x=log2_median)) + 
+  geom_histogram(binwidth=1, fill="#69b3a2", color="#e9ecef", alpha=0.9) +
+  xlab("log2 median")
+ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/log_median_expression_specific_tissue_no_filtering.png', plot=log_median_expression_specific_tissue_no_filt, type='cairo', dpi = 300)
+log_median_expression_specific_tissue_no_filt
+
+log_median_expression_specific_tissue <- ggplot(info_tissue_filt_df, aes(x=log2_median)) + 
+  geom_histogram(binwidth=1, fill="#69b3a2", color="#e9ecef", alpha=0.9) +
+  xlab("log2 median")
+ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/log_median_expression_specific_tissue.png', plot=log_median_expression_specific_tissue, type='cairo', dpi = 300)
+log_median_expression_specific_tissue
+
+log_mean_expression_specific_tissue <- ggplot(info_tissue_filt_df, aes(x=log2_mean)) + 
+  geom_histogram(binwidth=1, fill="#69b3a2", color="#e9ecef", alpha=0.9) +
+  xlab("log2 mean")
+ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/log_mean_expression_specific_tissue.png', plot=log_mean_expression_specific_tissue, type='cairo', dpi = 300)
+log_mean_expression_specific_tissue
+
+sd_expression_specific_tissue <- ggplot(info_tissue_filt_df[info_tissue_filt_df$sd < 20,], aes(x=sd)) + 
+  geom_histogram(binwidth=1, fill="#69b3a2", color="#e9ecef", alpha=0.9) +
+  xlab("standard deviation")
+ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/sd_expression_specific_tissue.png', plot=sd_expression_specific_tissue, type='cairo', dpi = 300)
+sd_expression_specific_tissue
+
+```
+
+```{r}
+rm(tpm_tissue_df)
+rm(info_tissue_df)
+rm(info_tissue_filt_df)
+rm(log_median_expression_specific_tissue)
+rm(log_mean_expression_specific_tissue)
+rm(sd_expression_specific_tissue)
+
+```
+
+
+### For all tissues
+
+First, we filter the samples in the TPM file that are in the samples information file:
+
+```{r filter_tpm_file_samples}
+dim(tpm_df)
+tpm_df <- tpm_df %>% select(c("Name", "Description", samples_df$SAMPID))
+dim(tpm_df)
+
+```
+
+Now, let's analyze the distribution of TPMs for all tissues.
+
+```{r calculate_metrics_for_expression_of_all_tissues}
+info_df = data.frame(Name=tpm_df$Name, Description=tpm_df$Description, sum=rowSums(tpm_df[,-1:-2]))
+info_df$sd = apply(tpm_df[,-1:-2], 1, sd)
+info_df$mean = rowMeans(tpm_df[,-1:-2])
+info_df$median = apply(tpm_df[,-1:-2], 1, median)
+info_df$log2_median = log2(info_df$median)
+info_df$log2_mean = log2(info_df$mean)
+info_df$zero_sum_counts = as.numeric(apply(tpm_df[,-1:-2], 1, function(i) sum(i == 0) )) # Number of times that the sum of the TPMs is equal to 0
+
+dim(info_df)
+```
+
+```{r filter_low_expressed_genes_all_tissues}
+info_filt_df = info_df[(info_df$sum > 0) & (info_df$mean > 0) & (info_df$median >= 1) & (info_df$sd > 0) & (info_df$zero_sum_counts < dim(tpm_df[, -1])[2]/2) ,]
+dim(info_filt_df)
+
+```
+
+```{r plot_distribution_expression_all_tissues}
+log_median_expression_all_tissues_no_filt <- ggplot(info_df, aes(x=log2_median)) + 
+  geom_histogram(binwidth=1, fill="#69b3a2", color="#e9ecef", alpha=0.9) +
+  xlab("log2 median")
+ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/log_median_expression_all_tissues_no_filtering.png', plot=log_median_expression_all_tissues_no_filt, type='cairo', dpi = 300)
+log_median_expression_all_tissues_no_filt
+
+log_median_expression_all_tissues <- ggplot(info_filt_df, aes(x=log2_median)) + 
+  geom_histogram(binwidth=1, fill="#69b3a2", color="#e9ecef", alpha=0.9) +
+  xlab("log2 median")
+ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/log_median_expression_all_tissues.png', plot=log_median_expression_all_tissues, type='cairo', dpi = 300)
+log_median_expression_all_tissues
+
+log_mean_expression_all_tissues <- ggplot(info_filt_df, aes(x=log2_mean)) + 
+  geom_histogram(binwidth=1, fill="#69b3a2", color="#e9ecef", alpha=0.9) +
+  xlab("log2 mean")
+ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/log_mean_expression_all_tissues.png', plot=log_mean_expression_all_tissues, type='cairo', dpi = 300)
+log_mean_expression_all_tissues
+
+sd_expression_all_tissues <- ggplot(info_filt_df[info_filt_df$sd < 30,], aes(x=sd)) + 
+  geom_histogram(binwidth=1, fill="#69b3a2", color="#e9ecef", alpha=0.9) +
+  xlab("standard deviation")
+ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/sd_expression_all_tissues.png', plot=sd_expression_all_tissues, type='cairo', dpi = 300)
+sd_expression_all_tissues
+
+```
+
+```{r}
+rm(info_df)
+rm(info_filt_df)
+rm(log_median_expression_all_tissues)
+rm(log_mean_expression_all_tissues)
+rm(sd_expression_all_tissues)
+
+```
+
+
+## Check if there are genes with same symbol
+
+They seem to be isoforms or splicing variants of the same gene:
+
+```{r}
+repeated_genes <- unique(tpm_df$Description[duplicated(tpm_df$Description)])
+length(repeated_genes)
+tpm_df[tpm_df$Description %in% repeated_genes[1:10],][,c("Name", "Description")][order(Description),]
+
+```
+
+```{r}
+rm(tpm_df)
+
+```
+
+
+
+## Check if there are multiple samples for same subject and tissue
+
+We check if there are any samples from same subject and tissue:
+
+```{r}
+# Get standard deviation of the expression on subjects with more than one sample
+for (t in unique(samples_df$SMTSD)){
+  for (subjid in unique(samples_df[samples_df$SMTSD == t,]$SUBJID)){
+    samples_subjid <- samples_df[(samples_df$SUBJID == subjid) & (samples_df$SMTSD == t) ,]$SAMPID
+    if (length(samples_subjid) > 1){
+      print(t)
+      print(length(samples_subjid))
+    }
+  }
+}
+
+```
+
+There are no multiple samples for the same subject and tissue!
+
+

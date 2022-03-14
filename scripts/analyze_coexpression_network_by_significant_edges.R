@@ -27,7 +27,7 @@ option_list = list(
               help="File containing the protein-protein interaction network", metavar="character"),
   make_option(c("-d", "--disease_genes_file"), type="character", default = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_scipher.csv",
               help="File containing the disease genes in the expression dataset", metavar="character"),
-  make_option(c("-e", "--essential_genes_file"), type="character", default = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_esential_genes_scipher.csv",
+  make_option(c("-e", "--essential_genes_file"), type="character", default = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_scipher.csv",
               help="File containing the essential genes in the expression dataset", metavar="character"),
   make_option(c("-g", "--genes_dataset_file"), type="character", default = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_gene_info.csv",
               help="File containing the genes in the expression dataset", metavar="character")
@@ -66,7 +66,7 @@ genes_dataset_file = opt$genes_dataset_file
 #output_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_scipher/all_samples/analysis_by_top_scoring_edges_wgcna_scipher_all_samples_size_100_rep_1.txt"
 #ppi_file = "/home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv"
 #disease_genes_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_scipher.csv"
-#essential_genes_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_esential_genes_scipher.csv"
+#essential_genes_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_scipher.csv"
 #genes_dataset_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_gene_info.csv"
 
 
@@ -153,7 +153,7 @@ essential_gene_results_df = data.frame(matrix(ncol=11,nrow=0, dimnames=list(NULL
 
 
 # Calculate topology analysis
-start_time <- Sys.time()
+start_time_topology <- Sys.time()
 print("Calculating topology")
 if(!(file.exists(output_topology_file))){
   
@@ -163,25 +163,62 @@ if(!(file.exists(output_topology_file))){
   # Calculate topological parameters
   num_nodes = gorder(coexpression_net)
   num_edges = gsize(coexpression_net)
+  
+  start_time <- Sys.time()
+  print("Calculating average degree")
   av_degree = mean(degree(coexpression_net))
+  end_time <- Sys.time()
+  time_diff = end_time - start_time
+  print(time_diff)
+  
+  start_time <- Sys.time()
+  print("Calculating average path length")
   av_path_length = mean_distance(coexpression_net)
+  end_time <- Sys.time()
+  time_diff = end_time - start_time
+  print(time_diff)
+  
+  start_time <- Sys.time()
+  print("Calculating average clustering coefficient")
   av_clustering_coef = transitivity(coexpression_net)
+  end_time <- Sys.time()
+  time_diff = end_time - start_time
+  print(time_diff)
   
   # Components analysis
+  start_time <- Sys.time()
+  print("Calculating LCC")
   components_net = components(coexpression_net)
   lcc = induced.subgraph(coexpression_net, vids = V(coexpression_net)[components_net$membership == which.max(components_net$csize)] )
   num_lcc_nodes = gorder(lcc)
   num_lcc_edges = gsize(lcc)
-  lcc_sig = LCC_Significance(N = 1000, 
-                             Targets = V(lcc)$name, 
-                             G = coexpression_net)
+  end_time <- Sys.time()
+  time_diff = end_time - start_time
+  print(time_diff)
+  
+  start_time <- Sys.time()
+  print("Calculating LCC significance")
+  # LCC significance is the calculation that takes more time!!! Several hours depending on the size of the network
+  # So maybe I will skip it by now
+  #lcc_sig = LCC_Significance(N = 1000, 
+  #                           Targets = V(lcc)$name, 
+  #                           G = coexpression_net)
+  lcc_sig = list(Z=NA, emp_p=NA)
+  end_time <- Sys.time()
+  time_diff = end_time - start_time
+  print(time_diff)
   
   # K-core analysis
+  start_time <- Sys.time()
+  print("Calculating K core")
   k_core = coreness(coexpression_net)
   max_k = max(k_core)
   main_core = induced.subgraph(coexpression_net, vids = names(k_core[k_core==max_k]))
   num_main_core_nodes = gorder(main_core)
   num_main_core_edges = gsize(main_core)
+  end_time <- Sys.time()
+  time_diff = end_time - start_time
+  print(time_diff)
   
   topology_df = rbind(topology_df, data.frame(threshold=threshold, disparity=disparity_threshold, num_nodes=num_nodes, num_edges=num_edges, av_degree=av_degree, av_path_length=av_path_length, av_clustering_coef=av_clustering_coef, num_components=components_net$no, num_lcc_nodes=num_lcc_nodes, num_lcc_edges=num_lcc_edges, lcc_z=lcc_sig$Z, lcc_pvalue=lcc_sig$emp_p, max_k=max_k, num_main_core_nodes=num_main_core_nodes, num_main_core_edges=num_main_core_edges))
   
@@ -192,8 +229,8 @@ if(!(file.exists(output_topology_file))){
   topology_df %>% fwrite(output_topology_file)
   
 }
-end_time <- Sys.time()
-time_diff = end_time - start_time
+end_time_topology <- Sys.time()
+time_diff = end_time_topology - start_time_topology
 print(time_diff)
 
 
@@ -241,7 +278,8 @@ if(!(file.exists(output_disease_genes_file))){
     disease_lcc = igraph::induced.subgraph(disease_subgraph, vids = V(disease_subgraph)[disease_components$membership == which.max(disease_components$csize)] )
     num_disease_lcc_nodes = gorder(disease_lcc)
     num_disease_lcc_edges = gsize(disease_lcc)
-    disease_lcc_sig = LCC_Significance(N = 1000, Targets = V(disease_lcc)$name, G = coexpression_net)
+    #disease_lcc_sig = LCC_Significance(N = 1000, Targets = V(disease_lcc)$name, G = coexpression_net)
+    disease_lcc_sig = list(Z=NA, emp_p=NA)
     disease_selected_classes = strsplit(unique(disease_selected_df$DescriptorName), split="|", fixed=TRUE)[[1]]
     
     disease_name_no_sp_char = unique((disease_genes_df %>% filter(DiseaseName == !!disease))$DiseaseName.no.sp.char)
@@ -281,7 +319,8 @@ if(!(file.exists(output_essential_genes_file))){
   essential_lcc = induced.subgraph(essential_subgraph, vids = V(essential_subgraph)[essential_components$membership == which.max(essential_components$csize)] )
   num_essential_lcc_nodes = gorder(essential_lcc)
   num_essential_lcc_edges = gsize(essential_lcc)
-  essential_lcc_sig = LCC_Significance(N = 1000, Targets = V(essential_lcc)$name, G = coexpression_net)
+  #essential_lcc_sig = LCC_Significance(N = 1000, Targets = V(essential_lcc)$name, G = coexpression_net)
+  essential_lcc_sig = list(Z=NA, emp_p=NA)
   essential_gene_results_df = rbind(essential_gene_results_df, data.frame(threshold=threshold, disparity=disparity_threshold, num_essential_genes=num_essential_genes_subgraph, num_essential_edges=gsize(essential_subgraph), fraction_essential_genes=num_essential_genes_subgraph/length(essential_genes), num_components=essential_components$no, num_lcc_nodes=num_essential_lcc_nodes, num_lcc_edges=num_essential_lcc_edges, fraction_essential_lcc_nodes=num_essential_lcc_nodes/length(essential_genes), lcc_z=essential_lcc_sig$Z, lcc_pvalue=essential_lcc_sig$emp_p))
 
   # Output essential genes subgraph

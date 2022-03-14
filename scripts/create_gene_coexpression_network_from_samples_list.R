@@ -19,7 +19,7 @@ option_list = list(
               help="metric (e.g., pearson, spearman, mutual_information, wto, wgcna, aracne) [default= %default]", metavar="character"),
   make_option(c("-n", "--wto_n"), type="integer", default=100, 
               help="Number of wTO bootstrap repetitions to calculate the p-value [default= %default]", metavar="integer"),
-  make_option(c("-d", "--wto_delta"), type="double", default=0.2,
+  make_option(c("-d", "--wto_delta"), type="double", default=0.05,
               help="Value that defines the interval of confidence from which the p-values of the bootstrap repetitions are calculated [default= %default]", metavar="double"),
   make_option(c("-p", "--wgcna_power"), type="integer", default=6, 
               help="Number of wTO bootstrap repetitions to calculate the p-value [default= %default]", metavar="integer"),

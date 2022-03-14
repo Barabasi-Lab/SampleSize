@@ -35,7 +35,7 @@ topology_file = paste(input_dir, 'analysis_topology.csv', sep='/')
 topology_df = fread(topology_file) %>% unique()
 topology_df %<>% filter(!(size == "all"))
 topology_df$size = as.numeric(topology_df$size)
-topology_df %<>% filter((dataset == "scipher") & (type_dataset == "all_samples") & (method == "spearman") & (cut == 0.05) & is.na(disparity))
+topology_df %<>% filter((dataset == "scipher") & (type_dataset == "complete_dataset") & (method == "pearson") & (threshold == 0.05) & is.na(disparity))
 head(topology_df)
 
 # Calculate mean and median of the number of edges per size
@@ -52,27 +52,30 @@ topology_by_size_df$mean.lower = topology_by_size_df$mean - topology_by_size_df$
 Plot in linear scale:
 
 ```{r}
-ggplot(topology_df) +
-  aes(x = size, y = num_edges) +
-  geom_point(
-    shape = "circle",
-    size = 1.95,
-    colour = "#112446"
-  ) +
-  geom_smooth(span = 0.75) +
-  scale_y_continuous(trans = "log") +
-  theme_minimal()
+#ggplot(topology_df) +
+#  aes(x = size, y = num_edges) +
+#  geom_point(
+#    shape = "circle",
+#    size = 1.95,
+#    colour = "#112446"
+#  ) +
+#  geom_smooth(span = 0.75) +
+#  scale_y_continuous(trans = "log") +
+#  theme_minimal()
 
+lm_res = summary(lm(num_edges~log(size), data=topology_df))
+print(lm_res)
+formula_name = paste("F(x) = ln(x)*", round(coef(lm_res)[2]),  round(coef(lm_res)[1]), sep="")
 
 ggplot(topology_df, aes(x=size, y=num_edges)) + 
-    geom_point() +
-  geom_smooth(se = TRUE, span = 0.1, method = "lm") + 
-    # geom_smooth(method = "lm", formula = y~log(x), aes(col="y~log(x)"), se=FALSE, size=1) +
+    geom_point(alpha=0.5, size=3, col=2, fill=2) +
+    #geom_smooth(se = TRUE, span = 0.1, method = "lm") + 
     # geom_smooth(method = "lm", formula = y~sqrt(x), aes(col="y~sqrt(x)"), se=FALSE, size=1) +
-  scale_y_continuous(trans = "log") + 
+    #scale_y_continuous(trans = "log") + 
     #geom_smooth(method = "lm", formula = y~ln(x), aes(col="y~ln(x)"), se=FALSE, size=1) +
     geom_line(data=topology_by_size_df, aes(x=size, y=mean, color="Mean"), size=1) +
-    #geom_line(data=topology_by_size_df, aes(x=size, y=log(size), color="Log"), size=1) +
+    #geom_smooth(method = "lm", formula = y~log(x), aes(col="y~ln(x)"), se=F, size=1) +
+    geom_line(data=topology_df, aes(x=size, y=(log(size)*coef(lm_res)[2] + coef(lm_res)[1]), color=formula_name), size=1) +
     ggtitle("Num. of significant edges vs. Num. of samples") +
     labs(x="Number of samples", y = "Number of significant edges") +
     theme_linedraw() +
@@ -80,30 +83,54 @@ ggplot(topology_df, aes(x=size, y=num_edges)) +
     scale_color_manual(name = "",
                        #breaks = c("Mean", "y~log10(x)", "y~log2(x)", "y~ln(x)"),
                        #breaks = c("Mean", "Log", "y~log(x)"),
-                       breaks = c("Mean", "y~log(x)"),
+                       #breaks = c("Mean", "y~log(x)"),
                        #values = c("Mean" = "blue", "y~log10(x)" = "red", "y~log2(x)" = "green", "y~ln(x)" = "orange") )
                        #values = c("Mean" = "blue", "Log" = "green", "y~log(x)" = "red") )
-                       values = c("Mean" = "blue", "y~log(x)" = "red") )
+                       values = c("green", "2") )
 
 plot_num_edges_num_samples_file = paste(plots_dir, "scipher_spearman_pval_0.05_num_edges_vs_num_samples.png", sep="/")
 ggsave(
   plot_num_edges_num_samples_file,
   dpi = 1200,
-  width = 8750,
+  width = 15000,
   height = 6000,
   units = c("px")
 )
+
+num_samples=seq(10,10000,1)
+prediction_num_edges_df = data.frame(size=num_samples, num_edges=(log(num_samples)*coef(lm_res)[2] + coef(lm_res)[1]))
+total_num_genes=14266
+total_num_edges = total_num_genes * (total_num_genes-1) / 2
+print(total_num_edges)
+closest_num_edges = prediction_num_edges_df$num_edges[which.min(abs(prediction_num_edges_df$num_edges - total_num_edges))]
+print(prediction_num_edges_df[prediction_num_edges_df$num_edges == closest_num_edges,])
+ggplot(prediction_num_edges_df) + 
+    geom_line(aes(x=size, y=num_edges), size=1, col=2) +
+    ggtitle("Prediction of significant edges vs. Num. of samples") +
+    labs(x="Number of samples", y = "Number of significant edges") +
+    theme_linedraw() +
+    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom")
+
+plot_num_edges_num_samples_file = paste(plots_dir, "scipher_spearman_pval_0.05_prediction_num_edges_vs_num_samples.png", sep="/")
+ggsave(
+  plot_num_edges_num_samples_file,
+  dpi = 1200,
+  width = 15000,
+  height = 6000,
+  units = c("px")
+)
+
 
 ```
 
 Plot y in log scale and x in linear scale:
 
 ```{r}
-ggplot(topology_df, aes(x=size, y=log10(num_edges))) + 
-    geom_point() +
+ggplot(topology_df, aes(x=size, y=log(num_edges))) + 
+    geom_point(size=3, col=2, fill=2) +
     #geom_smooth(method = "lm", formula = y~log10(x), col="red", fill="#69b3a2", se=TRUE) +
-    ggtitle("Log. num. of significant edges vs. Num. of samples") +
-    labs(x="Number of samples", y = "Log (Number of significant edges)") +
+    #ggtitle("Ln num. of significant edges vs. Num. of samples") +
+    labs(x="Number of samples", y = "Number of significant edges (Ln)") +
     theme_linedraw() +
     theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom")
 
@@ -111,7 +138,7 @@ plot_log_num_edges_num_samples_file = paste(plots_dir, "scipher_spearman_pval_0.
 ggsave(
   plot_log_num_edges_num_samples_file,
   dpi = 1200,
-  width = 8750,
+  width = 15000,
   height = 6000,
   units = c("px")
 )
@@ -121,11 +148,11 @@ ggsave(
 Plot x in log scale and y in linear scale:
 
 ```{r}
-ggplot(topology_df, aes(x=log10(size), y=num_edges)) + 
-    geom_point() +
-    #geom_smooth(method = "lm", formula = y~log10(x), col="red", fill="#69b3a2", se=TRUE) +
-    ggtitle("Num. of significant edges vs. Log. num. of samples") +
-    labs(x="Log (Number of samples)", y = "Number of significant edges") +
+ggplot(topology_df, aes(x=log(size), y=num_edges)) + 
+    geom_point(size=3, col=2, fill=2) +
+    #geom_smooth(method = "lm", formula = y~log(x), col="red", fill="#69b3a2", se=TRUE) +
+    #ggtitle("Num. of significant edges vs. Ln num. of samples") +
+    labs(x="Number of samples (Ln)", y = "Number of significant edges") +
     theme_linedraw() +
     theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom")
 
@@ -133,7 +160,7 @@ plot_num_edges_log_num_samples_file = paste(plots_dir, "scipher_spearman_pval_0.
 ggsave(
   plot_num_edges_log_num_samples_file,
   dpi = 1200,
-  width = 8750,
+  width = 15000,
   height = 6000,
   units = c("px")
 )
@@ -143,11 +170,11 @@ ggsave(
 Plot x in log scale and y in log scale:
 
 ```{r}
-ggplot(topology_df, aes(x=log10(size), y=log10(num_edges))) + 
-    geom_point() +
-    #geom_smooth(method = "lm", formula = y~log10(x), col="red", fill="#69b3a2", se=TRUE)
-    ggtitle("Log. num. of significant edges vs. Log. num. of samples") +
-    labs(x="Log (Number of samples)", y = "Log (Number of significant edges)") +
+ggplot(topology_df, aes(x=log(size), y=log(num_edges))) + 
+    geom_point(size=3, col=2, fill=2) +
+    #geom_smooth(method = "lm", formula = y~log(x), col="red", fill="#69b3a2", se=TRUE)
+    #ggtitle("Ln num. of significant edges vs. Ln num. of samples") +
+    labs(x="Number of samples (Ln)", y = "Number of significant edges (Ln)") +
     theme_linedraw() +
     theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom")
 
@@ -155,7 +182,7 @@ plot_log_num_edges_log_num_samples_file = paste(plots_dir, "scipher_spearman_pva
 ggsave(
   plot_log_num_edges_log_num_samples_file,
   dpi = 1200,
-  width = 8750,
+  width = 15000,
   height = 6000,
   units = c("px")
 )
@@ -210,7 +237,7 @@ plot_significant_edges_file = paste(plots_dir, "scipher_pearson_pval_0.05_theore
 ggsave(
   plot_significant_edges_file,
   dpi = 1200,
-  width = 8750,
+  width = 12000,
   height = 6000,
   units = c("px")
 )
@@ -235,12 +262,12 @@ coexpression_df = as.data.frame(fread(network_file)) %>% dplyr::select(Node.1, N
 
 ne_df = data.frame(matrix(ncol=4,nrow=0, dimnames=list(NULL, c("N", "r", "num_edges", "fraction_edges"))))
 
-N_list = seq(10, 1000, 10)
+N_list = seq(10, 580, 10)
 total_num_genes = 14266
-total_num_genes = 20000
+#total_num_genes = 20000
 total_num_edges = (total_num_genes*(total_num_genes-1)/2)
 alpha_level = 0.05/ (total_num_edges)
-alpha_level = 0.05/ (total_num_genes*total_num_genes)/2
+#alpha_level = 0.05/ (total_num_genes*total_num_genes)/2
 Za = qnorm(alpha_level, lower.tail=F)
 Zb = qnorm(0.8, lower.tail=F)
 
@@ -254,27 +281,122 @@ for(N in N_list){
 
 ggplot(topology_df, aes(x=size, y=num_edges)) + 
     geom_point() +
-    geom_point(data=ne_df, aes(x=N, y=num_edges), col="green") +
-    geom_line(data=topology_by_size_df, aes(x=size, y=mean, color="Mean"), size=1) +
-    #geom_line(data=topology_by_size_df, aes(x=size, y=log(size), color="Log"), size=1) +
+    geom_line(data=ne_df, aes(x=N, y=num_edges, colour="Analytical estimate"), size=1) +
+    geom_line(data=topology_by_size_df, aes(x=size, y=mean, colour="Mean"), size=1) +
+    geom_smooth(method = "lm", formula = y~log(x), aes(col="y~log(x)"), se=F, size=1) +
+    ggtitle("Num. of significant edges vs. Num. of samples") +
+    labs(x="Number of samples", y = "Number of significant edges") +
+    theme_linedraw() +
+    theme(plot.title =  element_text(size = 17, face="bold"), 
+          axis.title = element_text(size = 16, face="bold"), 
+          axis.text = element_text(size = 15), 
+          legend.text = element_text(size = 14), 
+          legend.position="bottom") +
+    scale_color_manual(name = "",
+                       values = c("Mean" = "blue", "Analytical estimate" = "red", "y~log(x)" = "green") )
+
+plot_significant_edges_file = paste(plots_dir, "scipher_pearson_pval_0.05_analytical_estimate_num_edges_vs_num_samples.png", sep="/")
+ggsave(
+  plot_significant_edges_file,
+  dpi = 1200,
+  width = 12000,
+  height = 6000,
+  units = c("px")
+)
+
+```
+
+
+
+
+### Plot number of samples vs. significant edges for GTEx Whole Blood
+
+Read the results file:
+
+```{r}
+input_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/data_shiny_app'
+plots_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots'
+topology_file = paste(input_dir, 'analysis_topology.csv', sep='/')
+topology_df = fread(topology_file) %>% unique()
+topology_df %<>% filter(!(size == "all"))
+topology_df$size = as.numeric(topology_df$size)
+topology_df %<>% filter(((dataset == "gtex") | (dataset == "scipher")) & ((type_dataset == "Whole.Blood") | (type_dataset == "complete_dataset")) & (method == "pearson") & (threshold == 0.05) & is.na(disparity))
+head(topology_df)
+
+# Calculate mean and median of the number of edges per size
+topology_by_size_df = topology_df %>%
+  group_by(dataset, size) %>%
+  summarise_at(vars(num_edges), list(mean=mean, median=median, sd=sd, var=var)) %>%
+  arrange(size)
+topology_by_size_df$mean.upper = topology_by_size_df$mean + topology_by_size_df$var
+topology_by_size_df$mean.lower = topology_by_size_df$mean - topology_by_size_df$var
+
+
+```
+
+
+Plot in linear scale:
+
+```{r}
+lm_res_scipher = summary(lm(num_edges~log(size), data=(topology_df %>% filter(dataset=="scipher"))))
+formula_name_scipher = paste("F(x) = ln(x)*", round(coef(lm_res_scipher)[2]),  round(coef(lm_res_scipher)[1]), sep="")
+lm_res_gtex = summary(lm(num_edges~log(size), data=(topology_df %>% filter(dataset=="gtex"))))
+formula_name_gtex = paste("F(x) = ln(x)*", round(coef(lm_res_gtex)[2]),  round(coef(lm_res_gtex)[1]), sep="")
+
+ggplot(topology_df, aes(x=size, y=num_edges, col=dataset)) + 
+    geom_point(alpha=0.5, size=3) +
+    geom_line(data=topology_by_size_df, aes(x=size, y=mean, col=dataset), size=1) +
+    geom_line(data=topology_df, aes(x=size, y=(log(size)*coef(lm_res_scipher)[2] + coef(lm_res_scipher)[1]), color=formula_name_scipher), size=1) +
+    geom_line(data=topology_df, aes(x=size, y=(log(size)*coef(lm_res_gtex)[2] + coef(lm_res_gtex)[1]), color=formula_name_gtex), size=1) +
     ggtitle("Num. of significant edges vs. Num. of samples") +
     labs(x="Number of samples", y = "Number of significant edges") +
     theme_linedraw() +
     theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom") +
     scale_color_manual(name = "",
-                       #breaks = c("Mean", "y~log10(x)", "y~log2(x)", "y~ln(x)"),
-                       #breaks = c("Mean", "Log", "y~log(x)"),
-                       breaks = c("Mean", "y~log(x)"),
-                       #values = c("Mean" = "blue", "y~log10(x)" = "red", "y~log2(x)" = "green", "y~ln(x)" = "orange") )
-                       #values = c("Mean" = "blue", "Log" = "green", "y~log(x)" = "red") )
-                       values = c("Mean" = "blue", "y~log(x)" = "red") )
+                       values = c("green", "red", "#7CAE00", "2") )
+
+plot_num_edges_num_samples_file = paste(plots_dir, "gtex_Whole.Blood_spearman_pval_0.05_num_edges_vs_num_samples.png", sep="/")
+ggsave(
+  plot_num_edges_num_samples_file,
+  dpi = 1200,
+  width = 15000,
+  height = 6000,
+  units = c("px")
+)
+
+num_samples=seq(10,10000,1)
+prediction_num_edges_df = data.frame(size=num_samples, num_edges=(log(num_samples)*coef(lm_res_scipher)[2] + coef(lm_res_scipher)[1]), dataset="scipher")
+prediction_num_edges_df = rbind(prediction_num_edges_df, data.frame(size=num_samples, num_edges=(log(num_samples)*coef(lm_res_gtex)[2] + coef(lm_res_gtex)[1]), dataset="gtex"))
+total_num_genes=10368
+total_num_edges = total_num_genes * (total_num_genes-1) / 2
+print(total_num_edges)
+closest_num_edges = prediction_num_edges_df$num_edges[which.min(abs(prediction_num_edges_df$num_edges - total_num_edges))]
+print(prediction_num_edges_df[prediction_num_edges_df$num_edges == closest_num_edges,])
+ggplot(prediction_num_edges_df) + 
+    geom_line(aes(x=size, y=num_edges, col=dataset), size=1) +
+    ggtitle("Prediction of significant edges vs. Num. of samples") +
+    labs(x="Number of samples", y = "Number of significant edges") +
+    theme_linedraw() +
+    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom")
+
+plot_num_edges_num_samples_file = paste(plots_dir, "gtex_Whole.Blood_spearman_pval_0.05_prediction_num_edges_vs_num_samples.png", sep="/")
+ggsave(
+  plot_num_edges_num_samples_file,
+  dpi = 1200,
+  width = 15000,
+  height = 6000,
+  units = c("px")
+)
 
 
 ```
 
 
 
-```{r correlation_expectation}
+
+## Residual code
+
+```{r correlation_expectation, eval=FALSE}
 # Parse correlation of networks from different number of samples
 num_samples_list = c(20, 40, 60, 80, 100, 200, 300, 400, 500)
 r_list = c(0.05, 0.1, 0.2, 0.3, 0.4, 0.5)
@@ -321,7 +443,7 @@ for (num_samples in N){
 
 
 
-```{r}
+```{r, eval=FALSE}
 networks_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete_dataset"
 network_file = paste(networks_dir, paste("pearson_scipher_complete_dataset_all_samples.net", sep=""), sep="/")
 coexpression_df = as.data.frame(fread(network_file)) %>% dplyr::select(Node.1, Node.2, score, pval.adj)

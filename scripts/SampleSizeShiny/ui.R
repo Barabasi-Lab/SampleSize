@@ -17,11 +17,11 @@ ui <- fluidPage(
                       # Sidebar with a slider input for number of bins 
                       sidebarLayout(
                         sidebarPanel(
-                          radioButtons("dataset_topology", "Dataset:",
-                                       c('GTEx' = 'gtex',
-                                         'Scipher' = 'scipher'
-                                       ),
-                                       selected='scipher'),
+                          checkboxGroupInput("dataset_topology", label = "Method:", 
+                                             c('GTEx' = 'gtex',
+                                               'Scipher' = 'scipher'
+                                             ),
+                                             selected='scipher'),
                           verbatimTextOutput(outputId = "topology_gtex_tissues"),
                           shinyWidgets::pickerInput(
                             inputId = "topology_gtex_tissues",
@@ -47,8 +47,8 @@ ui <- fluidPage(
                             selected = 'both',
                             multiple = TRUE),
                           selectInput("type_scipher_dataset_topology", label = "Type of Scipher dataset (if Scipher dataset):", 
-                                      choices = list("all samples" = "all_samples", "all samples at baseline" = "all_samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
-                                      selected = "all_samples"
+                                      choices = list("complete dataset" = "complete_dataset", "samples at baseline" = "samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
+                                      selected = "complete_dataset"
                           ),
                         checkboxGroupInput("method_topology", label = "Method:", 
                                            c('wTO' = 'wto',
@@ -75,12 +75,13 @@ ui <- fluidPage(
                                          'Num. edges in main core' = 'num_main_core_edges')),
                         checkboxGroupInput("pvalue_threshold_topology", label = "P-value threshold:", 
                                            choices = c('0.05' = "0.05-NA",
-                                                       '0.01' = "0.01-NA",
+                                                       '0.001' = "0.001-NA",
                                                        '0.05, disparity 0.05' = "0.05-0.05",
-                                                       '0.01, disparity 0.05' = "0.01-0.05"),
+                                                       '0.001, disparity 0.05' = "0.001-0.05"),
                                            selected = "0.05-NA",
                                            ),
-                          shinyWidgets::materialSwitch(inputId = "log_topology", label = "Turn log scale:", status="primary")
+                          shinyWidgets::materialSwitch(inputId = "log_x_topology", label = "Turn x axis to log scale:", status="primary"),
+                          shinyWidgets::materialSwitch(inputId = "log_y_topology", label = "Turn y axis to log scale:", status="primary")
                         ),
                         
                         # Show boxplot of topological parameters
@@ -90,6 +91,80 @@ ui <- fluidPage(
                       )
              ),
 
+             
+             tabPanel("PPI",
+                      
+                      # Sidebar with a slider input for number of bins 
+                      sidebarLayout(
+                        sidebarPanel(
+                          radioButtons("dataset_ppi", "Dataset:",
+                                       c('GTEx' = 'gtex',
+                                         'Scipher' = 'scipher'
+                                       ),
+                                       selected='scipher'),
+                          verbatimTextOutput(outputId = "ppi_gtex_tissues"),
+                          shinyWidgets::pickerInput(
+                            inputId = "ppi_gtex_tissues",
+                            label = "Tissue (if GTEx dataset)",
+                            choices = c("spleen", "whole blood"),
+                            options = list(
+                              `actions-box` = TRUE,
+                              size = 10,
+                              `selected-text-format` = "count > 1"
+                            ),
+                            selected = 'whole blood',
+                            multiple = TRUE),
+                          verbatimTextOutput(outputId = "ppi_gtex_sex"),
+                          shinyWidgets::pickerInput(
+                            inputId = "ppi_gtex_sex",
+                            label = "Sex (if GTEx dataset)",
+                            choices = c("female", "male", "both"),
+                            options = list(
+                              `actions-box` = TRUE,
+                              size = 10,
+                              `selected-text-format` = "count > 1"
+                            ),
+                            selected = 'both',
+                            multiple = TRUE),
+                          selectInput("type_scipher_dataset_ppi", label = "Type of Scipher dataset (if Scipher dataset):", 
+                                      choices = list("complete dataset" = "complete_dataset", "samples at baseline" = "samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
+                                      selected = "complete_dataset"
+                          ),
+                          checkboxGroupInput("method_ppi", label = "Method:", 
+                                             c('wTO' = 'wto',
+                                               'WGCNA' = 'wgcna',
+                                               'ARACNE' = 'aracne',
+                                               'Pearson' = 'pearson',
+                                               'Spearman' = 'spearman'
+                                             ), selected = 'spearman'
+                          ),
+                          radioButtons("parameter_ppi", "Parameter:",
+                                       c('Num. PPI nodes' = 'num_ppi_nodes',
+                                         'Num. PPI edges' = 'num_ppi_edges',
+                                         'Fraction PPI nodes' = 'fraction_ppi_nodes',
+                                         'Fraction PPI edges' = 'fraction_ppi_edges',
+                                         'Num. PPI main core nodes' = 'num_ppi_main_core_nodes',
+                                         'Num. PPI main core edges' = 'num_ppi_main_core_edges',
+                                         'Fraction PPI main core nodes' = 'fraction_ppi_main_core_nodes',
+                                         'Fraction PPI main core edges' = 'fraction_ppi_main_core_edges')),
+                          checkboxGroupInput("pvalue_threshold_ppi", label = "P-value threshold:", 
+                                             choices = c('0.05' = "0.05-NA",
+                                                         '0.001' = "0.001-NA",
+                                                         '0.05, disparity 0.05' = "0.05-0.05",
+                                                         '0.001, disparity 0.05' = "0.001-0.05"),
+                                             selected = "0.05-NA",
+                          ),
+                          shinyWidgets::materialSwitch(inputId = "log_x_ppi", label = "Turn x axis to log scale:", status="primary"),
+                          shinyWidgets::materialSwitch(inputId = "log_y_ppi", label = "Turn y axis to log scale:", status="primary")
+                        ),
+                        
+                        # Show boxplot of topological parameters
+                        mainPanel(
+                          plotOutput("ppiBoxPlot")
+                        )
+                      )
+             ),
+             
              
              tabPanel("Essentiality",
                       
@@ -126,7 +201,7 @@ ui <- fluidPage(
                             selected = 'both',
                             multiple = TRUE),
                           selectInput("type_scipher_dataset_essentiality", label = "Type of Scipher dataset (if Scipher dataset):", 
-                                      choices = list("all samples" = "all_samples", "all samples at baseline" = "all_samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
+                                      choices = list("complete dataset" = "complete_dataset", "samples at baseline" = "samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
                                       selected = "all_samples"
                           ),
                           radioButtons("method_essentiality", "Method:",
@@ -142,16 +217,16 @@ ui <- fluidPage(
                                          'Fraction of essential genes' = 'fraction_essential_genes',
                                          'Num. components' = 'num_components',
                                          'Num. nodes of the LCC' = 'num_essential_lcc_nodes',
-                                         'Fraction of essential genes in the LCC' = 'fraction_essential_lcc_nodes',
+                                         'Essential genes rLCC' = 'fraction_essential_lcc_nodes',
                                          'Num. edges of the LCC' = 'num_lcc_edges',
                                          'LCC z-score' = 'lcc_z',
                                          'LCC p-value' = 'lcc_pvalue',
                                          'LCC log(p-value)' = 'log_lcc_pvalue')),
                           radioButtons("pvalue_threshold_essentiality", "P-value threshold",
                                        c('0.05' = "0.05-NA",
-                                         '0.01' = "0.01-NA",
+                                         '0.001' = "0.001-NA",
                                          '0.05, disparity 0.05' = "0.05-0.05",
-                                         '0.01, disparity 0.05' = "0.01-0.05",
+                                         '0.001, disparity 0.05' = "0.001-0.05",
                                          'Group' = 'group_essentiality_pvalue_threshold')),
                           shinyWidgets::materialSwitch(inputId = "log_essentiality", label = "Turn log scale:", status="primary")
                         ),
@@ -203,7 +278,7 @@ ui <- fluidPage(
                                      ),
                                      verbatimTextOutput(outputId = "disease_genes_gtex_sex"),
                                      selectInput("type_scipher_dataset_disease_genes", label = "Type of Scipher dataset (if Scipher dataset):", 
-                                                 choices = list("all samples" = "all_samples", "all samples at baseline" = "all_samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
+                                                 choices = list("complete dataset" = "complete_dataset", "samples at baseline" = "samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
                                                  selected = "all_samples"
                                      ),
                                      radioButtons("method_disease_genes", "Method:",
@@ -219,16 +294,16 @@ ui <- fluidPage(
                                                     'Fraction disease genes in network' = 'fraction_disease_genes',
                                                     'Num. components of disease genes' = 'num_disease_components',
                                                     'Num. disease genes forming a LCC' = 'num_disease_lcc_nodes',
-                                                    'Fraction of disease genes forming a LCC' = 'fraction_disease_lcc_nodes',
+                                                    'Disease rLCC' = 'fraction_disease_lcc_nodes',
                                                     'Num. edges of the disease gene LCC' = 'num_disease_lcc_edges',
                                                     'Disease gene LCC z-score' = 'disease_lcc_z',
                                                     'Disease gene LCC p-value' = 'disease_lcc_pvalue',
                                                     'Disease gene LCC log(p-value)' = 'log_disease_lcc_pvalue')),
                                  radioButtons("pvalue_threshold_disease_genes", "P-value threshold",
                                               c('0.05' = "0.05-NA",
-                                                '0.01' = "0.01-NA",
+                                                '0.001' = "0.001-NA",
                                                 '0.05, disparity 0.05' = "0.05-0.05",
-                                                '0.01, disparity 0.05' = "0.01-0.05")),
+                                                '0.001, disparity 0.05' = "0.001-0.05")),
                                      radioButtons("group_by", "Group by:",
                                                   c('Disease' = 'group_disease',
                                                     'Disease class' = 'group_disease_class',
@@ -237,13 +312,13 @@ ui <- fluidPage(
                                      shinyWidgets::pickerInput(
                                        inputId = "immune",
                                        label = "Immune system diseases",
-                                       choices = c("immune system diseases", "arthritis, rheumatoid", "asthma", "graves disease", "multiple sclerosis"),
+                                       choices = c("immune system diseases", "arthritis rheumatoid", "asthma", "graves disease", "multiple sclerosis"),
                                        options = list(
                                          `actions-box` = TRUE,
                                          size = 10,
                                          `selected-text-format` = "count > 1"
                                        ),
-                                       selected = 'arthritis, rheumatoid',
+                                       selected = 'arthritis rheumatoid',
                                        multiple = TRUE
                                      ),
                                      verbatimTextOutput(outputId = "diseases_immune"),
@@ -302,20 +377,20 @@ ui <- fluidPage(
                                      shinyWidgets::pickerInput(
                                        inputId = "nutritional",
                                        label = "Nutritional and metabolic diseases",
-                                       choices = c("nutritional and metabolic diseases", "amyotrophic lateral sclerosis", "celiac disease", "diabetes mellitus, type 1", "diabetes mellitus, type 2", "obesity"),
+                                       choices = c("nutritional and metabolic diseases", "amyotrophic lateral sclerosis", "celiac disease", "diabetes mellitus type 1", "diabetes mellitus type 2", "obesity"),
                                        options = list(
                                          `actions-box` = TRUE,
                                          size = 10,
                                          `selected-text-format` = "count > 1"
                                        ),
-                                       #selected = 'diabetes mellitus, type 2',
+                                       #selected = 'diabetes mellitus type 2',
                                        multiple = TRUE
                                      ),
                                      verbatimTextOutput(outputId = "diseases_nutritional"),
                                      shinyWidgets::pickerInput(
                                        inputId = "endocrine",
                                        label = "Endocrine system diseases",
-                                       choices = c("endocrine system diseases", "diabetes mellitus, type 2", "hyperthyroidism", "goiter"),
+                                       choices = c("endocrine system diseases", "diabetes mellitus type 2", "hyperthyroidism", "goiter"),
                                        options = list(
                                          `actions-box` = TRUE,
                                          size = 10,
@@ -325,7 +400,8 @@ ui <- fluidPage(
                                        multiple = TRUE
                                      ),
                                      verbatimTextOutput(outputId = "diseases_endocrine"),
-                                     shinyWidgets::materialSwitch(inputId = "log_diseases", label = "Turn log scale:", status="primary")
+                                     shinyWidgets::materialSwitch(inputId = "log_x_diseases", label = "Turn x axis to log scale:", status="primary"),
+                                     shinyWidgets::materialSwitch(inputId = "log_y_diseases", label = "Turn y axis to log scale:", status="primary")
                                    ),
                                    
                                    # Show boxplot of topological parameters
@@ -435,20 +511,20 @@ ui <- fluidPage(
                                      shinyWidgets::pickerInput(
                                        inputId = "disease_genes_by_score_nutritional",
                                        label = "Nutritional and metabolic diseases",
-                                       choices = c("nutritional and metabolic diseases", "amyotrophic lateral sclerosis", "celiac disease", "diabetes mellitus, type 1", "diabetes mellitus, type 2", "obesity"),
+                                       choices = c("nutritional and metabolic diseases", "amyotrophic lateral sclerosis", "celiac disease", "diabetes mellitus type 1", "diabetes mellitus type 2", "obesity"),
                                        options = list(
                                          `actions-box` = TRUE,
                                          size = 10,
                                          `selected-text-format` = "count > 1"
                                        ),
-                                       #selected = 'diabetes mellitus, type 2',
+                                       #selected = 'diabetes mellitus type 2',
                                        multiple = TRUE
                                      ),
                                      verbatimTextOutput(outputId = "disease_genes_by_score_nutritional"),
                                      shinyWidgets::pickerInput(
                                        inputId = "disease_genes_by_score_endocrine",
                                        label = "Endocrine system diseases",
-                                       choices = c("endocrine system diseases", "diabetes mellitus, type 2", "hyperthyroidism", "goiter"),
+                                       choices = c("endocrine system diseases", "diabetes mellitus type 2", "hyperthyroidism", "goiter"),
                                        options = list(
                                          `actions-box` = TRUE,
                                          size = 10,
@@ -486,7 +562,7 @@ ui <- fluidPage(
                                      ),
                                      verbatimTextOutput(outputId = "disease_genes_by_score_gtex_sex"),
                                      selectInput("type_scipher_dataset_disease_genes_by_score", label = "Type of Scipher dataset (if Scipher dataset):", 
-                                                 choices = list("all samples" = "all_samples", "all samples at baseline" = "all_samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
+                                                 choices = list("complete dataset" = "complete_dataset", "samples at baseline" = "samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
                                                  selected = "all_samples"
                                      )
                                      
@@ -537,7 +613,7 @@ ui <- fluidPage(
                             selected = 'both',
                             multiple = TRUE),
                           selectInput("type_scipher_dataset_similarity", label = "Type of Scipher dataset (if Scipher dataset):", 
-                                      choices = list("all samples" = "all_samples", "all samples at baseline" = "all_samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
+                                      choices = list("complete dataset" = "complete_dataset", "samples at baseline" = "samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
                                       selected = "all_samples"
                           ),
                           radioButtons("method_similarity", "Method:",
@@ -560,7 +636,7 @@ ui <- fluidPage(
                                        ), selected = 'subgraphs'),
                           radioButtons("pvalue_threshold_similarity", "P-value threshold",
                                        c('0.05' = 0.05,
-                                         '0.01' = 0.01))
+                                         '0.001' = 0.001))
                         ),
                         
                         # Show boxplot of topological parameters
@@ -610,7 +686,7 @@ ui <- fluidPage(
                           ),
                           verbatimTextOutput(outputId = "coexpressed_ppis_gtex_sex"),
                           selectInput("type_scipher_dataset_coexpressed_ppis", label = "Type of Scipher dataset (if Scipher dataset):", 
-                                      choices = list("all samples" = "all_samples", "all samples at baseline" = "all_samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
+                                      choices = list("complete dataset" = "complete_dataset", "samples at baseline" = "samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
                                       selected = "all_samples"
                           ),
                           radioButtons("method_coexpressed_ppis", "Method:",
@@ -683,7 +759,7 @@ ui <- fluidPage(
                           ),
                           verbatimTextOutput(outputId = "stability_gtex_sex"),
                           selectInput("type_scipher_dataset_stability", label = "Type of Scipher dataset (if Scipher dataset):", 
-                                      choices = list("all samples" = "all_samples", "all samples at baseline" = "all_samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
+                                      choices = list("complete dataset" = "complete_dataset", "samples at baseline" = "samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
                                       selected = "all_samples"
                           ),
                           radioButtons("method_stability", "Method:",
@@ -709,8 +785,8 @@ ui <- fluidPage(
                                          )),
                           radioButtons("difference_range_stability", "Co-expression score difference:",
                                        c('> 0' = '0-Inf',
-                                         '0 - 0.01' = '0-0.01',
-                                         '0.01 - 0.05' = '0.01-0.05',
+                                         '0 - 0.001' = '0-0.001',
+                                         '0.001 - 0.05' = '0.001-0.05',
                                          '0.05 - 0.1' = '0.05-0.1',
                                          '> 0.1' = '0.1-Inf'
                                          )),
@@ -765,7 +841,7 @@ ui <- fluidPage(
                             ),
                             verbatimTextOutput(outputId = "scores_gtex_sex"),
                             selectInput("type_scipher_dataset_scores", label = "Type of Scipher dataset (if Scipher dataset):", 
-                                        choices = list("all samples" = "all_samples", "all samples at baseline" = "all_samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
+                                        choices = list("complete dataset" = "complete_dataset", "samples at baseline" = "samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
                                         selected = "all_samples"
                             ),
                             radioButtons("method_scores", "Method:",
@@ -851,7 +927,7 @@ ui <- fluidPage(
                             ),
                             verbatimTextOutput(outputId = "scores_thresholds_gtex_sex"),
                             selectInput("type_scipher_dataset_scores_thresholds", label = "Type of Scipher dataset (if Scipher dataset):", 
-                                        choices = list("all samples" = "all_samples", "all samples at baseline" = "all_samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
+                                        choices = list("complete dataset" = "complete_dataset", "samples at baseline" = "samples_baseline", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline", "old dataset (responders)" = "scipherold_responder", "old dataset (non-responders)" = "scipherold_nonresponder"), 
                                         selected = "all_samples"
                             ),
                             radioButtons("method_scores_thresholds", "Method:",

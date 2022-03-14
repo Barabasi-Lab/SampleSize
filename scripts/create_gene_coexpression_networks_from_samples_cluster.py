@@ -102,15 +102,19 @@ def create_gene_coexpression_networks(options):
 
     # Run co-expression for all files
     datasets = [f for f in os.listdir(input_dir) if fileExist(os.path.join(input_dir, f))]
-    sizes = [str(size) for size in range(10, 1100, 20)]
-    reps = [str(rep) for rep in range(5, 11, 1)]
+    #sizes = [str(size) for size in range(10, 1100, 20)]
+    sizes = [str(size) for size in range(20, 1020, 20)]
+    #reps = [str(rep) for rep in range(5, 11, 1)]
+    reps = [str(rep) for rep in range(1, 6, 1)]
+    #reps = ['1', '2']
 
     for dataset in sorted(datasets):
 
         size = dataset.replace('.txt', '').split("_")[-3]
         rep = dataset.replace('.txt', '').split("_")[-1]
 
-        if ((size not in sizes) and (rep not in reps)):
+        if ((size in sizes) and (rep in reps)):
+        #if ((size in sizes) and (rep in reps) and (size not in ['60', '80'])):
 
             if limit: # Break the loop if a limit of jobs is introduced
                 if l > limit:

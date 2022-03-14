@@ -205,46 +205,53 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coex
 
 # Using samples files
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Liver -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Liver -m wto
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Liver -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Liver -m wto
 
 #### GTEx ####
 
 # WTO CONVERGENCE: All genes - Spleen - Female
 module load python/3.8.1
 # For the moment only 20 to try how much time do they take (2021/12/16, 17:14)
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_with_wto_finding_pvalue_convergence_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Spleen_female -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Spleen_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_female
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_with_wto_finding_pvalue_convergence_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Spleen_female -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Spleen_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Spleen_female
 
 # WTO FASTER: All genes - Spleen
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Spleen_female -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Spleen_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_female -m wto
-# TO DO
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Spleen_male -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Spleen_male.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_male -m wto
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Spleen_female -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Spleen_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Spleen_female -m wto
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Spleen_male -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Spleen_male.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Spleen_male -m wto
+
+# WTO FASTER: All genes - Whole blood
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Whole.Blood -m wto
 
 # WGCNA: All genes - Spleen
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Spleen_female -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Spleen_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_female -m wgcna
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Spleen_male -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Spleen_male.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_male -m wgcna
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Spleen_female -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Spleen_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Spleen_female -m wgcna
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Spleen_male -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Spleen_male.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Spleen_male -m wgcna
 
 # WGCNA: All genes - Whole Blood
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood_female -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Whole.Blood_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Whole.Blood_female -m wgcna
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood_male -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Whole.Blood_male.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Whole.Blood_male -m wgcna
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Whole.Blood.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Whole.Blood -m wgcna
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood_female -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Whole.Blood_female -m wgcna
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood_male -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood_male.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Whole.Blood_male -m wgcna
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Whole.Blood -m wgcna
+
+# Pearson: All samples - Whole Blood
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Whole.Blood -m pearson
 
 # Spearman: All samples - Whole Blood
-# Check if all complete
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Whole.Blood.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Whole.Blood -m spearman
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Whole.Blood -m spearman
 
 # ARACNE: All genes - Spleen
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Spleen_female -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Spleen_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_female -m aracne
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Spleen_male -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Spleen_male.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_male -m aracne
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Spleen_female -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Spleen_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Spleen_female -m aracne
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Spleen_male -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Spleen_male.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Spleen_male -m aracne
 
 # ARACNE: All genes - Whole Blood
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood_female -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Whole.Blood_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Whole.Blood_female -m aracne
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood_male -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Whole.Blood_male.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Whole.Blood_male -m aracne
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Whole.Blood.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Whole.Blood -m aracne
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood_female -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Whole.Blood_female -m aracne
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood_male -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood_male.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Whole.Blood_male -m aracne
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Whole.Blood -m aracne
 
 #### SCIPHER (NEW DATASET) ####
 
@@ -415,22 +422,23 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coe
 
 # GTEx: All genes - Spleen
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_female -p /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Spleen_female.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Spleen_female
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Spleen_female -p /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Spleen_female.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Spleen_female
 # TO DO
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Spleen_male -p /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Spleen_male.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Spleen_male
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Spleen_male -p /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Spleen_male.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Spleen_male
 
 # GTEx: All genes - Whole Blood
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Whole.Blood_female -p /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Whole.Blood_female.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Whole.Blood_female
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Whole.Blood_male -p /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Whole.Blood_male.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Whole.Blood_male
-#TO DO
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Whole.Blood -p /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Whole.Blood.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Whole.Blood -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/Whole.Blood
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Whole.Blood_female -p /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Whole.Blood_female.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Whole.Blood_female
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Whole.Blood_male -p /home/j.aguirreplans/data/PPI/interactome_tissue_specific/interactome_2019_Whole.Blood_male.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Whole.Blood_male
+# NEW
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Whole.Blood -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes.csv -g /home/j.aguirreplans/Databases/GTEx/v8/genes_filtered_files_by_tissue/gtex_rnaseq_gene_info_Whole.Blood.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Whole.Blood -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/Whole.Blood
 
 
 #### SCIPHER (NEW DATASET) ####
 
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete_dataset -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_scipher.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_esential_genes_scipher.csv -g /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_gene_info.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_scipher/complete_dataset -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_scipher/complete_dataset
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete_dataset -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_scipher.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_scipher.csv -g /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_gene_info.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_scipher/complete_dataset -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_scipher/complete_dataset
 # output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_scipher/complete_dataset
 # output networks: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_scipher/complete_dataset
 
@@ -498,7 +506,7 @@ cd /home/j.aguirreplans/Projects/Scipher/SampleSize
 # To add new changes:
 git add .
 git commit -m "Calculate networks for Scipher"
-git push origin master
+git push origin
 
 # To pull changes from the repository:
 git pull origin master
