@@ -1,0 +1,135 @@
+---
+title: "Pre-process TCGA"
+author: "Joaquim Aguirre-Plans"
+date: "3/11/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Description
+
+Pre-process TCGA data before creating gene co-expression networks.
+
+```{r, message=FALSE}
+library(data.table)
+library(dplyr)
+library(ggplot2)
+require(magrittr)
+library(tidyr)
+library(igraph)
+set.seed(1510)
+`%ni%` <- Negate(`%in%`)
+```
+
+## Define variables
+
+```{r define_files}
+# Define working directories
+gdc_dir = '/home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA'
+output_dir = paste(gdc_dir, 'out', sep='/')
+tcga_processed_file = paste(output_dir, 'TCGA_processed.csv', sep='/')
+```
+
+## Read files
+
+```{r}
+RNAseq = fread(tcga_processed_file)
+```
+
+The TCGA dataframe contains `r as.integer(ncol(RNAseq)-1)` columns (genes) and `r nrow(RNAseq)` rows (case IDs).
+
+```{r}
+head(RNAseq[1:10,1:10])
+```
+
+## Filter genes without classification
+
+We keep genes that have a classification in HGNC:
+
+```{r}
+gene_annotations_dir = '/home/j.aguirreplans/data/gene_annotations/data/out'
+gene_category_file = paste(gene_annotations_dir, 'hgnc_category_set_2022-01-01.txt', sep='/')
+gene_category_df = fread(gene_category_file)
+gene_category_df$HGNC_Symbol = toupper(gene_category_df$HGNC_Symbol)
+head(gene_category_df)
+```
+
+We use this dataframe to map gene category, and we only keep genes that are in this dataframe:
+
+```{r}
+dim(RNAseq)
+genes_with_category = colnames(RNAseq)[colnames(RNAseq) %in% gene_category_df$HGNC_Symbol]
+RNAseq %<>% select(c(case_id, all_of(genes_with_category)))
+dim(RNAseq)
+```
+
+The TCGA dataframe contains `r as.integer(ncol(RNAseq)-1)` genes with category and `r nrow(RNAseq)` rows (case IDs).
+
+It contains the following number of genes for each category:
+
+```{r}
+tcga_gene_category_df = gene_category_df %>% filter(HGNC_Symbol %in% genes_with_category) %>% unique
+table(tcga_gene_category_df$HGNC_category)
+round(prop.table(table(tcga_gene_category_df$HGNC_category))*100,2)
+```
+
+
+## Filtering the genes with low counts
+
+We filter the genes that have low expression in all samples, keeping the ones that meet these rules:
+
+* Sum of the expression of all samples above 0.
+* Mean of the expression of all samples above 5.
+* Median of the expression of all samples above 5.
+* Standard deviation of all samples above 1.
+* More than half of the genes with counts above 0.
+
+```{r, echo=FALSE, results='hide'}
+# Select only gene expression columns
+RNA = RNAseq %>% select(-case_id)
+
+# Calculate sum, mean, median and standard deviation
+info_df = data.frame(gene=colnames(RNA), sum=colSums(RNA))
+info_df$sd = apply(RNA, 2,sd)
+info_df$mean = colMeans(RNA)
+info_df$median = apply(RNA, 2, median)
+info_df$zero_sum_counts = as.numeric(apply(RNA, 2, function(i) sum(i == 0) )) # Number of times that the sum of the counts is equal to 0 
+
+# We keep the genes following all criteria
+info_filt_df = info_df[(info_df$sum > 0) & (info_df$mean > 5) & (info_df$median > 5) & (info_df$sd > 1) & (info_df$zero_sum_counts < dim(RNA)[1]/2) ,]
+```
+
+We count the following number of genes accomplishing each rule:
+
+* Sum of the expression of all samples above 0: `r length(info_df[info_df$sum > 0,]$gene)`.
+* Mean of the expression of all samples above 5: `r length(info_df[info_df$mean > 5,]$gene)`.
+* Median of the expression of all samples above 5: `r length(info_df[info_df$median > 5,]$gene)`.
+* Standard deviation of all samples above 1: `r length(info_df[info_df$sd > 1,]$gene)`.
+* More than half of the genes with counts above 0: `r length(info_df[info_df$zero_sum_counts < dim(RNA)[1]/2,]$gene)`.
+
+We count the following number of filtered genes for each category:
+
+```{r}
+tcga_filt_gene_category_df = gene_category_df %>% filter(HGNC_Symbol %in% info_filt_df$gene) %>% unique
+table(tcga_filt_gene_category_df$HGNC_category)
+round(prop.table(table(tcga_filt_gene_category_df$HGNC_category))*100,2)
+```
+
+```{r}
+# We filter the gene expression
+rm(RNA)
+RNAseq %<>% select(c(case_id, all_of(info_filt_df$gene)))
+
+# We write final file
+tcga_final_file = paste(output_dir, 'TCGA_processed_for_coexpression.csv', sep='/')
+fwrite(RNAseq, tcga_final_file, sep='\t')
+```
+
+The filtered TCGA dataframe contains `r as.integer(ncol(RNAseq)-1)` genes and `r nrow(RNAseq)` rows (case IDs).
+
+```{r}
+head(RNAseq[1:10,1:10])
+```

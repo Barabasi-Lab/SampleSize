@@ -109,7 +109,7 @@ We have selected different groups of samples according to different criteria:
 
 ```{r, echo=FALSE, results='hide'}
 group_to_samples = list("complete_dataset"=complete_dataset, "samples_baseline"=samples_baseline, "sample_per_patient_baseline"=sample_per_patient_baseline, "responder_baseline"=sample_per_responder_baseline, "nonresponder_baseline"=sample_per_nonresponder_baseline)
-n_repetitions = 5
+n_repetitions = 10
 
 for (group in names(group_to_samples)){
   sampling_dir = paste(output_dir, 'sampling/Scipher/Dec2021/sampling_with_repetition', group, sep='/')

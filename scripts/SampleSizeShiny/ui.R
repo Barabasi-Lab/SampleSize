@@ -72,7 +72,8 @@ ui <- fluidPage(
                                          'LCC log(p-value)' = 'log_lcc_pvalue',
                                          'Maximum k-core' = 'max_k',
                                          'Num. nodes in main core' = 'num_main_core_nodes',
-                                         'Num. edges in main core' = 'num_main_core_edges')),
+                                         'Num. edges in main core' = 'num_main_core_edges',
+                                         'Repetitions' = 'rep')),
                         checkboxGroupInput("pvalue_threshold_topology", label = "P-value threshold:", 
                                            choices = c('0.05' = "0.05-NA",
                                                        '0.001' = "0.001-NA",
@@ -81,7 +82,8 @@ ui <- fluidPage(
                                            selected = "0.05-NA",
                                            ),
                           shinyWidgets::materialSwitch(inputId = "log_x_topology", label = "Turn x axis to log scale:", status="primary"),
-                          shinyWidgets::materialSwitch(inputId = "log_y_topology", label = "Turn y axis to log scale:", status="primary")
+                          shinyWidgets::materialSwitch(inputId = "log_y_topology", label = "Turn y axis to log scale:", status="primary"),
+                          shinyWidgets::materialSwitch(inputId = "sd_topology", label = "Plot standard deviation:", status="primary")
                         ),
                         
                         # Show boxplot of topological parameters

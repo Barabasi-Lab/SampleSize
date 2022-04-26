@@ -63,7 +63,9 @@ parameter2label <- list("nodes"="Nodes", "edges"="Edges", "av_degree"="Av. degre
                         "max_k" = "Maximum k-core", "num_main_core_nodes" = "Number of nodes in the main core", "num_main_core_edges" = "Number of edges in the main core",
                         "num_essential_genes" = "Number of essential genes", "fraction_essential_genes" = "Fraction of essential genes", "num_essential_lcc_nodes" = "Number of essential genes forming a LCC", "fraction_essential_lcc_nodes" = "Essential genes rLCC", 
                         "num_disease_genes" = "Number of disease genes", "fraction_disease_genes" = "Fraction of disease genes", "num_disease_components" = "Number of disease gene components", "num_disease_lcc_nodes" = "Number of disease genes in the LCC", "fraction_disease_lcc_nodes" = "Disease rLCC", "num_disease_lcc_edges" = "Number of disease gene edges in the LCC", "disease_lcc_z" = "Significance z-score of the disease LCC", "disease_lcc_pvalue" = "Significance p-value of the disease LCC", "log_disease_lcc_pvalue" = "Significance log(p-value) of the disease LCC",
-                        "overlapindex" = "Overlap index", "jaccardIndex" = "Jaccard index")
+                        "overlapindex" = "Overlap index", "jaccardIndex" = "Jaccard index",
+                        "num_ppi_nodes" = "Number of PPI nodes", "num_ppi_edges" = "Number of PPI edges", "fraction_ppi_nodes" = "Fraction of PPI nodes", "fraction_ppi_edges" = "Fraction of PPI edges", "num_ppi_main_core_nodes" = "Number of PPI main core nodes", "num_ppi_main_core_edges" = "Number of PPI main core edges", "fraction_ppi_main_core_nodes" = "Fraction of PPI main core nodes", "fraction_ppi_main_core_edges" = "Fraction of PPI main core edges"
+                        )
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
@@ -73,7 +75,6 @@ server <- function(input, output) {
   ############
   
   output$topologyBoxPlot <- renderPlot({
-    
     
     # Get tissue and sex
     get_gtex_tissues <- renderText(input$topology_gtex_tissues, sep='___')
@@ -122,7 +123,7 @@ server <- function(input, output) {
       selected_topology_df = selected_topology_df %>% filter(size %in% c(seq(20, max(sizes), 20), "all"))
     }
 
-    # Calculate mean
+    # Calculate mean and sd
     selected_topology_by_size_df = selected_topology_df %>%
       group_by(dataset, method, size, threshold_disparity) %>%
       summarise_at(vars(input$parameter_topology), list(mean=mean, median=median, sd=sd, var=var)) %>%
@@ -130,6 +131,16 @@ server <- function(input, output) {
     selected_topology_by_size_df$mean.upper = selected_topology_by_size_df$mean + selected_topology_by_size_df$var
     selected_topology_by_size_df$mean.lower = selected_topology_by_size_df$mean - selected_topology_by_size_df$var
     
+    # Get maximum number of repetitions
+    selected_topology_df$rep = length(unique(selected_topology_df$rep))
+    
+    # Check if plot sd or mean
+    if(isTruthy(input$sd_topology)){
+      combination_metric = "sd"
+    } else{
+      combination_metric = "mean"
+    }
+
     # Plot using ggplot
     if (length(input$dataset_topology) > 1){
       print(input$dataset_topology)
@@ -167,7 +178,7 @@ server <- function(input, output) {
             #geom_violin(alpha=0.5) +
             geom_point(alpha=0.5, size=3, col=2, fill=2) +
             geom_line(data = selected_topology_by_size_df,
-                      aes(x = size, y = mean, group=1),
+                      aes(x = size, y = get(combination_metric), group=1),
                       col=2, lwd=1)
         }
       }
@@ -178,28 +189,34 @@ server <- function(input, output) {
       #topology_plot = topology_plot + 
         #geom_hline(yintercept=max_number_links, col=2, lwd=1)
     }
-        
+    
+    # Define labels
+    label_x = "Number of samples"
+    label_y = parameter2label[[input$parameter_topology]]
+    
+    # Check if plot standard deviation (sd)
+    if(isTruthy(input$sd_topology)){
+      topology_plot$layers[[1]] = NULL
+      label_y= paste(label_y, " (SD)", sep="")
+    }
+    
     # Transform to log scale
     if (isTruthy(input$log_x_topology)){
+      label_x= paste(label_x, " (Ln)", sep="")
       topology_plot = topology_plot + 
-        scale_x_continuous(trans = scales::log_trans()) + 
-        xlab("Number of samples (Ln)")
-    } else {
-      topology_plot = topology_plot + 
-        xlab("Number of samples")
+        scale_x_continuous(trans = scales::log_trans())
     }
     if (isTruthy(input$log_y_topology)){
+      label_y= paste(label_y, " (Ln)", sep="")
       topology_plot = topology_plot + 
-        scale_y_continuous(trans = scales::log_trans()) + 
-        ylab(paste(parameter2label[[input$parameter_topology]], " (Ln)", sep=""))
-    } else {
-      topology_plot = topology_plot + 
-        ylab(parameter2label[[input$parameter_topology]])
+        scale_y_continuous(trans = scales::log_trans())
     }
     
     # Show plot
     topology_plot = topology_plot + 
       theme_linedraw() +
+      xlab(label_x) +
+      ylab(label_y) +
       theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom")
       
     #topology_plot_file = paste(plots_dir, "/topology_", paste(input$method_topology, input$dataset_topology, input$type_scipher_dataset_topology, input$parameter_topology, input$pvalue_threshold_topology, sep="_"), ".png", sep="")
@@ -221,9 +238,12 @@ server <- function(input, output) {
     #plot(selected_network_similarity_df$size, selected_network_similarity_df[[input$parameter_similarity]],col=rgb(0.4,0.4,0.8,0.6),pch=16 , cex=1.3, xlab="Number of samples", ylab=parameter2label[[input$parameter_similarity]], main="Similarity between networks with same number of samples") 
     #lines(selected_network_similarity_by_size$size, selected_network_similarity_by_size$mean, col=2, lwd=2 )  
     #polygon(c(selected_network_similarity_by_size$size, rev(selected_network_similarity_by_size$size)), c(selected_network_similarity_by_size$mean.upper, rev(selected_network_similarity_by_size$mean.lower)), col = rgb(0.7,0.7,0.7,0.4) , border = NA)
-
+    
   })
 
+  output$topologySDBoxPlot <- renderPlot({
+    
+  })
 
   output$ppiBoxPlot <- renderPlot({
     
@@ -498,7 +518,7 @@ server <- function(input, output) {
     # Calculate mean
     selected_disease_genes_by_size_df = selected_disease_genes_df %>%
       group_by(size, disease, disease_class, threshold_disparity) %>%
-      summarise_at(vars(input$parameter_disease_genes), list(mean=mean, median=median, sd=sd, var=var)) %>%
+      summarise_at(vars(input$parameter_disease_genes), list(mean=mean, median=median, sd=sd, var=var), na.rm = TRUE) %>%
       arrange(size)
     selected_disease_genes_by_size_df$mean.upper = selected_disease_genes_by_size_df$mean + selected_disease_genes_by_size_df$var
     selected_disease_genes_by_size_df$mean.lower = selected_disease_genes_by_size_df$mean - selected_disease_genes_by_size_df$var
@@ -536,6 +556,12 @@ server <- function(input, output) {
                     aes(x = size, y = mean, group=1),
                     col=2, lwd=1)
       }
+    }
+    
+    if(input$parameter_disease_genes == 'disease_lcc_pvalue'){
+      disease_genes_plot = disease_genes_plot +
+        geom_hline(yintercept=0.05, col=2, lwd=1)
+        
     }
     
     # Transform to log scale
@@ -609,7 +635,6 @@ server <- function(input, output) {
     }
     
     # Plot using ggplot
-    print(input$disease_genes_by_score_group_by)
     if(isTruthy(input$disease_genes_by_score_group_by == 'group_disease_pval')){
       selected_disease_results_df <- selected_disease_results_df[selected_disease_results_df$disease %in% selected_diseases,]
       ggplot(selected_disease_results_df, aes(x=size, y=.data[[input$metric_disease_genes_by_score]], fill=pval)) + 
@@ -622,8 +647,6 @@ server <- function(input, output) {
         labs(x="Number of samples", y = parameter2label[[input$metric_disease_genes_by_score]])
     } else if(isTruthy(input$disease_genes_by_score_group_by == 'group_disease')){
       selected_disease_results_df <- selected_disease_results_df[selected_disease_results_df$disease %in% selected_diseases,]
-      print(dataset)
-      print(selected_disease_results_df)
       ggplot(selected_disease_results_df, aes(x=size, y=.data[[input$metric_disease_genes_by_score]], fill=disease)) + 
         geom_boxplot() +
         labs(x="Number of samples", y = parameter2label[[input$metric_disease_genes_by_score]])

@@ -105,7 +105,7 @@ def create_gene_coexpression_networks(options):
     #sizes = [str(size) for size in range(10, 1100, 20)]
     sizes = [str(size) for size in range(20, 1020, 20)]
     #reps = [str(rep) for rep in range(5, 11, 1)]
-    reps = [str(rep) for rep in range(1, 6, 1)]
+    reps = [str(rep) for rep in range(1, 11, 1)]
     #reps = ['1', '2']
 
     for dataset in sorted(datasets):

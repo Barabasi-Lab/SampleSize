@@ -365,7 +365,6 @@ set.seed(1510)</code></pre>
 <h2>Read files</h2>
 <pre class="r"><code># Define working directories
 databases_dir = '/home/j.aguirreplans/Databases'
-#databases_dir = '/Users/j.aguirreplans/Databases'
 
 # Define input files
 subjects_file = paste(databases_dir, 'GTEx/v8/GTEx_Analysis_v8_Annotations_SubjectPhenotypesDS.txt', sep='/')
@@ -516,6 +515,9 @@ print(length(subject_ids))</code></pre>
 ## 4:         NA       NA       NA       NA       NA
 ## 5:         NA       NA       NA       NA       NA
 ## 6: 0.00310538  0.99474       NA        0  50.1944</code></pre>
+</div>
+<div id="merge-sample-with-subject-data" class="section level3">
+<h3>Merge sample with subject data</h3>
 <p>We filter the samples by just keeping the ones present in the TPM data:</p>
 <pre class="r"><code>samples_df &lt;- samples_df[samples_df$SAMPID %in% colnames(tpm_df),]
 print(length(unique(samples_df$SAMPID)))</code></pre>

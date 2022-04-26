@@ -358,8 +358,11 @@ pre code {
 <pre class="r"><code>library(data.table)
 library(dplyr)
 library(ggplot2)
+require(magrittr)
 library(tidyr)
-set.seed(1510)</code></pre>
+library(igraph)
+set.seed(1510)
+`%ni%` &lt;- Negate(`%in%`)</code></pre>
 </div>
 <div id="read-files" class="section level2">
 <h2>Read files</h2>
@@ -367,22 +370,155 @@ set.seed(1510)</code></pre>
 databases_dir = '/home/j.aguirreplans/Databases'
 #databases_dir = '/Users/j.aguirreplans/Databases'
 ppi_dir = '/home/j.aguirreplans/data/PPI'
+deisy_dicts_dir = '/home/j.aguirreplans/data/DeisyDictionaries'
 
 # Define input files
-samples_subjects_file = paste(databases_dir, 'GTEx/v8/GTEx_Annotations_SamplesSubjectsMerged.txt', sep='/')
+subjects_file = paste(databases_dir, 'GTEx/v8/GTEx_Analysis_v8_Annotations_SubjectPhenotypesDS.txt', sep='/')
+samples_file = paste(databases_dir, 'GTEx/v8/GTEx_Analysis_v8_Annotations_SampleAttributesDS.txt', sep='/')
 tpm_file = paste(databases_dir, 'GTEx/v8/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_tpm.gct', sep='/')
-ppi_network_file = paste(ppi_dir, 'interactome_2019_merged.csv', sep='/')
-ppi_info_file = paste(ppi_dir, 'interactome_2019_merged_protAnnots.csv', sep='/')
+ppi_network_symbol_file = paste(ppi_dir, 'interactome_2019_merged_symbols.csv', sep='/')
+gene_names_dict_file = paste(deisy_dicts_dir, 'Gene_Names_Dic.csv', sep='/')
+gene_names_cat_file = paste(deisy_dicts_dir, 'Gene_Names_Cat.csv', sep='/')
+gene_type_file = paste(deisy_dicts_dir, 'gene_type.csv', sep='/')
+gene_info_file = paste(databases_dir, 'NCBIGene/Homo_sapiens.gene_info', sep='/')
 
 # Define output files and dirs
-ppi_network_symbol_file = paste(ppi_dir, 'interactome_2019_merged_symbols.csv', sep='/')
+samples_subjects_file = paste(databases_dir, 'GTEx/v8/GTEx_Annotations_SamplesSubjectsMerged.txt', sep='/')
 tpm_no_duplicates_file = paste(databases_dir, 'GTEx/v8/GTEx_RNASeq_gene_tpm_no_duplicates.gct', sep='/')
-tpm_only_ppi_file = paste(databases_dir, 'GTEx/v8/GTEx_RNASeq_gene_tpm_only_ppi.gct', sep='/')
 tpm_filt_dir = paste(databases_dir, 'GTEx/v8/tpm_filtered_files_by_tissue', sep='/')
-ppi_filt_dir = paste(ppi_dir, 'interactome_tissue_specific', sep='/')</code></pre>
-<pre class="r"><code># Read input files
-samples_df = fread(samples_subjects_file)
-tpm_df = fread(tpm_file)</code></pre>
+genes_filt_dir = paste(databases_dir, 'GTEx/v8/genes_filtered_files_by_tissue', sep='/')</code></pre>
+<pre class="r"><code># Read input file
+tpm_df = fread(tpm_file)
+subjects_df = fread(subjects_file)
+samples_df = fread(samples_file)</code></pre>
+</div>
+<div id="merge-sample-with-subject-data" class="section level2">
+<h2>Merge sample with subject data</h2>
+<p>We filter the samples by just keeping the ones present in the TPM data:</p>
+<pre class="r"><code>samples_df &lt;- samples_df[samples_df$SAMPID %in% colnames(tpm_df),]
+print(length(unique(samples_df$SAMPID)))</code></pre>
+<pre><code>## [1] 17382</code></pre>
+<pre class="r"><code>head(samples_df)</code></pre>
+<pre><code>##                      SAMPID SMATSSCR SMCENTER
+## 1: GTEX-1117F-0226-SM-5GZZ7        0       B1
+## 2: GTEX-1117F-0426-SM-5EGHI        0       B1
+## 3: GTEX-1117F-0526-SM-5EGHJ        0       B1
+## 4: GTEX-1117F-0626-SM-5N9CS        1       B1
+## 5: GTEX-1117F-0726-SM-5GIEN        1       B1
+## 6: GTEX-1117F-1326-SM-5EGHH        1       B1
+##                                                                              SMPTHNTS
+## 1:                                       2 pieces, ~15% vessel stroma, rep delineated
+## 2:                          2 pieces, !5% fibrous connective tissue, delineated (rep)
+## 3:                        2 pieces, clean, Monckebeg medial sclerosis, rep delineated
+## 4:                           2 pieces, up to 4mm aderent fat/nerve/vessel, delineated
+## 5:                                                         2 pieces, no abnormalities
+## 6: 2 pieces, diffuse mesothelial hyperplasia; ~10% vessel/fibrous tissue (delineated)
+##    SMRIN           SMTS                        SMTSD SMUBRID SMTSISCH SMTSPAX
+## 1:   6.8 Adipose Tissue       Adipose - Subcutaneous 0002190     1214    1125
+## 2:   7.1         Muscle            Muscle - Skeletal 0011907     1220    1119
+## 3:   8.0   Blood Vessel              Artery - Tibial 0007610     1221    1120
+## 4:   6.9   Blood Vessel            Artery - Coronary 0001621     1243    1098
+## 5:   6.3          Heart     Heart - Atrial Appendage 0006631     1244    1097
+## 6:   5.9 Adipose Tissue Adipose - Visceral (Omentum) 0010414     1277    1066
+##    SMNABTCH                                              SMNABTCHT  SMNABTCHD
+## 1: BP-43693 RNA Extraction from Paxgene-derived Lysate Plate Based 09/17/2013
+## 2: BP-43495 RNA Extraction from Paxgene-derived Lysate Plate Based 09/12/2013
+## 3: BP-43495 RNA Extraction from Paxgene-derived Lysate Plate Based 09/12/2013
+## 4: BP-43956 RNA Extraction from Paxgene-derived Lysate Plate Based 09/25/2013
+## 5: BP-44261 RNA Extraction from Paxgene-derived Lysate Plate Based 10/03/2013
+## 6: BP-43495 RNA Extraction from Paxgene-derived Lysate Plate Based 09/12/2013
+##      SMGEBTCH  SMGEBTCHD SMGEBTCHT SMAFRZE SMGTC SME2MPRT SMCHMPRS SMNTRART
+## 1: LCSET-4804 03/05/2014 TruSeq.v1  RNASEQ       0.986026   345562 0.966793
+## 2: LCSET-4764 02/09/2014 TruSeq.v1  RNASEQ       0.985786   145441 0.978816
+## 3: LCSET-4764 02/09/2014 TruSeq.v1  RNASEQ       0.983859   223040 0.971360
+## 4: LCSET-4904 03/22/2014 TruSeq.v1  RNASEQ       0.990294   174501 0.970076
+## 5: LCSET-4796 02/27/2014 TruSeq.v1  RNASEQ       0.990734   184394 0.978830
+## 6: LCSET-4764 02/09/2014 TruSeq.v1  RNASEQ       0.979520   197036 0.975456
+##    SMNUMGPS  SMMAPRT SMEXNCRT SM550NRM SMGNSDTC SMUNMPRT SM350NRM SMRDLGTH
+## 1:       NA 0.990383 0.756726       NA    23548        1       NA       76
+## 2:       NA 0.990413 0.838961       NA    20246        1       NA       76
+## 3:       NA 0.988930 0.767837       NA    22193        1       NA       76
+## 4:       NA 0.991275 0.769820       NA    23331        1       NA       76
+## 5:       NA 0.993223 0.803478       NA    22000        1       NA       76
+## 6:       NA 0.984949 0.759520       NA    22537        1       NA       76
+##    SMMNCPB   SME1MMRT SMSFLGTH SMESTLBS   SMMPPD  SMNTERRT SMRRNANM  SMRDTTL
+## 1:      NA 0.00240323      136        0 66833200 0.0329192   209558 67482200
+## 2:      NA 0.00241283      137        0 59963600 0.0209516   423484 60544100
+## 3:      NA 0.00263069      126        0 59839400 0.0283102   173556 60509200
+## 4:      NA 0.00305290      136        0 69859200 0.0296435   376087 70474000
+## 5:      NA 0.00311411      131        0 62885700 0.0208913  1936430 63314800
+## 6:      NA 0.00320572      125        0 59795800 0.0230271   627193 60709500
+##    SMVQCFL SMMNCV SMTRSCPT SMMPPDPR SMCGLGTH SMGAPPCT SMUNPDRD SMNTRNRT
+## 1: 8797660     NA    23575 33158000       NA       NA        0 0.210067
+## 2: 9601460     NA    20259 29785800       NA       NA        0 0.139855
+## 3: 9407590     NA    22218 29681000       NA       NA        0 0.203524
+## 4: 3633120     NA    23354 34766500       NA       NA        0 0.200257
+## 5: 8252970     NA    22015 31291500       NA       NA        0 0.175352
+## 6: 9770160     NA    22563 29610400       NA       NA        0 0.215936
+##    SMMPUNRT SMEXPEFF SMMPPDUN   SME2MMRT SME2ANTI SMALTALG SME2SNSE SMMFLGTH
+## 1: 0.990383 0.749449 66833200 0.00391915 14462700  8914900 14575600      144
+## 2: 0.990413 0.830918 59963600 0.00553754 13154500  8383440 13125800      139
+## 3: 0.988930 0.759337 59839400 0.00592874 12951200  6139790 13090100      125
+## 4: 0.991275 0.763103 69859200 0.00367148 15167600  6124860 15220100      151
+## 5: 0.993223 0.798033 62885700 0.00377222 13636600  9075650 13612800      146
+## 6: 0.984949 0.748088 59795800 0.00652572 13203500 10667300 13272900      128
+##    SME1ANTI SMSPLTRD   SMBSMMRT SME1SNSE SME1PCTS   SMRRNART SME1MPRT SMNUM5CD
+## 1: 14648800 11999300 0.00315785 14669500  50.0354 0.00310538 0.994740       NA
+## 2: 13191500 11550200 0.00396788 13340500  50.2809 0.00699464 0.995041       NA
+## 3: 13175400 11000300 0.00427126 13150900  49.9535 0.00286826 0.994001       NA
+## 4: 15164200 11617900 0.00336188 15291900  50.2096 0.00533653 0.992257       NA
+## 5: 13627100  9266070 0.00344234 13756700  50.2367 0.03058410 0.995711       NA
+## 6: 13379400  9631060 0.00485657 13408700  50.0547 0.01033100 0.990378       NA
+##    SMDPMPRT SME2PCTS
+## 1:        0  50.1944
+## 2:        0  49.9455
+## 3:        0  50.2667
+## 4:        0  50.0865
+## 5:        0  49.9563
+## 6:        0  50.1311</code></pre>
+<p>We add a column with subject ID by splitting the sample ID:</p>
+<pre class="r"><code># Add column with subject ID 
+# sample ID --&gt; GTEX-14753-1626-SM-5NQ9L
+# subject ID --&gt; GTEX-14753
+# info --&gt; https://sites.google.com/broadinstitute.org/gtex-faqs/home
+donor_ids &lt;- list()
+i = 1
+for(sample_id in samples_df$SAMPID){
+  split_list &lt;- unlist(strsplit(sample_id, &quot;-&quot;, fixed = TRUE))
+  donor_id &lt;- paste(split_list[1], split_list[2], sep='-')
+  donor_ids[i] &lt;- donor_id
+  i&lt;- i+1
+}
+samples_df$SUBJID &lt;- unlist(donor_ids)</code></pre>
+<p>We merge samples and subjects dataframes:</p>
+<pre class="r"><code>samples_df &lt;- merge(x = samples_df, y = subjects_df, by = &quot;SUBJID&quot;, all = FALSE)</code></pre>
+<p>We keep only columns of interest:</p>
+<pre class="r"><code>samples_df &lt;- samples_df[,c(&quot;SAMPID&quot;, &quot;SUBJID&quot;, &quot;SEX&quot;, &quot;AGE&quot;, &quot;DTHHRDY&quot;, &quot;SMTS&quot;, &quot;SMTSD&quot;)]</code></pre>
+<p>We create tissue names without special characters:</p>
+<pre class="r"><code>samples_df$SMTS.no.sp.char &lt;- gsub(' ', '.', gsub(' - ', '.', gsub('[\\(\\)]', '', samples_df$SMTS)))
+samples_df$SMTSD.no.sp.char &lt;- gsub(' ', '.', gsub(' - ', '.', gsub('[\\(\\)]', '', samples_df$SMTSD)))</code></pre>
+<p>We remove samples without cause of death:</p>
+<pre class="r"><code>samples_df &lt;- samples_df[!(is.na(samples_df$DTHHRDY)),]
+print(length(unique(samples_df$SAMPID)))</code></pre>
+<pre><code>## [1] 17271</code></pre>
+<pre class="r"><code>print(length(unique(samples_df$SUBJID)))</code></pre>
+<pre><code>## [1] 932</code></pre>
+<pre class="r"><code>head(samples_df)</code></pre>
+<pre><code>##                      SAMPID     SUBJID SEX   AGE DTHHRDY           SMTS
+## 1: GTEX-1117F-0226-SM-5GZZ7 GTEX-1117F   2 60-69       4 Adipose Tissue
+## 2: GTEX-1117F-0426-SM-5EGHI GTEX-1117F   2 60-69       4         Muscle
+## 3: GTEX-1117F-0526-SM-5EGHJ GTEX-1117F   2 60-69       4   Blood Vessel
+## 4: GTEX-1117F-0626-SM-5N9CS GTEX-1117F   2 60-69       4   Blood Vessel
+## 5: GTEX-1117F-0726-SM-5GIEN GTEX-1117F   2 60-69       4          Heart
+## 6: GTEX-1117F-1326-SM-5EGHH GTEX-1117F   2 60-69       4 Adipose Tissue
+##                           SMTSD SMTS.no.sp.char         SMTSD.no.sp.char
+## 1:       Adipose - Subcutaneous  Adipose.Tissue     Adipose.Subcutaneous
+## 2:            Muscle - Skeletal          Muscle          Muscle.Skeletal
+## 3:              Artery - Tibial    Blood.Vessel            Artery.Tibial
+## 4:            Artery - Coronary    Blood.Vessel          Artery.Coronary
+## 5:     Heart - Atrial Appendage           Heart   Heart.Atrial.Appendage
+## 6: Adipose - Visceral (Omentum)  Adipose.Tissue Adipose.Visceral.Omentum</code></pre>
+<pre class="r"><code>fwrite(samples_df, samples_subjects_file)</code></pre>
 </div>
 <div id="calculate-the-median-expression-of-genes-that-have-the-same-symbol" class="section level2">
 <h2>Calculate the median expression of genes that have the same symbol</h2>
@@ -417,753 +553,75 @@ length(repeated_genes)</code></pre>
 dim(tpm_df)</code></pre>
 <pre><code>## [1] 54592 17383</code></pre>
 </div>
-<div id="keep-only-genes-in-the-ppi-network" class="section level2">
-<h2>Keep only genes in the PPI network</h2>
-<p>We read the PPI network and map the gene IDs to symbols:</p>
-<pre class="r"><code>PPI = fread(ppi_network_file)
-dim(PPI)</code></pre>
-<pre><code>## [1] 327924      4</code></pre>
-<pre class="r"><code>PPI_info_df = fread(ppi_info_file)
-head(PPI)</code></pre>
-<pre><code>##    V1 proteinA proteinB                                        databases
-## 1:  0     9796    56992                                   bioplex|HIPPIE
-## 2:  1     7918     9240 instruct|hiunion|APID|biogrid|HINT-binary|intact
-## 3:  2     8233    23548                                   bioplex|HIPPIE
-## 4:  3     4899    11253                                           encode
-## 5:  4     5297     8601                                          bioplex
-## 6:  5     6564     8933                                          bioplex</code></pre>
-<pre class="r"><code>head(PPI_info_df)</code></pre>
-<pre><code>##    V1 GeneID   Symbol                  Synonyms
-## 1:  0      1     A1BG      A1B|ABG|GAB|HYST2477
-## 2:  1      2      A2M A2MD|CPAMD5|FWP007|S863-7
-## 3:  3      9     NAT1      AAC1|MNAT|NAT-1|NATI
-## 4:  4     10     NAT2           AAC2|NAT-2|PNAT
-## 5:  6     12 SERPINA3      AACT|ACT|GIG24|GIG25
-## 6:  7     13    AADAC                CES5A1|DAC
-##                                              dbXrefs chromosome map_location
-## 1:    MIM:138670|HGNC:HGNC:5|Ensembl:ENSG00000121410         19     19q13.43
-## 2:    MIM:103950|HGNC:HGNC:7|Ensembl:ENSG00000175899         12     12p13.31
-## 3: MIM:108345|HGNC:HGNC:7645|Ensembl:ENSG00000171428          8         8p22
-## 4: MIM:612182|HGNC:HGNC:7646|Ensembl:ENSG00000156006          8         8p22
-## 5:   MIM:107280|HGNC:HGNC:16|Ensembl:ENSG00000196136         14     14q32.13
-## 6:   MIM:600338|HGNC:HGNC:17|Ensembl:ENSG00000114771          3       3q25.1
-##                  description   type_of_gene
-## 1:    alpha-1-B glycoprotein protein-coding
-## 2:     alpha-2-macroglobulin protein-coding
-## 3:     N-acetyltransferase 1 protein-coding
-## 4:     N-acetyltransferase 2 protein-coding
-## 5:  serpin family A member 3 protein-coding
-## 6: arylacetamide deacetylase protein-coding</code></pre>
-<pre class="r"><code>PPI_symbol = left_join(PPI[,c(&quot;proteinA&quot;, &quot;proteinB&quot;)], PPI_info_df[,c(&quot;GeneID&quot;, &quot;Symbol&quot;)], by=c(&quot;proteinA&quot;=&quot;GeneID&quot;)) %&gt;% rename(proteinA_symbol=Symbol)
-PPI_symbol = left_join(PPI_symbol, PPI_info_df[,c(&quot;GeneID&quot;, &quot;Symbol&quot;)], by=c(&quot;proteinB&quot;=&quot;GeneID&quot;)) %&gt;% rename(proteinB_symbol=Symbol)
+<div id="select-genes-with-known-annotations" class="section level2">
+<h2>Select genes with known annotations</h2>
+<pre class="r"><code># Select genes from the initial dataset with known annotation
+tpm_df$Description = toupper(tpm_df$Description)
+genes_dataset_raw = unique(tpm_df$Description)
+print(length(genes_dataset_raw))</code></pre>
+<pre><code>## [1] 54592</code></pre>
+<pre class="r"><code># Read gene annotations and select the clean dataset of genes
+gene_type_df = fread(gene_type_file) %&gt;% unique()
+gene_type_df$symbol = toupper(gene_type_df$symbol)
+length(gene_type_df$symbol)</code></pre>
+<pre><code>## [1] 43017</code></pre>
+<pre class="r"><code>table(gene_type_df$gene_type)</code></pre>
+<pre><code>## 
+## gene with protein product                     other                pseudogene 
+##                     19208                      1482                     13716 
+##      RNA, long non-coding                RNA, micro        RNA, small nuclear 
+##                      5488                      1914                        50 
+##      RNA, small nucleolar             RNA, transfer 
+##                       568                       591</code></pre>
+<pre class="r"><code>round(prop.table(table(gene_type_df$gene_type))*100,2)</code></pre>
+<pre><code>## 
+## gene with protein product                     other                pseudogene 
+##                     44.65                      3.45                     31.89 
+##      RNA, long non-coding                RNA, micro        RNA, small nuclear 
+##                     12.76                      4.45                      0.12 
+##      RNA, small nucleolar             RNA, transfer 
+##                      1.32                      1.37</code></pre>
+<pre class="r"><code>genes_dataset_clean = genes_dataset_raw[genes_dataset_raw %in% gene_type_df$symbol]
+print(length(genes_dataset_clean))</code></pre>
+<pre><code>## [1] 34831</code></pre>
+<pre class="r"><code># Merge both gene datasets with dataframe of gene categories
+genes_dataset_clean_df = gene_type_df %&gt;% filter(symbol %in% genes_dataset_clean) %&gt;% unique()
+table(genes_dataset_clean_df$gene_type)</code></pre>
+<pre><code>## 
+## gene with protein product                     other                pseudogene 
+##                     18327                       807                     10608 
+##      RNA, long non-coding                RNA, micro        RNA, small nuclear 
+##                      3128                      1556                        32 
+##      RNA, small nucleolar             RNA, transfer 
+##                       350                        23</code></pre>
+<pre class="r"><code>round(prop.table(table(genes_dataset_clean_df$gene_type))*100,2)</code></pre>
+<pre><code>## 
+## gene with protein product                     other                pseudogene 
+##                     52.62                      2.32                     30.46 
+##      RNA, long non-coding                RNA, micro        RNA, small nuclear 
+##                      8.98                      4.47                      0.09 
+##      RNA, small nucleolar             RNA, transfer 
+##                      1.00                      0.07</code></pre>
+<pre class="r"><code># Find genes without symbol
+genes_not_symbol = genes_dataset_raw[(!genes_dataset_raw %in% unique(genes_dataset_clean_df$symbol))]
+print(genes_not_symbol[1:20])</code></pre>
+<pre><code>##  [1] &quot;RP11-34P13.7&quot;      &quot;RP11-34P13.15&quot;     &quot;RP11-34P13.16&quot;    
+##  [4] &quot;RP11-34P13.14&quot;     &quot;RP11-34P13.13&quot;     &quot;RP11-34P13.9&quot;     
+##  [7] &quot;ABC7-43046700E7.1&quot; &quot;RP11-34P13.18&quot;     &quot;AP006222.2&quot;       
+## [10] &quot;RP5-857K21.15&quot;     &quot;RP4-669L17.2&quot;      &quot;RP4-669L17.10&quot;    
+## [13] &quot;RP4-669L17.8&quot;      &quot;RP5-857K21.4&quot;      &quot;RP5-857K21.2&quot;     
+## [16] &quot;RP11-206L10.17&quot;    &quot;RP11-206L10.2&quot;     &quot;RP11-206L10.4&quot;    
+## [19] &quot;RP11-206L10.9&quot;     &quot;RP11-206L10.8&quot;</code></pre>
+<pre class="r"><code>print(length(genes_not_symbol))</code></pre>
+<pre><code>## [1] 19761</code></pre>
+<pre class="r"><code>#genes_not_symbol = genes_not_symbol[(!(toupper(gsub(&quot;_&quot;, &quot;&quot;, genes_not_symbol))) %in% toupper(all_genes_and_synonyms))]
+#gene_names_dict = fread(gene_names_dict_file)
+#genes_not_symbol_synonyms = genes_not_symbol[genes_not_symbol %in% gene_names_dict$Alias]
+#genes_not_symbol_dict = gene_names_dict %&gt;% filter(Alias %in% genes_not_symbol_synonyms)
 
-# Get unique links
-PPI_symbol = PPI_symbol %&gt;% unique()
-dim(PPI_symbol)</code></pre>
-<pre><code>## [1] 327924      4</code></pre>
-<pre class="r"><code>PPI_symbol = PPI_symbol %&gt;%
-  filter((proteinA_symbol != &quot;&quot;) &amp; (proteinB_symbol != &quot;&quot;)) %&gt;%
-  filter(proteinA_symbol != proteinB_symbol)
-dim(PPI_symbol)</code></pre>
-<pre><code>## [1] 322163      4</code></pre>
-<pre class="r"><code>head(PPI_symbol)</code></pre>
-<pre><code>##    proteinA proteinB proteinA_symbol proteinB_symbol
-## 1:     9796    56992          PHYHIP           KIF15
-## 2:     7918     9240          GPANK1           PNMA1
-## 3:     8233    23548           ZRSR2           TTC33
-## 4:     4899    11253            NRF1          MAN1B1
-## 5:     5297     8601           PI4KA           RGS20
-## 6:     6564     8933         SLC15A1           RTL8C</code></pre>
-<pre class="r"><code>fwrite(PPI_symbol, ppi_network_symbol_file)</code></pre>
-<p>We filter the genes, keeping the ones that are part of the PPI network:</p>
-<pre class="r"><code>nodes_network = unique(c(PPI_symbol$proteinA_symbol, PPI_symbol$proteinB_symbol))
-length(nodes_network)</code></pre>
-<pre><code>## [1] 18453</code></pre>
-<pre class="r"><code>tpm_df = tpm_df[tpm_df$Description %in% nodes_network,]
-fwrite(tpm_df, tpm_only_ppi_file)
+tpm_df = tpm_df %&gt;% filter(Description %in% genes_dataset_clean_df$symbol)
 dim(tpm_df)</code></pre>
-<pre><code>## [1] 17655 17383</code></pre>
-<p>Examples of proteins in the PPI network that are not in the expression dataset:</p>
-<pre class="r"><code>nodes_network[!(nodes_network %in% tpm_df$Description)][1:10]</code></pre>
-<pre><code>##  [1] &quot;TLE5&quot;   &quot;H1-1&quot;   &quot;H2AC4&quot;  &quot;CCN2&quot;   &quot;H4C11&quot;  &quot;H2AC20&quot; &quot;H2AC15&quot; &quot;H1-5&quot;  
-##  [9] &quot;H2BC14&quot; &quot;H2BC5&quot;</code></pre>
-<pre class="r"><code>length(nodes_network[!(nodes_network %in% tpm_df$Description)])</code></pre>
-<pre><code>## [1] 798</code></pre>
-</div>
-<div id="remove-genes-with-low-tpm-expression" class="section level2">
-<h2>Remove genes with low TPM expression</h2>
-<p>We filter the samples in the TPM file by keeping the ones that are in the samples information file:</p>
-<pre class="r"><code>dim(tpm_df[,-1])</code></pre>
-<pre><code>## [1] 17655 17382</code></pre>
-<pre class="r"><code>tpm_df &lt;- tpm_df %&gt;% select(c(&quot;Description&quot;, samples_df$SAMPID))
-dim(tpm_df[,-1])</code></pre>
-<pre><code>## [1] 17655 17271</code></pre>
-<pre class="r"><code>length(samples_df$SAMPID)</code></pre>
-<pre><code>## [1] 17271</code></pre>
-<p>We filter the low expressed genes for each tissue and sex:</p>
-<pre class="r"><code>sex_to_id = data.frame(row.names=c(&quot;male&quot;,&quot;female&quot;, &quot;&quot;) , val=c(1,2,&quot;&quot;))
-for (tissue in unique(samples_df$SMTSD.no.sp.char)){
-  for (sex in rownames(sex_to_id)){
-    print(tissue)
-    print(sex)
-    if (sex == &quot;&quot;){
-      samples_tissue_sex = samples_df[samples_df$SMTSD.no.sp.char == tissue,]$SAMPID
-      tpm_tissue_sex_filt_file = paste(tpm_filt_dir, paste(&quot;GTEx_RNASeq_&quot;, tissue, &quot;.gct&quot;, sep=''), sep='/')
-      ppi_tissue_sex_filt_file = paste(ppi_filt_dir, paste(&quot;interactome_2019_&quot;, tissue, &quot;.csv&quot;, sep=''), sep='/')
-    } else {
-      sex_id = sex_to_id[sex,]
-      samples_tissue_sex = samples_df[(samples_df$SMTSD.no.sp.char == tissue) &amp; (samples_df$SEX == sex_id),]$SAMPID
-      tpm_tissue_sex_filt_file = paste(tpm_filt_dir, paste(&quot;GTEx_RNASeq_&quot;, tissue, &quot;_&quot;, sex, &quot;.gct&quot;, sep=''), sep='/')
-      ppi_tissue_sex_filt_file = paste(ppi_filt_dir, paste(&quot;interactome_2019_&quot;, tissue, &quot;_&quot;, sex, &quot;.csv&quot;, sep=''), sep='/')
-    }
-    if (length(samples_tissue_sex) &gt; 10){
-      tpm_tissue_sex_df = tpm_df %&gt;% select(c(&quot;Description&quot;, all_of(samples_tissue_sex)))
-      print(dim(tpm_tissue_sex_df))
-      # Calculate metrics of expression
-      info_df = data.frame(Description=tpm_tissue_sex_df$Description, sum=rowSums(tpm_tissue_sex_df[,-1]))
-      info_df$sd = apply(tpm_tissue_sex_df[,-1], 1, sd)
-      info_df$mean = rowMeans(tpm_tissue_sex_df[,-1])
-      info_df$median = apply(tpm_tissue_sex_df[,-1], 1, median)
-      info_df$zero_sum_counts = as.numeric(apply(tpm_tissue_sex_df[,-1], 1, function(i) sum(i == 0) )) # Number of times that the sum of the TPMs is equal to 0
-      # Filter low expressed genes
-      info_filt_df = info_df[(info_df$sum &gt; 0) &amp; (info_df$mean &gt; 0) &amp; (info_df$median &gt;= 1) &amp; (info_df$sd &gt; 0) &amp; (info_df$zero_sum_counts &lt; dim(tpm_tissue_sex_df[, -1])[2]/2) ,]
-      tpm_tissue_sex_filt_df = tpm_tissue_sex_df[tpm_tissue_sex_df$Description %in% info_filt_df$Description,] %&gt;% rename(&quot;Gene&quot;=&quot;Description&quot;)
-      print(dim(tpm_tissue_sex_filt_df))
-      fwrite(tpm_tissue_sex_filt_df, tpm_tissue_sex_filt_file)
-      
-      # Get transposed matrix
-      #sample.ids &lt;- tpm_tissue_sex_filt_df[, 1][[1]]
-      #tpm_tissue_sex_filt_df &lt;- as.matrix(tpm_tissue_sex_filt_df[, -c(1)])
-      #rownames(tpm_tissue_sex_filt_df) &lt;- sample.ids
-      #tpm_tissue_sex_filt_df.t &lt;- t(as.matrix(tpm_tissue_sex_filt_df)) %&gt;% as.data.frame() 
-      #colnames(tpm_tissue_sex_filt_df.t) &lt;- rownames(tpm_tissue_sex_filt_df)
-      #tpm_tissue_sex_filt_df.t &lt;- cbind(Sample = colnames(tpm_tissue_sex_filt_df), tpm_tissue_sex_filt_df.t)
-      #tpm_tissue_sex_filt_file = paste(tpm_filt_dir, paste(&quot;GTEx_RNASeq_&quot;, tissue, &quot;_&quot;, sex, &quot;.gct&quot;, sep=''), sep='/')
-      #fwrite(tpm_tissue_sex_filt_df.t, tpm_tissue_sex_filt_file)
-      
-      # Filter low expressed genes in PPI
-      ppi_tissue_sex_filt_df = PPI_symbol[(PPI_symbol$proteinA_symbol %in% info_filt_df$Description) &amp; (PPI_symbol$proteinB_symbol %in% info_filt_df$Description),]
-      fwrite(ppi_tissue_sex_filt_df, ppi_tissue_sex_filt_file)
-    }
-  }
-}</code></pre>
-<pre><code>## [1] &quot;Adipose.Subcutaneous&quot;
-## [1] &quot;male&quot;
-## [1] 17655   437
-## [1] 12639   437
-## [1] &quot;Adipose.Subcutaneous&quot;
-## [1] &quot;female&quot;
-## [1] 17655   216
-## [1] 12586   216
-## [1] &quot;Adipose.Subcutaneous&quot;
-## [1] &quot;&quot;
-## [1] 17655   652
-## [1] 12628   652
-## [1] &quot;Muscle.Skeletal&quot;
-## [1] &quot;male&quot;
-## [1] 17655   536
-## [1] 10708   536
-## [1] &quot;Muscle.Skeletal&quot;
-## [1] &quot;female&quot;
-## [1] 17655   257
-## [1] 10760   257
-## [1] &quot;Muscle.Skeletal&quot;
-## [1] &quot;&quot;
-## [1] 17655   792
-## [1] 10733   792
-## [1] &quot;Artery.Tibial&quot;
-## [1] &quot;male&quot;
-## [1] 17655   446
-## [1] 12287   446
-## [1] &quot;Artery.Tibial&quot;
-## [1] &quot;female&quot;
-## [1] 17655   207
-## [1] 12261   207
-## [1] &quot;Artery.Tibial&quot;
-## [1] &quot;&quot;
-## [1] 17655   652
-## [1] 12283   652
-## [1] &quot;Artery.Coronary&quot;
-## [1] &quot;male&quot;
-## [1] 17655   147
-## [1] 12746   147
-## [1] &quot;Artery.Coronary&quot;
-## [1] &quot;female&quot;
-## [1] 17655    95
-## [1] 12730    95
-## [1] &quot;Artery.Coronary&quot;
-## [1] &quot;&quot;
-## [1] 17655   241
-## [1] 12745   241
-## [1] &quot;Heart.Atrial.Appendage&quot;
-## [1] &quot;male&quot;
-## [1] 17655   294
-## [1] 11974   294
-## [1] &quot;Heart.Atrial.Appendage&quot;
-## [1] &quot;female&quot;
-## [1] 17655   137
-## [1] 11928   137
-## [1] &quot;Heart.Atrial.Appendage&quot;
-## [1] &quot;&quot;
-## [1] 17655   430
-## [1] 11972   430
-## [1] &quot;Adipose.Visceral.Omentum&quot;
-## [1] &quot;male&quot;
-## [1] 17655   372
-## [1] 12757   372
-## [1] &quot;Adipose.Visceral.Omentum&quot;
-## [1] &quot;female&quot;
-## [1] 17655   171
-## [1] 12654   171
-## [1] &quot;Adipose.Visceral.Omentum&quot;
-## [1] &quot;&quot;
-## [1] 17655   542
-## [1] 12731   542
-## [1] &quot;Uterus&quot;
-## [1] &quot;male&quot;
-## [1] &quot;Uterus&quot;
-## [1] &quot;female&quot;
-## [1] 17655   142
-## [1] 12903   142
-## [1] &quot;Uterus&quot;
-## [1] &quot;&quot;
-## [1] 17655   142
-## [1] 12903   142
-## [1] &quot;Vagina&quot;
-## [1] &quot;male&quot;
-## [1] &quot;Vagina&quot;
-## [1] &quot;female&quot;
-## [1] 17655   155
-## [1] 13287   155
-## [1] &quot;Vagina&quot;
-## [1] &quot;&quot;
-## [1] 17655   155
-## [1] 13287   155
-## [1] &quot;Breast.Mammary.Tissue&quot;
-## [1] &quot;male&quot;
-## [1] 17655   292
-## [1] 12695   292
-## [1] &quot;Breast.Mammary.Tissue&quot;
-## [1] &quot;female&quot;
-## [1] 17655   169
-## [1] 13263   169
-## [1] &quot;Breast.Mammary.Tissue&quot;
-## [1] &quot;&quot;
-## [1] 17655   460
-## [1] 13015   460
-## [1] &quot;Skin.Not.Sun.Exposed.Suprapubic&quot;
-## [1] &quot;male&quot;
-## [1] 17655   412
-## [1] 12925   412
-## [1] &quot;Skin.Not.Sun.Exposed.Suprapubic&quot;
-## [1] &quot;female&quot;
-## [1] 17655   194
-## [1] 12924   194
-## [1] &quot;Skin.Not.Sun.Exposed.Suprapubic&quot;
-## [1] &quot;&quot;
-## [1] 17655   605
-## [1] 12925   605
-## [1] &quot;Minor.Salivary.Gland&quot;
-## [1] &quot;male&quot;
-## [1] 17655   116
-## [1] 12952   116
-## [1] &quot;Minor.Salivary.Gland&quot;
-## [1] &quot;female&quot;
-## [1] 17655    48
-## [1] 13087    48
-## [1] &quot;Minor.Salivary.Gland&quot;
-## [1] &quot;&quot;
-## [1] 17655   163
-## [1] 12995   163
-## [1] &quot;Brain.Cortex&quot;
-## [1] &quot;male&quot;
-## [1] 17655   182
-## [1] 12831   182
-## [1] &quot;Brain.Cortex&quot;
-## [1] &quot;female&quot;
-## [1] 17655    75
-## [1] 12819    75
-## [1] &quot;Brain.Cortex&quot;
-## [1] &quot;&quot;
-## [1] 17655   256
-## [1] 12826   256
-## [1] &quot;Adrenal.Gland&quot;
-## [1] &quot;male&quot;
-## [1] 17655   158
-## [1] 12217   158
-## [1] &quot;Adrenal.Gland&quot;
-## [1] &quot;female&quot;
-## [1] 17655   102
-## [1] 12273   102
-## [1] &quot;Adrenal.Gland&quot;
-## [1] &quot;&quot;
-## [1] 17655   259
-## [1] 12247   259
-## [1] &quot;Thyroid&quot;
-## [1] &quot;male&quot;
-## [1] 17655   435
-## [1] 13258   435
-## [1] &quot;Thyroid&quot;
-## [1] &quot;female&quot;
-## [1] 17655   218
-## [1] 13227   218
-## [1] &quot;Thyroid&quot;
-## [1] &quot;&quot;
-## [1] 17655   652
-## [1] 13252   652
-## [1] &quot;Lung&quot;
-## [1] &quot;male&quot;
-## [1] 17655   396
-## [1] 13411   396
-## [1] &quot;Lung&quot;
-## [1] &quot;female&quot;
-## [1] 17655   182
-## [1] 13478   182
-## [1] &quot;Lung&quot;
-## [1] &quot;&quot;
-## [1] 17655   577
-## [1] 13428   577
-## [1] &quot;Spleen&quot;
-## [1] &quot;male&quot;
-## [1] 17655   155
-## [1] 12849   155
-## [1] &quot;Spleen&quot;
-## [1] &quot;female&quot;
-## [1] 17655    87
-## [1] 12858    87
-## [1] &quot;Spleen&quot;
-## [1] &quot;&quot;
-## [1] 17655   241
-## [1] 12849   241
-## [1] &quot;Pancreas&quot;
-## [1] &quot;male&quot;
-## [1] 17655   208
-## [1] 11494   208
-## [1] &quot;Pancreas&quot;
-## [1] &quot;female&quot;
-## [1] 17655   122
-## [1] 11397   122
-## [1] &quot;Pancreas&quot;
-## [1] &quot;&quot;
-## [1] 17655   329
-## [1] 11469   329
-## [1] &quot;Esophagus.Muscularis&quot;
-## [1] &quot;male&quot;
-## [1] 17655   339
-## [1] 12496   339
-## [1] &quot;Esophagus.Muscularis&quot;
-## [1] &quot;female&quot;
-## [1] 17655   177
-## [1] 12497   177
-## [1] &quot;Esophagus.Muscularis&quot;
-## [1] &quot;&quot;
-## [1] 17655   515
-## [1] 12503   515
-## [1] &quot;Esophagus.Mucosa&quot;
-## [1] &quot;male&quot;
-## [1] 17655   364
-## [1] 12639   364
-## [1] &quot;Esophagus.Mucosa&quot;
-## [1] &quot;female&quot;
-## [1] 17655   191
-## [1] 12649   191
-## [1] &quot;Esophagus.Mucosa&quot;
-## [1] &quot;&quot;
-## [1] 17655   554
-## [1] 12649   554
-## [1] &quot;Esophagus.Gastroesophageal.Junction&quot;
-## [1] &quot;male&quot;
-## [1] 17655   252
-## [1] 12571   252
-## [1] &quot;Esophagus.Gastroesophageal.Junction&quot;
-## [1] &quot;female&quot;
-## [1] 17655   125
-## [1] 12537   125
-## [1] &quot;Esophagus.Gastroesophageal.Junction&quot;
-## [1] &quot;&quot;
-## [1] 17655   376
-## [1] 12553   376
-## [1] &quot;Stomach&quot;
-## [1] &quot;male&quot;
-## [1] 17655   228
-## [1] 12558   228
-## [1] &quot;Stomach&quot;
-## [1] &quot;female&quot;
-## [1] 17655   132
-## [1] 12609   132
-## [1] &quot;Stomach&quot;
-## [1] &quot;&quot;
-## [1] 17655   359
-## [1] 12579   359
-## [1] &quot;Colon.Sigmoid&quot;
-## [1] &quot;male&quot;
-## [1] 17655   241
-## [1] 12691   241
-## [1] &quot;Colon.Sigmoid&quot;
-## [1] &quot;female&quot;
-## [1] 17655   134
-## [1] 12660   134
-## [1] &quot;Colon.Sigmoid&quot;
-## [1] &quot;&quot;
-## [1] 17655   374
-## [1] 12688   374
-## [1] &quot;Small.Intestine.Terminal.Ileum&quot;
-## [1] &quot;male&quot;
-## [1] 17655   121
-## [1] 13269   121
-## [1] &quot;Small.Intestine.Terminal.Ileum&quot;
-## [1] &quot;female&quot;
-## [1] 17655    68
-## [1] 13259    68
-## [1] &quot;Small.Intestine.Terminal.Ileum&quot;
-## [1] &quot;&quot;
-## [1] 17655   188
-## [1] 13271   188
-## [1] &quot;Colon.Transverse&quot;
-## [1] &quot;male&quot;
-## [1] 17655   260
-## [1] 13071   260
-## [1] &quot;Colon.Transverse&quot;
-## [1] &quot;female&quot;
-## [1] 17655   147
-## [1] 13025   147
-## [1] &quot;Colon.Transverse&quot;
-## [1] &quot;&quot;
-## [1] 17655   406
-## [1] 13062   406
-## [1] &quot;Prostate&quot;
-## [1] &quot;male&quot;
-## [1] 17655   246
-## [1] 13421   246
-## [1] &quot;Prostate&quot;
-## [1] &quot;female&quot;
-## [1] &quot;Prostate&quot;
-## [1] &quot;&quot;
-## [1] 17655   246
-## [1] 13421   246
-## [1] &quot;Testis&quot;
-## [1] &quot;male&quot;
-## [1] 17655   362
-## [1] 14954   362
-## [1] &quot;Testis&quot;
-## [1] &quot;female&quot;
-## [1] &quot;Testis&quot;
-## [1] &quot;&quot;
-## [1] 17655   362
-## [1] 14954   362
-## [1] &quot;Nerve.Tibial&quot;
-## [1] &quot;male&quot;
-## [1] 17655   415
-## [1] 13209   415
-## [1] &quot;Nerve.Tibial&quot;
-## [1] &quot;female&quot;
-## [1] 17655   197
-## [1] 13154   197
-## [1] &quot;Nerve.Tibial&quot;
-## [1] &quot;&quot;
-## [1] 17655   611
-## [1] 13191   611
-## [1] &quot;Skin.Sun.Exposed.Lower.leg&quot;
-## [1] &quot;male&quot;
-## [1] 17655   461
-## [1] 12995   461
-## [1] &quot;Skin.Sun.Exposed.Lower.leg&quot;
-## [1] &quot;female&quot;
-## [1] 17655   233
-## [1] 12979   233
-## [1] &quot;Skin.Sun.Exposed.Lower.leg&quot;
-## [1] &quot;&quot;
-## [1] 17655   693
-## [1] 12997   693
-## [1] &quot;Heart.Left.Ventricle&quot;
-## [1] &quot;male&quot;
-## [1] 17655   295
-## [1] 10926   295
-## [1] &quot;Heart.Left.Ventricle&quot;
-## [1] &quot;female&quot;
-## [1] 17655   138
-## [1] 11093   138
-## [1] &quot;Heart.Left.Ventricle&quot;
-## [1] &quot;&quot;
-## [1] 17655   432
-## [1] 10976   432
-## [1] &quot;Brain.Cerebellum&quot;
-## [1] &quot;male&quot;
-## [1] 17655   175
-## [1] 12880   175
-## [1] &quot;Brain.Cerebellum&quot;
-## [1] &quot;female&quot;
-## [1] 17655    68
-## [1] 12924    68
-## [1] &quot;Brain.Cerebellum&quot;
-## [1] &quot;&quot;
-## [1] 17655   242
-## [1] 12900   242
-## [1] &quot;Cells.Cultured.fibroblasts&quot;
-## [1] &quot;male&quot;
-## [1] 17655   322
-## [1] 11606   322
-## [1] &quot;Cells.Cultured.fibroblasts&quot;
-## [1] &quot;female&quot;
-## [1] 17655   171
-## [1] 11585   171
-## [1] &quot;Cells.Cultured.fibroblasts&quot;
-## [1] &quot;&quot;
-## [1] 17655   492
-## [1] 11598   492
-## [1] &quot;Whole.Blood&quot;
-## [1] &quot;male&quot;
-## [1] 17655   493
-## [1] 9556  493
-## [1] &quot;Whole.Blood&quot;
-## [1] &quot;female&quot;
-## [1] 17655   251
-## [1] 9719  251
-## [1] &quot;Whole.Blood&quot;
-## [1] &quot;&quot;
-## [1] 17655   743
-## [1] 9608  743
-## [1] &quot;Artery.Aorta&quot;
-## [1] &quot;male&quot;
-## [1] 17655   280
-## [1] 12550   280
-## [1] &quot;Artery.Aorta&quot;
-## [1] &quot;female&quot;
-## [1] 17655   153
-## [1] 12564   153
-## [1] &quot;Artery.Aorta&quot;
-## [1] &quot;&quot;
-## [1] 17655   432
-## [1] 12557   432
-## [1] &quot;Cells.EBV-transformed.lymphocytes&quot;
-## [1] &quot;male&quot;
-## [1] 17655   105
-## [1] 10959   105
-## [1] &quot;Cells.EBV-transformed.lymphocytes&quot;
-## [1] &quot;female&quot;
-## [1] 17655    62
-## [1] 10897    62
-## [1] &quot;Cells.EBV-transformed.lymphocytes&quot;
-## [1] &quot;&quot;
-## [1] 17655   166
-## [1] 10941   166
-## [1] &quot;Pituitary&quot;
-## [1] &quot;male&quot;
-## [1] 17655   205
-## [1] 13562   205
-## [1] &quot;Pituitary&quot;
-## [1] &quot;female&quot;
-## [1] 17655    80
-## [1] 13483    80
-## [1] &quot;Pituitary&quot;
-## [1] &quot;&quot;
-## [1] 17655   284
-## [1] 13542   284
-## [1] &quot;Brain.Frontal.Cortex.BA9&quot;
-## [1] &quot;male&quot;
-## [1] 17655   154
-## [1] 12806   154
-## [1] &quot;Brain.Frontal.Cortex.BA9&quot;
-## [1] &quot;female&quot;
-## [1] 17655    57
-## [1] 12852    57
-## [1] &quot;Brain.Frontal.Cortex.BA9&quot;
-## [1] &quot;&quot;
-## [1] 17655   210
-## [1] 12818   210
-## [1] &quot;Brain.Caudate.basal.ganglia&quot;
-## [1] &quot;male&quot;
-## [1] 17655   184
-## [1] 12642   184
-## [1] &quot;Brain.Caudate.basal.ganglia&quot;
-## [1] &quot;female&quot;
-## [1] 17655    64
-## [1] 12612    64
-## [1] &quot;Brain.Caudate.basal.ganglia&quot;
-## [1] &quot;&quot;
-## [1] 17655   247
-## [1] 12637   247
-## [1] &quot;Brain.Nucleus.accumbens.basal.ganglia&quot;
-## [1] &quot;male&quot;
-## [1] 17655   183
-## [1] 12625   183
-## [1] &quot;Brain.Nucleus.accumbens.basal.ganglia&quot;
-## [1] &quot;female&quot;
-## [1] 17655    65
-## [1] 12684    65
-## [1] &quot;Brain.Nucleus.accumbens.basal.ganglia&quot;
-## [1] &quot;&quot;
-## [1] 17655   247
-## [1] 12642   247
-## [1] &quot;Brain.Putamen.basal.ganglia&quot;
-## [1] &quot;male&quot;
-## [1] 17655   157
-## [1] 12287   157
-## [1] &quot;Brain.Putamen.basal.ganglia&quot;
-## [1] &quot;female&quot;
-## [1] 17655    50
-## [1] 12264    50
-## [1] &quot;Brain.Putamen.basal.ganglia&quot;
-## [1] &quot;&quot;
-## [1] 17655   206
-## [1] 12292   206
-## [1] &quot;Brain.Hypothalamus&quot;
-## [1] &quot;male&quot;
-## [1] 17655   148
-## [1] 12928   148
-## [1] &quot;Brain.Hypothalamus&quot;
-## [1] &quot;female&quot;
-## [1] 17655    56
-## [1] 12879    56
-## [1] &quot;Brain.Hypothalamus&quot;
-## [1] &quot;&quot;
-## [1] 17655   203
-## [1] 12906   203
-## [1] &quot;Brain.Spinal.cord.cervical.c-1&quot;
-## [1] &quot;male&quot;
-## [1] 17655   103
-## [1] 12676   103
-## [1] &quot;Brain.Spinal.cord.cervical.c-1&quot;
-## [1] &quot;female&quot;
-## [1] 17655    58
-## [1] 12621    58
-## [1] &quot;Brain.Spinal.cord.cervical.c-1&quot;
-## [1] &quot;&quot;
-## [1] 17655   160
-## [1] 12672   160
-## [1] &quot;Brain.Hippocampus&quot;
-## [1] &quot;male&quot;
-## [1] 17655   144
-## [1] 12440   144
-## [1] &quot;Brain.Hippocampus&quot;
-## [1] &quot;female&quot;
-## [1] 17655    55
-## [1] 12395    55
-## [1] &quot;Brain.Hippocampus&quot;
-## [1] &quot;&quot;
-## [1] 17655   198
-## [1] 12429   198
-## [1] &quot;Brain.Anterior.cingulate.cortex.BA24&quot;
-## [1] &quot;male&quot;
-## [1] 17655   129
-## [1] 12520   129
-## [1] &quot;Brain.Anterior.cingulate.cortex.BA24&quot;
-## [1] &quot;female&quot;
-## [1] 17655    49
-## [1] 12555    49
-## [1] &quot;Brain.Anterior.cingulate.cortex.BA24&quot;
-## [1] &quot;&quot;
-## [1] 17655   177
-## [1] 12528   177
-## [1] &quot;Ovary&quot;
-## [1] &quot;male&quot;
-## [1] &quot;Ovary&quot;
-## [1] &quot;female&quot;
-## [1] 17655   179
-## [1] 12716   179
-## [1] &quot;Ovary&quot;
-## [1] &quot;&quot;
-## [1] 17655   179
-## [1] 12716   179
-## [1] &quot;Brain.Cerebellar.Hemisphere&quot;
-## [1] &quot;male&quot;
-## [1] 17655   158
-## [1] 12707   158
-## [1] &quot;Brain.Cerebellar.Hemisphere&quot;
-## [1] &quot;female&quot;
-## [1] 17655    59
-## [1] 12678    59
-## [1] &quot;Brain.Cerebellar.Hemisphere&quot;
-## [1] &quot;&quot;
-## [1] 17655   216
-## [1] 12699   216
-## [1] &quot;Liver&quot;
-## [1] &quot;male&quot;
-## [1] 17655   162
-## [1] 11152   162
-## [1] &quot;Liver&quot;
-## [1] &quot;female&quot;
-## [1] 17655    65
-## [1] 11308    65
-## [1] &quot;Liver&quot;
-## [1] &quot;&quot;
-## [1] 17655   226
-## [1] 11195   226
-## [1] &quot;Brain.Substantia.nigra&quot;
-## [1] &quot;male&quot;
-## [1] 17655   102
-## [1] 12427   102
-## [1] &quot;Brain.Substantia.nigra&quot;
-## [1] &quot;female&quot;
-## [1] 17655    39
-## [1] 12422    39
-## [1] &quot;Brain.Substantia.nigra&quot;
-## [1] &quot;&quot;
-## [1] 17655   140
-## [1] 12432   140
-## [1] &quot;Kidney.Cortex&quot;
-## [1] &quot;male&quot;
-## [1] 17655    67
-## [1] 12345    67
-## [1] &quot;Kidney.Cortex&quot;
-## [1] &quot;female&quot;
-## [1] 17655    20
-## [1] 12516    20
-## [1] &quot;Kidney.Cortex&quot;
-## [1] &quot;&quot;
-## [1] 17655    86
-## [1] 12392    86
-## [1] &quot;Brain.Amygdala&quot;
-## [1] &quot;male&quot;
-## [1] 17655   108
-## [1] 12324   108
-## [1] &quot;Brain.Amygdala&quot;
-## [1] &quot;female&quot;
-## [1] 17655    46
-## [1] 12506    46
-## [1] &quot;Brain.Amygdala&quot;
-## [1] &quot;&quot;
-## [1] 17655   153
-## [1] 12370   153
-## [1] &quot;Cervix.Ectocervix&quot;
-## [1] &quot;male&quot;
-## [1] &quot;Cervix.Ectocervix&quot;
-## [1] &quot;female&quot;
-## [1] &quot;Cervix.Ectocervix&quot;
-## [1] &quot;&quot;
-## [1] &quot;Fallopian.Tube&quot;
-## [1] &quot;male&quot;
-## [1] &quot;Fallopian.Tube&quot;
-## [1] &quot;female&quot;
-## [1] &quot;Fallopian.Tube&quot;
-## [1] &quot;&quot;
-## [1] &quot;Cervix.Endocervix&quot;
-## [1] &quot;male&quot;
-## [1] &quot;Cervix.Endocervix&quot;
-## [1] &quot;female&quot;
-## [1] &quot;Cervix.Endocervix&quot;
-## [1] &quot;&quot;
-## [1] &quot;Bladder&quot;
-## [1] &quot;male&quot;
-## [1] 17655    15
-## [1] 12959    15
-## [1] &quot;Bladder&quot;
-## [1] &quot;female&quot;
-## [1] &quot;Bladder&quot;
-## [1] &quot;&quot;
-## [1] 17655    22
-## [1] 12911    22
-## [1] &quot;Kidney.Medulla&quot;
-## [1] &quot;male&quot;
-## [1] &quot;Kidney.Medulla&quot;
-## [1] &quot;female&quot;
-## [1] &quot;Kidney.Medulla&quot;
-## [1] &quot;&quot;</code></pre>
-<pre class="r"><code>rm(tpm_df)
-rm(tpm_tissue_sex_df)
-rm(tpm_tissue_sex_filt_df)
-rm(info_df)
-rm(info_filt_df)</code></pre>
+<pre><code>## [1] 34831 17383</code></pre>
 </div>
 
 

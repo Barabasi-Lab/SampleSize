@@ -26,7 +26,6 @@ set.seed(1510)
 ```{r define_files}
 # Define working directories
 databases_dir = '/home/j.aguirreplans/Databases'
-#databases_dir = '/Users/j.aguirreplans/Databases'
 
 # Define input files
 subjects_file = paste(databases_dir, 'GTEx/v8/GTEx_Analysis_v8_Annotations_SubjectPhenotypesDS.txt', sep='/')
@@ -94,6 +93,9 @@ print(length(unique(samples_df$SAMPID)))
 head(samples_df)
 
 ```
+
+
+### Merge sample with subject data
 
 We filter the samples by just keeping the ones present in the TPM data:
 
