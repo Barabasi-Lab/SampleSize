@@ -23,18 +23,15 @@ set.seed(1510)
 
 ```{r define_files}
 # Define working directories
-databases_dir = '/home/j.aguirreplans/Databases'
-#databases_dir = '/Users/j.aguirreplans/Databases'
 output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data'
-#output_dir = '/Users/quim/Documents/DATA/BioGroup/Scipher/data'
 
-# Define input files and dirs
+# Define input file
 samples_subjects_file = '/home/j.aguirreplans/Databases/GTEx/v8/GTEx_Annotations_SamplesSubjectsMerged.txt'
 
 ```
 
 ```{r read_files}
-# Read input files
+# Read input file
 samples_df = fread(samples_subjects_file)
 
 ```
@@ -46,7 +43,6 @@ We define the list of tissues that we want to analyze:
 ```{r}
 tissues <- unique(samples_df$SMTSD.no.sp.char)
 #tissues <- c('Spleen', 'Whole.Blood')
-
 ```
 
 We define the sampling function:
@@ -86,7 +82,6 @@ create_random_subsamples_with_replacement <- function(samples_list, size_list, r
   }
   return(subsamples_df)
 }
-
 ```
 
 For each tissue and sex, we select groups of samples from different sizes:
@@ -123,6 +118,5 @@ for (tissue in tissues){
     }
   }
 }
-
 ```
 

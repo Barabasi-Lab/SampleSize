@@ -354,160 +354,193 @@ pre code {
 
 <div id="description" class="section level2">
 <h2>Description</h2>
-<p>Preprocess GTEx data (version v8).</p>
+<p>Pre-process GTEx data (version v8) before creating gene co-expression networks.</p>
 <pre class="r"><code>library(data.table)
 library(dplyr)
 library(ggplot2)
+require(magrittr)
 library(tidyr)
 library(igraph)
-set.seed(1510)</code></pre>
+set.seed(1510)
+`%ni%` &lt;- Negate(`%in%`)</code></pre>
+</div>
+<div id="define-variables" class="section level2">
+<h2>Define variables</h2>
+<pre class="r"><code># Define working directories
+gtex_dir = '/home/j.aguirreplans/Databases/GTEx/v8'
+gene_annotations_dir = '/home/j.aguirreplans/data/gene_annotations/data/out'
+gene_associations_dir = '/home/j.aguirreplans/data/gene_associations/data/out'
+
+# Define input files
+samples_subjects_file = paste(gtex_dir, 'GTEx_Annotations_SamplesSubjectsMerged.txt', sep='/')
+tpm_file = paste(gtex_dir, 'GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_tpm.gct', sep='/')</code></pre>
 </div>
 <div id="read-files" class="section level2">
 <h2>Read files</h2>
-<pre class="r"><code># Define working directories
-databases_dir = '/home/j.aguirreplans/Databases'
-#databases_dir = '/Users/j.aguirreplans/Databases'
-ppi_dir = '/home/j.aguirreplans/data/PPI'
-deisy_dicts_dir = '/home/j.aguirreplans/data/DeisyDictionaries'
-
-# Define input files
-samples_subjects_file = paste(databases_dir, 'GTEx/v8/GTEx_Annotations_SamplesSubjectsMerged.txt', sep='/')
-tpm_file = paste(databases_dir, 'GTEx/v8/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_tpm.gct', sep='/')
-ppi_network_symbol_file = paste(ppi_dir, 'interactome_2019_merged_symbols.csv', sep='/')
-gene_names_dict_file = paste(deisy_dicts_dir, 'Gene_Names_Dic.csv', sep='/')
-gene_names_cat_file = paste(deisy_dicts_dir, 'Gene_Names_Cat.csv', sep='/')
-gene_type_file = paste(deisy_dicts_dir, 'gene_type.csv', sep='/')
-
-# Define output files and dirs
-tpm_no_duplicates_file = paste(databases_dir, 'GTEx/v8/GTEx_RNASeq_gene_tpm_no_duplicates.gct', sep='/')
-tpm_only_ppi_file = paste(databases_dir, 'GTEx/v8/GTEx_RNASeq_gene_tpm_only_ppi.gct', sep='/')
-tpm_ppi_filt_dir = paste(databases_dir, 'GTEx/v8/tpm_filtered_files_by_tissue_and_ppi_genes', sep='/')
-tpm_filt_dir = paste(databases_dir, 'GTEx/v8/tpm_filtered_files_by_tissue', sep='/')
-genes_filt_dir = paste(databases_dir, 'GTEx/v8/genes_filtered_files_by_tissue', sep='/')
-ppi_filt_dir = paste(ppi_dir, 'interactome_tissue_specific', sep='/')</code></pre>
-<pre class="r"><code># Read input files
-samples_df = fread(samples_subjects_file)
-tpm_df = fread(tpm_file)</code></pre>
+<pre class="r"><code>tpm_df = fread(tpm_file)</code></pre>
+<p>The raw GTEx dataframe contains 17382 sample IDs (as columns) and 56200 genes (as rows) described in the first two columns as <strong><em>Name</em></strong> (Ensembl ID) and <strong><em>Description</em></strong> (HGNC symbol).</p>
+<pre class="r"><code>head(tpm_df[1:10,1:5])</code></pre>
+<pre><code>##                 Name Description GTEX-1117F-0226-SM-5GZZ7
+## 1: ENSG00000223972.5     DDX11L1                  0.00000
+## 2: ENSG00000227232.5      WASH7P                  8.76400
+## 3: ENSG00000278267.1   MIR6859-1                  0.00000
+## 4: ENSG00000243485.5 MIR1302-2HG                  0.07187
+## 5: ENSG00000237613.2     FAM138A                  0.00000
+## 6: ENSG00000268020.3      OR4G4P                  0.00000
+##    GTEX-1117F-0426-SM-5EGHI GTEX-1117F-0526-SM-5EGHJ
+## 1:                    0.000                    0.000
+## 2:                    3.861                    7.349
+## 3:                    0.000                    1.004
+## 4:                    0.000                    0.000
+## 5:                    0.000                    0.000
+## 6:                    0.056                    0.000</code></pre>
+<pre class="r"><code>samples_df = fread(samples_subjects_file)</code></pre>
+<p>The samples are described in the samples dataframe, which contains information about the subject and tissue of the sample:</p>
+<pre class="r"><code>head(samples_df)</code></pre>
+<pre><code>##                      SAMPID     SUBJID SEX   AGE DTHHRDY           SMTS
+## 1: GTEX-1117F-0226-SM-5GZZ7 GTEX-1117F   2 60-69       4 Adipose Tissue
+## 2: GTEX-1117F-0426-SM-5EGHI GTEX-1117F   2 60-69       4         Muscle
+## 3: GTEX-1117F-0526-SM-5EGHJ GTEX-1117F   2 60-69       4   Blood Vessel
+## 4: GTEX-1117F-0626-SM-5N9CS GTEX-1117F   2 60-69       4   Blood Vessel
+## 5: GTEX-1117F-0726-SM-5GIEN GTEX-1117F   2 60-69       4          Heart
+## 6: GTEX-1117F-1326-SM-5EGHH GTEX-1117F   2 60-69       4 Adipose Tissue
+##                           SMTSD SMTS.no.sp.char         SMTSD.no.sp.char
+## 1:       Adipose - Subcutaneous  Adipose.Tissue     Adipose.Subcutaneous
+## 2:            Muscle - Skeletal          Muscle          Muscle.Skeletal
+## 3:              Artery - Tibial    Blood.Vessel            Artery.Tibial
+## 4:            Artery - Coronary    Blood.Vessel          Artery.Coronary
+## 5:     Heart - Atrial Appendage           Heart   Heart.Atrial.Appendage
+## 6: Adipose - Visceral (Omentum)  Adipose.Tissue Adipose.Visceral.Omentum</code></pre>
+<p>We filter the samples in the TPM file by keeping the ones that are in the samples information file:</p>
+<pre class="r"><code>dim(tpm_df[,-2])</code></pre>
+<pre><code>## [1] 56200 17383</code></pre>
+<pre class="r"><code>tpm_df &lt;- tpm_df %&gt;% select(c(&quot;Name&quot;, &quot;Description&quot;, samples_df$SAMPID))
+dim(tpm_df[,-2])</code></pre>
+<pre><code>## [1] 56200 17272</code></pre>
+<p>We end up having a gene expression matrix of 17271 sample IDs (as columns) and 56200 genes (as rows).</p>
 </div>
-<div id="calculate-the-median-expression-of-genes-that-have-the-same-symbol" class="section level2">
-<h2>Calculate the median expression of genes that have the same symbol</h2>
-<p>There are ENSEMBL genes that have the same symbol. They are probably isoforms:</p>
+<div id="gene-pre-processing" class="section level2">
+<h2>Gene pre-processing</h2>
+<div id="merge-repeated-hgnc-symbols" class="section level3">
+<h3>Merge repeated HGNC symbols</h3>
+<p>The genes in GTEx are annotated both as Ensembl IDs and HGNC symbols. We only want to keep HGNC symbol annotations. However, there are Ensembl IDs with the same HGNC symbols, probably isoforms:</p>
 <pre class="r"><code>repeated_genes &lt;- unique(tpm_df$Description[duplicated(tpm_df$Description)])
-length(repeated_genes)</code></pre>
-<pre><code>## [1] 199</code></pre>
-<pre class="r"><code>tpm_df[tpm_df$Description %in% repeated_genes[1:10],][,c(&quot;Name&quot;, &quot;Description&quot;)][order(Description),]</code></pre>
-<pre><code>##                    Name Description
-##    1: ENSG00000277313.1         7SK
-##    2: ENSG00000275933.1         7SK
-##    3: ENSG00000273591.1         7SK
-##    4: ENSG00000202198.1         7SK
-##    5: ENSG00000274303.1         7SK
-##   ---                              
-## 1083: ENSG00000277413.1      uc_338
-## 1084: ENSG00000274051.1      uc_338
-## 1085: ENSG00000278643.1      uc_338
-## 1086: ENSG00000275958.1      uc_338
-## 1087: ENSG00000278218.1      uc_338</code></pre>
-<p>We will merge these genes by calculating the median expression between them:</p>
-<pre class="r"><code>dim(tpm_df)</code></pre>
-<pre><code>## [1] 56200 17384</code></pre>
-<pre class="r"><code>if (!(file.exists(tpm_no_duplicates_file))){
+tpm_df[tpm_df$Description %in% repeated_genes[1:10],][1:10,1:5][order(Description),]</code></pre>
+<pre><code>##                  Name Description GTEX-1117F-0226-SM-5GZZ7
+##  1: ENSG00000252404.1    SCARNA16                   0.6765
+##  2: ENSG00000278757.1          U6                   0.0000
+##  3: ENSG00000200344.1       Y_RNA                   0.0000
+##  4: ENSG00000252254.1       Y_RNA                   0.0000
+##  5: ENSG00000222511.2       Y_RNA                   0.0000
+##  6: ENSG00000202461.1       Y_RNA                   1.1020
+##  7: ENSG00000239106.1       Y_RNA                   0.0000
+##  8: ENSG00000207302.1       Y_RNA                   0.0000
+##  9: ENSG00000252802.1       Y_RNA                   0.0000
+## 10: ENSG00000238316.1      snoU13                   0.0000
+##     GTEX-1117F-0426-SM-5EGHI GTEX-1117F-0526-SM-5EGHJ
+##  1:                   0.0000                   0.0000
+##  2:                   0.0000                   0.0000
+##  3:                   0.9134                   0.6626
+##  4:                   0.8325                   0.6040
+##  5:                   0.0000                   0.0000
+##  6:                   0.0000                   1.8120
+##  7:                   0.0000                   0.0000
+##  8:                   0.0000                   0.0000
+##  9:                   0.0000                   0.0000
+## 10:                   0.0000                   0.0000</code></pre>
+<p>In total, there are 199 repeated HGNC symbols. We merge these genes by calculating the median expression between them:</p>
+<pre class="r"><code>tpm_no_duplicates_file = paste(gtex_dir, 'GTEx_RNASeq_gene_tpm_no_duplicates.gct', sep='/')
+if (!(file.exists(tpm_no_duplicates_file))){
   tpm_df = subset(tpm_df, select=-Name)
   repeated_genes_aggregated = aggregate(.~Description, tpm_df[tpm_df$Description %in% repeated_genes,], median)
-  tpm_df = rbind(tpm_df[!(tpm_df$Description %in% repeated_genes),], repeated_genes_aggregated)
+  tpm_df = rbind(tpm_df[!(tpm_df$Description %in% repeated_genes),], repeated_genes_aggregated) %&gt;% rename(&quot;Gene&quot;=&quot;Description&quot;)
   fwrite(tpm_df, tpm_no_duplicates_file)
 } else {
   tpm_df = fread(tpm_no_duplicates_file)
-}
-dim(tpm_df)</code></pre>
-<pre><code>## [1] 54592 17383</code></pre>
+}</code></pre>
+<p>After merging the repeated HGNC symbols, we end up having a gene expression matrix of 17271 sample IDs (as columns) and 54592 genes (as rows).</p>
+<pre class="r"><code>tpm_df[tpm_df$Gene %in% repeated_genes[1:10],][1:10,1:5][order(Gene),]</code></pre>
+<pre><code>##            Gene GTEX-1117F-0226-SM-5GZZ7 GTEX-1117F-0426-SM-5EGHI
+##  1:         7SK                        0                        0
+##  2: Metazoa_SRP                        0                        0
+##  3:    SCARNA16                        0                        0
+##  4:     SNORA63                        0                        0
+##  5:          U1                        0                        0
+##  6:          U3                        0                        0
+##  7:          U6                        0                        0
+##  8:       Y_RNA                        0                        0
+##  9:      snoU13                        0                        0
+## 10:      uc_338                        0                        0
+##     GTEX-1117F-0526-SM-5EGHJ GTEX-1117F-0626-SM-5N9CS
+##  1:                        0                        0
+##  2:                        0                        0
+##  3:                        0                        0
+##  4:                        0                        0
+##  5:                        0                        0
+##  6:                        0                        0
+##  7:                        0                        0
+##  8:                        0                        0
+##  9:                        0                        0
+## 10:                        0                        0</code></pre>
 </div>
-<div id="select-genes-with-known-annotations" class="section level2">
-<h2>Select genes with known annotations</h2>
-<pre class="r"><code># Select genes from the initial dataset with known annotation
-tpm_df$Description = toupper(tpm_df$Description)
-genes_dataset_raw = unique(tpm_df$Description)
-print(length(genes_dataset_raw))</code></pre>
-<pre><code>## [1] 54592</code></pre>
-<pre class="r"><code># Read gene annotations and select the clean dataset of genes
-gene_type_df = fread(gene_type_file) %&gt;% unique()
-gene_type_df$symbol = toupper(gene_type_df$symbol)
-length(gene_type_df$symbol)</code></pre>
-<pre><code>## [1] 43017</code></pre>
-<pre class="r"><code>table(gene_type_df$gene_type)</code></pre>
-<pre><code>## 
-## gene with protein product                     other                pseudogene 
-##                     19208                      1482                     13716 
-##      RNA, long non-coding                RNA, micro        RNA, small nuclear 
-##                      5488                      1914                        50 
-##      RNA, small nucleolar             RNA, transfer 
-##                       568                       591</code></pre>
-<pre class="r"><code>round(prop.table(table(gene_type_df$gene_type))*100,2)</code></pre>
-<pre><code>## 
-## gene with protein product                     other                pseudogene 
-##                     44.65                      3.45                     31.89 
-##      RNA, long non-coding                RNA, micro        RNA, small nuclear 
-##                     12.76                      4.45                      0.12 
-##      RNA, small nucleolar             RNA, transfer 
-##                      1.32                      1.37</code></pre>
-<pre class="r"><code>genes_dataset_clean = genes_dataset_raw[genes_dataset_raw %in% gene_type_df$symbol]
-print(length(genes_dataset_clean))</code></pre>
-<pre><code>## [1] 34831</code></pre>
-<pre class="r"><code># Merge both gene datasets with dataframe of gene categories
-genes_dataset_clean_df = gene_type_df %&gt;% filter(symbol %in% genes_dataset_clean) %&gt;% unique()
-table(genes_dataset_clean_df$gene_type)</code></pre>
-<pre><code>## 
-## gene with protein product                     other                pseudogene 
-##                     18327                       807                     10608 
-##      RNA, long non-coding                RNA, micro        RNA, small nuclear 
-##                      3128                      1556                        32 
-##      RNA, small nucleolar             RNA, transfer 
-##                       350                        23</code></pre>
-<pre class="r"><code>round(prop.table(table(genes_dataset_clean_df$gene_type))*100,2)</code></pre>
-<pre><code>## 
-## gene with protein product                     other                pseudogene 
-##                     52.62                      2.32                     30.46 
-##      RNA, long non-coding                RNA, micro        RNA, small nuclear 
-##                      8.98                      4.47                      0.09 
-##      RNA, small nucleolar             RNA, transfer 
-##                      1.00                      0.07</code></pre>
-<pre class="r"><code># Find genes without symbol
-genes_not_symbol = genes_dataset_raw[(!genes_dataset_raw %in% unique(genes_dataset_clean_df$symbol))]
-print(genes_not_symbol[1:20])</code></pre>
-<pre><code>##  [1] &quot;RP11-34P13.7&quot;      &quot;RP11-34P13.15&quot;     &quot;RP11-34P13.16&quot;    
-##  [4] &quot;RP11-34P13.14&quot;     &quot;RP11-34P13.13&quot;     &quot;RP11-34P13.9&quot;     
-##  [7] &quot;ABC7-43046700E7.1&quot; &quot;RP11-34P13.18&quot;     &quot;AP006222.2&quot;       
-## [10] &quot;RP5-857K21.15&quot;     &quot;RP4-669L17.2&quot;      &quot;RP4-669L17.10&quot;    
-## [13] &quot;RP4-669L17.8&quot;      &quot;RP5-857K21.4&quot;      &quot;RP5-857K21.2&quot;     
-## [16] &quot;RP11-206L10.17&quot;    &quot;RP11-206L10.2&quot;     &quot;RP11-206L10.4&quot;    
-## [19] &quot;RP11-206L10.9&quot;     &quot;RP11-206L10.8&quot;</code></pre>
-<pre class="r"><code>print(length(genes_not_symbol))</code></pre>
-<pre><code>## [1] 19761</code></pre>
-<pre class="r"><code>#genes_not_symbol = genes_not_symbol[(!(toupper(gsub(&quot;_&quot;, &quot;&quot;, genes_not_symbol))) %in% toupper(all_genes_and_synonyms))]
-#gene_names_dict = fread(gene_names_dict_file)
-#genes_not_symbol_synonyms = genes_not_symbol[genes_not_symbol %in% gene_names_dict$Alias]
-#genes_not_symbol_dict = gene_names_dict %&gt;% filter(Alias %in% genes_not_symbol_synonyms)
-
-tpm_df = tpm_df %&gt;% filter(Description %in% genes_dataset_clean_df$symbol)
+<div id="keep-genes-properly-annotated-and-classified-by-the-hgnc-database" class="section level3">
+<h3>Keep genes properly annotated and classified by the HGNC database</h3>
+<p><a href="https://www.genenames.org/">HGNC</a> is a database of annotation, description and classification of genes. We use the information in this database to keep the genes that have been properly annotated using HGNC symbols and classified in different gene categories. We use the file <code>hgnc_category_set_2022-01-01.txt</code>, which is a dataframe that has been created after parsing and processing the HGNC database:</p>
+<pre class="r"><code>gene_annotations_dir = '/home/j.aguirreplans/data/gene_annotations/data/out'
+gene_category_file = paste(gene_annotations_dir, 'hgnc_category_set_2022-01-01.txt', sep='/')
+gene_category_df = fread(gene_category_file)
+gene_category_df$HGNC_Symbol = toupper(gene_category_df$HGNC_Symbol)
+head(gene_category_df)</code></pre>
+<pre><code>##    HGNC_Symbol       HGNC_category       HGNC_category_short
+## 1:        A1BG protein-coding gene gene with protein product
+## 2:    A1BG-AS1      non-coding RNA      RNA, long non-coding
+## 3:        A1CF protein-coding gene gene with protein product
+## 4:         A2M protein-coding gene gene with protein product
+## 5:     A2M-AS1      non-coding RNA      RNA, long non-coding
+## 6:       A2ML1 protein-coding gene gene with protein product</code></pre>
+<p>We use this dataframe to map gene category, and we only keep genes that are in this dataframe:</p>
+<pre class="r"><code>dim(tpm_df)</code></pre>
+<pre><code>## [1] 54592 17272</code></pre>
+<pre class="r"><code>genes_with_category = tpm_df$Gene[tpm_df$Gene %in% gene_category_df$HGNC_Symbol]
+tpm_df %&lt;&gt;% filter(Gene %in% genes_with_category)
 dim(tpm_df)</code></pre>
-<pre><code>## [1] 34831 17383</code></pre>
+<pre><code>## [1] 34487 17272</code></pre>
+<p>The filtered dataframe contains17271 sample IDs (as columns) and 34487 genes with category (as rows).</p>
+<p>It contains the following number of genes for each category:</p>
+<pre class="r"><code>gtex_gene_category_df = gene_category_df %&gt;% filter(HGNC_Symbol %in% genes_with_category) %&gt;% unique
+table(gtex_gene_category_df$HGNC_category)</code></pre>
+<pre><code>## 
+##      non-coding RNA               other protein-coding gene          pseudogene 
+##                5054                 534               18064               10835</code></pre>
+<pre class="r"><code>round(prop.table(table(gtex_gene_category_df$HGNC_category))*100,2)</code></pre>
+<pre><code>## 
+##      non-coding RNA               other protein-coding gene          pseudogene 
+##               14.65                1.55               52.38               31.42</code></pre>
+<pre class="r"><code># Keep the information in a file
+genes_dataset_file = paste(gtex_dir, &quot;gtex_rnaseq_gene_info.csv&quot;, sep='/')
+fwrite(gtex_gene_category_df, genes_dataset_file)</code></pre>
 </div>
-<div id="remove-genes-with-low-tpm-expression" class="section level2">
-<h2>Remove genes with low TPM expression</h2>
-<p>We filter the samples in the TPM file by keeping the ones that are in the samples information file:</p>
-<pre class="r"><code>dim(tpm_df[,-1])</code></pre>
-<pre><code>## [1] 34831 17382</code></pre>
-<pre class="r"><code>tpm_df &lt;- tpm_df %&gt;% select(c(&quot;Description&quot;, samples_df$SAMPID))
-dim(tpm_df[,-1])</code></pre>
-<pre><code>## [1] 34831 17271</code></pre>
-<pre class="r"><code>length(samples_df$SAMPID)</code></pre>
-<pre><code>## [1] 17271</code></pre>
-<p>We filter the low expressed genes for each tissue and sex:</p>
-<pre class="r"><code>sex_to_id = data.frame(row.names=c(&quot;male&quot;,&quot;female&quot;, &quot;&quot;) , val=c(1,2,&quot;&quot;))
+<div id="filter-genes-with-low-counts" class="section level3">
+<h3>Filter genes with low counts</h3>
+<p>We filter the genes that have low expression in most of the samples of each tissue/sex, keeping the ones that meet these rules:</p>
+<ul>
+<li>Sum of the expression of all samples above 0.</li>
+<li>Mean of the expression of all samples above 1.</li>
+<li>Median of the expression of all samples above 1.</li>
+<li>Standard deviation of all samples above 0.</li>
+<li>More than half of the genes with counts above 0.</li>
+</ul>
+<pre class="r"><code>tpm_filt_dir = paste(gtex_dir, 'tpm_filtered_files_by_tissue', sep='/')
+genes_filt_dir = paste(gtex_dir, 'genes_filtered_files_by_tissue', sep='/')
+dir.create(tpm_filt_dir, showWarnings = FALSE)
+dir.create(genes_filt_dir, showWarnings = FALSE)
+cols = c(&quot;tissue&quot;, &quot;sex&quot;, &quot;n_genes_raw&quot;, &quot;n_genes_processed&quot;, &quot;sum&quot;,  &quot;mean&quot;, &quot;median&quot;, &quot;sd&quot;, &quot;zero_sum_counts&quot;)
+statistics_low_counts_df &lt;- setNames(data.frame(matrix(ncol = length(cols), nrow = 0)), cols)
+sex_to_id = data.frame(row.names=c(&quot;male&quot;,&quot;female&quot;, &quot;&quot;) , val=c(1,2,&quot;&quot;))
 for (tissue in unique(samples_df$SMTSD.no.sp.char)){
   for (sex in rownames(sex_to_id)){
-    print(tissue)
-    print(sex)
+    
+    # Get the samples of the selected tissue/sex
     if (sex == &quot;&quot;){
       samples_tissue_sex = samples_df[samples_df$SMTSD.no.sp.char == tissue,]$SAMPID
       tpm_tissue_sex_filt_file = paste(tpm_filt_dir, paste(&quot;gtex_rnaseq_&quot;, tissue, &quot;.gct&quot;, sep=''), sep='/')
@@ -518,702 +551,215 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
       tpm_tissue_sex_filt_file = paste(tpm_filt_dir, paste(&quot;gtex_rnaseq_&quot;, tissue, &quot;_&quot;, sex, &quot;.gct&quot;, sep=''), sep='/')
       genes_dataset_filt_file = paste(genes_filt_dir, paste(&quot;gtex_rnaseq_gene_info_&quot;, tissue, &quot;_&quot;, sex, &quot;.csv&quot;, sep=''), sep='/')
     }
+    
+    # Consider only tissue/sex combinations of more than 10 samples
     if (length(samples_tissue_sex) &gt; 10){
-      tpm_tissue_sex_df = tpm_df %&gt;% select(c(&quot;Description&quot;, all_of(samples_tissue_sex)))
-      print(dim(tpm_tissue_sex_df))
+      # Select expression from selected samples
+      tpm_tissue_sex_df = tpm_df %&gt;% select(c(&quot;Gene&quot;, all_of(samples_tissue_sex)))
       # Calculate metrics of expression
-      info_df = data.frame(Description=tpm_tissue_sex_df$Description, sum=rowSums(tpm_tissue_sex_df[,-1]))
+      info_df = data.frame(Gene=tpm_tissue_sex_df$Gene, sum=rowSums(tpm_tissue_sex_df[,-1]))
       info_df$sd = apply(tpm_tissue_sex_df[,-1], 1, sd)
       info_df$mean = rowMeans(tpm_tissue_sex_df[,-1])
       info_df$median = apply(tpm_tissue_sex_df[,-1], 1, median)
-      info_df$zero_sum_counts = as.numeric(apply(tpm_tissue_sex_df[,-1], 1, function(i) sum(i == 0) )) # Number of times that the sum of the TPMs is equal to 0
+      info_df$zero_sum_counts = as.numeric(apply(tpm_tissue_sex_df[,-1], 1, function(i) sum(i == 0) )) # Number of times that the counts are equal to 0
       # Filter low expressed genes
-      info_filt_df = info_df[(info_df$sum &gt; 0) &amp; (info_df$mean &gt; 0) &amp; (info_df$median &gt;= 1) &amp; (info_df$sd &gt; 0) &amp; (info_df$zero_sum_counts &lt; dim(tpm_tissue_sex_df[, -1])[2]/2) ,]
-      tpm_tissue_sex_filt_df = tpm_tissue_sex_df[tpm_tissue_sex_df$Description %in% info_filt_df$Description,] %&gt;% rename(&quot;Gene&quot;=&quot;Description&quot;)
-      print(dim(tpm_tissue_sex_filt_df))
+      info_filt_df = info_df[(info_df$sum &gt; 0) &amp; (info_df$mean &gt; 1) &amp; (info_df$median &gt; 1) &amp; (info_df$sd &gt; 0) &amp; (info_df$zero_sum_counts &lt; dim(tpm_tissue_sex_df[, -1])[2]/2) ,]
+      tpm_tissue_sex_filt_df = tpm_tissue_sex_df[tpm_tissue_sex_df$Gene %in% info_filt_df$Gene,]
       fwrite(tpm_tissue_sex_filt_df, tpm_tissue_sex_filt_file)
-      
-      # Get transposed matrix
-      #sample.ids &lt;- tpm_tissue_sex_filt_df[, 1][[1]]
-      #tpm_tissue_sex_filt_df &lt;- as.matrix(tpm_tissue_sex_filt_df[, -c(1)])
-      #rownames(tpm_tissue_sex_filt_df) &lt;- sample.ids
-      #tpm_tissue_sex_filt_df.t &lt;- t(as.matrix(tpm_tissue_sex_filt_df)) %&gt;% as.data.frame() 
-      #colnames(tpm_tissue_sex_filt_df.t) &lt;- rownames(tpm_tissue_sex_filt_df)
-      #tpm_tissue_sex_filt_df.t &lt;- cbind(Sample = colnames(tpm_tissue_sex_filt_df), tpm_tissue_sex_filt_df.t)
-      #tpm_tissue_sex_filt_file = paste(tpm_filt_dir, paste(&quot;GTEx_RNASeq_&quot;, tissue, &quot;_&quot;, sex, &quot;.gct&quot;, sep=''), sep='/')
-      #fwrite(tpm_tissue_sex_filt_df.t, tpm_tissue_sex_filt_file)
+      # Count statistics about the filter
+      statistics_low_counts_df = rbind(statistics_low_counts_df, data.frame(tissue=tissue, sex=sex, n_genes_raw=length(tpm_tissue_sex_df$Gene), n_genes_processed=length(tpm_tissue_sex_filt_df$Gene), sum=length(info_df[(info_df$sum &gt; 0),]$Gene), mean=length(info_df[(info_df$mean &gt; 1),]$Gene), median=length(info_df[(info_df$median &gt; 1),]$Gene), sd=length(info_df[(info_df$sd &gt; 0),]$Gene), zero_sum_counts=length(info_df[(info_df$zero_sum_counts &lt; dim(tpm_tissue_sex_df[, -1])[2]/2),]$Gene)))
       
       # Write gene info file
-      genes_dataset_filt_df = genes_dataset_clean_df
-      genes_dataset_filt_df$enough_counts = ifelse(genes_dataset_filt_df$symbol %in% info_filt_df$Description, TRUE, FALSE)
+      genes_dataset_filt_df = data.frame(gtex_gene_category_df)
+      genes_dataset_filt_df$enough_counts = ifelse(genes_dataset_filt_df$HGNC_Symbol %in% info_filt_df$Gene, TRUE, FALSE)
       fwrite(genes_dataset_filt_df, genes_dataset_filt_file)
 
     }
   }
-}</code></pre>
-<pre><code>## [1] &quot;Adipose.Subcutaneous&quot;
-## [1] &quot;male&quot;
-## [1] 34831   437
-## [1] 13957   437
-## [1] &quot;Adipose.Subcutaneous&quot;
-## [1] &quot;female&quot;
-## [1] 34831   216
-## [1] 13906   216
-## [1] &quot;Adipose.Subcutaneous&quot;
-## [1] &quot;&quot;
-## [1] 34831   652
-## [1] 13941   652
-## [1] &quot;Muscle.Skeletal&quot;
-## [1] &quot;male&quot;
-## [1] 34831   536
-## [1] 11339   536
-## [1] &quot;Muscle.Skeletal&quot;
-## [1] &quot;female&quot;
-## [1] 34831   257
-## [1] 11403   257
-## [1] &quot;Muscle.Skeletal&quot;
-## [1] &quot;&quot;
-## [1] 34831   792
-## [1] 11362   792
-## [1] &quot;Artery.Tibial&quot;
-## [1] &quot;male&quot;
-## [1] 34831   446
-## [1] 13492   446
-## [1] &quot;Artery.Tibial&quot;
-## [1] &quot;female&quot;
-## [1] 34831   207
-## [1] 13460   207
-## [1] &quot;Artery.Tibial&quot;
-## [1] &quot;&quot;
-## [1] 34831   652
-## [1] 13485   652
-## [1] &quot;Artery.Coronary&quot;
-## [1] &quot;male&quot;
-## [1] 34831   147
-## [1] 14065   147
-## [1] &quot;Artery.Coronary&quot;
-## [1] &quot;female&quot;
-## [1] 34831    95
-## [1] 14006    95
-## [1] &quot;Artery.Coronary&quot;
-## [1] &quot;&quot;
-## [1] 34831   241
-## [1] 14041   241
-## [1] &quot;Heart.Atrial.Appendage&quot;
-## [1] &quot;male&quot;
-## [1] 34831   294
-## [1] 12827   294
-## [1] &quot;Heart.Atrial.Appendage&quot;
-## [1] &quot;female&quot;
-## [1] 34831   137
-## [1] 12764   137
-## [1] &quot;Heart.Atrial.Appendage&quot;
-## [1] &quot;&quot;
-## [1] 34831   430
-## [1] 12816   430
-## [1] &quot;Adipose.Visceral.Omentum&quot;
-## [1] &quot;male&quot;
-## [1] 34831   372
-## [1] 14027   372
-## [1] &quot;Adipose.Visceral.Omentum&quot;
-## [1] &quot;female&quot;
-## [1] 34831   171
-## [1] 13864   171
-## [1] &quot;Adipose.Visceral.Omentum&quot;
-## [1] &quot;&quot;
-## [1] 34831   542
-## [1] 13978   542
-## [1] &quot;Uterus&quot;
-## [1] &quot;male&quot;
-## [1] &quot;Uterus&quot;
-## [1] &quot;female&quot;
-## [1] 34831   142
-## [1] 14424   142
-## [1] &quot;Uterus&quot;
-## [1] &quot;&quot;
-## [1] 34831   142
-## [1] 14424   142
-## [1] &quot;Vagina&quot;
-## [1] &quot;male&quot;
-## [1] &quot;Vagina&quot;
-## [1] &quot;female&quot;
-## [1] 34831   155
-## [1] 14788   155
-## [1] &quot;Vagina&quot;
-## [1] &quot;&quot;
-## [1] 34831   155
-## [1] 14788   155
-## [1] &quot;Breast.Mammary.Tissue&quot;
-## [1] &quot;male&quot;
-## [1] 34831   292
-## [1] 14021   292
-## [1] &quot;Breast.Mammary.Tissue&quot;
-## [1] &quot;female&quot;
-## [1] 34831   169
-## [1] 14850   169
-## [1] &quot;Breast.Mammary.Tissue&quot;
-## [1] &quot;&quot;
-## [1] 34831   460
-## [1] 14458   460
-## [1] &quot;Skin.Not.Sun.Exposed.Suprapubic&quot;
-## [1] &quot;male&quot;
-## [1] 34831   412
-## [1] 14242   412
-## [1] &quot;Skin.Not.Sun.Exposed.Suprapubic&quot;
-## [1] &quot;female&quot;
-## [1] 34831   194
-## [1] 14266   194
-## [1] &quot;Skin.Not.Sun.Exposed.Suprapubic&quot;
-## [1] &quot;&quot;
-## [1] 34831   605
-## [1] 14244   605
-## [1] &quot;Minor.Salivary.Gland&quot;
-## [1] &quot;male&quot;
-## [1] 34831   116
-## [1] 14396   116
-## [1] &quot;Minor.Salivary.Gland&quot;
-## [1] &quot;female&quot;
-## [1] 34831    48
-## [1] 14522    48
-## [1] &quot;Minor.Salivary.Gland&quot;
-## [1] &quot;&quot;
-## [1] 34831   163
-## [1] 14428   163
-## [1] &quot;Brain.Cortex&quot;
-## [1] &quot;male&quot;
-## [1] 34831   182
-## [1] 13981   182
-## [1] &quot;Brain.Cortex&quot;
-## [1] &quot;female&quot;
-## [1] 34831    75
-## [1] 13945    75
-## [1] &quot;Brain.Cortex&quot;
-## [1] &quot;&quot;
-## [1] 34831   256
-## [1] 13968   256
-## [1] &quot;Adrenal.Gland&quot;
-## [1] &quot;male&quot;
-## [1] 34831   158
-## [1] 13254   158
-## [1] &quot;Adrenal.Gland&quot;
-## [1] &quot;female&quot;
-## [1] 34831   102
-## [1] 13327   102
-## [1] &quot;Adrenal.Gland&quot;
-## [1] &quot;&quot;
-## [1] 34831   259
-## [1] 13286   259
-## [1] &quot;Thyroid&quot;
-## [1] &quot;male&quot;
-## [1] 34831   435
-## [1] 14946   435
-## [1] &quot;Thyroid&quot;
-## [1] &quot;female&quot;
-## [1] 34831   218
-## [1] 14898   218
-## [1] &quot;Thyroid&quot;
-## [1] &quot;&quot;
-## [1] 34831   652
-## [1] 14928   652
-## [1] &quot;Lung&quot;
-## [1] &quot;male&quot;
-## [1] 34831   396
-## [1] 15011   396
-## [1] &quot;Lung&quot;
-## [1] &quot;female&quot;
-## [1] 34831   182
-## [1] 15082   182
-## [1] &quot;Lung&quot;
-## [1] &quot;&quot;
-## [1] 34831   577
-## [1] 15027   577
-## [1] &quot;Spleen&quot;
-## [1] &quot;male&quot;
-## [1] 34831   155
-## [1] 14521   155
-## [1] &quot;Spleen&quot;
-## [1] &quot;female&quot;
-## [1] 34831    87
-## [1] 14506    87
-## [1] &quot;Spleen&quot;
-## [1] &quot;&quot;
-## [1] 34831   241
-## [1] 14509   241
-## [1] &quot;Pancreas&quot;
-## [1] &quot;male&quot;
-## [1] 34831   208
-## [1] 12268   208
-## [1] &quot;Pancreas&quot;
-## [1] &quot;female&quot;
-## [1] 34831   122
-## [1] 12131   122
-## [1] &quot;Pancreas&quot;
-## [1] &quot;&quot;
-## [1] 34831   329
-## [1] 12223   329
-## [1] &quot;Esophagus.Muscularis&quot;
-## [1] &quot;male&quot;
-## [1] 34831   339
-## [1] 13672   339
-## [1] &quot;Esophagus.Muscularis&quot;
-## [1] &quot;female&quot;
-## [1] 34831   177
-## [1] 13673   177
-## [1] &quot;Esophagus.Muscularis&quot;
-## [1] &quot;&quot;
-## [1] 34831   515
-## [1] 13677   515
-## [1] &quot;Esophagus.Mucosa&quot;
-## [1] &quot;male&quot;
-## [1] 34831   364
-## [1] 13847   364
-## [1] &quot;Esophagus.Mucosa&quot;
-## [1] &quot;female&quot;
-## [1] 34831   191
-## [1] 13853   191
-## [1] &quot;Esophagus.Mucosa&quot;
-## [1] &quot;&quot;
-## [1] 34831   554
-## [1] 13855   554
-## [1] &quot;Esophagus.Gastroesophageal.Junction&quot;
-## [1] &quot;male&quot;
-## [1] 34831   252
-## [1] 13793   252
-## [1] &quot;Esophagus.Gastroesophageal.Junction&quot;
-## [1] &quot;female&quot;
-## [1] 34831   125
-## [1] 13725   125
-## [1] &quot;Esophagus.Gastroesophageal.Junction&quot;
-## [1] &quot;&quot;
-## [1] 34831   376
-## [1] 13767   376
-## [1] &quot;Stomach&quot;
-## [1] &quot;male&quot;
-## [1] 34831   228
-## [1] 13674   228
-## [1] &quot;Stomach&quot;
-## [1] &quot;female&quot;
-## [1] 34831   132
-## [1] 13743   132
-## [1] &quot;Stomach&quot;
-## [1] &quot;&quot;
-## [1] 34831   359
-## [1] 13691   359
-## [1] &quot;Colon.Sigmoid&quot;
-## [1] &quot;male&quot;
-## [1] 34831   241
-## [1] 13957   241
-## [1] &quot;Colon.Sigmoid&quot;
-## [1] &quot;female&quot;
-## [1] 34831   134
-## [1] 13906   134
-## [1] &quot;Colon.Sigmoid&quot;
-## [1] &quot;&quot;
-## [1] 34831   374
-## [1] 13950   374
-## [1] &quot;Small.Intestine.Terminal.Ileum&quot;
-## [1] &quot;male&quot;
-## [1] 34831   121
-## [1] 14796   121
-## [1] &quot;Small.Intestine.Terminal.Ileum&quot;
-## [1] &quot;female&quot;
-## [1] 34831    68
-## [1] 14776    68
-## [1] &quot;Small.Intestine.Terminal.Ileum&quot;
-## [1] &quot;&quot;
-## [1] 34831   188
-## [1] 14793   188
-## [1] &quot;Colon.Transverse&quot;
-## [1] &quot;male&quot;
-## [1] 34831   260
-## [1] 14410   260
-## [1] &quot;Colon.Transverse&quot;
-## [1] &quot;female&quot;
-## [1] 34831   147
-## [1] 14339   147
-## [1] &quot;Colon.Transverse&quot;
-## [1] &quot;&quot;
-## [1] 34831   406
-## [1] 14390   406
-## [1] &quot;Prostate&quot;
-## [1] &quot;male&quot;
-## [1] 34831   246
-## [1] 15018   246
-## [1] &quot;Prostate&quot;
-## [1] &quot;female&quot;
-## [1] &quot;Prostate&quot;
-## [1] &quot;&quot;
-## [1] 34831   246
-## [1] 15018   246
-## [1] &quot;Testis&quot;
-## [1] &quot;male&quot;
-## [1] 34831   362
-## [1] 18401   362
-## [1] &quot;Testis&quot;
-## [1] &quot;female&quot;
-## [1] &quot;Testis&quot;
-## [1] &quot;&quot;
-## [1] 34831   362
-## [1] 18401   362
-## [1] &quot;Nerve.Tibial&quot;
-## [1] &quot;male&quot;
-## [1] 34831   415
-## [1] 14913   415
-## [1] &quot;Nerve.Tibial&quot;
-## [1] &quot;female&quot;
-## [1] 34831   197
-## [1] 14864   197
-## [1] &quot;Nerve.Tibial&quot;
-## [1] &quot;&quot;
-## [1] 34831   611
-## [1] 14902   611
-## [1] &quot;Skin.Sun.Exposed.Lower.leg&quot;
-## [1] &quot;male&quot;
-## [1] 34831   461
-## [1] 14333   461
-## [1] &quot;Skin.Sun.Exposed.Lower.leg&quot;
-## [1] &quot;female&quot;
-## [1] 34831   233
-## [1] 14297   233
-## [1] &quot;Skin.Sun.Exposed.Lower.leg&quot;
-## [1] &quot;&quot;
-## [1] 34831   693
-## [1] 14326   693
-## [1] &quot;Heart.Left.Ventricle&quot;
-## [1] &quot;male&quot;
-## [1] 34831   295
-## [1] 11519   295
-## [1] &quot;Heart.Left.Ventricle&quot;
-## [1] &quot;female&quot;
-## [1] 34831   138
-## [1] 11725   138
-## [1] &quot;Heart.Left.Ventricle&quot;
-## [1] &quot;&quot;
-## [1] 34831   432
-## [1] 11581   432
-## [1] &quot;Brain.Cerebellum&quot;
-## [1] &quot;male&quot;
-## [1] 34831   175
-## [1] 14471   175
-## [1] &quot;Brain.Cerebellum&quot;
-## [1] &quot;female&quot;
-## [1] 34831    68
-## [1] 14524    68
-## [1] &quot;Brain.Cerebellum&quot;
-## [1] &quot;&quot;
-## [1] 34831   242
-## [1] 14493   242
-## [1] &quot;Cells.Cultured.fibroblasts&quot;
-## [1] &quot;male&quot;
-## [1] 34831   322
-## [1] 12693   322
-## [1] &quot;Cells.Cultured.fibroblasts&quot;
-## [1] &quot;female&quot;
-## [1] 34831   171
-## [1] 12661   171
-## [1] &quot;Cells.Cultured.fibroblasts&quot;
-## [1] &quot;&quot;
-## [1] 34831   492
-## [1] 12686   492
-## [1] &quot;Whole.Blood&quot;
-## [1] &quot;male&quot;
-## [1] 34831   493
-## [1] 10304   493
-## [1] &quot;Whole.Blood&quot;
-## [1] &quot;female&quot;
-## [1] 34831   251
-## [1] 10502   251
-## [1] &quot;Whole.Blood&quot;
-## [1] &quot;&quot;
-## [1] 34831   743
-## [1] 10368   743
-## [1] &quot;Artery.Aorta&quot;
-## [1] &quot;male&quot;
-## [1] 34831   280
-## [1] 13857   280
-## [1] &quot;Artery.Aorta&quot;
-## [1] &quot;female&quot;
-## [1] 34831   153
-## [1] 13867   153
-## [1] &quot;Artery.Aorta&quot;
-## [1] &quot;&quot;
-## [1] 34831   432
-## [1] 13863   432
-## [1] &quot;Cells.EBV-transformed.lymphocytes&quot;
-## [1] &quot;male&quot;
-## [1] 34831   105
-## [1] 12243   105
-## [1] &quot;Cells.EBV-transformed.lymphocytes&quot;
-## [1] &quot;female&quot;
-## [1] 34831    62
-## [1] 12157    62
-## [1] &quot;Cells.EBV-transformed.lymphocytes&quot;
-## [1] &quot;&quot;
-## [1] 34831   166
-## [1] 12220   166
-## [1] &quot;Pituitary&quot;
-## [1] &quot;male&quot;
-## [1] 34831   205
-## [1] 15244   205
-## [1] &quot;Pituitary&quot;
-## [1] &quot;female&quot;
-## [1] 34831    80
-## [1] 15148    80
-## [1] &quot;Pituitary&quot;
-## [1] &quot;&quot;
-## [1] 34831   284
-## [1] 15216   284
-## [1] &quot;Brain.Frontal.Cortex.BA9&quot;
-## [1] &quot;male&quot;
-## [1] 34831   154
-## [1] 13961   154
-## [1] &quot;Brain.Frontal.Cortex.BA9&quot;
-## [1] &quot;female&quot;
-## [1] 34831    57
-## [1] 13991    57
-## [1] &quot;Brain.Frontal.Cortex.BA9&quot;
-## [1] &quot;&quot;
-## [1] 34831   210
-## [1] 13961   210
-## [1] &quot;Brain.Caudate.basal.ganglia&quot;
-## [1] &quot;male&quot;
-## [1] 34831   184
-## [1] 13692   184
-## [1] &quot;Brain.Caudate.basal.ganglia&quot;
-## [1] &quot;female&quot;
-## [1] 34831    64
-## [1] 13639    64
-## [1] &quot;Brain.Caudate.basal.ganglia&quot;
-## [1] &quot;&quot;
-## [1] 34831   247
-## [1] 13679   247
-## [1] &quot;Brain.Nucleus.accumbens.basal.ganglia&quot;
-## [1] &quot;male&quot;
-## [1] 34831   183
-## [1] 13720   183
-## [1] &quot;Brain.Nucleus.accumbens.basal.ganglia&quot;
-## [1] &quot;female&quot;
-## [1] 34831    65
-## [1] 13781    65
-## [1] &quot;Brain.Nucleus.accumbens.basal.ganglia&quot;
-## [1] &quot;&quot;
-## [1] 34831   247
-## [1] 13736   247
-## [1] &quot;Brain.Putamen.basal.ganglia&quot;
-## [1] &quot;male&quot;
-## [1] 34831   157
-## [1] 13201   157
-## [1] &quot;Brain.Putamen.basal.ganglia&quot;
-## [1] &quot;female&quot;
-## [1] 34831    50
-## [1] 13157    50
-## [1] &quot;Brain.Putamen.basal.ganglia&quot;
-## [1] &quot;&quot;
-## [1] 34831   206
-## [1] 13198   206
-## [1] &quot;Brain.Hypothalamus&quot;
-## [1] &quot;male&quot;
-## [1] 34831   148
-## [1] 14044   148
-## [1] &quot;Brain.Hypothalamus&quot;
-## [1] &quot;female&quot;
-## [1] 34831    56
-## [1] 13983    56
-## [1] &quot;Brain.Hypothalamus&quot;
-## [1] &quot;&quot;
-## [1] 34831   203
-## [1] 14016   203
-## [1] &quot;Brain.Spinal.cord.cervical.c-1&quot;
-## [1] &quot;male&quot;
-## [1] 34831   103
-## [1] 13824   103
-## [1] &quot;Brain.Spinal.cord.cervical.c-1&quot;
-## [1] &quot;female&quot;
-## [1] 34831    58
-## [1] 13760    58
-## [1] &quot;Brain.Spinal.cord.cervical.c-1&quot;
-## [1] &quot;&quot;
-## [1] 34831   160
-## [1] 13816   160
-## [1] &quot;Brain.Hippocampus&quot;
-## [1] &quot;male&quot;
-## [1] 34831   144
-## [1] 13400   144
-## [1] &quot;Brain.Hippocampus&quot;
-## [1] &quot;female&quot;
-## [1] 34831    55
-## [1] 13325    55
-## [1] &quot;Brain.Hippocampus&quot;
-## [1] &quot;&quot;
-## [1] 34831   198
-## [1] 13382   198
-## [1] &quot;Brain.Anterior.cingulate.cortex.BA24&quot;
-## [1] &quot;male&quot;
-## [1] 34831   129
-## [1] 13518   129
-## [1] &quot;Brain.Anterior.cingulate.cortex.BA24&quot;
-## [1] &quot;female&quot;
-## [1] 34831    49
-## [1] 13556    49
-## [1] &quot;Brain.Anterior.cingulate.cortex.BA24&quot;
-## [1] &quot;&quot;
-## [1] 34831   177
-## [1] 13525   177
-## [1] &quot;Ovary&quot;
-## [1] &quot;male&quot;
-## [1] &quot;Ovary&quot;
-## [1] &quot;female&quot;
-## [1] 34831   179
-## [1] 14353   179
-## [1] &quot;Ovary&quot;
-## [1] &quot;&quot;
-## [1] 34831   179
-## [1] 14353   179
-## [1] &quot;Brain.Cerebellar.Hemisphere&quot;
-## [1] &quot;male&quot;
-## [1] 34831   158
-## [1] 14235   158
-## [1] &quot;Brain.Cerebellar.Hemisphere&quot;
-## [1] &quot;female&quot;
-## [1] 34831    59
-## [1] 14181    59
-## [1] &quot;Brain.Cerebellar.Hemisphere&quot;
-## [1] &quot;&quot;
-## [1] 34831   216
-## [1] 14219   216
-## [1] &quot;Liver&quot;
-## [1] &quot;male&quot;
-## [1] 34831   162
-## [1] 11959   162
-## [1] &quot;Liver&quot;
-## [1] &quot;female&quot;
-## [1] 34831    65
-## [1] 12159    65
-## [1] &quot;Liver&quot;
-## [1] &quot;&quot;
-## [1] 34831   226
-## [1] 12010   226
-## [1] &quot;Brain.Substantia.nigra&quot;
-## [1] &quot;male&quot;
-## [1] 34831   102
-## [1] 13387   102
-## [1] &quot;Brain.Substantia.nigra&quot;
-## [1] &quot;female&quot;
-## [1] 34831    39
-## [1] 13373    39
-## [1] &quot;Brain.Substantia.nigra&quot;
-## [1] &quot;&quot;
-## [1] 34831   140
-## [1] 13392   140
-## [1] &quot;Kidney.Cortex&quot;
-## [1] &quot;male&quot;
-## [1] 34831    67
-## [1] 13352    67
-## [1] &quot;Kidney.Cortex&quot;
-## [1] &quot;female&quot;
-## [1] 34831    20
-## [1] 13618    20
-## [1] &quot;Kidney.Cortex&quot;
-## [1] &quot;&quot;
-## [1] 34831    86
-## [1] 13429    86
-## [1] &quot;Brain.Amygdala&quot;
-## [1] &quot;male&quot;
-## [1] 34831   108
-## [1] 13241   108
-## [1] &quot;Brain.Amygdala&quot;
-## [1] &quot;female&quot;
-## [1] 34831    46
-## [1] 13459    46
-## [1] &quot;Brain.Amygdala&quot;
-## [1] &quot;&quot;
-## [1] 34831   153
-## [1] 13299   153
-## [1] &quot;Cervix.Ectocervix&quot;
-## [1] &quot;male&quot;
-## [1] &quot;Cervix.Ectocervix&quot;
-## [1] &quot;female&quot;
-## [1] &quot;Cervix.Ectocervix&quot;
-## [1] &quot;&quot;
-## [1] &quot;Fallopian.Tube&quot;
-## [1] &quot;male&quot;
-## [1] &quot;Fallopian.Tube&quot;
-## [1] &quot;female&quot;
-## [1] &quot;Fallopian.Tube&quot;
-## [1] &quot;&quot;
-## [1] &quot;Cervix.Endocervix&quot;
-## [1] &quot;male&quot;
-## [1] &quot;Cervix.Endocervix&quot;
-## [1] &quot;female&quot;
-## [1] &quot;Cervix.Endocervix&quot;
-## [1] &quot;&quot;
-## [1] &quot;Bladder&quot;
-## [1] &quot;male&quot;
-## [1] 34831    15
-## [1] 14304    15
-## [1] &quot;Bladder&quot;
-## [1] &quot;female&quot;
-## [1] &quot;Bladder&quot;
-## [1] &quot;&quot;
-## [1] 34831    22
-## [1] 14242    22
-## [1] &quot;Kidney.Medulla&quot;
-## [1] &quot;male&quot;
-## [1] &quot;Kidney.Medulla&quot;
-## [1] &quot;female&quot;
-## [1] &quot;Kidney.Medulla&quot;
-## [1] &quot;&quot;</code></pre>
-<pre class="r"><code>rm(tpm_df)
-rm(tpm_tissue_sex_df)
-rm(tpm_tissue_sex_filt_df)
-rm(info_df)
-rm(info_filt_df)</code></pre>
-<pre class="r"><code>sex_to_id = data.frame(row.names=c(&quot;male&quot;,&quot;female&quot;, &quot;&quot;) , val=c(1,2,&quot;&quot;))
-for (tissue in unique(samples_df$SMTSD.no.sp.char)){
-  for (sex in rownames(sex_to_id)){
-    print(tissue)
-    print(sex)
-    if (sex == &quot;&quot;){
-      samples_tissue_sex = samples_df[samples_df$SMTSD.no.sp.char == tissue,]$SAMPID
-      tpm_tissue_sex_filt_file = paste(tpm_ppi_filt_dir, paste(&quot;gtex_rnaseq_&quot;, tissue, &quot;.gct&quot;, sep=''), sep='/')
-      ppi_tissue_sex_filt_file = paste(ppi_filt_dir, paste(&quot;interactome_2019_&quot;, tissue, &quot;.csv&quot;, sep=''), sep='/')
-    } else {
-      sex_id = sex_to_id[sex,]
-      samples_tissue_sex = samples_df[(samples_df$SMTSD.no.sp.char == tissue) &amp; (samples_df$SEX == sex_id),]$SAMPID
-      tpm_tissue_sex_filt_file = paste(tpm_ppi_filt_dir, paste(&quot;gtex_rnaseq_&quot;, tissue, &quot;_&quot;, sex, &quot;.gct&quot;, sep=''), sep='/')
-      ppi_tissue_sex_filt_file = paste(ppi_filt_dir, paste(&quot;interactome_2019_&quot;, tissue, &quot;_&quot;, sex, &quot;.csv&quot;, sep=''), sep='/')
-    }
-    if (length(samples_tissue_sex) &gt; 10){
-      tpm_tissue_sex_df = tpm_df %&gt;% select(c(&quot;Description&quot;, all_of(samples_tissue_sex)))
-      print(dim(tpm_tissue_sex_df))
-      # Calculate metrics of expression
-      info_df = data.frame(Description=tpm_tissue_sex_df$Description, sum=rowSums(tpm_tissue_sex_df[,-1]))
-      info_df$sd = apply(tpm_tissue_sex_df[,-1], 1, sd)
-      info_df$mean = rowMeans(tpm_tissue_sex_df[,-1])
-      info_df$median = apply(tpm_tissue_sex_df[,-1], 1, median)
-      info_df$zero_sum_counts = as.numeric(apply(tpm_tissue_sex_df[,-1], 1, function(i) sum(i == 0) )) # Number of times that the sum of the TPMs is equal to 0
-      # Filter low expressed genes
-      info_filt_df = info_df[(info_df$sum &gt; 0) &amp; (info_df$mean &gt; 0) &amp; (info_df$median &gt;= 1) &amp; (info_df$sd &gt; 0) &amp; (info_df$zero_sum_counts &lt; dim(tpm_tissue_sex_df[, -1])[2]/2) ,]
-      tpm_tissue_sex_filt_df = tpm_tissue_sex_df[tpm_tissue_sex_df$Description %in% info_filt_df$Description,] %&gt;% rename(&quot;Gene&quot;=&quot;Description&quot;)
-      print(dim(tpm_tissue_sex_filt_df))
-      fwrite(tpm_tissue_sex_filt_df, tpm_tissue_sex_filt_file)
-      
-      # Get transposed matrix
-      #sample.ids &lt;- tpm_tissue_sex_filt_df[, 1][[1]]
-      #tpm_tissue_sex_filt_df &lt;- as.matrix(tpm_tissue_sex_filt_df[, -c(1)])
-      #rownames(tpm_tissue_sex_filt_df) &lt;- sample.ids
-      #tpm_tissue_sex_filt_df.t &lt;- t(as.matrix(tpm_tissue_sex_filt_df)) %&gt;% as.data.frame() 
-      #colnames(tpm_tissue_sex_filt_df.t) &lt;- rownames(tpm_tissue_sex_filt_df)
-      #tpm_tissue_sex_filt_df.t &lt;- cbind(Sample = colnames(tpm_tissue_sex_filt_df), tpm_tissue_sex_filt_df.t)
-      #tpm_tissue_sex_filt_file = paste(tpm_ppi_filt_dir, paste(&quot;GTEx_RNASeq_&quot;, tissue, &quot;_&quot;, sex, &quot;.gct&quot;, sep=''), sep='/')
-      #fwrite(tpm_tissue_sex_filt_df.t, tpm_tissue_sex_filt_file)
-      
-      # Filter low expressed genes in PPI
-      ppi_tissue_sex_filt_df = PPI_symbol[(PPI_symbol$proteinA_symbol %in% info_filt_df$Description) &amp; (PPI_symbol$proteinB_symbol %in% info_filt_df$Description),]
-      fwrite(ppi_tissue_sex_filt_df, ppi_tissue_sex_filt_file)
-    }
-  }
-}</code></pre>
+}
+
+statistics_low_counts_file = paste(gtex_dir, &quot;gtex_rnaseq_low_counts_statistics.csv&quot;, sep='/')
+fwrite(statistics_low_counts_df, statistics_low_counts_file)</code></pre>
+<p>These are the different number of genes after filtering by the criteria mentioned above:</p>
+<pre class="r"><code>head(statistics_low_counts_df)</code></pre>
+<pre><code>##                 tissue    sex n_genes_raw n_genes_processed   sum  mean median
+## 1 Adipose.Subcutaneous   male       34487             13788 32774 14449  13788
+## 2 Adipose.Subcutaneous female       34487             13738 31895 14309  13738
+## 3 Adipose.Subcutaneous              34487             13770 33102 14416  13771
+## 4      Muscle.Skeletal   male       34487             11204 32556 11769  11204
+## 5      Muscle.Skeletal female       34487             11270 32004 11885  11270
+## 6      Muscle.Skeletal              34487             11230 33037 11824  11230
+##      sd zero_sum_counts
+## 1 32774           20508
+## 2 31895           20587
+## 3 33102           20527
+## 4 32556           19075
+## 5 32004           19073
+## 6 33037           19083</code></pre>
+<p>Here, we show an example (whole blood) of the number of genes for each gene category before/after filtering by gene counts. Before filtering:</p>
+<pre class="r"><code>genes_dataset_filt_file = paste(genes_filt_dir, &quot;gtex_rnaseq_gene_info_Whole.Blood.csv&quot;, sep='/')
+genes_dataset_filt_df = fread(genes_dataset_filt_file)
+table(genes_dataset_filt_df$HGNC_category)</code></pre>
+<pre><code>## 
+##      non-coding RNA               other protein-coding gene          pseudogene 
+##                5054                 534               18064               10835</code></pre>
+<pre class="r"><code>round(prop.table(table(genes_dataset_filt_df$HGNC_category))*100,2)</code></pre>
+<pre><code>## 
+##      non-coding RNA               other protein-coding gene          pseudogene 
+##               14.65                1.55               52.38               31.42</code></pre>
+<p>After filtering:</p>
+<pre class="r"><code>table((genes_dataset_filt_df %&gt;% filter(enough_counts == TRUE))$HGNC_category)</code></pre>
+<pre><code>## 
+##      non-coding RNA               other protein-coding gene          pseudogene 
+##                 282                 234                9449                 286</code></pre>
+<pre class="r"><code>round(prop.table(table((genes_dataset_filt_df %&gt;% filter(enough_counts == TRUE))$HGNC_category))*100,2)</code></pre>
+<pre><code>## 
+##      non-coding RNA               other protein-coding gene          pseudogene 
+##                2.75                2.28               92.18                2.79</code></pre>
+</div>
+</div>
+<div id="prepare-disease-genes-information-dataset" class="section level2">
+<h2>Prepare disease genes information dataset</h2>
+<p>Read the disease-gene associations dataset:</p>
+<pre class="r"><code>gene_associations_dir = '/home/j.aguirreplans/data/gene_associations/data/out'
+disease_genes_file = paste(gene_associations_dir, 'GDA_Filtered_04042022.csv', sep='/')
+GDA = fread(disease_genes_file) %&gt;% unique()
+GDA$HGNC_Symbol = toupper(GDA$HGNC_Symbol)
+head(GDA)</code></pre>
+<pre><code>##                     NewName  MESHID HGNC_Symbol         evidence Strong Weak
+## 1:             hepatomegaly D006529        A1BG CTD|DisGeNET_GDA      0    2
+## 2:            schizophrenia D012559        A1BG CTD|DisGeNET_GDA      0    2
+## 3:      acute kidney injury D058186         A2M CTD|DisGeNET_GDA      0    2
+## 4:       adenoma liver cell D018248         A2M CTD|DisGeNET_GDA      0    2
+## 5:        alzheimer disease D000544         A2M CTD|DisGeNET_GDA      0    2
+## 6: carcinoma hepatocellular D006528         A2M              CTD      0    1
+##    Incompatible Inferred Did not provide TreeNumber
+## 1:            0        0               0    C06|C23
+## 2:            0        0               0        F03
+## 3:            0        0               0    C13|C12
+## 4:            0        0               0    C06|C04
+## 5:            0        0               0    F03|C10
+## 6:            0        0               0    C06|C04
+##                                                                     DescriptorName
+## 1:           Digestive System Diseases|Pathological Conditions, Signs and Symptoms
+## 2:                                                                Mental Disorders
+## 3: Female Urogenital Diseases and Pregnancy Complications|Male Urogenital Diseases
+## 4:                                             Digestive System Diseases|Neoplasms
+## 5:                                        Mental Disorders|Nervous System Diseases
+## 6:                                             Digestive System Diseases|Neoplasms</code></pre>
+<p>There are 102362 disease-gene associations (919 diseases, 16537 genes)</p>
+<p>Prepare the disease-gene associations for the GTEx dataset:</p>
+<pre class="r"><code>GDA[is.na(GDA)]&lt;-0
+GDA$NewName = tolower(GDA$NewName)
+GDA$DescriptorName = tolower(GDA$DescriptorName)
+GDA$MESHID = toupper(GDA$MESHID)
+GDA$HGNC_Symbol = toupper(GDA$HGNC_Symbol)
+GDA %&lt;&gt;% 
+  filter(Strong &gt; 0 | 
+           Weak &gt; 0 |
+           Incompatible &gt; 0) %&gt;%
+  mutate(DiseaseName = NewName) %&gt;%
+  filter(DescriptorName %ni% c(&quot;behavioral disciplines and activities&quot;)) %&gt;%
+  mutate(MESHID_remove = stringr::str_detect(TreeNumber, pattern = &quot;C22|C25|F04&quot;)) %&gt;%
+  mutate(MESHID_remove = ifelse(TreeNumber == &quot;F01&quot;, TRUE,MESHID_remove)) %&gt;%
+  filter(!(MESHID_remove)) %&gt;%
+  select(DiseaseName, HGNC_Symbol, DescriptorName) %&gt;% 
+  unique() %&gt;% 
+  mutate(gene_in_dataset = ifelse(HGNC_Symbol %in% tpm_df$Gene, TRUE, FALSE))
+
+# Make columns without special characters  
+GDA$DiseaseName.no.sp.char &lt;- gsub(' ', '.', gsub(', ', '.', gsub('-', '.', gsub('[\\(\\)]', '', GDA$DiseaseName))))
+GDA$DescriptorName.no.sp.char &lt;- gsub(' ', '.', gsub(', ', '.', gsub('-', '.', gsub('[\\(\\)]', '', GDA$DescriptorName))))
+
+# Write output file
+disease_genes_info_file = &quot;/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_gtex.csv&quot;
+GDA %&gt;% fwrite(disease_genes_info_file)
+
+head(GDA)</code></pre>
+<pre><code>##                 DiseaseName HGNC_Symbol
+## 1:             hepatomegaly        A1BG
+## 2:            schizophrenia        A1BG
+## 3:      acute kidney injury         A2M
+## 4:       adenoma liver cell         A2M
+## 5:        alzheimer disease         A2M
+## 6: carcinoma hepatocellular         A2M
+##                                                                     DescriptorName
+## 1:           digestive system diseases|pathological conditions, signs and symptoms
+## 2:                                                                mental disorders
+## 3: female urogenital diseases and pregnancy complications|male urogenital diseases
+## 4:                                             digestive system diseases|neoplasms
+## 5:                                        mental disorders|nervous system diseases
+## 6:                                             digestive system diseases|neoplasms
+##    gene_in_dataset   DiseaseName.no.sp.char
+## 1:            TRUE             hepatomegaly
+## 2:            TRUE            schizophrenia
+## 3:            TRUE      acute.kidney.injury
+## 4:            TRUE       adenoma.liver.cell
+## 5:            TRUE        alzheimer.disease
+## 6:            TRUE carcinoma.hepatocellular
+##                                                          DescriptorName.no.sp.char
+## 1:            digestive.system.diseases|pathological.conditions.signs.and.symptoms
+## 2:                                                                mental.disorders
+## 3: female.urogenital.diseases.and.pregnancy.complications|male.urogenital.diseases
+## 4:                                             digestive.system.diseases|neoplasms
+## 5:                                        mental.disorders|nervous.system.diseases
+## 6:                                             digestive.system.diseases|neoplasms</code></pre>
+<p>There are 65425 disease-gene associations (870 diseases, 14833 genes), and 59598 disease-gene associations in the GTEx dataset (870 diseases, 13508 genes).</p>
+</div>
+<div id="prepare-essential-genes-dataset" class="section level2">
+<h2>Prepare essential genes dataset</h2>
+<p>Prepare the essential genes of the TCGA dataset:</p>
+<pre class="r"><code># Read the essential genes file
+essential_genes_dir = '/home/j.aguirreplans/Databases/OGEE'
+essential_genes_original_file = paste(essential_genes_dir, 'OGEE_esential_genes_20190416.txt', sep='/')
+# Filter by human genes
+essential_genes_df = fread(essential_genes_original_file, header=TRUE) %&gt;% rename(&quot;taxID&quot;=&quot;#taxID&quot;)
+head(essential_genes_df)</code></pre>
+<pre><code>##    taxID      sciName           locus essential pubmedID               dataType
+## 1:  9606 Homo sapiens ENSG00000000003        NE 26472760 LargescaleAllAvailable
+## 2:  9606 Homo sapiens ENSG00000000003        NE 26472758 LargescaleAllAvailable
+## 3:  9606 Homo sapiens ENSG00000000003        NE 26472758 LargescaleAllAvailable
+## 4:  9606 Homo sapiens ENSG00000000003        NE 26472758 LargescaleAllAvailable
+## 5:  9606 Homo sapiens ENSG00000000003        NE 18239125 LargescaleAllAvailable
+## 6:  9606 Homo sapiens ENSG00000000003        NE 26472760 LargescaleAllAvailable
+##        dataSource
+## 1: PMID: 26472760
+## 2: PMID: 26472758
+## 3: PMID: 26472758
+## 4: PMID: 26472758
+## 5: PMID: 18239125
+## 6: PMID: 26472760</code></pre>
+<pre class="r"><code># Read the gene annotations dictionary
+gene_annotations_dir = '/home/j.aguirreplans/data/gene_annotations/data/out'
+gene_dict_file = paste(gene_annotations_dir, 'multiple_hgnc_dict_set_2022-01-01.txt', sep='/')
+gene_dict_df = fread(gene_dict_file) %&gt;% unique()
+gene_dict_df = gene_dict_df[!((gene_dict_df$HGNC_Symbol==&quot;&quot;)|(gene_dict_df$alias==&quot;&quot;)),]
+gene_dict_df$HGNC_Symbol = toupper(gene_dict_df$HGNC_Symbol)
+gene_dict_df$alias = toupper(gene_dict_df$alias)
+gene_dict_df %&lt;&gt;% unique()
+head(gene_dict_df)</code></pre>
+<pre><code>##    HGNC_Symbol           alias
+## 1:       MT-TF ENSG00000210049
+## 2:       MT-TF ENST00000387314
+## 3:       MT-TF       MT-TF-201
+## 4:     MT-RNR1 ENSG00000211459
+## 5:     MT-RNR1 ENST00000389680
+## 6:     MT-RNR1     MT-RNR1-201</code></pre>
+<pre class="r"><code># Map ENSEMBL IDs to HGNC symbols
+essential_genes_df = essential_genes_df %&gt;% filter((taxID == 9606) &amp; (essential==&quot;E&quot;))
+essential_genes_df = essential_genes_df %&gt;% inner_join(gene_dict_df, by=c(&quot;locus&quot;=&quot;alias&quot;)) %&gt;% select(taxID, sciName, HGNC_Symbol) %&gt;% unique()
+essential_genes_df$gene_in_dataset = ifelse(essential_genes_df$HGNC_Symbol %in% tpm_df$Gene, TRUE, FALSE)
+head(essential_genes_df)</code></pre>
+<pre><code>##    taxID      sciName HGNC_Symbol gene_in_dataset
+## 1:  9606 Homo sapiens        DPM1            TRUE
+## 2:  9606 Homo sapiens       SCYL3            TRUE
+## 3:  9606 Homo sapiens         FGR            TRUE
+## 4:  9606 Homo sapiens        GCLC            TRUE
+## 5:  9606 Homo sapiens        NFYA            TRUE
+## 6:  9606 Homo sapiens       LAS1L            TRUE</code></pre>
+<pre class="r"><code>essential_genes_tcga_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_gtex.csv'
+essential_genes_df %&gt;% fwrite(essential_genes_tcga_file)</code></pre>
+<p>There are 7108 essential genes, 6816 in the TCGA dataset.</p>
 </div>
 
 

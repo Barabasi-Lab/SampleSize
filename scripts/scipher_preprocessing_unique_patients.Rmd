@@ -1,5 +1,5 @@
 ---
-title: "scipher_preprocessing"
+title: "Scipher Pre-processing (Unique Patients)"
 author: "Joaquim Aguirre-Plans & Deisy Morselli Gysi"
 date: "1/11/2022"
 output: html_document
@@ -51,12 +51,22 @@ The `RNA_metadata` dataframe contains `r ncol(RNA_metadata)` features (`r length
 
 > Important to note: There are many samples that have the same Scipher_id, meaning that they come from the same patient. They only differ by the visit (which can be either 0m, 3m or 6m) and the "batch" (which can be either "seq_fac1" or "seq_fac2").
 
-We combine the Scipher_id, the visit and the batch, so that we can have a unique ID for each sample:
+## Combine samples from same patients and visit
+
+We combine the Scipher_id and visit, so that we can have a unique ID for each sample:
 
 ```{r}
-scipherid_visit_batch = paste(RNA_metadata$Scipher_id, RNA_metadata$visit, RNA_metadata$batch, sep=".")
-RNA_metadata = cbind(data.frame(Scipher_id.visit.batch=scipherid_visit_batch), RNA_metadata) %>% relocate(Scipher_id.visit.batch, Scipher_id, visit, batch, .before = age)
-RNA_metadata[1:5,1:5]
+scipherid_visit = paste(RNA_metadata$Scipher_id, RNA_metadata$visit, sep=".")
+RNA_metadata = cbind(data.frame(Scipher_id.visit=scipherid_visit), RNA_metadata) %>% relocate(Scipher_id.visit, Scipher_id, visit, batch, .before = age)
+RNA_metadata[1:10,1:5]
+```
+
+We calculate the median expression of samples from same patients and visits:
+
+```{r}
+RNA_metadata = RNA_metadata %>% select(-batch)
+RNA_metadata = RNA_metadata %>% group_by_at(colnames(RNA_metadata)[1:52]) %>% summarise_all(median) %>% as.data.frame()
+RNA_metadata[1:10,1:5]
 ```
 
 The new `RNA_metadata` dataframe contains `r ncol(RNA_metadata)` features (`r length(genes_dataset)` genes) and `r nrow(RNA_metadata)` samples.
@@ -105,7 +115,7 @@ We filter the genes that have low expression in all samples, keeping the ones th
 # Get only the gene expression
 RNA = RNA_metadata %>% select(genes_dataset_df$HGNC_Symbol)
 genes = colnames(RNA)
-sample_ids = RNA_metadata$Scipher_id.visit.batch
+sample_ids = RNA_metadata$Scipher_id.visit
 
 # Transpose the matrix
 RNA = t(as.matrix(RNA)) %>% as.data.frame()
@@ -141,7 +151,7 @@ We count the following number of filtered genes for each category:
 ```{r}
 # Write the information about the selected genes of the dataset in a separate file
 genes_dataset_df$enough_counts = ifelse(genes_dataset_df$HGNC_Symbol %in% info_filt_df$Gene, TRUE, FALSE)
-genes_dataset_file = paste(scipher_data_dir, '00_data/scipher_rnaseq_gene_info.csv', sep='/')
+genes_dataset_file = paste(scipher_data_dir, '00_data/scipher_unique_patients_rnaseq_gene_info.csv', sep='/')
 fwrite(genes_dataset_df, genes_dataset_file)
 
 # Check the percentage of genes in each category after filtering by counts
@@ -151,22 +161,22 @@ round(prop.table(table(genes_dataset_filtered_df$HGNC_category))*100,2)
 ```
 
 ```{r}
-RNAseq_processed = RNA_metadata %>% select(c("Scipher_id.visit.batch", "Scipher_id", "visit", "batch", info_filt_df$Gene))
+RNAseq_processed = RNA_metadata %>% select(c("Scipher_id.visit", "Scipher_id", "visit", info_filt_df$Gene))
 RNAseq_processed_t = t(as.matrix(RNAseq_processed %>% select(info_filt_df$Gene))) %>% as.data.frame()
-colnames(RNAseq_processed_t) = RNA_metadata$Scipher_id.visit.batch
+colnames(RNAseq_processed_t) = RNA_metadata$Scipher_id.visit
 RNAseq_processed_t = cbind(data.frame(Gene=rownames(RNAseq_processed_t)), RNAseq_processed_t)
-RNAseq_processed_file = paste(scipher_data_dir, '00_data/scipher_rnaseq_counts_processed.csv', sep='/')
+RNAseq_processed_file = paste(scipher_data_dir, '00_data/scipher_unique_patients_rnaseq_counts_processed.csv', sep='/')
 RNAseq_processed_t %>% fwrite(RNAseq_processed_file)
 rm(RNA)
 ```
 
 ```{r}
-RNA_metadata_processed = dplyr::inner_join((RNA_metadata %>% dplyr::select(names(RNA_metadata)[1:53])), RNAseq_processed)
-RNA_metadata_processed_file = paste(scipher_data_dir, '00_data/scipher_metadata_rnaseq_counts.csv', sep='/')
+RNA_metadata_processed = dplyr::inner_join((RNA_metadata %>% dplyr::select(names(RNA_metadata)[1:52])), RNAseq_processed)
+RNA_metadata_processed_file = paste(scipher_data_dir, '00_data/scipher_unique_patients_metadata_rnaseq_counts.csv', sep='/')
 RNA_metadata_processed %>% fwrite(RNA_metadata_processed_file)
 ```
 
-We end up having `r length(RNAseq_processed_t$Gene)` genes and `r length(unique(RNAseq_processed$Scipher_id.visit.batch))` samples from `r length(unique(RNAseq_processed$Scipher_id))` individuals.
+We end up having `r length(RNAseq_processed_t$Gene)` genes and `r length(unique(RNAseq_processed$Scipher_id.visit))` samples from `r length(unique(RNAseq_processed$Scipher_id))` individuals.
 
 ## Analyze the metadata
 
@@ -201,7 +211,7 @@ We focus here on the gene expression data that we have in the baseline (visit = 
 # We filter gene expression by visit = 0m (at baseline)
 RNAseq_processed_0m = RNAseq_processed %>% filter(visit == "0m")
 RNA_metadata_processed_0m = dplyr::inner_join(metadata_response, RNAseq_processed_0m)
-RNA_metadata_processed_0m_file = paste(scipher_data_dir, '00_data/scipher_metadata_rnaseq_counts_0m.csv', sep='/')
+RNA_metadata_processed_0m_file = paste(scipher_data_dir, '00_data/scipher_unique_patients_metadata_rnaseq_counts_0m.csv', sep='/')
 fwrite(RNA_metadata_processed_0m, RNA_metadata_processed_0m_file)
 ```
 
@@ -253,7 +263,7 @@ There are `r nrow(GDA)` disease-gene associations (`r length(unique(GDA$NewName)
 Prepare the disease-gene associations for the Scipher dataset: 
 
 ```{r}
-disease_genes_info_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_scipher.csv"
+disease_genes_info_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_scipher_unique_patients.csv"
 
 GDA[is.na(GDA)]<-0
 GDA$NewName = tolower(GDA$NewName)
@@ -317,7 +327,7 @@ essential_genes_df = essential_genes_df %>% filter((taxID == 9606) & (essential=
 essential_genes_df = essential_genes_df %>% inner_join(gene_dict_df, by=c("locus"="alias")) %>% select(taxID, sciName, HGNC_Symbol) %>% unique()
 essential_genes_df$gene_in_dataset = ifelse(essential_genes_df$HGNC_Symbol %in% RNAseq_processed_t$Gene, TRUE, FALSE)
 head(essential_genes_df)
-essential_genes_scipher_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_scipher.csv'
+essential_genes_scipher_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_scipher_unique_patients.csv'
 essential_genes_df %>% fwrite(essential_genes_scipher_file)
 ```
 

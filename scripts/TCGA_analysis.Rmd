@@ -255,7 +255,7 @@ The `tcga_df` dataframe contains `r ncol(tcga_df)` columns (samples) and `r nrow
 
 ```{r}
 tcga_df %<>% rename("Ensembl"="V1")
-head(tcga_df[1:10,1:10])
+head(tcga_df[1:10,1:5])
 ```
 
 ```{r}
@@ -385,13 +385,22 @@ dim(tcga_df)
 ```
 
 ```{r}
+# We transpose the matrix
+genes = colnames((tcga_df %>% select(-case_id)))
+case_ids = tcga_df$case_id
+tcga_df = t(as.matrix((tcga_df %>% select(-case_id)))) %>% as.data.frame()
+colnames(tcga_df) = case_ids
+tcga_df = cbind(data.frame(Gene=genes), tcga_df)
+```
+
+```{r}
 tcga_processed_file = paste(output_dir, 'TCGA_processed.csv', sep='/')
 fwrite(tcga_df, tcga_processed_file, sep='\t')
 ```
 
-The processed `tcga_df` dataframe contains `r ncol(tcga_df)` columns (genes) and `r nrow(tcga_df)` rows (case IDs).
+The processed `tcga_df` dataframe contains `r as.integer(ncol(tcga_df)-1)` columns (case IDs) and `r nrow(tcga_df)` rows (genes).
 
 ```{r}
-head(tcga_df[1:10,1:10])
+head(tcga_df[1:10,1:5])
 ```
 

@@ -174,7 +174,7 @@ samples_subtissues_plot <- smtsd_samples_count %>%
     coord_flip() +
     xlab("") +
     theme_bw()
-ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/num_samples_vs_subtissues.png', plot=samples_subtissues_plot, type='cairo', dpi = 300, height=8, width = 10)
+ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots_gtex/num_samples_vs_subtissues.png', plot=samples_subtissues_plot, type='cairo', dpi = 300, height=8, width = 10)
 samples_subtissues_plot
 
 samples_tissues_plot <- smts_samples_count %>%
@@ -184,7 +184,7 @@ samples_tissues_plot <- smts_samples_count %>%
     coord_flip() +
     xlab("") +
     theme_bw()
-ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/num_samples_vs_tissues.png', plot=samples_tissues_plot, type='cairo', dpi = 300)
+ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots_gtex/num_samples_vs_tissues.png', plot=samples_tissues_plot, type='cairo', dpi = 300)
 samples_tissues_plot
 
 ```
@@ -217,7 +217,7 @@ samples_subtissues_by_sex_plot <- smtsd_samples_count_by_sex %>%
     coord_flip() +
     xlab("") +
     theme_bw()
-ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/num_samples_vs_subtissues_by_sex.png', plot=samples_subtissues_by_sex_plot, type='cairo', dpi = 300, height=8, width = 10)
+ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots_gtex/num_samples_vs_subtissues_by_sex.png', plot=samples_subtissues_by_sex_plot, type='cairo', dpi = 300, height=8, width = 10)
 samples_subtissues_by_sex_plot
 
 samples_tissues_by_sex_plot <- smts_samples_count_by_sex %>%
@@ -227,7 +227,7 @@ samples_tissues_by_sex_plot <- smts_samples_count_by_sex %>%
     coord_flip() +
     xlab("") +
     theme_bw()
-ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/num_samples_vs_tissues_by_sex.png', plot=samples_tissues_by_sex_plot, type='cairo', dpi = 300)
+ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots_gtex/num_samples_vs_tissues_by_sex.png', plot=samples_tissues_by_sex_plot, type='cairo', dpi = 300)
 samples_tissues_by_sex_plot
 
 ```
@@ -343,25 +343,25 @@ Here we plot the distributions based on different metrics:
 log_median_expression_specific_tissue_no_filt <- ggplot(info_tissue_df, aes(x=log2_median)) + 
   geom_histogram(binwidth=1, fill="#69b3a2", color="#e9ecef", alpha=0.9) +
   xlab("log2 median")
-ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/log_median_expression_specific_tissue_no_filtering.png', plot=log_median_expression_specific_tissue_no_filt, type='cairo', dpi = 300)
+ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots_gtex/log_median_expression_specific_tissue_no_filtering.png', plot=log_median_expression_specific_tissue_no_filt, type='cairo', dpi = 300)
 log_median_expression_specific_tissue_no_filt
 
 log_median_expression_specific_tissue <- ggplot(info_tissue_filt_df, aes(x=log2_median)) + 
   geom_histogram(binwidth=1, fill="#69b3a2", color="#e9ecef", alpha=0.9) +
   xlab("log2 median")
-ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/log_median_expression_specific_tissue.png', plot=log_median_expression_specific_tissue, type='cairo', dpi = 300)
+ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots_gtex/log_median_expression_specific_tissue.png', plot=log_median_expression_specific_tissue, type='cairo', dpi = 300)
 log_median_expression_specific_tissue
 
 log_mean_expression_specific_tissue <- ggplot(info_tissue_filt_df, aes(x=log2_mean)) + 
   geom_histogram(binwidth=1, fill="#69b3a2", color="#e9ecef", alpha=0.9) +
   xlab("log2 mean")
-ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/log_mean_expression_specific_tissue.png', plot=log_mean_expression_specific_tissue, type='cairo', dpi = 300)
+ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots_gtex/log_mean_expression_specific_tissue.png', plot=log_mean_expression_specific_tissue, type='cairo', dpi = 300)
 log_mean_expression_specific_tissue
 
 sd_expression_specific_tissue <- ggplot(info_tissue_filt_df[info_tissue_filt_df$sd < 20,], aes(x=sd)) + 
   geom_histogram(binwidth=1, fill="#69b3a2", color="#e9ecef", alpha=0.9) +
   xlab("standard deviation")
-ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/sd_expression_specific_tissue.png', plot=sd_expression_specific_tissue, type='cairo', dpi = 300)
+ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots_gtex/sd_expression_specific_tissue.png', plot=sd_expression_specific_tissue, type='cairo', dpi = 300)
 sd_expression_specific_tissue
 
 ```
@@ -412,25 +412,25 @@ dim(info_filt_df)
 log_median_expression_all_tissues_no_filt <- ggplot(info_df, aes(x=log2_median)) + 
   geom_histogram(binwidth=1, fill="#69b3a2", color="#e9ecef", alpha=0.9) +
   xlab("log2 median")
-ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/log_median_expression_all_tissues_no_filtering.png', plot=log_median_expression_all_tissues_no_filt, type='cairo', dpi = 300)
+ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots_gtex/log_median_expression_all_tissues_no_filtering.png', plot=log_median_expression_all_tissues_no_filt, type='cairo', dpi = 300)
 log_median_expression_all_tissues_no_filt
 
 log_median_expression_all_tissues <- ggplot(info_filt_df, aes(x=log2_median)) + 
   geom_histogram(binwidth=1, fill="#69b3a2", color="#e9ecef", alpha=0.9) +
   xlab("log2 median")
-ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/log_median_expression_all_tissues.png', plot=log_median_expression_all_tissues, type='cairo', dpi = 300)
+ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots_gtex/log_median_expression_all_tissues.png', plot=log_median_expression_all_tissues, type='cairo', dpi = 300)
 log_median_expression_all_tissues
 
 log_mean_expression_all_tissues <- ggplot(info_filt_df, aes(x=log2_mean)) + 
   geom_histogram(binwidth=1, fill="#69b3a2", color="#e9ecef", alpha=0.9) +
   xlab("log2 mean")
-ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/log_mean_expression_all_tissues.png', plot=log_mean_expression_all_tissues, type='cairo', dpi = 300)
+ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots_gtex/log_mean_expression_all_tissues.png', plot=log_mean_expression_all_tissues, type='cairo', dpi = 300)
 log_mean_expression_all_tissues
 
 sd_expression_all_tissues <- ggplot(info_filt_df[info_filt_df$sd < 30,], aes(x=sd)) + 
   geom_histogram(binwidth=1, fill="#69b3a2", color="#e9ecef", alpha=0.9) +
   xlab("standard deviation")
-ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/GTEx_analysis/sd_expression_all_tissues.png', plot=sd_expression_all_tissues, type='cairo', dpi = 300)
+ggsave('/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots_gtex/sd_expression_all_tissues.png', plot=sd_expression_all_tissues, type='cairo', dpi = 300)
 sd_expression_all_tissues
 
 ```

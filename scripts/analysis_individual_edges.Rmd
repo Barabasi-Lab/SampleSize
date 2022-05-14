@@ -1,0 +1,134 @@
+---
+title: "Analyze changes in individual edges"
+author: "Joaquim Aguirre-Plans"
+date: "4/27/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Description
+
+Analyze the evolution of edges
+
+```{r, message=FALSE}
+library(data.table)
+library(dplyr)
+library(ggplot2)
+require(magrittr)
+library(tidyr)
+library(igraph)
+set.seed(1510)
+`%ni%` <- Negate(`%in%`)
+```
+
+
+## Test
+
+
+```{r}
+networks_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/dummy"
+method = "pearson"
+i=1
+result_files = list.files(networks_dir)
+for (result_file in result_files){
+  file_split = strsplit(gsub(".net", "", result_file), split="_")[[1]]
+  if(file_split[1] == method){
+    if(length(file_split) == 8){
+      size = as.integer(file_split[6])
+      rep = as.integer(file_split[8])
+      if(i == 1){
+        nets_df = fread(paste(networks_dir, result_file, sep="/")) %>% select(Node.1, Node.2, score) %>% rename(!!paste(size, rep, sep=".") := "score")
+      }else{
+        nets_df = cbind(nets_df, (fread(paste(networks_dir, result_file, sep="/")) %>% select(score) %>% rename(!!paste(size, rep, sep=".") := "score")))
+      }
+      i=i+1
+    }
+  }
+}
+
+```
+
+
+```{r pressure, echo=FALSE}
+require(magrittr)
+require(dplyr)
+require(data.table)
+require(igraph)
+require(ggplot2)
+
+# data = iris %>%
+#   select(-Species)
+# 
+# final_cor = data %>% cor
+# 
+# sample_sizes = c(5, 10, 25, 50)
+# function(data, sample_sizes){
+#   ### add inside a parallel
+#   o = list()
+#   for (i in 1:length(sample_sizes)){
+#     o[[i]] = data[sample(sample_sizes[i]), ] %>%
+#       cor() %>%
+#       reshape2::melt() %>%
+#       mutate(ss =sample_sizes[i] )
+#   }  
+# }
+# 
+# o %<>% bind_rows()
+# names(o) = c("Node.1", "Node.2", "score", "ss")
+
+
+dir = "~/Dropbox\ \(CCNR\)/Biology/Quim/network_examples/"
+setwd(dir)
+
+files = system(paste("ls"), intern = T)
+
+RR = list()
+for(i in 1:length(files)){
+  RR[[i]] = fread(files[i])  %>%
+    mutate(file = files[i])
+}
+RR[[1]] [1:10, ]
+
+o = RR %>%
+  bind_rows()
+
+load("~/Desktop/PostDoc/00_Projects/GDA_NC/00_data/data/graphs_new.Rdata")
+
+genes = V(gPPI)$name
+o2 = o %>%
+  # filter(Node.1 %in% V(gPPI)$name & Node.2 %in% V(gPPI)$name) %>% 
+  filter(Node.1 %in% genes & Node.2 %in% genes) %>% 
+  group_by(Node.1, Node.2) %>%
+  mutate(sd = sd(score, na.rm = T), 
+         median = median(score, na.rm = T),
+         mean = mean(score, na.rm = T)) %>%
+  mutate(gp = paste(Node.1, Node.2, " -- ")) %>%
+  mutate(ss = stringr::str_remove(file, "pearson_scipher_complete_dataset_size_")) %>% 
+  mutate(ss = stringr::str_remove(ss, "_rep_[0-9]+.net"))
+
+o2$ss %<>% as.numeric()
+
+ggplot(o2) +
+  aes(x = ss, y = score, group = gp) +
+  geom_line(size = 0.5,
+            colour = "#112446") +
+  theme_minimal()
+
+require(som)
+require(tidyr)
+o3 = o2 %>%
+  mutate(gp = paste(Node.1, Node.2, sep = " -- ")) %>%
+  select(gp, score,ss) %>%
+  pivot_wider(names_from = ss, values_from = score) %>%
+  ungroup() %>% 
+  select(-c(Node.1, Node.2))
+
+o3.n = som::normalize(o3[,c(3,2)])
+som_vars <- som(o3.n, xdim=2, ydim=1)
+plot(som_vars)
+```
+
+

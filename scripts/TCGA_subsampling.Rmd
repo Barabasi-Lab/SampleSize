@@ -11,43 +11,59 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Description
 
-Create subsamples of gene expression data from GTEx, with the aim of testing the effect of sample size in these subsamples.
+Create subsamples of gene expression data from TCGA (GDC), with the aim of testing the effect of sample size in these subsamples.
 
 ```{r, message=FALSE}
 library(data.table)
 library(dplyr)
+library(ggplot2)
+require(magrittr)
+library(tidyr)
+library(igraph)
 set.seed(1510)
+`%ni%` <- Negate(`%in%`)
 ```
 
 ## Read files
 
-```{r define_files}
+```{r}
 # Define working directories
-databases_dir = '/home/j.aguirreplans/Databases'
-#databases_dir = '/Users/j.aguirreplans/Databases'
-output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data'
-#output_dir = '/Users/quim/Documents/DATA/BioGroup/Scipher/data'
+gdc_dir = '/home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA'
+output_dir = paste(gdc_dir, 'out', sep='/')
 
-# Define input files and dirs
-samples_subjects_file = '/home/j.aguirreplans/Databases/GTEx/v8/GTEx_Annotations_SamplesSubjectsMerged.txt'
-
+# Read metadata file
+metadata_file = paste(output_dir, 'metadata.txt', sep='/')
+metadata_df = fread(metadata_file)
+metadata_df %<>% select(case_id, project_id) %>% unique()
 ```
 
-```{r read_files}
-# Read input files
-samples_df = fread(samples_subjects_file)
+There are `r length(unique(metadata_df$case_id))` case IDs.
 
+```{r}
+head(metadata_df)
 ```
+
+```{r}
+# Join metadata with ICD10 names
+# Download ICD10 at: https://www.cms.gov/medicare/icd-10/2022-icd-10-cm 
+#icd10_file = '/home/j.aguirreplans/Databases/ICD10/icd10cm_codes_2022.txt'
+#icd10_df = read.delim(icd10_file, sep=" ", header=F)
+#icd10_df = as.data.frame(cbind(icd10_df[,1], trimws(apply( icd10_df[ , 2:length(icd10_df)] , 1 , paste , collapse = " " ))))
+#colnames(icd10_df) = c("ID", "Name")
+#metadata_df$icd_10_code = gsub(".","",metadata_df$icd_10_code, fixed=T)
+#metadata_df %,>% left_join(as.data.frame(icd10_df), by = c("icd_10_code" = "ID"))
+```
+
 
 ## Subsampling
 
-We define the list of tissues that we want to analyze:
+We define the list of projects that we want to analyze:
 
 ```{r}
-tissues <- unique(samples_df$SMTSD.no.sp.char)
-#tissues <- c('Spleen', 'Whole.Blood')
-
+project_ids <- unique(metadata_df$project_id)
 ```
+
+There are `r length(unique(metadata_df$project_id))` projects.
 
 We define the sampling function:
 
@@ -89,40 +105,50 @@ create_random_subsamples_with_replacement <- function(samples_list, size_list, r
 
 ```
 
-For each tissue and sex, we select groups of samples from different sizes:
+For all samples, we select groups of samples from different sizes:
 
-```{r sampling_by_tissue_sex_with_repetition}
-sampling_dir = paste(output_dir, 'sampling/GTEx/sampling_with_repetition', sep='/')
-sex_to_id = data.frame(row.names=c("male","female","") , val=c(1,2,""))
-for (tissue in tissues){
-  for (sex in rownames(sex_to_id)){
-    if (sex == ""){
-      tissue_sex_samples = samples_df[samples_df$SMTSD.no.sp.char == tissue,]$SAMPID
-      tissue_sampling_dir = paste(sampling_dir, tissue, sep='/')
-      all_samples_output_file = paste(tissue_sampling_dir, paste('RNAseq_samples_', tissue, '_all_samples.txt', sep=''), sep='/')
-      output_file_name = paste(paste(paste('RNAseq_samples', tissue, sep="_")))
-      compilation_samples_output_file = paste(sampling_dir, paste(paste('RNAseq_samples', tissue, sep="_"), '.txt', sep=''), sep='/')
-    } else {
-      sex_id = sex_to_id[sex,]
-      tissue_sex_samples = samples_df[(samples_df$SMTSD.no.sp.char == tissue) & (samples_df$SEX == sex_id),]$SAMPID
-      tissue_sampling_dir = paste(sampling_dir, paste(tissue, sex, sep="_"), sep='/')
-      all_samples_output_file = paste(tissue_sampling_dir, paste('RNAseq_samples_', tissue, '_', sex, '_all_samples.txt', sep=''), sep='/')
-      output_file_name = paste(paste(paste('RNAseq_samples', tissue, sex, sep="_")))
-      compilation_samples_output_file = paste(sampling_dir, paste(paste('RNAseq_samples', tissue, sex, sep="_"), '.txt', sep=''), sep='/')
-    }
-    if (length(tissue_sex_samples) > 10){
-      size_list <- seq(10, length(tissue_sex_samples), 10)
-      dir.create(tissue_sampling_dir, showWarnings = FALSE)
-      # Create a file with a list of all samples
-      all_samples_df <- data.frame(samples=tissue_sex_samples)
-      all_samples_df %>% write.table(all_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
-      # Create files with lists of subsamples
-      subsamples_df <- create_random_subsamples_with_replacement(samples_list=tissue_sex_samples, size_list=size_list, rep=10, output_dir=tissue_sampling_dir, output_file_name=output_file_name)
-      # Create a final file with a compilation of all selected samples for the same tissue
-      subsamples_df %>% write.table(compilation_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
-    }
+```{r}
+sampling_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-03-28-Dataset/sampling_with_repetition'
+tcga_sampling_dir = paste(sampling_dir, "TCGA", sep='/')
+project_samples = unique(metadata_df$case_id)
+size_list <- seq(10, length(project_samples), 10)
+dir.create(tcga_sampling_dir, showWarnings = FALSE)
+# Create a file with a list of all samples
+all_samples_output_file = paste(tcga_sampling_dir, paste('RNAseq_samples_TCGA_all_samples.txt', sep=''), sep='/')
+all_samples_df <- data.frame(samples=project_samples)
+all_samples_df %>% write.table(all_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
+# Create files with lists of subsamples
+output_file_name = 'RNAseq_samples_TCGA'
+subsamples_df <- create_random_subsamples_with_replacement(samples_list=project_samples, size_list=size_list, rep=10, output_dir=tcga_sampling_dir, output_file_name=output_file_name)
+# Create a final file with a compilation of all selected samples for the same project
+compilation_samples_output_file = paste(sampling_dir, 'RNAseq_samples_TCGA.txt', sep='/')
+subsamples_df %>% write.table(compilation_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
+```
+
+For each project, we select groups of samples from different sizes:
+
+```{r}
+sampling_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-03-28-Dataset/sampling_with_repetition'
+
+for (project_id in project_ids){
+  # Select samples of the project
+  project_samples = metadata_df[metadata_df$project_id == .GlobalEnv$project_id,]$case_id
+  project_sampling_dir = paste(sampling_dir, project_id, sep='/')
+  all_samples_output_file = paste(project_sampling_dir, paste('RNAseq_samples_', project_id, '_all_samples.txt', sep=''), sep='/')
+  output_file_name = paste(paste(paste('RNAseq_samples', project_id, sep="_")))
+  compilation_samples_output_file = paste(sampling_dir, paste(paste('RNAseq_samples', project_id, sep="_"), '.txt', sep=''), sep='/')
+  if (length(project_samples) > 10){
+    # Define list of different sample sizes
+    size_list <- seq(10, length(project_samples), 10)
+    dir.create(project_sampling_dir, showWarnings = FALSE)
+    # Create a file with a list of all samples
+    all_samples_df <- data.frame(samples=project_samples)
+    all_samples_df %>% write.table(all_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
+    # Create files with lists of subsamples
+    subsamples_df <- create_random_subsamples_with_replacement(samples_list=project_samples, size_list=size_list, rep=10, output_dir=project_sampling_dir, output_file_name=output_file_name)
+    # Create a final file with a compilation of all selected samples for the same project
+    subsamples_df %>% write.table(compilation_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
   }
 }
-
 ```
 

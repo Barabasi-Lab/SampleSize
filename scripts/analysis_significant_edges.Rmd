@@ -45,6 +45,10 @@ We filter the results by focusing on the dataset of Scipher, method Pearson and 
 topology_scipher_pearson_df = topology_df %>% filter((dataset == "scipher") & (type_dataset == "complete_dataset") & (method == "pearson") & (threshold == 0.05) & is.na(disparity))
 head(topology_scipher_pearson_df)
 
+# Write small table with results
+num_edges_num_samples_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/scipher_pearson_pval_0.05_num_edges_vs_num_samples.txt"
+topology_scipher_pearson_df %>% select(size, rep, num_edges) %>% arrange(size, rep) %>% fwrite(num_edges_num_samples_file)
+
 # Calculate mean and median of the number of edges per size
 topology_scipher_pearson_by_size_df = topology_scipher_pearson_df %>%
   group_by(size) %>%

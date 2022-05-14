@@ -354,10 +354,11 @@ pre code {
 
 <div id="description" class="section level2">
 <h2>Description</h2>
-<p>Preprocess Scipher data (version v8).</p>
+<p>Pre-process Scipher data (version v8) before creating gene co-expression networks.</p>
 <pre class="r"><code>library(data.table)
 library(dplyr)
 library(ggplot2)
+library(igraph)
 require(magrittr)
 library(tidyr)
 set.seed(1510)
@@ -366,204 +367,412 @@ set.seed(1510)
 <div id="read-files" class="section level2">
 <h2>Read files</h2>
 <pre class="r"><code># Define working directories
-databases_dir = '/home/j.aguirreplans/Databases'
-ppi_dir = '/home/j.aguirreplans/data/PPI'
-deisy_dicts_dir = '/home/j.aguirreplans/data/DeisyDictionaries'
-data_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021'
+scipher_data_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021'
 
 # Define input files
-RNAseq_raw_file = paste(data_dir, '00_data/Network004_hg19_ucsc_counts_20211027.csv', sep='/')
-metadata_raw_file = paste(data_dir, '00_data/RA-netk042021-10-25.xlsx', sep='/')
-RNA_metadata_file = paste(data_dir, '00_data/RNA_metadata.csv', sep='/')
-gene_names_dict_file = paste(deisy_dicts_dir, 'Gene_Names_Dic.csv', sep='/')
-gene_names_cat_file = paste(deisy_dicts_dir, 'Gene_Names_Cat.csv', sep='/')
-gene_type_file = paste(deisy_dicts_dir, 'gene_type.csv', sep='/')
-ppi_network_symbol_file = paste(ppi_dir, 'interactome_2019_merged_symbols.csv', sep='/')
-mesh_file = paste(databases_dir, 'MeSH/mtrees2021.bin', sep='/')
-disease_genes_file_old = &quot;/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/Guney2016_GenesDisease.tsv&quot;
-disease_genes_file = &quot;/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/GDA_Data_Clean_Filtered_GeneNames.csv&quot;
-essential_genes_original_file = paste(databases_dir, 'OGEE/OGEE_esential_genes_20190416.txt', sep='/')
-gene_info_file = paste(databases_dir, 'NCBIGene/Homo_sapiens.gene_info', sep='/')
-
-# Define output files and dirs
-RNA_metadata_processed_file = paste(data_dir, '00_data/scipher_metadata_rnaseq_counts.csv', sep='/')
-RNA_metadata_processed_0m_file = paste(data_dir, '00_data/scipher_metadata_rnaseq_counts_0m.csv', sep='/')
-RNAseq_processed_file = paste(data_dir, '00_data/scipher_rnaseq_counts_processed.csv', sep='/')
-genes_dataset_file = paste(data_dir, '00_data/scipher_rnaseq_gene_info.csv', sep='/')
-disease_genes_info_file_old = &quot;/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2015_scipher.csv&quot;
-disease_genes_info_file = &quot;/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_scipher.csv&quot;
-essential_genes_file = paste(databases_dir, 'OGEE/OGEE_esential_genes.csv', sep='/')
-essential_genes_scipher_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_esential_genes_scipher.csv'</code></pre>
+RNA_metadata_file = paste(scipher_data_dir, '00_data/RNA_metadata.csv', sep='/')</code></pre>
+<p>We read a file containing the gene expression and metadata together, which was created in a previous analysis:</p>
+<pre class="r"><code># Read RNA metadata processed and select the clean dataset of genes
+RNA_metadata = fread(RNA_metadata_file)
+genes_dataset = unique(toupper(names(RNA_metadata)[53:length(names(RNA_metadata))]))
+print(length(genes_dataset))</code></pre>
+<pre><code>## [1] 24219</code></pre>
+<pre class="r"><code>RNA_metadata[1:5,1:60]</code></pre>
+<pre><code>##    Scipher_id age gender              ethnicity
+## 1:  Nk4001001  82   male Not Hispanic or Latino
+## 2:  Nk4001001  82   male Not Hispanic or Latino
+## 3:  Nk4001002  56   male Not Hispanic or Latino
+## 4:  Nk4001002  56   male Not Hispanic or Latino
+## 5:  Nk4001003  74   male Not Hispanic or Latino
+##    race.american.indian.or.alaska.tive race.asian
+## 1:                                   0          0
+## 2:                                   0          0
+## 3:                                   0          0
+## 4:                                   0          0
+## 5:                                   0          0
+##    race.black.or.african.american race.white race.other race.other.specify
+## 1:                              0          1          0             {null}
+## 2:                              0          1          0             {null}
+## 3:                              0          1          0             {null}
+## 4:                              0          1          0             {null}
+## 5:                              0          1          0             {null}
+##      symp_begin      date_dx smoke_yesno smoke_yrs cancer fibromyalgia
+## 1: 2004-UNK-UNK 2004-UNK-UNK       FALSE         0      0            0
+## 2: 2004-UNK-UNK 2004-UNK-UNK       FALSE         0      0            0
+## 3: 1999-UNK-UNK 2006-UNK-UNK       FALSE         0      0            0
+## 4: 1999-UNK-UNK 2006-UNK-UNK       FALSE         0      0            0
+## 5: 2002-UNK-UNK 2002-UNK-UNK        TRUE        54      0            0
+##    biologic_grp visit      bmi weight height duration_disease dose_plaquenil
+## 1:       enbrel    0m 33.71531    235     70               15               
+## 2:       enbrel    3m 32.85449    229     NA               NA               
+## 3:       enbrel    0m 17.33175    114     68               13               
+## 4:       enbrel    3m 17.33175    114     NA               NA               
+## 5:       humira    0m 23.09857    161     70               17               
+##    con_plaquenil dose_mtx con_mtx dose_pred con_pred dose_azulfidine
+## 1:             0    15 mg       1                  0                
+## 2:             0    15 mg       1                  0                
+## 3:             0     1 mg       1                  0                
+## 4:             0    15 mg       1                  0                
+## 5:             0                0                  0                
+##    con_azulfidine dose_arava con_arava CRP_metadata swollen_jts_28
+## 1:              0                    0          1.0              7
+## 2:              0                    0          1.0              0
+## 3:              0                    0          4.0             16
+## 4:              0                    0          1.0              8
+## 5:              0                    0          0.2              7
+##    tender_jts_28 pt_global_assess md_global_assess pt_pain    di cdai
+## 1:             6               40               40      40 0.125 21.0
+## 2:             0                0                5       3 0.375  0.5
+## 3:            23               90               55      80 1.375 53.5
+## 4:            20               70               30      70 1.375 38.0
+## 5:             4               45               55      70 0.000 21.0
+##    antiCCP_biry    RF RF_binary das28crp        acr20        acr50        acr70
+## 1:            1 100.0         1 3.882058                                       
+## 2:           NA    NA        NA 1.209533    responder    responder    responder
+## 3:            0   8.1         0 6.605063                                       
+## 4:           NA    NA        NA 5.485889 nonresponder nonresponder nonresponder
+## 5:            1 100.0         1 3.516446                                       
+##    eular eular_binary  cdai_cat das28crp_cat    batch A1BG A1BG-AS1 A1CF A2M
+## 1:                     Moderate     Moderate seq_fac1   19      109    0  27
+## 2:  Good    responder Remission    Remission seq_fac1   16      129    0   1
+## 3:                         High         High seq_fac1   27       77    0   7
+## 4:  Poor nonresponder      High         High seq_fac1   34      104    0   1
+## 5:                     Moderate     Moderate seq_fac1   18      128    0   9
+##    A2M-AS1 A2ML1 A2MP1 A3GALT2
+## 1:     718     0     7       9
+## 2:     962     0     0      13
+## 3:     288     1     2       9
+## 4:     426     0     0       8
+## 5:     569     0     0       5</code></pre>
+<p>The <code>RNA_metadata</code> dataframe contains 24271 features (24219 genes) and 584 samples.</p>
 <blockquote>
 <p>Important to note: There are many samples that have the same Scipher_id, meaning that they come from the same patient. They only differ by the visit (which can be either 0m, 3m or 6m) and the “batch” (which can be either “seq_fac1” or “seq_fac2”).</p>
 </blockquote>
-<pre class="r"><code># Read file with gene counts
-RNAseq_raw = fread(RNAseq_raw_file)
-names(RNAseq_raw) %&gt;% head(n = 20)</code></pre>
-<pre><code>##  [1] &quot;Scipher_id&quot;     &quot;visit&quot;          &quot;batch&quot;          &quot;N_unmapped&quot;    
-##  [5] &quot;N_multimapping&quot; &quot;N_noFeature&quot;    &quot;N_ambiguous&quot;    &quot;Histone3&quot;      
-##  [9] &quot;TRNA_Pseudo&quot;    &quot;5S_rRNA&quot;        &quot;Mir_584&quot;        &quot;TRNA_Asn&quot;      
-## [13] &quot;TRNA_Gly&quot;       &quot;TRNA_Val&quot;       &quot;Metazoa_SRP&quot;    &quot;U6&quot;            
-## [17] &quot;SCARNA24&quot;       &quot;7SK&quot;            &quot;Mir_548&quot;        &quot;SNORA63&quot;</code></pre>
-<pre class="r"><code>names(RNAseq_raw) %&gt;% tail(n = 20)</code></pre>
-<pre><code>##  [1] &quot;HTJA84&quot;         &quot;X74394&quot;         &quot;TCRBV1S1A1N1&quot;   &quot;KIAA1817&quot;      
-##  [5] &quot;TCRVb7.1-Jb1.5&quot; &quot;X97876&quot;         &quot;Y00482&quot;         &quot;Nup88&quot;         
-##  [9] &quot;Y12839&quot;         &quot;Y16709&quot;         &quot;XB&quot;             &quot;Z22690&quot;        
-## [13] &quot;Z24749&quot;         &quot;Z49973&quot;         &quot;Z49979&quot;         &quot;Z49981&quot;        
-## [17] &quot;Z49982&quot;         &quot;Z49985&quot;         &quot;Z70701&quot;         &quot;unknown&quot;</code></pre>
-<pre class="r"><code># Merge Scipher_id, visit and batch into a unique id
-scipherid_visit_batch = paste(RNAseq_raw$Scipher_id, RNAseq_raw$visit, RNAseq_raw$batch, sep=&quot;.&quot;)
-RNAseq_raw = cbind(data.frame(Scipher_id.visit.batch=scipherid_visit_batch), RNAseq_raw)</code></pre>
-<p>The <code>RNAseq_raw</code> contains 34433 features, from 586 samples</p>
-<blockquote>
-<p><strong>Note: Gene names must be remapped from the USCS format to an official name system - such as HGNC or ENTREZ. For that, one can use, for example, biomart.</strong></p>
-</blockquote>
-<p>We filter the genes in the RNAseq keeping only the ones that have known gene symbol.</p>
-<p>In the raw dataset, we have 34420 unique genes.</p>
-<p>After selecting the genes that have known annotations in HGNC, we ended up with 24219 unique genes.</p>
-<p>We end up having 24219 genes, from 584 samples</p>
-<p>There are also 13603 genes without known annotations in HGNC. Here we show several of these genes:</p>
-<pre><code>##  [1] &quot;HISTONE3&quot;    &quot;TRNA_PSEUDO&quot; &quot;5S_RRNA&quot;     &quot;MIR_584&quot;     &quot;TRNA_ASN&quot;   
-##  [6] &quot;TRNA_GLY&quot;    &quot;TRNA_VAL&quot;    &quot;METAZOA_SRP&quot; &quot;U6&quot;          &quot;SCARNA24&quot;   
-## [11] &quot;7SK&quot;         &quot;MIR_548&quot;     &quot;MIR_562&quot;     &quot;TRNA_LYS&quot;    &quot;Y_RNA&quot;      
-## [16] &quot;U7&quot;          &quot;MIR_544&quot;     &quot;U4&quot;          &quot;SNORA2&quot;      &quot;MIR_590&quot;</code></pre>
-<p>Regarding the metadata, we have features, from 270 unique individuals. The majory of the patients have more than one visit.</p>
+<p>We combine the Scipher_id, the visit and the batch, so that we can have a unique ID for each sample:</p>
+<pre class="r"><code>scipherid_visit_batch = paste(RNA_metadata$Scipher_id, RNA_metadata$visit, RNA_metadata$batch, sep=&quot;.&quot;)
+RNA_metadata = cbind(data.frame(Scipher_id.visit.batch=scipherid_visit_batch), RNA_metadata) %&gt;% relocate(Scipher_id.visit.batch, Scipher_id, visit, batch, .before = age)
+RNA_metadata[1:5,1:5]</code></pre>
+<pre><code>##   Scipher_id.visit.batch Scipher_id visit    batch age
+## 1  Nk4001001.0m.seq_fac1  Nk4001001    0m seq_fac1  82
+## 2  Nk4001001.3m.seq_fac1  Nk4001001    3m seq_fac1  82
+## 3  Nk4001002.0m.seq_fac1  Nk4001002    0m seq_fac1  56
+## 4  Nk4001002.3m.seq_fac1  Nk4001002    3m seq_fac1  56
+## 5  Nk4001003.0m.seq_fac1  Nk4001003    0m seq_fac1  74</code></pre>
+<p>The new <code>RNA_metadata</code> dataframe contains 24272 features (24219 genes) and 584 samples.</p>
 </div>
-<div id="filtering-the-genes-with-low-counts" class="section level2">
-<h2>Filtering the genes with low counts</h2>
-<p>We filter the genes that have low expression in all samples, keeping the ones that meet at least 3 of these 4 rules:</p>
+<div id="gene-pre-processing" class="section level2">
+<h2>Gene pre-processing</h2>
+<div id="filter-genes-without-classification" class="section level3">
+<h3>Filter genes without classification</h3>
+<p>We filter the genes in the matrix keeping only the ones that have been properly annotated and classified in the HGNC database:</p>
+<pre class="r"><code>gene_annotations_dir = '/home/j.aguirreplans/data/gene_annotations/data/out'
+gene_category_file = paste(gene_annotations_dir, 'hgnc_category_set_2022-01-01.txt', sep='/')
+gene_category_df = fread(gene_category_file)
+gene_category_df$HGNC_Symbol = toupper(gene_category_df$HGNC_Symbol)
+head(gene_category_df)</code></pre>
+<pre><code>##    HGNC_Symbol       HGNC_category       HGNC_category_short
+## 1:        A1BG protein-coding gene gene with protein product
+## 2:    A1BG-AS1      non-coding RNA      RNA, long non-coding
+## 3:        A1CF protein-coding gene gene with protein product
+## 4:         A2M protein-coding gene gene with protein product
+## 5:     A2M-AS1      non-coding RNA      RNA, long non-coding
+## 6:       A2ML1 protein-coding gene gene with protein product</code></pre>
+<pre class="r"><code>genes_with_category = genes_dataset[genes_dataset %in% gene_category_df$HGNC_Symbol]
+genes_without_category = genes_dataset[!(genes_dataset %in% gene_category_df$HGNC_Symbol)]
+genes_dataset_df = gene_category_df %&gt;% filter(HGNC_Symbol %in% genes_with_category)
+head(genes_dataset_df)</code></pre>
+<pre><code>##    HGNC_Symbol       HGNC_category       HGNC_category_short
+## 1:        A1BG protein-coding gene gene with protein product
+## 2:    A1BG-AS1      non-coding RNA      RNA, long non-coding
+## 3:        A1CF protein-coding gene gene with protein product
+## 4:         A2M protein-coding gene gene with protein product
+## 5:     A2M-AS1      non-coding RNA      RNA, long non-coding
+## 6:       A2ML1 protein-coding gene gene with protein product</code></pre>
+<pre class="r"><code>table(genes_dataset_df$HGNC_category)</code></pre>
+<pre><code>## 
+##      non-coding RNA               other protein-coding gene          pseudogene 
+##                4528                 245               18680                 766</code></pre>
+<pre class="r"><code>round(prop.table(table(genes_dataset_df$HGNC_category))*100,2)</code></pre>
+<pre><code>## 
+##      non-coding RNA               other protein-coding gene          pseudogene 
+##               18.70                1.01               77.13                3.16</code></pre>
+<p>From the initial 24219 genes, there are 24219 with category and 0 without category.</p>
+</div>
+<div id="filter-genes-with-low-counts" class="section level3">
+<h3>Filter genes with low counts</h3>
+<p>We filter the genes that have low expression in all samples, keeping the ones that meet these rules:</p>
 <ul>
 <li>Sum of the expression of all samples above 0.</li>
 <li>Mean of the expression of all samples above 5.</li>
 <li>Median of the expression of all samples above 5.</li>
 <li>Standard deviation of all samples above 1.</li>
+<li>More than half of the genes with counts above 0.</li>
 </ul>
-<p>We end up having 14266 genes and 584 samples from 261 individuals.</p>
-</div>
-<div id="combining-the-dataset" class="section level2">
-<h2>Combining the dataset</h2>
+<pre class="r"><code># Get only the gene expression
+RNA = RNA_metadata %&gt;% select(genes_dataset_df$HGNC_Symbol)
+genes = colnames(RNA)
+sample_ids = RNA_metadata$Scipher_id.visit.batch
+
+# Transpose the matrix
+RNA = t(as.matrix(RNA)) %&gt;% as.data.frame()
+colnames(RNA) = sample_ids
+RNA = cbind(data.frame(Gene=genes), RNA)
+RNA[1:5,1:5]</code></pre>
+<pre><code>##              Gene Nk4001001.0m.seq_fac1 Nk4001001.3m.seq_fac1
+## A1BG         A1BG                    19                    16
+## A1BG-AS1 A1BG-AS1                   109                   129
+## A1CF         A1CF                     0                     0
+## A2M           A2M                    27                     1
+## A2M-AS1   A2M-AS1                   718                   962
+##          Nk4001002.0m.seq_fac1 Nk4001002.3m.seq_fac1
+## A1BG                        27                    34
+## A1BG-AS1                    77                   104
+## A1CF                         0                     0
+## A2M                          7                     1
+## A2M-AS1                    288                   426</code></pre>
+<pre class="r"><code># Calculate sum, mean, median and standard deviation
+info_df = data.frame(Gene=RNA$Gene, sum=rowSums(RNA[,-1]))
+info_df$sd = apply(RNA[,-1], 1, sd)
+info_df$mean = rowMeans(RNA[,-1])
+info_df$median = apply(RNA[,-1], 1, median)
+info_df$zero_sum_counts = as.numeric(apply(RNA[,-1], 1, function(i) sum(i == 0) )) # Number of times that the counts are equal to 0
+
+# We keep the genes following all criteria
+info_filt_df = info_df[(info_df$sum &gt; 0) &amp; (info_df$mean &gt; 5) &amp; (info_df$median &gt; 5) &amp; (info_df$sd &gt; 1) &amp; (info_df$zero_sum_counts &lt; dim(RNA[, -1])[2]/2) ,]</code></pre>
+<p>There are 13822 genes accomplishing all the rules.</p>
+<p>We count the following number of genes accomplishing each rule:</p>
+<ul>
+<li>Sum of the expression of all samples above 0: 23494.</li>
+<li>Mean of the expression of all samples above 5: 14266.</li>
+<li>Median of the expression of all samples above 5: 13822.</li>
+<li>Standard deviation of all samples above 1: 18126.</li>
+<li>More than half of the genes with counts above 0: 16165.</li>
+</ul>
+<p>We count the following number of filtered genes for each category:</p>
+<pre class="r"><code># Write the information about the selected genes of the dataset in a separate file
+genes_dataset_df$enough_counts = ifelse(genes_dataset_df$HGNC_Symbol %in% info_filt_df$Gene, TRUE, FALSE)
+genes_dataset_file = paste(scipher_data_dir, '00_data/scipher_rnaseq_gene_info.csv', sep='/')
+fwrite(genes_dataset_df, genes_dataset_file)
+
+# Check the percentage of genes in each category after filtering by counts
+genes_dataset_filtered_df = genes_dataset_df %&gt;% filter(HGNC_Symbol %in% info_filt_df$Gene) %&gt;% unique
+table(genes_dataset_filtered_df$HGNC_category)</code></pre>
+<pre><code>## 
+##      non-coding RNA               other protein-coding gene          pseudogene 
+##                 837                  59               12673                 253</code></pre>
+<pre class="r"><code>round(prop.table(table(genes_dataset_filtered_df$HGNC_category))*100,2)</code></pre>
+<pre><code>## 
+##      non-coding RNA               other protein-coding gene          pseudogene 
+##                6.06                0.43               91.69                1.83</code></pre>
+<pre class="r"><code>RNAseq_processed = RNA_metadata %&gt;% select(c(&quot;Scipher_id.visit.batch&quot;, &quot;Scipher_id&quot;, &quot;visit&quot;, &quot;batch&quot;, info_filt_df$Gene))
+RNAseq_processed_t = t(as.matrix(RNAseq_processed %&gt;% select(info_filt_df$Gene))) %&gt;% as.data.frame()
+colnames(RNAseq_processed_t) = RNA_metadata$Scipher_id.visit.batch
+RNAseq_processed_t = cbind(data.frame(Gene=rownames(RNAseq_processed_t)), RNAseq_processed_t)
+RNAseq_processed_file = paste(scipher_data_dir, '00_data/scipher_rnaseq_counts_processed.csv', sep='/')
+RNAseq_processed_t %&gt;% fwrite(RNAseq_processed_file)
+rm(RNA)</code></pre>
+<pre class="r"><code>RNA_metadata_processed = dplyr::inner_join((RNA_metadata %&gt;% dplyr::select(names(RNA_metadata)[1:53])), RNAseq_processed)</code></pre>
 <pre><code>## Joining, by = c(&quot;Scipher_id.visit.batch&quot;, &quot;Scipher_id&quot;, &quot;visit&quot;, &quot;batch&quot;)</code></pre>
+<pre class="r"><code>RNA_metadata_processed_file = paste(scipher_data_dir, '00_data/scipher_metadata_rnaseq_counts.csv', sep='/')
+RNA_metadata_processed %&gt;% fwrite(RNA_metadata_processed_file)</code></pre>
+<p>We end up having 13822 genes and 584 samples from 261 individuals.</p>
+</div>
+</div>
+<div id="analyze-the-metadata" class="section level2">
+<h2>Analyze the metadata</h2>
+<p>We analyze the response of the patients at different time points:</p>
+<pre class="r"><code># Read file with metadata
+metadata_raw_file = paste(scipher_data_dir, '00_data/RA-netk042021-10-25.xlsx', sep='/')
+metadata = readxl::read_xlsx(metadata_raw_file)
+
+metadata = metadata %&gt;% 
+  rename(CRP_metadata = CRP)
+
+# Select type of response of patients
+metadata_response = 
+  metadata %&gt;%
+  select(Scipher_id, visit, 
+         eular_binary, acr50) %&gt;%
+  pivot_wider(names_from = visit, 
+              values_from = c(eular_binary, acr50))
+
+head(metadata_response)</code></pre>
+<pre><code>## # A tibble: 6 × 7
+##   Scipher_id eular_binary_0m eular_binary_3m eular_binary_6m acr50_0m acr50_3m  
+##   &lt;chr&gt;      &lt;chr&gt;           &lt;chr&gt;           &lt;chr&gt;           &lt;chr&gt;    &lt;chr&gt;     
+## 1 Nk4001001  &lt;NA&gt;            responder       &lt;NA&gt;            &lt;NA&gt;     responder 
+## 2 Nk4001002  &lt;NA&gt;            nonresponder    nonresponder    &lt;NA&gt;     nonrespon…
+## 3 Nk4001003  &lt;NA&gt;            nonresponder    responder       &lt;NA&gt;     nonrespon…
+## 4 Nk4001004  &lt;NA&gt;            nonresponder    nonresponder    &lt;NA&gt;     nonrespon…
+## 5 Nk4001005  &lt;NA&gt;            &lt;NA&gt;            &lt;NA&gt;            &lt;NA&gt;     &lt;NA&gt;      
+## 6 Nk4002001  &lt;NA&gt;            &lt;NA&gt;            &lt;NA&gt;            &lt;NA&gt;     &lt;NA&gt;      
+## # … with 1 more variable: acr50_6m &lt;chr&gt;</code></pre>
 <p>When combining the metadata with the RNAseq we have, in total, 584 samples from 261 individuals. Out of those, <strong>367</strong> samples from 260 individuals are at baseline.</p>
 <blockquote>
 <p>Important to note: The key to both data sets is the combination of <code>Scipher_id</code> and <code>visit</code>. Do not join using <code>CRP</code>.</p>
 </blockquote>
-<p>We focus here on the data we have in the baseline.</p>
+<p>We focus here on the gene expression data that we have in the baseline (visit = 0m).</p>
+<p>This is the response (in eular) of patients after 3 months:</p>
 </div>
 <div id="a-tibble-3-3" class="section level1">
 <h1>A tibble: 3 × 3</h1>
 <p>eular_binary_3m <code>#</code> <code>%</code> <chr> <int> <dbl> 1 nonresponder 153 51<br />
 2 responder 87 29<br />
 3 <NA> 127 42.3</p>
+<p>This is the response (in eular) of patients after 6 months:</p>
 </div>
 <div id="a-tibble-3-3-1" class="section level1">
 <h1>A tibble: 3 × 3</h1>
 <p>eular_binary_6m <code>#</code> <code>%</code> <chr> <int> <dbl> 1 nonresponder 135 45<br />
 2 responder 107 35.7 3 <NA> 125 41.7</p>
+<p>This is a summary of the response (in eular) after both 3 and 6 months:</p>
 </div>
 <div id="a-tibble-9-4" class="section level1">
 <h1>A tibble: 9 × 4</h1>
 <p>eular_binary_3m eular_binary_6m <code>#</code> <code>%</code> <chr> <chr> <int> <dbl> 1 nonresponder nonresponder 93 10.3 2 nonresponder responder 38 4.22 3 nonresponder <NA> 22 2.44 4 responder nonresponder 22 2.44 5 responder responder 58 6.44 6 responder <NA> 7 0.78 7 <NA> nonresponder 20 2.22 8 <NA> responder 11 1.22 9 <NA> <NA> 96 10.7</p>
 <div id="prepare-disease-genes-information-dataset" class="section level2">
 <h2>Prepare disease genes information dataset</h2>
-<p>Prepare the version of 2015:</p>
-<pre class="r"><code># Create a disease gene file containing MESH information
-if(!(file.exists(disease_genes_info_file_old))){
-  
-  # Parse MESH
-  mesh_df = fread(mesh_file, header=FALSE, col.names = c(&quot;concept&quot;, &quot;concept.id&quot;))
-  mesh_df$root.concept.id = substr(mesh_df$concept.id,1,3)
-  root.concepts = mesh_df %&gt;% filter(concept.id==root.concept.id) %&gt;% select(concept, concept.id) %&gt;% rename(&quot;root.concept&quot;=&quot;concept&quot;, &quot;root.concept.id&quot;=&quot;concept.id&quot;)
-  mesh_df = left_join(mesh_df, root.concepts, by=c(&quot;root.concept.id&quot; = &quot;root.concept.id&quot;))
-  mesh_df$concept = tolower(mesh_df$concept)
-  mesh_df$root.concept = tolower(mesh_df$root.concept)
-  
-  # Parse disease2gene
-  processDisease2Genes = function(filepath) {
-    disease_genes_df=data.frame(matrix(ncol=2,nrow=0, dimnames=list(NULL, c(&quot;disease&quot;, &quot;gene.id&quot;))))
-    con = file(filepath, &quot;r&quot;)
-    while ( TRUE ) {
-      line = readLines(con, n = 1)
-      if ( length(line) == 0 ) {
-        break
-      }
-      lineValues=strsplit(line, split=&quot;\t&quot;)[[1]]
-      disease=lineValues[2]
-      genes=lineValues[3:length(lineValues)]
-      disease2genes=data.frame(disease=disease,gene.id=genes)
-      disease_genes_df=rbind(disease_genes_df, disease2genes)
-    }
-    close(con)
-    return(disease_genes_df)
-  }
-  disease_genes_df = processDisease2Genes(disease_genes_file_old)
-  disease_genes_df$gene.id = as.numeric(disease_genes_df$gene.id)
-  
-  # Parse gene info
-  gene_info_df = fread(gene_info_file) %&gt;% select(GeneID, Symbol)
-  gene_info_df$Symbol = toupper(gene_info_df$Symbol)
-  
-  # Merge disease2gene with gene info to include gene symbols
-  disease_genes_df = inner_join(disease_genes_df, gene_info_df, by=c(&quot;gene.id&quot; = &quot;GeneID&quot;)) %&gt;% rename(&quot;gene&quot;=&quot;Symbol&quot;)
-  
-  # Merge disease2gene table with MESH and output file
-  disease_genes_df = inner_join(disease_genes_df, mesh_df, by=c(&quot;disease&quot; = &quot;concept&quot;))
+<p>Read the disease-gene associations dataset:</p>
+<pre class="r"><code>gene_associations_dir = '/home/j.aguirreplans/data/gene_associations/data/out'
+disease_genes_file = paste(gene_associations_dir, 'GDA_Filtered_04042022.csv', sep='/')
+GDA = fread(disease_genes_file) %&gt;% unique()
+GDA$HGNC_Symbol = toupper(GDA$HGNC_Symbol)
+head(GDA)</code></pre>
+<pre><code>##                     NewName  MESHID HGNC_Symbol         evidence Strong Weak
+## 1:             hepatomegaly D006529        A1BG CTD|DisGeNET_GDA      0    2
+## 2:            schizophrenia D012559        A1BG CTD|DisGeNET_GDA      0    2
+## 3:      acute kidney injury D058186         A2M CTD|DisGeNET_GDA      0    2
+## 4:       adenoma liver cell D018248         A2M CTD|DisGeNET_GDA      0    2
+## 5:        alzheimer disease D000544         A2M CTD|DisGeNET_GDA      0    2
+## 6: carcinoma hepatocellular D006528         A2M              CTD      0    1
+##    Incompatible Inferred Did not provide TreeNumber
+## 1:            0        0               0    C06|C23
+## 2:            0        0               0        F03
+## 3:            0        0               0    C13|C12
+## 4:            0        0               0    C06|C04
+## 5:            0        0               0    F03|C10
+## 6:            0        0               0    C06|C04
+##                                                                     DescriptorName
+## 1:           Digestive System Diseases|Pathological Conditions, Signs and Symptoms
+## 2:                                                                Mental Disorders
+## 3: Female Urogenital Diseases and Pregnancy Complications|Male Urogenital Diseases
+## 4:                                             Digestive System Diseases|Neoplasms
+## 5:                                        Mental Disorders|Nervous System Diseases
+## 6:                                             Digestive System Diseases|Neoplasms</code></pre>
+<p>There are 102362 disease-gene associations (919 diseases, 16537 genes)</p>
+<p>Prepare the disease-gene associations for the Scipher dataset:</p>
+<pre class="r"><code>disease_genes_info_file = &quot;/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_scipher.csv&quot;
 
-  # Make columns without special characters  
-  disease_genes_df$disease.no.sp.char &lt;- gsub(' ', '.', gsub(', ', '.', gsub('-', '.', gsub('[\\(\\)]', '', disease_genes_df$disease))))
-  disease_genes_df$root.concept.no.sp.char &lt;- gsub(' ', '.', gsub(', ', '.', gsub('-', '.', gsub('[\\(\\)]', '', disease_genes_df$root.concept))))
+GDA[is.na(GDA)]&lt;-0
+GDA$NewName = tolower(GDA$NewName)
+GDA$DescriptorName = tolower(GDA$DescriptorName)
+GDA$MESHID = toupper(GDA$MESHID)
+GDA$HGNC_Symbol = toupper(GDA$HGNC_Symbol)
+GDA %&lt;&gt;% 
+  filter(Strong &gt; 0 | 
+           Weak &gt; 0 |
+           Incompatible &gt; 0) %&gt;%
+  mutate(DiseaseName = NewName) %&gt;%
+  filter(DescriptorName %ni% c(&quot;behavioral disciplines and activities&quot;)) %&gt;%
+  mutate(MESHID_remove = stringr::str_detect(TreeNumber, pattern = &quot;C22|C25|F04&quot;)) %&gt;%
+  mutate(MESHID_remove = ifelse(TreeNumber == &quot;F01&quot;, TRUE,MESHID_remove)) %&gt;%
+  filter(!(MESHID_remove)) %&gt;%
+  select(DiseaseName, HGNC_Symbol, DescriptorName) %&gt;% 
+  unique() %&gt;% 
+  mutate(gene_in_dataset = ifelse(HGNC_Symbol %in% RNAseq_processed_t$Gene, TRUE, FALSE))
 
-  disease_genes_df %&gt;% fwrite(disease_genes_info_file_old)
-  
-} else {
-  disease_genes_df = fread(disease_genes_info_file_old)
-}</code></pre>
-<p>Prepare the version of 2022:</p>
-<pre class="r"><code># Create a disease gene file containing MESH information
-if(!(file.exists(disease_genes_info_file))){
-  
-  GDA = fread(disease_genes_file)
-  GDA[is.na(GDA)]&lt;-0
-  GDA$Symbol = toupper(GDA$hgnc_symbol)
-  GDA$DiseaseName = tolower(GDA$DiseaseName)
-  GDA$DescriptorName = tolower(GDA$DescriptorName)
-  GDA %&lt;&gt;% 
-    filter(Strong &gt; 0 | 
-             Weak &gt; 0 |
-             Incompatible &gt; 0) %&gt;%
-    mutate(DiseaseName = NewName) %&gt;%
-    filter(DescriptorName %ni% c(&quot;Behavioral Disciplines and Activities&quot;)) %&gt;%
-    mutate(MESHID_remove = stringr::str_detect(TreeNumber, pattern = &quot;C22|C25|F04&quot;)) %&gt;%
-    mutate(MESHID_remove = ifelse(TreeNumber == &quot;F01&quot;, TRUE,MESHID_remove)) %&gt;%
-    filter(!(MESHID_remove)) %&gt;%
-    select(DiseaseName, hgnc_symbol, DescriptorName) %&gt;% 
-    #filter(hgnc_symbol %in% V(gPPInc)$name) %&gt;% 
-    unique() %&gt;% 
-    mutate(gene_in_dataset = ifelse(hgnc_symbol %in% genes_keep_df$symbol, TRUE, FALSE))
-    #group_by(DiseaseName) %&gt;%
-    #mutate(Total_Genes = n()) %&gt;%
-    #filter(Total_Genes &gt; 10)
+# Make columns without special characters  
+GDA$DiseaseName.no.sp.char &lt;- gsub(' ', '.', gsub(', ', '.', gsub('-', '.', gsub('[\\(\\)]', '', GDA$DiseaseName))))
+GDA$DescriptorName.no.sp.char &lt;- gsub(' ', '.', gsub(', ', '.', gsub('-', '.', gsub('[\\(\\)]', '', GDA$DescriptorName))))
 
-    # Make columns without special characters  
-  GDA$DiseaseName.no.sp.char &lt;- gsub(' ', '.', gsub(', ', '.', gsub('-', '.', gsub('[\\(\\)]', '', GDA$DiseaseName))))
-  GDA$DescriptorName.no.sp.char &lt;- gsub(' ', '.', gsub(', ', '.', gsub('-', '.', gsub('[\\(\\)]', '', GDA$DescriptorName))))
-  
-  GDA %&gt;% fwrite(disease_genes_info_file)
-  
-} else {
-  GDA = fread(disease_genes_info_file)
-}</code></pre>
+# Write output file
+GDA %&gt;% fwrite(disease_genes_info_file)
+
+head(GDA)</code></pre>
+<pre><code>##                 DiseaseName HGNC_Symbol
+## 1:             hepatomegaly        A1BG
+## 2:            schizophrenia        A1BG
+## 3:      acute kidney injury         A2M
+## 4:       adenoma liver cell         A2M
+## 5:        alzheimer disease         A2M
+## 6: carcinoma hepatocellular         A2M
+##                                                                     DescriptorName
+## 1:           digestive system diseases|pathological conditions, signs and symptoms
+## 2:                                                                mental disorders
+## 3: female urogenital diseases and pregnancy complications|male urogenital diseases
+## 4:                                             digestive system diseases|neoplasms
+## 5:                                        mental disorders|nervous system diseases
+## 6:                                             digestive system diseases|neoplasms
+##    gene_in_dataset   DiseaseName.no.sp.char
+## 1:            TRUE             hepatomegaly
+## 2:            TRUE            schizophrenia
+## 3:            TRUE      acute.kidney.injury
+## 4:            TRUE       adenoma.liver.cell
+## 5:            TRUE        alzheimer.disease
+## 6:            TRUE carcinoma.hepatocellular
+##                                                          DescriptorName.no.sp.char
+## 1:            digestive.system.diseases|pathological.conditions.signs.and.symptoms
+## 2:                                                                mental.disorders
+## 3: female.urogenital.diseases.and.pregnancy.complications|male.urogenital.diseases
+## 4:                                             digestive.system.diseases|neoplasms
+## 5:                                        mental.disorders|nervous.system.diseases
+## 6:                                             digestive.system.diseases|neoplasms</code></pre>
+<p>There are 65425 disease-gene associations (870 diseases, 14833 genes), and 34499 disease-gene associations in the Scipher dataset (869 diseases, 8113 genes).</p>
 </div>
-<div id="prepare-essencial-genes-dataset" class="section level2">
-<h2>Prepare essencial genes dataset</h2>
-<pre class="r"><code>essential_genes_df = fread(essential_genes_original_file, header=TRUE) %&gt;% rename(&quot;taxID&quot;=&quot;#taxID&quot;)
+<div id="prepare-essential-genes-dataset" class="section level2">
+<h2>Prepare essential genes dataset</h2>
+<p>Prepare the essential genes of the Scipher dataset:</p>
+<pre class="r"><code># Read the essential genes file
+essential_genes_dir = '/home/j.aguirreplans/Databases/OGEE'
+essential_genes_original_file = paste(essential_genes_dir, 'OGEE_esential_genes_20190416.txt', sep='/')
+# Filter by human genes
+essential_genes_df = fread(essential_genes_original_file, header=TRUE) %&gt;% rename(&quot;taxID&quot;=&quot;#taxID&quot;)
+head(essential_genes_df)</code></pre>
+<pre><code>##    taxID      sciName           locus essential pubmedID               dataType
+## 1:  9606 Homo sapiens ENSG00000000003        NE 26472760 LargescaleAllAvailable
+## 2:  9606 Homo sapiens ENSG00000000003        NE 26472758 LargescaleAllAvailable
+## 3:  9606 Homo sapiens ENSG00000000003        NE 26472758 LargescaleAllAvailable
+## 4:  9606 Homo sapiens ENSG00000000003        NE 26472758 LargescaleAllAvailable
+## 5:  9606 Homo sapiens ENSG00000000003        NE 18239125 LargescaleAllAvailable
+## 6:  9606 Homo sapiens ENSG00000000003        NE 26472760 LargescaleAllAvailable
+##        dataSource
+## 1: PMID: 26472760
+## 2: PMID: 26472758
+## 3: PMID: 26472758
+## 4: PMID: 26472758
+## 5: PMID: 18239125
+## 6: PMID: 26472760</code></pre>
+<pre class="r"><code># Read the gene annotations dictionary
+gene_annotations_dir = '/home/j.aguirreplans/data/gene_annotations/data/out'
+gene_dict_file = paste(gene_annotations_dir, 'multiple_hgnc_dict_set_2022-01-01.txt', sep='/')
+gene_dict_df = fread(gene_dict_file) %&gt;% unique()
+gene_dict_df = gene_dict_df[!((gene_dict_df$HGNC_Symbol==&quot;&quot;)|(gene_dict_df$alias==&quot;&quot;)),]
+gene_dict_df$HGNC_Symbol = toupper(gene_dict_df$HGNC_Symbol)
+gene_dict_df$alias = toupper(gene_dict_df$alias)
+gene_dict_df %&lt;&gt;% unique()
+head(gene_dict_df)</code></pre>
+<pre><code>##    HGNC_Symbol           alias
+## 1:       MT-TF ENSG00000210049
+## 2:       MT-TF ENST00000387314
+## 3:       MT-TF       MT-TF-201
+## 4:     MT-RNR1 ENSG00000211459
+## 5:     MT-RNR1 ENST00000389680
+## 6:     MT-RNR1     MT-RNR1-201</code></pre>
+<pre class="r"><code># Map ENSEMBL IDs to HGNC symbols
 essential_genes_df = essential_genes_df %&gt;% filter((taxID == 9606) &amp; (essential==&quot;E&quot;))
-gene_info_df = fread(gene_info_file)
-gene_info_df = gene_info_df %&gt;% separate_rows(dbXrefs, convert = TRUE) %&gt;% select(Symbol, dbXrefs) %&gt;% unique()
-essential_genes_df = essential_genes_df %&gt;% left_join(gene_info_df, by=c(&quot;locus&quot;=&quot;dbXrefs&quot;)) %&gt;% rename(&quot;gene&quot;=&quot;Symbol&quot;)
-essential_genes_df$gene_in_dataset = ifelse(essential_genes_df$gene %in% genes_keep_df$symbol, TRUE, FALSE)
-essential_genes_df %&gt;% fwrite(essential_genes_file)</code></pre>
-<pre class="r"><code>#essential_genes_scipher_df = essential_genes_df %&gt;% filter(gene %in% names(RNAseq_processed))
-#essential_genes_scipher_df %&gt;% fwrite(essential_genes_scipher_file)</code></pre>
+essential_genes_df = essential_genes_df %&gt;% inner_join(gene_dict_df, by=c(&quot;locus&quot;=&quot;alias&quot;)) %&gt;% select(taxID, sciName, HGNC_Symbol) %&gt;% unique()
+essential_genes_df$gene_in_dataset = ifelse(essential_genes_df$HGNC_Symbol %in% RNAseq_processed_t$Gene, TRUE, FALSE)
+head(essential_genes_df)</code></pre>
+<pre><code>##    taxID      sciName HGNC_Symbol gene_in_dataset
+## 1:  9606 Homo sapiens        DPM1            TRUE
+## 2:  9606 Homo sapiens       SCYL3            TRUE
+## 3:  9606 Homo sapiens         FGR            TRUE
+## 4:  9606 Homo sapiens        GCLC            TRUE
+## 5:  9606 Homo sapiens        NFYA            TRUE
+## 6:  9606 Homo sapiens       LAS1L            TRUE</code></pre>
+<pre class="r"><code>essential_genes_scipher_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_esential_genes_scipher.csv'
+essential_genes_df %&gt;% fwrite(essential_genes_scipher_file)</code></pre>
+<p>There are 7108 essential genes, 5726 in the Scipher dataset.</p>
 </div>
 </div>
 

@@ -364,30 +364,86 @@ set.seed(1510)</code></pre>
 <pre class="r"><code># Define working directories
 databases_dir = '/home/j.aguirreplans/Databases'
 ppi_dir = '/home/j.aguirreplans/data/PPI'
-deisy_dicts_dir = '/home/j.aguirreplans/data/DeisyDictionaries'
 data_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021'
 output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data'
 
 # Define input files and dirs
 metadata_RNA_file = paste(data_dir, '00_data/scipher_metadata_rnaseq_counts.csv', sep='/')
-metadata_RNA_0m_file = paste(data_dir, '00_data/scipher_metadata_rnaseq_counts_0m.csv', sep='/')</code></pre>
+metadata_RNA_unique_patients_file = paste(data_dir, '00_data/scipher_unique_patients_metadata_rnaseq_counts.csv', sep='/')
+metadata_RNA_unique_patients_0m_file = paste(data_dir, '00_data/scipher_unique_patients_metadata_rnaseq_counts_0m.csv', sep='/')</code></pre>
 <pre class="r"><code># Read input files
 metadata_RNA = fread(metadata_RNA_file)
-metadata_RNA_0m = fread(metadata_RNA_0m_file)</code></pre>
+metadata_RNA_unique_patients = fread(metadata_RNA_unique_patients_file)
+metadata_RNA_unique_patients_0m = fread(metadata_RNA_unique_patients_0m_file)</code></pre>
 </div>
 <div id="subsampling" class="section level2">
 <h2>Subsampling</h2>
+<pre class="r"><code>## Random sampling with replacement
+create_random_subsamples_with_replacement &lt;- function(samples_list, size_list, rep, output_dir, output_file_name){
+  subsamples_df = data.frame(matrix(ncol=3,nrow=0, dimnames=list(NULL, c(&quot;size&quot;, &quot;rep&quot;, &quot;samples&quot;))))
+  seed &lt;- 1
+  for(size in size_list){
+    set.seed(seed)
+    seed &lt;- seed + 1
+    for(r in 1:rep){
+      subsample &lt;- sort(sample(samples_list, size=size, replace=TRUE))
+      subsample_df &lt;- data.frame(samples=subsample)
+      output_file = paste(output_dir, paste(paste(output_file_name, 'size', size, 'rep', r, sep='_'), '.txt', sep=''), sep='/')
+      subsample_df %&gt;% write.table(output_file, quote = F, sep='\t', row.names = F, col.names = T)
+      subsamples_df = rbind(subsamples_df, data.frame(size=size, rep=r, samples=paste(subsample, collapse = ';')))
+    }
+  }
+  return(subsamples_df)
+}</code></pre>
 <blockquote>
 <p>Important to note: There are many samples that have the same Scipher_id, meaning that they come from the same patient. They only differ by the “batch”, which can be either “seq_fac1” or “seq_fac2”.</p>
 </blockquote>
+<pre class="r"><code># Select all samples
+complete_dataset = metadata_RNA$Scipher_id.visit.batch
+
+# Select all samples of unique patients at different visits
+sample_per_patient_all_visits = metadata_RNA_unique_patients$Scipher_id.visit
+
+# Select all samples of unique patients at baseline
+sample_per_patient_baseline = metadata_RNA_unique_patients_0m$Scipher_id.visit
+
+# Get the responder and nonresponder samples at baseline
+sample_per_patient_baseline_df = metadata_RNA_unique_patients_0m %&gt;% filter(Scipher_id.visit %in% sample_per_patient_baseline)
+
+# Responders are selected when they respond in eular and do not have any non-response
+responder_euler_df = sample_per_patient_baseline_df %&gt;% filter(( (eular_binary_3m == &quot;responder&quot;) &amp; (eular_binary_6m == &quot;responder&quot;)) | ((eular_binary_3m == &quot;responder&quot;) &amp; (eular_binary_6m == &quot;&quot;)) | ((eular_binary_3m == &quot;&quot;) &amp; (eular_binary_6m == &quot;responder&quot;)) ) # Response in eular and not any non-response
+#responder_df = sample_per_patient_baseline_df %&gt;% filter( (!(eular_binary_3m == &quot;nonresponder&quot;)) &amp; (!(eular_binary_6m == &quot;nonresponder&quot;)) &amp; (!(acr50_3m == &quot;nonresponder&quot;)) &amp; (!(acr50_6m == &quot;nonresponder&quot;)) &amp; ( (eular_binary_3m == &quot;responder&quot;) | (eular_binary_6m == &quot;responder&quot;) | (acr50_3m == &quot;responder&quot;) | (acr50_6m == &quot;responder&quot;) ) ) # Response either in eular or acr50 and not any non-response
+sample_per_responder_baseline = responder_euler_df$Scipher_id.visit
+
+# Nonresponders are selected when they don't respond in eular and do not have any response
+nonresponder_euler_df = sample_per_patient_baseline_df %&gt;% filter(( (eular_binary_3m == &quot;nonresponder&quot;) &amp; (eular_binary_6m == &quot;nonresponder&quot;)) | ((eular_binary_3m == &quot;nonresponder&quot;) &amp; (eular_binary_6m == &quot;&quot;)) | ((eular_binary_3m == &quot;&quot;) &amp; (eular_binary_6m == &quot;nonresponder&quot;)) )
+#nonresponder_df = sample_per_patient_baseline_df %&gt;% filter( (!(eular_binary_3m == &quot;responder&quot;)) &amp; (!(eular_binary_6m == &quot;responder&quot;)) &amp; (!(acr50_3m == &quot;responder&quot;)) &amp; (!(acr50_6m == &quot;responder&quot;)) &amp; ( (eular_binary_3m == &quot;nonresponder&quot;) | (eular_binary_6m == &quot;nonresponder&quot;) | (acr50_3m == &quot;nonresponder&quot;) | (acr50_6m == &quot;nonresponder&quot;) ) ) # Non-response in eular and not any response
+sample_per_nonresponder_baseline = nonresponder_euler_df$Scipher_id.visit</code></pre>
 <p>We have selected different groups of samples according to different criteria:</p>
 <ul>
 <li>All samples, no matter the visit or batch (584)</li>
-<li>All samples at baseline, no matter the batch (367)</li>
+<li>One sample per patient at different visits (475)</li>
 <li>One sample per patient at baseline (260)</li>
 <li>One sample per responder patient at baseline (49)</li>
 <li>One sample per non-responder patient at baseline (92)</li>
 </ul>
+<pre class="r"><code>group_to_samples = list(&quot;complete_dataset&quot;=complete_dataset, &quot;sample_per_patient_all_visits&quot;=sample_per_patient_all_visits, &quot;sample_per_patient_baseline&quot;=sample_per_patient_baseline, &quot;responder_baseline&quot;=sample_per_responder_baseline, &quot;nonresponder_baseline&quot;=sample_per_nonresponder_baseline)
+n_repetitions = 10
+
+for (group in names(group_to_samples)){
+  sampling_dir = paste(output_dir, 'sampling/Scipher/Dec2021/sampling_with_repetition', group, sep='/')
+  dir.create(sampling_dir, showWarnings = FALSE)
+  samples = group_to_samples[[group]]
+  size_list &lt;- seq(10, length(samples), 10)
+  # Create a file with a list of all samples
+  all_samples_df &lt;- data.frame(samples=samples)
+  output_file = paste(sampling_dir, paste('scipher_', group, '_all_samples.txt', sep=&quot;&quot;), sep='/')
+  all_samples_df %&gt;% write.table(output_file, quote = F, sep='\t', row.names = F, col.names = T)
+  # Create files with lists of subsamples
+  output_file_name = paste('scipher_', group, sep = &quot;&quot;)
+  subsamples_df &lt;- create_random_subsamples_with_replacement(samples_list=samples, size_list=size_list, rep=n_repetitions, output_dir=sampling_dir, output_file_name=output_file_name)
+
+}</code></pre>
 </div>
 
 

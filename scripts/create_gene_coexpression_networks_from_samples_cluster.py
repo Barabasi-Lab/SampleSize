@@ -102,10 +102,13 @@ def create_gene_coexpression_networks(options):
 
     # Run co-expression for all files
     datasets = [f for f in os.listdir(input_dir) if fileExist(os.path.join(input_dir, f))]
-    #sizes = [str(size) for size in range(10, 1100, 20)]
-    sizes = [str(size) for size in range(20, 1020, 20)]
+    #sizes = [str(size) for size in range(10, 12000, 20)]
+    #sizes = [str(size) for size in range(20, 12000, 20)]
+    sizes = [10] + [str(size) for size in range(20, 12000, 20)]
+    #sizes = [10] + [str(size) for size in range(100, 12000, 100)]
     #reps = [str(rep) for rep in range(5, 11, 1)]
-    reps = [str(rep) for rep in range(1, 11, 1)]
+    #reps = [str(rep) for rep in range(1, 11, 1)]
+    reps = ['1', '2', '3', '4', '5']
     #reps = ['1', '2']
 
     for dataset in sorted(datasets):

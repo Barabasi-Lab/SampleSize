@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Description
 
-Preprocess GTEx data (version v8).
+Pre-process GTEx data (version v8) before creating gene co-expression networks.
 
 ```{r, message=FALSE}
 library(data.table)
@@ -24,133 +24,139 @@ set.seed(1510)
 `%ni%` <- Negate(`%in%`)
 ```
 
-## Read files
+## Define variables
 
-```{r define_files}
+```{r}
 # Define working directories
-databases_dir = '/home/j.aguirreplans/Databases'
-#databases_dir = '/Users/j.aguirreplans/Databases'
-ppi_dir = '/home/j.aguirreplans/data/PPI'
-deisy_dicts_dir = '/home/j.aguirreplans/data/DeisyDictionaries'
+gtex_dir = '/home/j.aguirreplans/Databases/GTEx/v8'
+gene_annotations_dir = '/home/j.aguirreplans/data/gene_annotations/data/out'
+gene_associations_dir = '/home/j.aguirreplans/data/gene_associations/data/out'
 
 # Define input files
-samples_subjects_file = paste(databases_dir, 'GTEx/v8/GTEx_Annotations_SamplesSubjectsMerged.txt', sep='/')
-tpm_file = paste(databases_dir, 'GTEx/v8/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_tpm.gct', sep='/')
-ppi_network_symbol_file = paste(ppi_dir, 'interactome_2019_merged_symbols.csv', sep='/')
-gene_names_dict_file = paste(deisy_dicts_dir, 'Gene_Names_Dic.csv', sep='/')
-gene_names_cat_file = paste(deisy_dicts_dir, 'Gene_Names_Cat.csv', sep='/')
-gene_type_file = paste(deisy_dicts_dir, 'gene_type.csv', sep='/')
-disease_genes_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/GDA_Data_Clean_Filtered_GeneNames.csv"
-essential_genes_original_file = paste(databases_dir, 'OGEE/OGEE_esential_genes_20190416.txt', sep='/')
-gene_info_file = paste(databases_dir, 'NCBIGene/Homo_sapiens.gene_info', sep='/')
-
-# Define output files and dirs
-tpm_no_duplicates_file = paste(databases_dir, 'GTEx/v8/GTEx_RNASeq_gene_tpm_no_duplicates.gct', sep='/')
-tpm_only_ppi_file = paste(databases_dir, 'GTEx/v8/GTEx_RNASeq_gene_tpm_only_ppi.gct', sep='/')
-tpm_ppi_filt_dir = paste(databases_dir, 'GTEx/v8/tpm_filtered_files_by_tissue_and_ppi_genes', sep='/')
-tpm_filt_dir = paste(databases_dir, 'GTEx/v8/tpm_filtered_files_by_tissue', sep='/')
-genes_filt_dir = paste(databases_dir, 'GTEx/v8/genes_filtered_files_by_tissue', sep='/')
-ppi_filt_dir = paste(ppi_dir, 'interactome_tissue_specific', sep='/')
-disease_genes_info_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022.csv"
-essential_genes_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes.csv'
-
+samples_subjects_file = paste(gtex_dir, 'GTEx_Annotations_SamplesSubjectsMerged.txt', sep='/')
+tpm_file = paste(gtex_dir, 'GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_tpm.gct', sep='/')
 ```
 
-```{r read_files}
-# Read input files
-samples_df = fread(samples_subjects_file)
+## Read files
+
+```{r}
 tpm_df = fread(tpm_file)
-
 ```
 
+The raw GTEx dataframe contains `r as.integer(ncol(tpm_df)-2)` sample IDs (as columns) and `r nrow(tpm_df)` genes (as rows) described in the first two columns as ***Name*** (Ensembl ID) and ***Description*** (HGNC symbol).
 
-## Calculate the median expression of genes that have the same symbol
-
-There are ENSEMBL genes that have the same symbol. They are probably isoforms:
-
-```{r get_genes_with_same_symbol}
-repeated_genes <- unique(tpm_df$Description[duplicated(tpm_df$Description)])
-length(repeated_genes)
-tpm_df[tpm_df$Description %in% repeated_genes[1:10],][,c("Name", "Description")][order(Description),]
-
+```{r}
+head(tpm_df[1:10,1:5])
 ```
 
-We will merge these genes by calculating the median expression between them:
-
-```{r merge_expression_of_genes_with_same_symbol}
-dim(tpm_df)
-if (!(file.exists(tpm_no_duplicates_file))){
-  tpm_df = subset(tpm_df, select=-Name)
-  repeated_genes_aggregated = aggregate(.~Description, tpm_df[tpm_df$Description %in% repeated_genes,], median)
-  tpm_df = rbind(tpm_df[!(tpm_df$Description %in% repeated_genes),], repeated_genes_aggregated)
-  fwrite(tpm_df, tpm_no_duplicates_file)
-} else {
-  tpm_df = fread(tpm_no_duplicates_file)
-}
-dim(tpm_df)
-
+```{r}
+samples_df = fread(samples_subjects_file)
 ```
 
+The samples are described in the samples dataframe, which contains information about the subject and tissue of the sample:
 
-## Select genes with known annotations
-
-
-```{r select_genes_known_annotations}
-# Select genes from the initial dataset with known annotation
-tpm_df$Description = toupper(tpm_df$Description)
-genes_dataset_raw = unique(tpm_df$Description)
-print(length(genes_dataset_raw))
-
-# Read gene annotations and select the clean dataset of genes
-gene_type_df = fread(gene_type_file) %>% unique()
-gene_type_df$symbol = toupper(gene_type_df$symbol)
-length(gene_type_df$symbol)
-table(gene_type_df$gene_type)
-round(prop.table(table(gene_type_df$gene_type))*100,2)
-genes_dataset_clean = genes_dataset_raw[genes_dataset_raw %in% gene_type_df$symbol]
-print(length(genes_dataset_clean))
-
-# Merge both gene datasets with dataframe of gene categories
-genes_dataset_clean_df = gene_type_df %>% filter(symbol %in% genes_dataset_clean) %>% unique()
-table(genes_dataset_clean_df$gene_type)
-round(prop.table(table(genes_dataset_clean_df$gene_type))*100,2)
-
-# Find genes without symbol
-genes_not_symbol = genes_dataset_raw[(!genes_dataset_raw %in% unique(genes_dataset_clean_df$symbol))]
-print(genes_not_symbol[1:20])
-print(length(genes_not_symbol))
-#genes_not_symbol = genes_not_symbol[(!(toupper(gsub("_", "", genes_not_symbol))) %in% toupper(all_genes_and_synonyms))]
-#gene_names_dict = fread(gene_names_dict_file)
-#genes_not_symbol_synonyms = genes_not_symbol[genes_not_symbol %in% gene_names_dict$Alias]
-#genes_not_symbol_dict = gene_names_dict %>% filter(Alias %in% genes_not_symbol_synonyms)
-
-tpm_df = tpm_df %>% filter(Description %in% genes_dataset_clean_df$symbol)
-dim(tpm_df)
-
-
+```{r}
+head(samples_df)
 ```
-
-
-## Remove genes with low TPM expression
 
 We filter the samples in the TPM file by keeping the ones that are in the samples information file:
 
 ```{r filter_tpm_file_samples}
-dim(tpm_df[,-1])
-tpm_df <- tpm_df %>% select(c("Description", samples_df$SAMPID))
-dim(tpm_df[,-1])
-length(samples_df$SAMPID)
-
+dim(tpm_df[,-2])
+tpm_df <- tpm_df %>% select(c("Name", "Description", samples_df$SAMPID))
+dim(tpm_df[,-2])
 ```
 
-We filter the low expressed genes for each tissue and sex:
+We end up having a gene expression matrix of `r as.integer(ncol(tpm_df)-2)` sample IDs (as columns) and `r nrow(tpm_df)` genes (as rows).
 
-```{r remove_low_expressed_genes_for_all_tissues}
+
+## Gene pre-processing
+
+### Merge repeated HGNC symbols
+
+The genes in GTEx are annotated both as Ensembl IDs and HGNC symbols. We only want to keep HGNC symbol annotations. However, there are Ensembl IDs with the same HGNC symbols, probably isoforms:
+
+```{r}
+repeated_genes <- unique(tpm_df$Description[duplicated(tpm_df$Description)])
+tpm_df[tpm_df$Description %in% repeated_genes[1:10],][1:10,1:5][order(Description),]
+```
+
+In total, there are `r length(repeated_genes)` repeated HGNC symbols. We merge these genes by calculating the median expression between them:
+
+```{r}
+tpm_no_duplicates_file = paste(gtex_dir, 'GTEx_RNASeq_gene_tpm_no_duplicates.gct', sep='/')
+if (!(file.exists(tpm_no_duplicates_file))){
+  tpm_df = subset(tpm_df, select=-Name)
+  repeated_genes_aggregated = aggregate(.~Description, tpm_df[tpm_df$Description %in% repeated_genes,], median)
+  tpm_df = rbind(tpm_df[!(tpm_df$Description %in% repeated_genes),], repeated_genes_aggregated) %>% rename("Gene"="Description")
+  fwrite(tpm_df, tpm_no_duplicates_file)
+} else {
+  tpm_df = fread(tpm_no_duplicates_file)
+}
+```
+
+After merging the repeated HGNC symbols, we end up having a gene expression matrix of `r as.integer(ncol(tpm_df)-1)` sample IDs (as columns) and `r nrow(tpm_df)` genes (as rows).
+
+```{r}
+tpm_df[tpm_df$Gene %in% repeated_genes[1:10],][1:10,1:5][order(Gene),]
+```
+
+### Keep genes properly annotated and classified by the HGNC database
+
+[HGNC](https://www.genenames.org/) is a database of annotation, description and classification of genes. We use the information in this database to keep the genes that have been properly annotated using HGNC symbols and classified in different gene categories. We use the file `hgnc_category_set_2022-01-01.txt`, which is a dataframe that has been created after parsing and processing the HGNC database:
+
+```{r}
+gene_annotations_dir = '/home/j.aguirreplans/data/gene_annotations/data/out'
+gene_category_file = paste(gene_annotations_dir, 'hgnc_category_set_2022-01-01.txt', sep='/')
+gene_category_df = fread(gene_category_file)
+gene_category_df$HGNC_Symbol = toupper(gene_category_df$HGNC_Symbol)
+head(gene_category_df)
+```
+
+We use this dataframe to map gene category, and we only keep genes that are in this dataframe:
+
+```{r}
+dim(tpm_df)
+genes_with_category = tpm_df$Gene[tpm_df$Gene %in% gene_category_df$HGNC_Symbol]
+tpm_df %<>% filter(Gene %in% genes_with_category)
+dim(tpm_df)
+```
+
+The filtered dataframe contains`r as.integer(ncol(tpm_df)-1)` sample IDs (as columns) and `r nrow(tpm_df)` genes with category (as rows).
+
+It contains the following number of genes for each category:
+
+```{r}
+gtex_gene_category_df = gene_category_df %>% filter(HGNC_Symbol %in% genes_with_category) %>% unique
+table(gtex_gene_category_df$HGNC_category)
+round(prop.table(table(gtex_gene_category_df$HGNC_category))*100,2)
+# Keep the information in a file
+genes_dataset_file = paste(gtex_dir, "gtex_rnaseq_gene_info.csv", sep='/')
+fwrite(gtex_gene_category_df, genes_dataset_file)
+```
+
+### Filter genes with low counts
+
+We filter the genes that have low expression in most of the samples of each tissue/sex, keeping the ones that meet these rules:
+
+* Sum of the expression of all samples above 0.
+* Mean of the expression of all samples above 1.
+* Median of the expression of all samples above 1.
+* Standard deviation of all samples above 0.
+* More than half of the genes with counts above 0.
+
+```{r}
+tpm_filt_dir = paste(gtex_dir, 'tpm_filtered_files_by_tissue', sep='/')
+genes_filt_dir = paste(gtex_dir, 'genes_filtered_files_by_tissue', sep='/')
+dir.create(tpm_filt_dir, showWarnings = FALSE)
+dir.create(genes_filt_dir, showWarnings = FALSE)
+cols = c("tissue", "sex", "n_genes_raw", "n_genes_processed", "sum",  "mean", "median", "sd", "zero_sum_counts")
+statistics_low_counts_df <- setNames(data.frame(matrix(ncol = length(cols), nrow = 0)), cols)
 sex_to_id = data.frame(row.names=c("male","female", "") , val=c(1,2,""))
 for (tissue in unique(samples_df$SMTSD.no.sp.char)){
   for (sex in rownames(sex_to_id)){
-    print(tissue)
-    print(sex)
+    
+    # Get the samples of the selected tissue/sex
     if (sex == ""){
       samples_tissue_sex = samples_df[samples_df$SMTSD.no.sp.char == tissue,]$SAMPID
       tpm_tissue_sex_filt_file = paste(tpm_filt_dir, paste("gtex_rnaseq_", tissue, ".gct", sep=''), sep='/')
@@ -161,190 +167,144 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
       tpm_tissue_sex_filt_file = paste(tpm_filt_dir, paste("gtex_rnaseq_", tissue, "_", sex, ".gct", sep=''), sep='/')
       genes_dataset_filt_file = paste(genes_filt_dir, paste("gtex_rnaseq_gene_info_", tissue, "_", sex, ".csv", sep=''), sep='/')
     }
+    
+    # Consider only tissue/sex combinations of more than 10 samples
     if (length(samples_tissue_sex) > 10){
-      tpm_tissue_sex_df = tpm_df %>% select(c("Description", all_of(samples_tissue_sex)))
-      print(dim(tpm_tissue_sex_df))
+      # Select expression from selected samples
+      tpm_tissue_sex_df = tpm_df %>% select(c("Gene", all_of(samples_tissue_sex)))
       # Calculate metrics of expression
-      info_df = data.frame(Description=tpm_tissue_sex_df$Description, sum=rowSums(tpm_tissue_sex_df[,-1]))
+      info_df = data.frame(Gene=tpm_tissue_sex_df$Gene, sum=rowSums(tpm_tissue_sex_df[,-1]))
       info_df$sd = apply(tpm_tissue_sex_df[,-1], 1, sd)
       info_df$mean = rowMeans(tpm_tissue_sex_df[,-1])
       info_df$median = apply(tpm_tissue_sex_df[,-1], 1, median)
-      info_df$zero_sum_counts = as.numeric(apply(tpm_tissue_sex_df[,-1], 1, function(i) sum(i == 0) )) # Number of times that the sum of the TPMs is equal to 0
+      info_df$zero_sum_counts = as.numeric(apply(tpm_tissue_sex_df[,-1], 1, function(i) sum(i == 0) )) # Number of times that the counts are equal to 0
       # Filter low expressed genes
-      info_filt_df = info_df[(info_df$sum > 0) & (info_df$mean > 0) & (info_df$median >= 1) & (info_df$sd > 0) & (info_df$zero_sum_counts < dim(tpm_tissue_sex_df[, -1])[2]/2) ,]
-      tpm_tissue_sex_filt_df = tpm_tissue_sex_df[tpm_tissue_sex_df$Description %in% info_filt_df$Description,] %>% rename("Gene"="Description")
-      print(dim(tpm_tissue_sex_filt_df))
+      info_filt_df = info_df[(info_df$sum > 0) & (info_df$mean > 1) & (info_df$median > 1) & (info_df$sd > 0) & (info_df$zero_sum_counts < dim(tpm_tissue_sex_df[, -1])[2]/2) ,]
+      tpm_tissue_sex_filt_df = tpm_tissue_sex_df[tpm_tissue_sex_df$Gene %in% info_filt_df$Gene,]
       fwrite(tpm_tissue_sex_filt_df, tpm_tissue_sex_filt_file)
-      
-      # Get transposed matrix
-      #sample.ids <- tpm_tissue_sex_filt_df[, 1][[1]]
-      #tpm_tissue_sex_filt_df <- as.matrix(tpm_tissue_sex_filt_df[, -c(1)])
-      #rownames(tpm_tissue_sex_filt_df) <- sample.ids
-      #tpm_tissue_sex_filt_df.t <- t(as.matrix(tpm_tissue_sex_filt_df)) %>% as.data.frame() 
-      #colnames(tpm_tissue_sex_filt_df.t) <- rownames(tpm_tissue_sex_filt_df)
-      #tpm_tissue_sex_filt_df.t <- cbind(Sample = colnames(tpm_tissue_sex_filt_df), tpm_tissue_sex_filt_df.t)
-      #tpm_tissue_sex_filt_file = paste(tpm_filt_dir, paste("GTEx_RNASeq_", tissue, "_", sex, ".gct", sep=''), sep='/')
-      #fwrite(tpm_tissue_sex_filt_df.t, tpm_tissue_sex_filt_file)
+      # Count statistics about the filter
+      statistics_low_counts_df = rbind(statistics_low_counts_df, data.frame(tissue=tissue, sex=sex, n_genes_raw=length(tpm_tissue_sex_df$Gene), n_genes_processed=length(tpm_tissue_sex_filt_df$Gene), sum=length(info_df[(info_df$sum > 0),]$Gene), mean=length(info_df[(info_df$mean > 1),]$Gene), median=length(info_df[(info_df$median > 1),]$Gene), sd=length(info_df[(info_df$sd > 0),]$Gene), zero_sum_counts=length(info_df[(info_df$zero_sum_counts < dim(tpm_tissue_sex_df[, -1])[2]/2),]$Gene)))
       
       # Write gene info file
-      genes_dataset_filt_df = genes_dataset_clean_df
-      genes_dataset_filt_df$enough_counts = ifelse(genes_dataset_filt_df$symbol %in% info_filt_df$Description, TRUE, FALSE)
+      genes_dataset_filt_df = data.frame(gtex_gene_category_df)
+      genes_dataset_filt_df$enough_counts = ifelse(genes_dataset_filt_df$HGNC_Symbol %in% info_filt_df$Gene, TRUE, FALSE)
       fwrite(genes_dataset_filt_df, genes_dataset_filt_file)
 
     }
   }
 }
+
+statistics_low_counts_file = paste(gtex_dir, "gtex_rnaseq_low_counts_statistics.csv", sep='/')
+fwrite(statistics_low_counts_df, statistics_low_counts_file)
 ```
 
-```{r check_whole_blood_genes}
+These are the different number of genes after filtering by the criteria mentioned above:
+
+```{r}
+head(statistics_low_counts_df)
+```
+
+Here, we show an example (whole blood) of the number of genes for each gene category before/after filtering by gene counts.
+Before filtering:
+
+```{r}
 genes_dataset_filt_file = paste(genes_filt_dir, "gtex_rnaseq_gene_info_Whole.Blood.csv", sep='/')
 genes_dataset_filt_df = fread(genes_dataset_filt_file)
-print(length(unique(genes_dataset_filt_df$symbol)))
-table(genes_dataset_filt_df$gene_type)
-round(prop.table(table(genes_dataset_filt_df$gene_type))*100,2)
-print(length(unique((genes_dataset_filt_df %>% filter(enough_counts == TRUE))$symbol)))
-table((genes_dataset_filt_df %>% filter(enough_counts == TRUE))$gene_type)
-round(prop.table(table((genes_dataset_filt_df %>% filter(enough_counts == TRUE))$gene_type))*100,2)
+table(genes_dataset_filt_df$HGNC_category)
+round(prop.table(table(genes_dataset_filt_df$HGNC_category))*100,2)
+```
 
+After filtering:
+
+```{r}
+table((genes_dataset_filt_df %>% filter(enough_counts == TRUE))$HGNC_category)
+round(prop.table(table((genes_dataset_filt_df %>% filter(enough_counts == TRUE))$HGNC_category))*100,2)
 ```
 
 
 ## Prepare disease genes information dataset
 
+Read the disease-gene associations dataset:
+
 ```{r}
-# Create a disease gene file containing MESH information
-if(!(file.exists(disease_genes_info_file))){
-  
-  GDA = fread(disease_genes_file)
-  GDA[is.na(GDA)]<-0
-  GDA$Symbol = toupper(GDA$hgnc_symbol)
-  GDA$DiseaseName = tolower(GDA$DiseaseName)
-  GDA$DescriptorName = tolower(GDA$DescriptorName)
-  GDA %<>% 
-    filter(Strong > 0 | 
-             Weak > 0 |
-             Incompatible > 0) %>%
-    mutate(DiseaseName = NewName) %>%
-    filter(DescriptorName %ni% c("Behavioral Disciplines and Activities")) %>%
-    mutate(MESHID_remove = stringr::str_detect(TreeNumber, pattern = "C22|C25|F04")) %>%
-    mutate(MESHID_remove = ifelse(TreeNumber == "F01", TRUE,MESHID_remove)) %>%
-    filter(!(MESHID_remove)) %>%
-    select(DiseaseName, hgnc_symbol, DescriptorName) %>% 
-    #filter(hgnc_symbol %in% V(gPPInc)$name) %>% 
-    unique()
-    #mutate(gene_in_dataset = ifelse(hgnc_symbol %in% genes_keep_df$symbol, TRUE, FALSE))
-    #group_by(DiseaseName) %>%
-    #mutate(Total_Genes = n()) %>%
-    #filter(Total_Genes > 10)
-
-    # Make columns without special characters  
-  GDA$DiseaseName.no.sp.char <- gsub(' ', '.', gsub(', ', '.', gsub('-', '.', gsub('[\\(\\)]', '', GDA$DiseaseName))))
-  GDA$DescriptorName.no.sp.char <- gsub(' ', '.', gsub(', ', '.', gsub('-', '.', gsub('[\\(\\)]', '', GDA$DescriptorName))))
-  
-  GDA %>% fwrite(disease_genes_info_file)
-  
-} else {
-  GDA = fread(disease_genes_info_file)
-}
-
+gene_associations_dir = '/home/j.aguirreplans/data/gene_associations/data/out'
+disease_genes_file = paste(gene_associations_dir, 'GDA_Filtered_04042022.csv', sep='/')
+GDA = fread(disease_genes_file) %>% unique()
+GDA$HGNC_Symbol = toupper(GDA$HGNC_Symbol)
+head(GDA)
 ```
 
+There are `r nrow(GDA)` disease-gene associations (`r length(unique(GDA$NewName))` diseases, `r length(unique(GDA$HGNC_Symbol))` genes)
 
-## Prepare essencial genes dataset
+Prepare the disease-gene associations for the GTEx dataset: 
 
 ```{r}
+GDA[is.na(GDA)]<-0
+GDA$NewName = tolower(GDA$NewName)
+GDA$DescriptorName = tolower(GDA$DescriptorName)
+GDA$MESHID = toupper(GDA$MESHID)
+GDA$HGNC_Symbol = toupper(GDA$HGNC_Symbol)
+GDA %<>% 
+  filter(Strong > 0 | 
+           Weak > 0 |
+           Incompatible > 0) %>%
+  mutate(DiseaseName = NewName) %>%
+  filter(DescriptorName %ni% c("behavioral disciplines and activities")) %>%
+  mutate(MESHID_remove = stringr::str_detect(TreeNumber, pattern = "C22|C25|F04")) %>%
+  mutate(MESHID_remove = ifelse(TreeNumber == "F01", TRUE,MESHID_remove)) %>%
+  filter(!(MESHID_remove)) %>%
+  select(DiseaseName, HGNC_Symbol, DescriptorName) %>% 
+  unique() %>% 
+  mutate(gene_in_dataset = ifelse(HGNC_Symbol %in% tpm_df$Gene, TRUE, FALSE))
+
+# Make columns without special characters  
+GDA$DiseaseName.no.sp.char <- gsub(' ', '.', gsub(', ', '.', gsub('-', '.', gsub('[\\(\\)]', '', GDA$DiseaseName))))
+GDA$DescriptorName.no.sp.char <- gsub(' ', '.', gsub(', ', '.', gsub('-', '.', gsub('[\\(\\)]', '', GDA$DescriptorName))))
+
+# Write output file
+disease_genes_info_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_gtex.csv"
+GDA %>% fwrite(disease_genes_info_file)
+
+head(GDA)
+```
+
+There are `r nrow(GDA)` disease-gene associations (`r length(unique(GDA$DiseaseName))` diseases, `r length(unique(GDA$HGNC_Symbol))` genes), and `r nrow((GDA %>% filter(gene_in_dataset == TRUE)))` disease-gene associations in the GTEx dataset (`r length(unique((GDA %>% filter(gene_in_dataset == TRUE))$DiseaseName))` diseases, `r length(unique((GDA %>% filter(gene_in_dataset == TRUE))$HGNC_Symbol))` genes).
+
+
+## Prepare essential genes dataset
+
+Prepare the essential genes of the TCGA dataset:
+
+```{r}
+# Read the essential genes file
+essential_genes_dir = '/home/j.aguirreplans/Databases/OGEE'
+essential_genes_original_file = paste(essential_genes_dir, 'OGEE_esential_genes_20190416.txt', sep='/')
+# Filter by human genes
 essential_genes_df = fread(essential_genes_original_file, header=TRUE) %>% rename("taxID"="#taxID")
-essential_genes_df = essential_genes_df %>% filter((taxID == 9606) & (essential=="E"))
-gene_info_df = fread(gene_info_file)
-gene_info_df = gene_info_df %>% separate_rows(dbXrefs, convert = TRUE) %>% select(Symbol, dbXrefs) %>% unique()
-essential_genes_df = essential_genes_df %>% left_join(gene_info_df, by=c("locus"="dbXrefs")) %>% rename("gene"="Symbol")
-#essential_genes_df$gene_in_dataset = ifelse(essential_genes_df$gene %in% genes_keep_df$symbol, TRUE, FALSE)
-essential_genes_df %>% fwrite(essential_genes_file)
+head(essential_genes_df)
 ```
-
-
-
-
-
-
 
 ```{r}
-rm(tpm_df)
-rm(tpm_tissue_sex_df)
-rm(tpm_tissue_sex_filt_df)
-rm(info_df)
-rm(info_filt_df)
-
+# Read the gene annotations dictionary
+gene_annotations_dir = '/home/j.aguirreplans/data/gene_annotations/data/out'
+gene_dict_file = paste(gene_annotations_dir, 'multiple_hgnc_dict_set_2022-01-01.txt', sep='/')
+gene_dict_df = fread(gene_dict_file) %>% unique()
+gene_dict_df = gene_dict_df[!((gene_dict_df$HGNC_Symbol=="")|(gene_dict_df$alias=="")),]
+gene_dict_df$HGNC_Symbol = toupper(gene_dict_df$HGNC_Symbol)
+gene_dict_df$alias = toupper(gene_dict_df$alias)
+gene_dict_df %<>% unique()
+head(gene_dict_df)
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-```{r remove_low_expressed_genes_for_all_tissues_ppi, eval=FALSE}
-sex_to_id = data.frame(row.names=c("male","female", "") , val=c(1,2,""))
-for (tissue in unique(samples_df$SMTSD.no.sp.char)){
-  for (sex in rownames(sex_to_id)){
-    print(tissue)
-    print(sex)
-    if (sex == ""){
-      samples_tissue_sex = samples_df[samples_df$SMTSD.no.sp.char == tissue,]$SAMPID
-      tpm_tissue_sex_filt_file = paste(tpm_ppi_filt_dir, paste("gtex_rnaseq_", tissue, ".gct", sep=''), sep='/')
-      ppi_tissue_sex_filt_file = paste(ppi_filt_dir, paste("interactome_2019_", tissue, ".csv", sep=''), sep='/')
-    } else {
-      sex_id = sex_to_id[sex,]
-      samples_tissue_sex = samples_df[(samples_df$SMTSD.no.sp.char == tissue) & (samples_df$SEX == sex_id),]$SAMPID
-      tpm_tissue_sex_filt_file = paste(tpm_ppi_filt_dir, paste("gtex_rnaseq_", tissue, "_", sex, ".gct", sep=''), sep='/')
-      ppi_tissue_sex_filt_file = paste(ppi_filt_dir, paste("interactome_2019_", tissue, "_", sex, ".csv", sep=''), sep='/')
-    }
-    if (length(samples_tissue_sex) > 10){
-      tpm_tissue_sex_df = tpm_df %>% select(c("Description", all_of(samples_tissue_sex)))
-      print(dim(tpm_tissue_sex_df))
-      # Calculate metrics of expression
-      info_df = data.frame(Description=tpm_tissue_sex_df$Description, sum=rowSums(tpm_tissue_sex_df[,-1]))
-      info_df$sd = apply(tpm_tissue_sex_df[,-1], 1, sd)
-      info_df$mean = rowMeans(tpm_tissue_sex_df[,-1])
-      info_df$median = apply(tpm_tissue_sex_df[,-1], 1, median)
-      info_df$zero_sum_counts = as.numeric(apply(tpm_tissue_sex_df[,-1], 1, function(i) sum(i == 0) )) # Number of times that the sum of the TPMs is equal to 0
-      # Filter low expressed genes
-      info_filt_df = info_df[(info_df$sum > 0) & (info_df$mean > 0) & (info_df$median >= 1) & (info_df$sd > 0) & (info_df$zero_sum_counts < dim(tpm_tissue_sex_df[, -1])[2]/2) ,]
-      tpm_tissue_sex_filt_df = tpm_tissue_sex_df[tpm_tissue_sex_df$Description %in% info_filt_df$Description,] %>% rename("Gene"="Description")
-      print(dim(tpm_tissue_sex_filt_df))
-      fwrite(tpm_tissue_sex_filt_df, tpm_tissue_sex_filt_file)
-      
-      # Get transposed matrix
-      #sample.ids <- tpm_tissue_sex_filt_df[, 1][[1]]
-      #tpm_tissue_sex_filt_df <- as.matrix(tpm_tissue_sex_filt_df[, -c(1)])
-      #rownames(tpm_tissue_sex_filt_df) <- sample.ids
-      #tpm_tissue_sex_filt_df.t <- t(as.matrix(tpm_tissue_sex_filt_df)) %>% as.data.frame() 
-      #colnames(tpm_tissue_sex_filt_df.t) <- rownames(tpm_tissue_sex_filt_df)
-      #tpm_tissue_sex_filt_df.t <- cbind(Sample = colnames(tpm_tissue_sex_filt_df), tpm_tissue_sex_filt_df.t)
-      #tpm_tissue_sex_filt_file = paste(tpm_ppi_filt_dir, paste("GTEx_RNASeq_", tissue, "_", sex, ".gct", sep=''), sep='/')
-      #fwrite(tpm_tissue_sex_filt_df.t, tpm_tissue_sex_filt_file)
-      
-      # Filter low expressed genes in PPI
-      ppi_tissue_sex_filt_df = PPI_symbol[(PPI_symbol$proteinA_symbol %in% info_filt_df$Description) & (PPI_symbol$proteinB_symbol %in% info_filt_df$Description),]
-      fwrite(ppi_tissue_sex_filt_df, ppi_tissue_sex_filt_file)
-    }
-  }
-}
+```{r}
+# Map ENSEMBL IDs to HGNC symbols
+essential_genes_df = essential_genes_df %>% filter((taxID == 9606) & (essential=="E"))
+essential_genes_df = essential_genes_df %>% inner_join(gene_dict_df, by=c("locus"="alias")) %>% select(taxID, sciName, HGNC_Symbol) %>% unique()
+essential_genes_df$gene_in_dataset = ifelse(essential_genes_df$HGNC_Symbol %in% tpm_df$Gene, TRUE, FALSE)
+head(essential_genes_df)
+essential_genes_tcga_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_gtex.csv'
+essential_genes_df %>% fwrite(essential_genes_tcga_file)
 ```
+
+There are `r nrow(essential_genes_df)` essential genes, `r nrow((essential_genes_df %>% filter(gene_in_dataset == TRUE)))` in the TCGA dataset.
+

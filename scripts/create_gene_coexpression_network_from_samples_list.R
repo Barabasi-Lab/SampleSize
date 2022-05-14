@@ -33,7 +33,7 @@ option_list = list(
               help="Method to correct for multiple testing if we use pearson or spearman as metric [default= %default]", metavar="character")
 ); 
 # Example of execution
-# Rscript /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_network_from_samples_list.R -s /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Liver/RNAseq_samples_Liver_female_size_10_rep_1.txt -f /home/j.aguirreplans/Databases/GTEx/v8/GTEx_RNASeq_gene_tpm_filtered_t.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/Liver/RNAseq_Liver_female_size_10_rep_1.net -m wgcna
+# Rscript /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_network_from_samples_list.R -s /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/complete_dataset/scipher_complete_dataset_size_80_rep_5.txt -f /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete_dataset/pearson_scipher_complete_dataset_size_80_rep_5.net -m pearson -n 100 -d 0.2 -p 6 -t signed -e pearson -a 0 -c bonferroni
 
 # Read arguments
 opt_parser = OptionParser(option_list=option_list);
@@ -56,13 +56,16 @@ mi_estimator = opt$mi_estimator
 aracne_eps = as.double(opt$aracne_eps)
 correction_method = opt$correction_method
 
-#samples_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood_female/RNAseq_samples_Whole.Blood_female_size_10_rep_1.txt'
-#rnaseq_file = '/home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Whole.Blood_female.gct'
-#output_file = '/scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/test/wto_RNAseq_Whole.Blood_female_size_10_rep_1_100_genes.net'
 #scripts.dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts'
-#samples_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/complete_dataset/scipher_complete_dataset_size_20_rep_1.txt'
+#samples_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood_female/RNAseq_samples_Whole.Blood_female_size_10_rep_1.txt'
+#samples_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-03-28-Dataset/sampling_with_repetition/TCGA/RNAseq_samples_TCGA_size_9900_rep_2.txt'
+#samples_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/complete_dataset/scipher_complete_dataset_size_580_rep_4.txt'
+#rnaseq_file = '/home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood.gct'
+#rnaseq_file = '/home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/TCGA_processed_for_coexpression.csv'
 #rnaseq_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_counts_processed.csv'
-#metric = 'wgcna'
+#output_file = '/scratch/j.aguirreplans/Scipher/SampleSize/networks_GTEx/test/wto_RNAseq_Whole.Blood_female_size_10_rep_1_100_genes.net'
+#output_file = '/scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete_dataset/pearson_scipher_complete_dataset_size_580_rep_4.net'
+#metric = 'pearson'
 #wto_n = 100
 #wto_delta = 0.2
 #wgcna_power = 6
@@ -85,15 +88,15 @@ source(coexpression.functions.file)
 subsample = fread(samples_file)[, 1][[1]]
 
 # Read RNAseq dataset (rows = genes, columns = samples)
-rnaseq = fread(rnaseq_file)
+rnaseq = fread(rnaseq_file) %>% as.data.frame()
 
-# Subset gene expression datast by samples in the samples file
-rnaseq = rnaseq %>% dplyr::select(c(colnames(rnaseq)[1], all_of(subsample)))
+# Subset gene expression dataset by samples in the samples file
+rnaseq = rnaseq[, c(names(rnaseq)[1], subsample)]
 
 # Remove the samples column and include it as "rownames"
-gene.ids <- rnaseq[, 1][[1]]
+gene.ids <- rnaseq[, 1]
 rnaseq <- as.matrix(rnaseq[, -c(1)]) %>% as.data.frame()
-rownames(rnaseq) <- gene.ids
+rownames(rnaseq) = gene.ids
 
 #rnaseq = rnaseq[row.names(rnaseq) %in% sample(row.names(rnaseq), size=200, replace=FALSE),] # Check example with less genes
 
