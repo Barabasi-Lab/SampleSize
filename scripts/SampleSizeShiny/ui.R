@@ -25,8 +25,8 @@ ui <- fluidPage(
                           conditionalPanel(
                             condition = "input.topology_dataset.includes('scipher')",
                             selectInput("topology_type_dataset_scipher", label = "Type of Scipher dataset:", 
-                                        choices = list("complete dataset" = "complete_dataset", "sample per patient at different times" = "sample_per_patient_all_visits", "sample per patient at baseline" = "sample_per_patient_baseline", "responders at baseline" = "responder_baseline", "non-responders at baseline" = "nonresponder_baseline"),
-                                        selected = "complete_dataset"
+                                        choices = list("complete dataset" = "complete.dataset", "sample per patient at different times" = "sample.per.patient.all.visits", "sample per patient at baseline" = "sample.per.patient.baseline", "responders at baseline" = "responder.baseline", "non-responders at baseline" = "nonresponder.baseline"),
+                                        selected = "complete.dataset"
                             ),
                           ),
                           conditionalPanel(
