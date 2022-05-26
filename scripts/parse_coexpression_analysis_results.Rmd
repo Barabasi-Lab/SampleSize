@@ -79,7 +79,7 @@ for(dataset in c('scipher', 'gtex', 'tcga')){
 
 ```{r output_results, echo=FALSE, results='hide'}
 # Define output files
-output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/data_shiny_app'
+output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data'
 topology_file = paste(output_dir, 'analysis_topology.csv', sep='/')
 ppi_results_file = paste(output_dir, 'analysis_ppi.csv', sep='/')
 disease_genes_file = paste(output_dir, 'analysis_disease_genes.csv', sep='/')

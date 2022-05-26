@@ -9,10 +9,10 @@ options(bitmapType='cairo')
 # MANUALLY #
 ############
 
-N = seq(4, 5000, 1)
+N = seq(4, 15000, 1)
 
-total_num_genes = 14266
-total_num_genes = 20000
+total_num_genes = 18884
+#total_num_genes = 20000
 total_num_edges = (total_num_genes*(total_num_genes-1)/2)
 alpha_level = 0.05/ (total_num_edges)
 alpha_level = 0.05/ (total_num_genes*total_num_genes)/2
@@ -28,7 +28,7 @@ Zb = qnorm(0.8, lower.tail=F)
 a = (Za + Zb)/(0.5 * sqrt(N-3))
 r = (exp(a) - 1) / (exp(a) + 1)
 ss_df = data.frame(N=N, r=r)
-print(ss_df %>% filter(N == 584))
+print(ss_df %>% filter(N == 10198))
 
 #ne * Za_cal
 ggplot(ss_df) +
@@ -61,7 +61,7 @@ ggsave(
 )
 
 # Reduced plot
-ss_reduced_df = ss_df %>% filter((N >= 550) & (N <= 650))
+ss_reduced_df = ss_df %>% filter((N >= 10150) & (N <= 10250))
 
 ggplot(ss_reduced_df) +
   aes(x = N, y = r) +

@@ -1,0 +1,11 @@
+name: samplesizeshiny
+title:
+username:
+account: joaquimaguirreplans
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 6352084
+bundleId: 5933186
+url: https://joaquimaguirreplans.shinyapps.io/samplesizeshiny/
+when: 1653262660.92852
+lastSyncTime: 1653262660.92855

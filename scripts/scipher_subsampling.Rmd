@@ -104,7 +104,7 @@ We have selected different groups of samples according to different criteria:
 
 
 ```{r}
-group_to_samples = list("complete_dataset"=complete_dataset, "sample_per_patient_all_visits"=sample_per_patient_all_visits, "sample_per_patient_baseline"=sample_per_patient_baseline, "responder_baseline"=sample_per_responder_baseline, "nonresponder_baseline"=sample_per_nonresponder_baseline)
+group_to_samples = list("complete.dataset"=complete_dataset, "sample.per.patient.all.visits"=sample_per_patient_all_visits, "sample.per.patient.baseline"=sample_per_patient_baseline, "responder.baseline"=sample_per_responder_baseline, "nonresponder.baseline"=sample_per_nonresponder_baseline)
 n_repetitions = 10
 
 for (group in names(group_to_samples)){

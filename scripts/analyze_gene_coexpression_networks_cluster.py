@@ -99,8 +99,8 @@ def create_gene_coexpression_networks(options):
 
     # Run co-expression for all files
     datasets = [f for f in os.listdir(input_dir) if fileExist(os.path.join(input_dir, f))]
-    sizes = [str(size) for size in range(20, 1020, 20)]
-    #sizes = [str(10)] + [str(size) for size in range(100, 12000, 100)]
+    #sizes = [str(size) for size in range(20, 1020, 20)]
+    sizes = [str(10)] + [str(size) for size in range(100, 12000, 100)]
     reps = [str(rep) for rep in range(1, 11, 1)]
     #reps = ['1', '2', '3']
 
@@ -118,8 +118,8 @@ def create_gene_coexpression_networks(options):
         dataset_names = []
         if size in sizes and rep in reps:
             if (method in ["pearson", "spearman"]):
-                #thresholds = [0.05, 0.001]
-                thresholds = [0.05]
+                thresholds = [0.05, 0.001]
+                #thresholds = [0.05]
                 disparity_pvalues = [None]
                 for threshold in thresholds:
                     for disparity in disparity_pvalues:

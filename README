@@ -255,29 +255,29 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coex
 
 #### SCIPHER ####
 
-# WTO FASTER: complete_dataset
+# WTO FASTER: complete.dataset
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/complete_dataset -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete_dataset -m wto
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/complete.dataset -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete.dataset -m wto
 
-# Spearman: complete_dataset
+# Spearman: complete.dataset
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/complete_dataset -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete_dataset -m spearman
-# Spearman: sample_per_patient_all_visits
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/sample_per_patient_all_visits -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_unique_patients_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/sample_per_patient_all_visits -m spearman
-# Spearman: sample_per_patient_baseline
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/sample_per_patient_baseline -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_unique_patients_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/sample_per_patient_baseline -m spearman
-# Spearman: responder_baseline
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/responder_baseline -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_unique_patients_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/responder_baseline -m spearman
-# Spearman: nonresponder_baseline
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/nonresponder_baseline -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_unique_patients_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/nonresponder_baseline -m spearman
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/complete.dataset -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete.dataset -m spearman
+# Spearman: sample.per.patient.all.visits
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/sample.per.patient.all.visits -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_unique_patients_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/sample.per.patient.all.visits -m spearman
+# Spearman: sample.per.patient.baseline
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/sample.per.patient.baseline -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_unique_patients_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/sample.per.patient.baseline -m spearman
+# Spearman: responder.baseline
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/responder.baseline -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_unique_patients_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/responder.baseline -m spearman
+# Spearman: nonresponder.baseline
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/nonresponder.baseline -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_unique_patients_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/nonresponder.baseline -m spearman
 
-# Pearson: complete_dataset
+# Pearson: complete.dataset
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/complete_dataset -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete_dataset -m pearson
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/complete.dataset -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete.dataset -m pearson
 
-# ARACNE: complete_dataset
+# ARACNE: complete.dataset
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/complete_dataset -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete_dataset -m aracne
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/complete.dataset -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete.dataset -m aracne
 
 #### TCGA (GDC) ####
 
@@ -449,11 +449,11 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coe
 
 #### SCIPHER ####
 
-# complete_dataset
+# complete.dataset
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete_dataset -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_scipher.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_scipher.csv -g /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_gene_info.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_scipher/complete_dataset -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_scipher/complete_dataset
-# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_scipher/complete_dataset
-# output networks: /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_scipher/complete_dataset
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete.dataset -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_scipher.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_scipher.csv -g /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_gene_info.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_scipher/complete.dataset -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_scipher/complete.dataset
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_scipher/complete.dataset
+# output networks: /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_scipher/complete.dataset
 
 
 #### TCGA (GDC) ####
@@ -479,6 +479,12 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coe
 # Copy results
 scp -r discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots_N100 /Users/quim/Desktop
 
+############################
+ANALYSIS OF INDIVIDUAL EDGES
+############################
+
+sbatch /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/merge_networks.sh
+
 ######################################
 ANALYSIS DISEASE GENES VS. SAMPLE SIZE
 ######################################
@@ -499,6 +505,9 @@ How to plot it?
 - Choose the most representative diseases of each group and make a plot of it.
 - Get the genes of all diseases of each group to make another plot.
 
+#########
+SHINY APP
+#########
 
 Run shiny app:
 
@@ -510,7 +519,20 @@ shiny::runApp(SampleSizeShiny)
 or
 shiny::runApp('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny')
 
+Deploy Shiny app:
+-----------------
 
+STEP 1 - INSTALL RSCONNECT
+install.packages('rsconnect')
+
+STEP 2 - AUTHORIZE ACCOUNT
+rsconnect::setAccountInfo(name='joaquimaguirreplans',
+			  token='4DC11654508D7B2460595CBBB4C28FA4',
+			  secret='1PW1nxzeiXCoWMwLDV7al1iT/QSwgdTMHTilLlII')
+
+STEP 3 - DEPLOY
+library(rsconnect)
+rsconnect::deployApp('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny')
 
 ###################################
 ANALYSIS USING RA DATASET FROM ENZO

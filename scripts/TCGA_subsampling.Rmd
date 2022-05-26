@@ -114,14 +114,14 @@ project_samples = unique(metadata_df$case_id)
 size_list <- seq(10, length(project_samples), 10)
 dir.create(tcga_sampling_dir, showWarnings = FALSE)
 # Create a file with a list of all samples
-all_samples_output_file = paste(tcga_sampling_dir, paste('RNAseq_samples_TCGA_all_samples.txt', sep=''), sep='/')
+all_samples_output_file = paste(tcga_sampling_dir, paste('tcga_TCGA_all_samples.txt', sep=''), sep='/')
 all_samples_df <- data.frame(samples=project_samples)
 all_samples_df %>% write.table(all_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
 # Create files with lists of subsamples
-output_file_name = 'RNAseq_samples_TCGA'
+output_file_name = 'tcga_TCGA'
 subsamples_df <- create_random_subsamples_with_replacement(samples_list=project_samples, size_list=size_list, rep=10, output_dir=tcga_sampling_dir, output_file_name=output_file_name)
 # Create a final file with a compilation of all selected samples for the same project
-compilation_samples_output_file = paste(sampling_dir, 'RNAseq_samples_TCGA.txt', sep='/')
+compilation_samples_output_file = paste(sampling_dir, 'tcga_TCGA.txt', sep='/')
 subsamples_df %>% write.table(compilation_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
 ```
 
@@ -134,9 +134,9 @@ for (project_id in project_ids){
   # Select samples of the project
   project_samples = metadata_df[metadata_df$project_id == .GlobalEnv$project_id,]$case_id
   project_sampling_dir = paste(sampling_dir, project_id, sep='/')
-  all_samples_output_file = paste(project_sampling_dir, paste('RNAseq_samples_', project_id, '_all_samples.txt', sep=''), sep='/')
-  output_file_name = paste(paste(paste('RNAseq_samples', project_id, sep="_")))
-  compilation_samples_output_file = paste(sampling_dir, paste(paste('RNAseq_samples', project_id, sep="_"), '.txt', sep=''), sep='/')
+  all_samples_output_file = paste(project_sampling_dir, paste('tcga_', project_id, '_all_samples.txt', sep=''), sep='/')
+  output_file_name = paste(paste(paste('tcga', project_id, sep="_")))
+  compilation_samples_output_file = paste(sampling_dir, paste(paste('tcga', project_id, sep="_"), '.txt', sep=''), sep='/')
   if (length(project_samples) > 10){
     # Define list of different sample sizes
     size_list <- seq(10, length(project_samples), 10)

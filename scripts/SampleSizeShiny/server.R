@@ -9,8 +9,7 @@ options(bitmapType='cairo')
 #------------------#
 
 # Input files
-input_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/data_shiny_app'
-plots_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots_shiny'
+input_dir = 'data'
 topology_results_file = paste(input_dir, 'analysis_topology.csv', sep='/')
 ppi_results_file = paste(input_dir, 'analysis_ppi.csv', sep='/')
 disease_genes_results_file = paste(input_dir, 'analysis_disease_genes.csv', sep='/')

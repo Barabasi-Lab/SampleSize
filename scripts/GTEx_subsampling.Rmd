@@ -94,16 +94,16 @@ for (tissue in tissues){
     if (sex == ""){
       tissue_sex_samples = samples_df[samples_df$SMTSD.no.sp.char == tissue,]$SAMPID
       tissue_sampling_dir = paste(sampling_dir, tissue, sep='/')
-      all_samples_output_file = paste(tissue_sampling_dir, paste('RNAseq_samples_', tissue, '_all_samples.txt', sep=''), sep='/')
-      output_file_name = paste(paste(paste('RNAseq_samples', tissue, sep="_")))
-      compilation_samples_output_file = paste(sampling_dir, paste(paste('RNAseq_samples', tissue, sep="_"), '.txt', sep=''), sep='/')
+      all_samples_output_file = paste(tissue_sampling_dir, paste('gtex_', tissue, '_all_samples.txt', sep=''), sep='/')
+      output_file_name = paste(paste(paste('gtex', tissue, sep="_")))
+      compilation_samples_output_file = paste(sampling_dir, paste(paste('gtex', tissue, sep="_"), '.txt', sep=''), sep='/')
     } else {
       sex_id = sex_to_id[sex,]
       tissue_sex_samples = samples_df[(samples_df$SMTSD.no.sp.char == tissue) & (samples_df$SEX == sex_id),]$SAMPID
       tissue_sampling_dir = paste(sampling_dir, paste(tissue, sex, sep="_"), sep='/')
-      all_samples_output_file = paste(tissue_sampling_dir, paste('RNAseq_samples_', tissue, '_', sex, '_all_samples.txt', sep=''), sep='/')
-      output_file_name = paste(paste(paste('RNAseq_samples', tissue, sex, sep="_")))
-      compilation_samples_output_file = paste(sampling_dir, paste(paste('RNAseq_samples', tissue, sex, sep="_"), '.txt', sep=''), sep='/')
+      all_samples_output_file = paste(tissue_sampling_dir, paste('gtex_', tissue, '_', sex, '_all_samples.txt', sep=''), sep='/')
+      output_file_name = paste(paste(paste('gtex', tissue, sex, sep="_")))
+      compilation_samples_output_file = paste(sampling_dir, paste(paste('gtex', tissue, sex, sep="_"), '.txt', sep=''), sep='/')
     }
     if (length(tissue_sex_samples) > 10){
       size_list <- seq(10, length(tissue_sex_samples), 10)
