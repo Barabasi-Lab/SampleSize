@@ -1,14 +1,17 @@
 library(data.table)
 library(dplyr)
 library(ggplot2)
-options(bitmapType='cairo')
 #shiny::runApp('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny')
+#shiny::runApp('/Users/j.aguirreplans/Dropbox (CCNR)/Biology/Quim/Scipher/SampleSize/scripts/SampleSizeShiny')
+#options(bitmapType='cairo') # Only for RStudio webserver if I want to save a plot
 
 #------------------#
 # Define variables #
 #------------------#
 
 # Input files
+#input_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/data_shiny_app'
+#setwd("/Users/j.aguirreplans/Dropbox (CCNR)/Biology/Quim/Scipher/SampleSize/scripts/SampleSizeShiny")
 input_dir = 'data'
 topology_results_file = paste(input_dir, 'analysis_topology.csv', sep='/')
 ppi_results_file = paste(input_dir, 'analysis_ppi.csv', sep='/')
@@ -29,6 +32,80 @@ parameter2label <- list("nodes"="Nodes", "edges"="Edges", "av_degree"="Av. degre
                         "overlapindex" = "Overlap index", "jaccardIndex" = "Jaccard index",
                         "num_ppi_nodes" = "Number of PPI nodes", "num_ppi_edges" = "Number of PPI edges", "fraction_ppi_nodes" = "Fraction of PPI nodes", "fraction_ppi_edges" = "Fraction of PPI edges", "num_ppi_main_core_nodes" = "Number of PPI main core nodes", "num_ppi_main_core_edges" = "Number of PPI main core edges", "fraction_ppi_main_core_nodes" = "Fraction of PPI main core nodes", "fraction_ppi_main_core_edges" = "Fraction of PPI main core edges"
 )
+
+#------------------#
+# Define functions #
+#------------------#
+
+#'  get_logarithmic_tendency
+#'  Method to obtain a logarithmic fit from the data.
+#'  @param results_dataframe Dataframe containing the data.
+#'  @param y_parameter Parameter of the Y axis.
+#'  @param x_parameter Parameter of the X axis.
+#'  
+get_logarithmic_tendency = function(results_dataframe, y_parameter, x_parameter){
+  lm_log = summary(lm(get(y_parameter)~log(get(x_parameter)), data=results_dataframe))
+  formula_name = paste("F(x) = (", formatC(round(coef(lm_log)[2]), format = "e", digits = 2), ")*ln(x) + (", formatC(round(coef(lm_log)[1]), format = "e", digits = 2), ")", sep="")
+  return(list(lm_log=lm_log, formula_name=formula_name))
+}
+
+#'  get_power_law_tendency
+#'  Method to obtain a power law fit from the data.
+#'  @param results_dataframe Dataframe containing the data.
+#'  @param y_parameter Parameter of the Y axis.
+#'  @param x_parameter Parameter of the X axis.
+#'  
+get_power_law_tendency = function(results_dataframe, y_parameter, x_parameter){
+  lm_pl = summary(lm(log(get(y_parameter))~log(get(x_parameter)), data=results_dataframe))
+  formula_name = paste("F(x) = exp(", round(coef(lm_pl)[2], 2), "*x) * exp(", round(coef(lm_pl)[1], 2), ")", sep="")
+  return(list(lm_pl=lm_pl, formula_name=formula_name))
+}
+
+#'  get_exponential_decay
+#'  Method to obtain an exponential decay fit from the data.
+#'  @param results_dataframe Dataframe containing the data.
+#'  @param y_parameter Parameter of the Y axis.
+#'  @param x_parameter Parameter of the X axis.
+#'  
+get_exponential_decay = function(results_dataframe, y_parameter, x_parameter){
+  # Calculate mean of repetitions from same sample size
+  results_dataframe_mean = results_dataframe %>% 
+    arrange(get(x_parameter), rep) %>%
+    group_by(get(x_parameter)) %>%
+    summarise_at(all_of(vars(y_parameter)), list(mean=mean, median=median, sd=sd)) %>%
+    rename(!!x_parameter := "get(x_parameter)") %>%
+    ungroup()
+  # Calculate difference between consecutive sizes and y_parameter
+  diff_n = diff(results_dataframe_mean[[x_parameter]])
+  diff_s = diff(results_dataframe_mean$mean)
+  # Calculate gradient = ratio between difference of y_parameter and size
+  grad = 1/(diff_n/diff_s)
+  # Calculate normalized gradient dividing it by size (starting from 2nd position)
+  frac_grad = grad/results_dataframe_mean$mean[2:length(results_dataframe_mean$mean)]
+  # Check which factions are negative so that we ignore them. 
+  # Why? Because some consecutive differences might give negative values! 
+  # This does not make sense in theory, and as the number of situations like this is very small, we ignore it.
+  boo=frac_grad>0
+  # Calculate polynomial equation = logarithm of the gradient vs. logarithm of sample size (starting from 2nd position) (removing negatives)
+  lm_exp_dec = summary(lm(log(frac_grad[boo])~log(results_dataframe_mean[[x_parameter]][2:length(results_dataframe_mean[[x_parameter]])][boo])))
+  formula_name = paste("F(x) = exp[ (exp(", round(coef(lm_exp_dec)[1], 2), ") * x**(1 + (", round(coef(lm_exp_dec)[2], 2), "))) / (1 + (", round(coef(lm_exp_dec)[2], 2), ")) ]", sep="")
+  return(list(lm_exp_dec=lm_exp_dec, formula_name=formula_name))
+}
+
+#'  calculate_exponential_decay
+#'  Formula to calculate exponential decay of significant interactions from a list of sample sizes.
+#'  @param x List of sample sizes.
+#'  @param a Slope coefficient.
+#'  @param b Intercept coefficient.
+#'  @param norm Boolean. If TRUE, the predictions are normalized (divided by the maximum prediction).
+#'  
+calculate_exponential_decay = function(x, a, b, norm=FALSE){
+  y = (exp( (exp(b) * x**(1 + a) ) / (1 + a) ))
+  if(isTRUE(norm)){
+    y=y/max(y) # Normalize y vector
+  }
+  return(y)
+}
 
 #-----------#
 # Read data #
@@ -186,25 +263,122 @@ server <- function(input, output, session) {
       }
     }
 
+    # Rescale Y axis
+    if(isTRUE(input$topology_rescale_y)){
+      results_selected_df = results_selected_df %>% group_by_at(selected_fill_parameter) %>% mutate(max_parameter = max(get(input$boxplot_parameter))) %>% mutate(norm = get(input$boxplot_parameter)/max_parameter) %>% select(!(all_of(c(!!input$boxplot_parameter, "max_parameter")))) %>% rename(!!input$boxplot_parameter := norm)
+      topology_results_selected_by_size_df = topology_results_selected_by_size_df %>% group_by_at(selected_fill_parameter) %>% mutate(max_mean=max(mean)) %>% mutate(mean_norm=mean/max_mean) %>% mutate(max_sd=max(sd)) %>% mutate(sd_norm=sd/max_sd)
+      combination_metric = paste(combination_metric, "norm", sep="_")
+    }
+    
+    # Re-scale x axis
+    if (isTRUE(input$topology_rescale_x)){
+      results_selected_df = results_selected_df %>% group_by_at(selected_fill_parameter) %>% mutate(max_size = max(size)) %>% mutate(norm = size/max_size) %>% select(!(all_of(c("size", "max_size")))) %>% rename(size = norm)
+      topology_results_selected_by_size_df = topology_results_selected_by_size_df %>% group_by_at(selected_fill_parameter) %>% mutate(max_size=max(size)) %>% mutate(norm = size/max_size) %>% select(!(all_of(c("size", "max_size")))) %>% rename(size = norm)
+    }
+    
+    # Check if user wants to plot analytical model
+    cols = c("model_type", "model_result", "size", "formula", "adj.r.squared", selected_fill_parameter)
+    topology_results_selected_analytical_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+    if (isTruthy(input$topology_analytical)){
+      if (is.null(selected_fill_parameter)){
+        # Calculate logarithmic fit for the whole selected data
+        log_results = get_logarithmic_tendency(results_dataframe=results_selected_df, y_parameter=input$boxplot_parameter, x_parameter="size")
+        pl_results = get_power_law_tendency(results_dataframe=results_selected_df, y_parameter=input$boxplot_parameter, x_parameter="size")
+        dec_results = get_exponential_decay(results_dataframe=results_selected_df, y_parameter=input$boxplot_parameter, x_parameter="size")
+        topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="log", model_result=(log(sort(unique(results_selected_df$size)))*coef(log_results$lm_log)[2] + coef(log_results$lm_log)[1]), size=sort(unique(results_selected_df$size)), formula=log_results$formula_name, adj.r.squared=log_results$lm_log$adj.r.squared))
+        topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="power.law", model_result=(exp(sort(unique(results_selected_df$size)))*coef(pl_results$lm_pl)[2] + exp(coef(pl_results$lm_pl)[1])), size=sort(unique(results_selected_df$size)), formula=pl_results$formula_name, adj.r.squared=pl_results$lm_pl$adj.r.squared))
+        topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="exp.decay", model_result=calculate_exponential_decay(x=sort(unique(results_selected_df$size)), a=coef(dec_results$lm_exp_dec)[2], b=coef(dec_results$lm_exp_dec)[1], norm=input$topology_rescale_y), size=sort(unique(results_selected_df$size)), formula=dec_results$formula_name, adj.r.squared=dec_results$lm_exp_dec$adj.r.squared))
+      } else {
+        # Calculate logarithmic fit for each selected fill parameter (e.g. each dataset)
+        for (selected_parameter in unique(results_selected_df[[selected_fill_parameter]])){
+          results_selected_by_parameter_df = results_selected_df %>% filter(!!as.symbol(selected_fill_parameter) == selected_parameter)
+          log_results = get_logarithmic_tendency(results_dataframe=results_selected_by_parameter_df, y_parameter=input$boxplot_parameter, x_parameter="size")
+          pl_results = get_power_law_tendency(results_dataframe=results_selected_by_parameter_df, y_parameter=input$boxplot_parameter, x_parameter="size")
+          dec_results = get_exponential_decay(results_dataframe=results_selected_by_parameter_df, y_parameter=input$boxplot_parameter, x_parameter="size")
+          topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="log", model_result=(log(sort(unique(results_selected_by_parameter_df$size)))*coef(log_results$lm_log)[2] + coef(log_results$lm_log)[1]), size=sort(unique(results_selected_by_parameter_df$size)), formula=log_results$formula_name, adj.r.squared=log_results$lm_log$adj.r.squared, parameter=selected_parameter) %>% rename(!!selected_fill_parameter := parameter))
+          topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="power.law", model_result=(exp(sort(unique(results_selected_by_parameter_df$size)))*coef(pl_results$lm_pl)[2] + exp(coef(pl_results$lm_pl)[1])), size=sort(unique(results_selected_by_parameter_df$size)), formula=pl_results$formula_name, adj.r.squared=pl_results$lm_pl$adj.r.squared, parameter=selected_parameter) %>% rename(!!selected_fill_parameter := parameter))
+          topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="exp.decay", model_result=calculate_exponential_decay(x=sort(unique(results_selected_by_parameter_df$size)), a=coef(dec_results$lm_exp_dec)[2], b=coef(dec_results$lm_exp_dec)[1], norm=input$topology_rescale_y), size=sort(unique(results_selected_by_parameter_df$size)), formula=dec_results$formula_name, adj.r.squared=dec_results$lm_exp_dec$adj.r.squared, parameter=selected_parameter) %>% rename(!!selected_fill_parameter := parameter))
+        }
+      }
+      # Calculate relative error
+      topology_results_selected_pred_vs_reality_df = topology_results_selected_analytical_df %>% inner_join(topology_results_selected_by_size_df %>% ungroup() %>% select("size", !!combination_metric, !!selected_fill_parameter), by=c("size", selected_fill_parameter)) %>% unique()
+      topology_results_selected_pred_vs_reality_df$relative.error = abs((topology_results_selected_pred_vs_reality_df[[combination_metric]] - topology_results_selected_pred_vs_reality_df$model_result)) / topology_results_selected_pred_vs_reality_df[[combination_metric]]
+      # Prepare output table
+      analytical_model_summary_df = topology_results_selected_pred_vs_reality_df %>% 
+        filter(model_type %in% c(input$topology_type_analytical_model)) %>% 
+        select(one_of(selected_fill_parameter), "model_type", "formula", "adj.r.squared", "relative.error") %>% 
+        unique() %>%
+        # Calculate relative error mean
+        group_by_at(c(selected_fill_parameter, "model_type", "formula", "adj.r.squared")) %>%
+        mutate(relative.error.mean=mean(relative.error)) %>%
+        select(!("relative.error")) %>%
+        unique() %>%
+        ungroup()
+      # Remove table if it is there
+      removeUI(
+        ## pass in appropriate div id
+        selector = "#topologyAnalyticalModelTableID"
+      )
+      # Insert updated table
+      insertUI(
+        selector = '#topologyAnalyticalModelTable',
+        # wrap element in a div with id for ease of removal
+        ui = tags$div(
+          renderTable(analytical_model_summary_df), 
+          id = "topologyAnalyticalModelTableID"
+        )
+      )
+    } else {
+      # Remove table if it is there
+      removeUI(
+        ## pass in appropriate div id
+        selector = "#topologyAnalyticalModelTableID"
+      )
+    }
+    
     #----------------------------------#
     # Define main elements of the plot #
     #----------------------------------#
     
     if (is.null(selected_fill_parameter)){
       # Plot without fill
-      topology_results_plot = ggplot(results_selected_df, aes(x=size, y=results_selected_df[[input$boxplot_parameter]])) + 
+      topology_results_plot = ggplot(results_selected_df, aes(x=size, y=.data[[input$boxplot_parameter]])) + 
         guides(fill=guide_legend(title="")) +
         geom_point(alpha=0.5, size=3, col=2, fill=2) +
         geom_line(data = topology_results_selected_by_size_df,
                   aes(x = size, y = get(combination_metric), group=1),
-                  col=2, lwd=1)
+                  col=2, lwd=1) +
+        geom_line(data = topology_results_selected_analytical_df %>% filter(model_type %in% c(input$topology_type_analytical_model)),
+                  aes(x = size, y = model_result, group=model_type, col=model_type),
+                  lwd=1) +
+        scale_color_brewer(name = "model_type", palette = "Accent", direction = 1)
+        #scale_color_manual(name = "model_type", values = c("#1f78b4", "#33a02c"))
+        
+      # Add analytical curve without fill
+      #if (isTruthy(input$topology_analytical)){
+      #  topology_results_plot = topology_results_plot +
+      #    geom_line(data = topology_results_selected_analytical_df,
+      #              aes(x = size, y = model_result),
+      #              lwd=1)
+      #}
     } else {
       # Plot with fill
-      topology_results_plot = ggplot(results_selected_df, aes(x=size, y=results_selected_df[[input$boxplot_parameter]], fill=get(selected_fill_parameter), group=get(selected_fill_parameter), col=get(selected_fill_parameter))) + 
+      topology_results_plot = ggplot(results_selected_df, aes(x=size, y=.data[[input$boxplot_parameter]], fill=get(selected_fill_parameter), group=get(selected_fill_parameter), col=get(selected_fill_parameter))) + 
         geom_point(alpha=0.5, size=3) +
         geom_line(data = topology_results_selected_by_size_df,
                   aes(x = size, y = get(combination_metric)),
-                  lwd=1)
+                  lwd=1) +
+        geom_line(data = topology_results_selected_analytical_df %>% filter(model_type %in% c(input$topology_type_analytical_model)),
+                  aes(x = size, y = model_result, group=get(selected_fill_parameter)),
+                  lwd=1, col="black")
+      
+      # Add analytical curve with fill
+      #if (isTruthy(input$topology_analytical)){
+      #  topology_results_plot = topology_results_plot +
+      #    geom_line(data = topology_results_selected_analytical_df,
+      #              aes(x = size, y = model_result, group=get(selected_fill_parameter)),
+      #              lwd=1, col="black")
+      #}
     }
     
     #----------------#

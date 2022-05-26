@@ -133,11 +133,35 @@ ui <- fluidPage(
                           ),
                           shinyWidgets::materialSwitch(inputId = "topology_log_x", label = "Turn x axis to log scale:", status="primary"),
                           shinyWidgets::materialSwitch(inputId = "topology_log_y", label = "Turn y axis to log scale:", status="primary"),
-                          shinyWidgets::materialSwitch(inputId = "topology_sd", label = "Plot standard deviation:", status="primary")
+                          shinyWidgets::materialSwitch(inputId = "topology_sd", label = "Plot standard deviation:", status="primary"),
+                          shinyWidgets::materialSwitch(inputId = "topology_rescale_x", label = "Normalize x axis:", status="primary"),
+                          shinyWidgets::materialSwitch(inputId = "topology_rescale_y", label = "Normalize y axis:", status="primary"),
+                          shinyWidgets::materialSwitch(inputId = "topology_analytical", label = "Show analytical curve:", status="primary"),
+                          conditionalPanel(
+                            condition = "input.topology_analytical == true",
+                            #selectInput("topology_type_analytical_model", label = "Type of analytical model:", 
+                            #            choices = list("exponential decay" = "exp.decay", "logarithmic" = "log", "power law" = "power.law"),
+                            #            selected = "exp.decay"
+                            #),
+                            verbatimTextOutput(outputId = "topology_type_analytical_model"),
+                            shinyWidgets::pickerInput(
+                              inputId = "topology_type_analytical_model",
+                              label = "Type of analytical model:",
+                              choices = list("Exponential decay" = "exp.decay", "Logarithmic" = "log", "Power law" = "power.law"),
+                              options = list(
+                                `actions-box` = TRUE,
+                                size = 10,
+                                `selected-text-format` = "count > 1"
+                              ),
+                              selected = 'exp.decay',
+                              multiple = TRUE
+                            ),
+                          ),
                         ),
                         # Show boxplot of topological parameters
                         mainPanel(
-                          plotOutput("topologyBoxPlot")
+                          plotOutput("topologyBoxPlot"),
+                          tags$div(id = 'topologyAnalyticalModelTable')
                         )
                       )
              ),
