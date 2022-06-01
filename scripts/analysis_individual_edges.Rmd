@@ -32,8 +32,8 @@ set.seed(1510)
 ```{r}
 # Define dataframe
 #networks_file = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/tcga_TCGA_pearson_combined.txt"
-#networks_file = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/gtex_Whole.Blood_pearson_combined.txt"
-networks_file = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/gtex_Whole.Blood_pearson_combined_dummy.txt"
+networks_file = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/gtex_Whole.Blood_pearson_combined.txt"
+#networks_file = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/gtex_Whole.Blood_pearson_combined_dummy.txt"
 #networks_file = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/scipher_complete.dataset_pearson_combined.txt"
 
 plots_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots'
@@ -67,11 +67,15 @@ min_val = floor(min(norm))
 
 ```{r}
 plot(som_vars, ylim=c(-5, 5))
-png(file=som_plot_file,
-    width=10000, 
-    height=6000,
-    units = c("px")
-)
+```
+
+```{r}
+plot(som_vars, ylim=c(-5, 5), save=som_plot_file)
+#png(file=som_plot_file,
+#    width=10000, 
+#    height=6000,
+#    units = c("px")
+#)
 dev.off()
 ```
 
@@ -112,5 +116,27 @@ ggsave(
   height = 6000,
   units = c("px")
 )
+```
+
+```{r}
+# Plot histogram of distribution
+histogram_correlation_distribution = networks_long %>%
+  filter(ss %% 100 == 0) %>%
+  ggplot(aes(score, color=ss, group=ss)) +
+  geom_freqpoly(binwidth=0.1) +
+  #geom_histogram(binwidth=0.1) +
+  #scale_y_log10() + 
+  ggtitle("Distribution of Pearson correlation") +
+  labs(x="Pearson correlation", y = "Number of edges", color = "Number of samples") +
+  theme_linedraw() + 
+  theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom")
+
+histogram_correlation_distribution
+#histogram_correlation_distribution_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/distribution_log_pearson_scipher_complete_dataset.png"
+#ggsave(
+#  filename=histogram_correlation_distribution_file,
+#  plot=histogram_correlation_distribution,
+#  dpi = 1200
+#)
 ```
 

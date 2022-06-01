@@ -3,7 +3,7 @@ library(dplyr)
 library(ggplot2)
 #shiny::runApp('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny')
 #shiny::runApp('/Users/j.aguirreplans/Dropbox (CCNR)/Biology/Quim/Scipher/SampleSize/scripts/SampleSizeShiny')
-#options(bitmapType='cairo') # Only for RStudio webserver if I want to save a plot
+options(bitmapType='cairo') # Only for RStudio webserver if I want to save a plot
 
 #------------------#
 # Define variables #
@@ -12,6 +12,7 @@ library(ggplot2)
 # Input files
 #input_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/data_shiny_app'
 #setwd("/Users/j.aguirreplans/Dropbox (CCNR)/Biology/Quim/Scipher/SampleSize/scripts/SampleSizeShiny")
+#setwd("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny")
 input_dir = 'data'
 topology_results_file = paste(input_dir, 'analysis_topology.csv', sep='/')
 ppi_results_file = paste(input_dir, 'analysis_ppi.csv', sep='/')
@@ -30,7 +31,8 @@ parameter2label <- list("nodes"="Nodes", "edges"="Edges", "av_degree"="Av. degre
                         "num_essential_genes" = "Number of essential genes", "fraction_essential_genes" = "Fraction of essential genes", "num_essential_lcc_nodes" = "Number of essential genes forming a LCC", "fraction_essential_lcc_nodes" = "Essential genes rLCC", 
                         "num_disease_genes" = "Number of disease genes", "fraction_disease_genes" = "Fraction of disease genes", "num_disease_components" = "Number of disease gene components", "num_disease_lcc_nodes" = "Number of disease genes in the LCC", "fraction_disease_lcc_nodes" = "Disease rLCC", "num_disease_lcc_edges" = "Number of disease gene edges in the LCC", "disease_lcc_z" = "Significance z-score of the disease LCC", "disease_lcc_pvalue" = "Significance p-value of the disease LCC", "log_disease_lcc_pvalue" = "Significance log(p-value) of the disease LCC",
                         "overlapindex" = "Overlap index", "jaccardIndex" = "Jaccard index",
-                        "num_ppi_nodes" = "Number of PPI nodes", "num_ppi_edges" = "Number of PPI edges", "fraction_ppi_nodes" = "Fraction of PPI nodes", "fraction_ppi_edges" = "Fraction of PPI edges", "num_ppi_main_core_nodes" = "Number of PPI main core nodes", "num_ppi_main_core_edges" = "Number of PPI main core edges", "fraction_ppi_main_core_nodes" = "Fraction of PPI main core nodes", "fraction_ppi_main_core_edges" = "Fraction of PPI main core edges"
+                        "num_ppi_nodes" = "Number of PPI nodes", "num_ppi_edges" = "Number of PPI edges", "fraction_ppi_nodes" = "Fraction of PPI nodes", "fraction_ppi_edges" = "Fraction of PPI edges", "num_ppi_main_core_nodes" = "Number of PPI main core nodes", "num_ppi_main_core_edges" = "Number of PPI main core edges", "fraction_ppi_main_core_nodes" = "Fraction of PPI main core nodes", "fraction_ppi_main_core_edges" = "Fraction of PPI main core edges",
+                        "dataset" = "Dataset", "type_dataset" = "Type of dataset", "method" = "Method", "type_correlation" = "Type of correlation", "threshold" = "P-value threshold", "disease" = "Disease"
 )
 
 #------------------#
@@ -45,7 +47,7 @@ parameter2label <- list("nodes"="Nodes", "edges"="Edges", "av_degree"="Av. degre
 #'  
 get_logarithmic_tendency = function(results_dataframe, y_parameter, x_parameter){
   lm_log = summary(lm(get(y_parameter)~log(get(x_parameter)), data=results_dataframe))
-  formula_name = paste("F(x) = (", formatC(round(coef(lm_log)[2]), format = "e", digits = 2), ")*ln(x) + (", formatC(round(coef(lm_log)[1]), format = "e", digits = 2), ")", sep="")
+  formula_name = paste("F(x) = (", formatC(round(coef(lm_log)[2], 2), format = "e", digits = 2), ")*ln(x) + (", formatC(round(coef(lm_log)[1], 2), format = "e", digits = 2), ")", sep="")
   return(list(lm_log=lm_log, formula_name=formula_name))
 }
 
@@ -57,7 +59,7 @@ get_logarithmic_tendency = function(results_dataframe, y_parameter, x_parameter)
 #'  
 get_power_law_tendency = function(results_dataframe, y_parameter, x_parameter){
   lm_pl = summary(lm(log(get(y_parameter))~log(get(x_parameter)), data=results_dataframe))
-  formula_name = paste("F(x) = exp(", round(coef(lm_pl)[2], 2), "*x) * exp(", round(coef(lm_pl)[1], 2), ")", sep="")
+  formula_name = paste("F(x) = -(", formatC(round(exp(coef(lm_pl)[1]), 2), format = "e", digits = 2), ")*x**(-(", formatC(round(coef(lm_pl)[2], 2), format = "e", digits = 2), "))", sep="")
   return(list(lm_pl=lm_pl, formula_name=formula_name))
 }
 
@@ -116,7 +118,9 @@ ppi_results_df = fread(ppi_results_file)
 disease_genes_results_df = fread(disease_genes_results_file)
 essential_genes_results_df = fread(essential_genes_results_file) %>% rename("num_essential_components" = "num_components", "num_essential_lcc_nodes" = "num_lcc_nodes", "num_essential_lcc_edges" = "num_lcc_edges", "essential_lcc_z" = "lcc_z", "essential_lcc_pvalue" = "lcc_pvalue")
 results_df = inner_join(topology_results_df, ppi_results_df, by = c("method", "dataset", "type_dataset", "size", "rep", "type_correlation", "threshold")) %>% inner_join(disease_genes_results_df, by = c("method", "dataset", "type_dataset", "size", "rep", "type_correlation", "threshold")) %>% inner_join(essential_genes_results_df, by = c("method", "dataset", "type_dataset", "size", "rep", "type_correlation", "threshold"))
+results_df$type_dataset = paste(results_df$dataset, results_df$type_dataset, sep=":") # Join dataset and type_dataset
 results_df$type_dataset = tolower(results_df$type_dataset)
+results_df$threshold = as.character(results_df$threshold) # Consider threshold as a discrete variable
 
 #------------------------#
 # Send information to UI #
@@ -208,14 +212,17 @@ server <- function(input, output, session) {
       topology_gtex_sex <- c(unlist(strsplit(renderText(input$topology_gtex_sex, sep='___')(), split='___')))
       type_datasets_gtex = apply(expand.grid(topology_gtex_tissues, topology_gtex_sex), 1, paste, collapse="_")
       type_datasets_gtex <- gsub('_both', '', type_datasets_gtex)
+      type_datasets_gtex = paste("gtex", type_datasets_gtex, sep=":")
     }
     type_datasets_scipher = c()
     if ("scipher" %in% c(input$topology_dataset)){
       type_datasets_scipher=c(input$topology_type_dataset_scipher)
+      type_datasets_scipher = paste("scipher", type_datasets_scipher, sep=":")
     }
     type_datasets_tcga = c()
     if ("tcga" %in% c(input$topology_dataset)){
       type_datasets_tcga=c(input$topology_tcga_project)
+      type_datasets_tcga = paste("tcga", type_datasets_tcga, sep=":")
     }
     type_datasets = c(type_datasets_gtex, type_datasets_scipher, type_datasets_tcga)
       
@@ -223,10 +230,10 @@ server <- function(input, output, session) {
     # Select information #
     #--------------------#
 
-    results_selected_df = results_df %>% filter((dataset %in% c(input$topology_dataset)) & (type_dataset %in% type_datasets) & (method %in% c(input$topology_method)) & (type_correlation %in% c(input$topology_type_correlation)) & (threshold %in% c(input$topology_pvalue_threshold)))
+    results_selected_df = results_df %>% filter((type_dataset %in% type_datasets) & (method %in% c(input$topology_method)) & (type_correlation %in% c(input$topology_type_correlation)) & (threshold %in% c(input$topology_pvalue_threshold)))
     
     # Select by diseases
-    group_vars = c("dataset", "type_dataset", "method", "size", "type_correlation", "threshold")
+    group_vars = c("type_dataset", "method", "size", "type_correlation", "threshold")
     if(input$type_analysis == "disease_genes"){
       diseases_selected <- unlist(strsplit(renderText(input$diseases, sep='___')(), split='___'))
       results_selected_df %<>% filter(disease %in% diseases_selected) %>% select(-disease_class) %>% unique()
@@ -253,8 +260,8 @@ server <- function(input, output, session) {
     }
     
     # Check which parameter should be plotted multiple times (if there are multiple checkboxes with multiple elements selected)
-    # In this case, the priority is given by the following list (dataset > type_dataset > method...)
-    multiple_options_params = c("dataset", "type_dataset", "method", "type_correlation", "threshold", "disease")
+    # In this case, the priority is given by the following list (type_dataset > method...)
+    multiple_options_params = c("type_dataset", "method", "type_correlation", "threshold", "disease")
     selected_fill_parameter = NULL
     for (multiple_options_param in multiple_options_params){
       if (length(unique(results_selected_df[[multiple_options_param]])) > 1){
@@ -286,7 +293,7 @@ server <- function(input, output, session) {
         pl_results = get_power_law_tendency(results_dataframe=results_selected_df, y_parameter=input$boxplot_parameter, x_parameter="size")
         dec_results = get_exponential_decay(results_dataframe=results_selected_df, y_parameter=input$boxplot_parameter, x_parameter="size")
         topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="log", model_result=(log(sort(unique(results_selected_df$size)))*coef(log_results$lm_log)[2] + coef(log_results$lm_log)[1]), size=sort(unique(results_selected_df$size)), formula=log_results$formula_name, adj.r.squared=log_results$lm_log$adj.r.squared))
-        topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="power.law", model_result=(exp(sort(unique(results_selected_df$size)))*coef(pl_results$lm_pl)[2] + exp(coef(pl_results$lm_pl)[1])), size=sort(unique(results_selected_df$size)), formula=pl_results$formula_name, adj.r.squared=pl_results$lm_pl$adj.r.squared))
+        topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="power.law", model_result=((-exp(coef(pl_results$lm_pl)[1]))*sort(unique(results_selected_df$size))**(-coef(pl_results$lm_pl)[2])), size=sort(unique(results_selected_df$size)), formula=pl_results$formula_name, adj.r.squared=pl_results$lm_pl$adj.r.squared))
         topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="exp.decay", model_result=calculate_exponential_decay(x=sort(unique(results_selected_df$size)), a=coef(dec_results$lm_exp_dec)[2], b=coef(dec_results$lm_exp_dec)[1], norm=input$topology_rescale_y), size=sort(unique(results_selected_df$size)), formula=dec_results$formula_name, adj.r.squared=dec_results$lm_exp_dec$adj.r.squared))
       } else {
         # Calculate logarithmic fit for each selected fill parameter (e.g. each dataset)
@@ -296,7 +303,7 @@ server <- function(input, output, session) {
           pl_results = get_power_law_tendency(results_dataframe=results_selected_by_parameter_df, y_parameter=input$boxplot_parameter, x_parameter="size")
           dec_results = get_exponential_decay(results_dataframe=results_selected_by_parameter_df, y_parameter=input$boxplot_parameter, x_parameter="size")
           topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="log", model_result=(log(sort(unique(results_selected_by_parameter_df$size)))*coef(log_results$lm_log)[2] + coef(log_results$lm_log)[1]), size=sort(unique(results_selected_by_parameter_df$size)), formula=log_results$formula_name, adj.r.squared=log_results$lm_log$adj.r.squared, parameter=selected_parameter) %>% rename(!!selected_fill_parameter := parameter))
-          topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="power.law", model_result=(exp(sort(unique(results_selected_by_parameter_df$size)))*coef(pl_results$lm_pl)[2] + exp(coef(pl_results$lm_pl)[1])), size=sort(unique(results_selected_by_parameter_df$size)), formula=pl_results$formula_name, adj.r.squared=pl_results$lm_pl$adj.r.squared, parameter=selected_parameter) %>% rename(!!selected_fill_parameter := parameter))
+          topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="power.law", model_result=((-exp(coef(pl_results$lm_pl)[1]))*sort(unique(results_selected_by_parameter_df$size))**(-coef(pl_results$lm_pl)[2])), size=sort(unique(results_selected_by_parameter_df$size)), formula=pl_results$formula_name, adj.r.squared=pl_results$lm_pl$adj.r.squared, parameter=selected_parameter) %>% rename(!!selected_fill_parameter := parameter))
           topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="exp.decay", model_result=calculate_exponential_decay(x=sort(unique(results_selected_by_parameter_df$size)), a=coef(dec_results$lm_exp_dec)[2], b=coef(dec_results$lm_exp_dec)[1], norm=input$topology_rescale_y), size=sort(unique(results_selected_by_parameter_df$size)), formula=dec_results$formula_name, adj.r.squared=dec_results$lm_exp_dec$adj.r.squared, parameter=selected_parameter) %>% rename(!!selected_fill_parameter := parameter))
         }
       }
@@ -363,7 +370,8 @@ server <- function(input, output, session) {
       #}
     } else {
       # Plot with fill
-      topology_results_plot = ggplot(results_selected_df, aes(x=size, y=.data[[input$boxplot_parameter]], fill=get(selected_fill_parameter), group=get(selected_fill_parameter), col=get(selected_fill_parameter))) + 
+      topology_results_plot = ggplot(results_selected_df, aes(x=size, y=.data[[input$boxplot_parameter]], col=get(selected_fill_parameter))) + 
+        guides(col=guide_legend(title=parameter2label[[selected_fill_parameter]])) +
         geom_point(alpha=0.5, size=3) +
         geom_line(data = topology_results_selected_by_size_df,
                   aes(x = size, y = get(combination_metric)),
@@ -407,12 +415,20 @@ server <- function(input, output, session) {
         scale_y_continuous(trans = scales::log_trans())
     }
     
+    # Change axes label if re-scaling
+    if(isTRUE(input$topology_rescale_y)){
+      label_x= paste(label_x, " (Norm.)", sep="")
+    }
+    if(isTRUE(input$topology_rescale_y)){
+      label_y= paste(label_y, " (Norm.)", sep="")
+    }
+    
     # Customize axes/labels/grid
     topology_results_plot = topology_results_plot + 
       theme_linedraw() +
       xlab(label_x) +
       ylab(label_y) +
-      theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom")
+      theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.title=element_text(size=15, face="bold"), legend.position="bottom")
     
     topology_results_plot
     
