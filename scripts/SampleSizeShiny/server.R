@@ -1,6 +1,7 @@
 library(data.table)
 library(dplyr)
 library(ggplot2)
+library(stats)
 #shiny::runApp('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny')
 #shiny::runApp('/Users/j.aguirreplans/Dropbox (CCNR)/Biology/Quim/Scipher/SampleSize/scripts/SampleSizeShiny')
 options(bitmapType='cairo') # Only for RStudio webserver if I want to save a plot
@@ -51,18 +52,6 @@ get_logarithmic_tendency = function(results_dataframe, y_parameter, x_parameter)
   return(list(lm_log=lm_log, formula_name=formula_name))
 }
 
-#'  get_power_law_tendency
-#'  Method to obtain a power law fit from the data.
-#'  @param results_dataframe Dataframe containing the data.
-#'  @param y_parameter Parameter of the Y axis.
-#'  @param x_parameter Parameter of the X axis.
-#'  
-get_power_law_tendency = function(results_dataframe, y_parameter, x_parameter){
-  lm_pl = summary(lm(log(get(y_parameter))~log(get(x_parameter)), data=results_dataframe))
-  formula_name = paste("F(x) = -(", formatC(round(exp(coef(lm_pl)[1]), 2), format = "e", digits = 2), ")*x**(-(", formatC(round(coef(lm_pl)[2], 2), format = "e", digits = 2), "))", sep="")
-  return(list(lm_pl=lm_pl, formula_name=formula_name))
-}
-
 #'  get_exponential_decay
 #'  Method to obtain an exponential decay fit from the data.
 #'  @param results_dataframe Dataframe containing the data.
@@ -74,7 +63,7 @@ get_exponential_decay = function(results_dataframe, y_parameter, x_parameter){
   results_dataframe_mean = results_dataframe %>% 
     arrange(get(x_parameter), rep) %>%
     group_by(get(x_parameter)) %>%
-    summarise_at(all_of(vars(y_parameter)), list(mean=mean, median=median, sd=sd)) %>%
+    summarise_at(vars(all_of(y_parameter)), list(mean=mean, median=median, sd=sd)) %>%
     rename(!!x_parameter := "get(x_parameter)") %>%
     ungroup()
   # Calculate difference between consecutive sizes and y_parameter
@@ -94,19 +83,69 @@ get_exponential_decay = function(results_dataframe, y_parameter, x_parameter){
   return(list(lm_exp_dec=lm_exp_dec, formula_name=formula_name))
 }
 
-#'  calculate_exponential_decay
+#'  calculate_exponential_decay_without_s_max
 #'  Formula to calculate exponential decay of significant interactions from a list of sample sizes.
+#'  This formula does not require the use of s_max
 #'  @param x List of sample sizes.
 #'  @param a Slope coefficient.
 #'  @param b Intercept coefficient.
-#'  @param norm Boolean. If TRUE, the predictions are normalized (divided by the maximum prediction).
 #'  
-calculate_exponential_decay = function(x, a, b, norm=FALSE){
+calculate_exponential_decay_without_s_max = function(x, a, b){
   y = (exp( (exp(b) * x**(1 + a) ) / (1 + a) ))
   y=y/max(y) # Normalize y vector
-  #if(isTRUE(norm)){
-  #  y=y/max(y) # Normalize y vector
-  #}
+  return(y)
+}
+
+#'  calculate_s_max
+#'  Formula to find linear fit between ln(s_max)-ln(s) and ln(N) that has the minimum value of 1-R**2,
+#'  thus being the most linear relationship.
+#'  @param results_dataframe Dataframe containing the data.
+#'  @param y_parameter Parameter of the Y axis.
+#'  @param x_parameter Parameter of the X axis.
+#'  @param s_max_guess Initial values for the parameters to be optimized over.
+#'  
+calculate_s_max = function(results_dataframe, y_parameter, x_parameter, s_max_guess=c(2)){
+  # Calculate mean of repetitions from same sample size
+  results_dataframe_mean = results_dataframe %>% 
+    arrange(get(x_parameter), rep) %>%
+    group_by(get(x_parameter)) %>%
+    summarise_at(vars(all_of(y_parameter)), list(mean=mean, median=median, sd=sd)) %>%
+    rename(!!x_parameter := "get(x_parameter)") %>%
+    ungroup()
+  # Define s and N
+  s = results_dataframe_mean$mean / max(results_dataframe_mean$mean)
+  N = results_dataframe_mean$size
+  # Define function to get linear fit
+  linear_fit = function(data, par){
+    # Calculate ln(s_max)-ln(s)
+    s_max = par[1]
+    s_rec = log(s_max) - log(data$s)
+    # Calculate linear regression between ln(s_max)-ln(s) and ln(N)
+    lm_result = summary(lm(log(s_rec)~log(data$N)))
+    # The function returns the result of 1-R**2
+    return(1-lm_result$adj.r.squared)
+  }
+  # Get minimization of error in linear fit
+  #res = optim(par=s_max_guess, fn=linear_fit, data=data.frame(s=s, N=N), method="Nelder-Mead")
+  res = optim(par=s_max_guess, fn=linear_fit, data=data.frame(s=s, N=N), method="Brent", lower=0, upper=5)
+  s_max=res$par
+  s_rec=log(s_max)-log(s)
+  # This is the linear fit containing s_max
+  lm_exp_dec = summary(lm(log(s_rec)~log(N)))
+  # This is the final formula
+  formula_name = paste("F(x) = ", round(s_max, 2), " * exp[ (exp(", round(coef(lm_exp_dec)[1], 2), ") * x**(1 + (", round(coef(lm_exp_dec)[2], 2), "))) / (1 + (", round(coef(lm_exp_dec)[2], 2), ")) ]", sep="")
+  return(list(s_max=s_max, lm_exp_dec=lm_exp_dec, formula_name=formula_name))
+}
+
+#'  calculate_exponential_decay_with_s_max
+#'  Formula to calculate exponential decay of significant interactions from a list of sample sizes.
+#'  This formula requires the use of the s_max parameter
+#'  @param x List of sample sizes.
+#'  @param a Slope coefficient.
+#'  @param b Intercept coefficient.
+#'  
+calculate_exponential_decay_with_s_max = function(x, s_max, a, b){
+  y = exp(log(s_max) - exp(b+a*log(x)))
   return(y)
 }
 
@@ -232,6 +271,8 @@ server <- function(input, output, session) {
     #--------------------#
 
     results_selected_df = results_df %>% filter((type_dataset %in% type_datasets) & (method %in% c(input$topology_method)) & (type_correlation %in% c(input$topology_type_correlation)) & (threshold %in% c(input$topology_pvalue_threshold)))
+    #results_selected_df = results_df %>% filter((type_dataset %in% c("tcga:tcga")) & (method %in% c("pearson")) & (type_correlation %in% c("all")) & (threshold %in% c(0.05))) # For a test
+    #results_selected_df = results_df %>% filter((type_dataset %in% c("tcga:tcga-brca", "tcga:tcga-ucec")) & (method %in% c("pearson")) & (type_correlation %in% c("all")) & (threshold %in% c(0.05))) # For a test with multiple parameters
     
     # Select by diseases
     group_vars = c("type_dataset", "method", "size", "type_correlation", "threshold")
@@ -250,7 +291,7 @@ server <- function(input, output, session) {
     # Calculate mean and standard deviation tendency
     topology_results_selected_by_size_df = results_selected_df %>%
       group_by_at(group_vars) %>%
-      summarise_at(vars(input$boxplot_parameter), list(mean=mean, sd=sd)) %>%
+      summarise_at(vars(all_of(input$boxplot_parameter)), list(mean=mean, sd=sd)) %>%
       arrange(size)
     
     # Check if the user wants to plot mean or standard deviation
@@ -291,13 +332,16 @@ server <- function(input, output, session) {
       if (is.null(selected_fill_parameter)){
         # Calculate logarithmic fit for the whole selected data
         log_results = get_logarithmic_tendency(results_dataframe=results_selected_df, y_parameter=input$boxplot_parameter, x_parameter="size")
-        pl_results = get_power_law_tendency(results_dataframe=results_selected_df, y_parameter=input$boxplot_parameter, x_parameter="size")
-        dec_results = get_exponential_decay(results_dataframe=results_selected_df, y_parameter=input$boxplot_parameter, x_parameter="size")
+        dec_model = get_exponential_decay(results_dataframe=results_selected_df, y_parameter=input$boxplot_parameter, x_parameter="size")
+        dec_predictions = calculate_exponential_decay_without_s_max(x=sort(unique(results_selected_df$size)), a=coef(dec_model$lm_exp_dec)[2], b=coef(dec_model$lm_exp_dec)[1])
+        dec_smax_model = calculate_s_max(results_dataframe=results_selected_df, y_parameter=input$boxplot_parameter, x_parameter="size", s_max_guess=c(2))
+        dec_smax_predictions = calculate_exponential_decay_with_s_max(x=sort(unique(results_selected_df$size)), s_max=dec_smax_model$s_max, a=coef(dec_smax_model$lm_exp_dec)[2], b=coef(dec_smax_model$lm_exp_dec)[1])
         topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="log", model_result=(log(sort(unique(results_selected_df$size)))*coef(log_results$lm_log)[2] + coef(log_results$lm_log)[1]), size=sort(unique(results_selected_df$size)), formula=log_results$formula_name, adj.r.squared=log_results$lm_log$adj.r.squared))
-        topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="power.law", model_result=((-exp(coef(pl_results$lm_pl)[1]))*sort(unique(results_selected_df$size))**(-coef(pl_results$lm_pl)[2])), size=sort(unique(results_selected_df$size)), formula=pl_results$formula_name, adj.r.squared=pl_results$lm_pl$adj.r.squared))
-        topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="exp.decay", model_result=calculate_exponential_decay(x=sort(unique(results_selected_df$size)), a=coef(dec_results$lm_exp_dec)[2], b=coef(dec_results$lm_exp_dec)[1], norm=input$topology_rescale_y), size=sort(unique(results_selected_df$size)), formula=dec_results$formula_name, adj.r.squared=dec_results$lm_exp_dec$adj.r.squared))
+        topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="exp.decay.no.smax", model_result=dec_predictions, size=sort(unique(results_selected_df$size)), formula=dec_model$formula_name, adj.r.squared=dec_model$lm_exp_dec$adj.r.squared))
+        topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="exp.decay", model_result=dec_smax_predictions, size=sort(unique(results_selected_df$size)), formula=dec_smax_model$formula_name, adj.r.squared=dec_smax_model$lm_exp_dec$adj.r.squared))
         # Un-normalize y axis if necessary
         if(!(isTRUE(norm))){
+          topology_results_selected_analytical_df$model_result = ifelse(topology_results_selected_analytical_df$model_type == "exp.decay.no.smax", topology_results_selected_analytical_df$model_result * max(results_selected_df[[input$boxplot_parameter]]), topology_results_selected_analytical_df$model_result)
           topology_results_selected_analytical_df$model_result = ifelse(topology_results_selected_analytical_df$model_type == "exp.decay", topology_results_selected_analytical_df$model_result * max(results_selected_df[[input$boxplot_parameter]]), topology_results_selected_analytical_df$model_result)
         }
       } else {
@@ -305,14 +349,17 @@ server <- function(input, output, session) {
         for (selected_parameter in unique(results_selected_df[[selected_fill_parameter]])){
           results_selected_by_parameter_df = results_selected_df %>% filter(!!as.symbol(selected_fill_parameter) == selected_parameter)
           log_results = get_logarithmic_tendency(results_dataframe=results_selected_by_parameter_df, y_parameter=input$boxplot_parameter, x_parameter="size")
-          pl_results = get_power_law_tendency(results_dataframe=results_selected_by_parameter_df, y_parameter=input$boxplot_parameter, x_parameter="size")
-          dec_results = get_exponential_decay(results_dataframe=results_selected_by_parameter_df, y_parameter=input$boxplot_parameter, x_parameter="size")
+          dec_model = get_exponential_decay(results_dataframe=results_selected_by_parameter_df, y_parameter=input$boxplot_parameter, x_parameter="size")
+          dec_predictions = calculate_exponential_decay_without_s_max(x=sort(unique(results_selected_by_parameter_df$size)), a=coef(dec_model$lm_exp_dec)[2], b=coef(dec_model$lm_exp_dec)[1])
+          dec_smax_model = calculate_s_max(results_dataframe=results_selected_by_parameter_df, y_parameter=input$boxplot_parameter, x_parameter="size", s_max_guess=c(2))
+          dec_smax_predictions = calculate_exponential_decay_with_s_max(x=sort(unique(results_selected_by_parameter_df$size)), s_max=dec_smax_model$s_max, a=coef(dec_smax_model$lm_exp_dec)[2], b=coef(dec_smax_model$lm_exp_dec)[1])
           topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="log", model_result=(log(sort(unique(results_selected_by_parameter_df$size)))*coef(log_results$lm_log)[2] + coef(log_results$lm_log)[1]), size=sort(unique(results_selected_by_parameter_df$size)), formula=log_results$formula_name, adj.r.squared=log_results$lm_log$adj.r.squared, parameter=selected_parameter) %>% rename(!!selected_fill_parameter := parameter))
-          topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="power.law", model_result=((-exp(coef(pl_results$lm_pl)[1]))*sort(unique(results_selected_by_parameter_df$size))**(-coef(pl_results$lm_pl)[2])), size=sort(unique(results_selected_by_parameter_df$size)), formula=pl_results$formula_name, adj.r.squared=pl_results$lm_pl$adj.r.squared, parameter=selected_parameter) %>% rename(!!selected_fill_parameter := parameter))
-          topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="exp.decay", model_result=calculate_exponential_decay(x=sort(unique(results_selected_by_parameter_df$size)), a=coef(dec_results$lm_exp_dec)[2], b=coef(dec_results$lm_exp_dec)[1], norm=input$topology_rescale_y), size=sort(unique(results_selected_by_parameter_df$size)), formula=dec_results$formula_name, adj.r.squared=dec_results$lm_exp_dec$adj.r.squared, parameter=selected_parameter) %>% rename(!!selected_fill_parameter := parameter))
+          topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="exp.decay.no.smax", model_result=dec_predictions, size=sort(unique(results_selected_by_parameter_df$size)), formula=dec_model$formula_name, adj.r.squared=dec_model$lm_exp_dec$adj.r.squared, parameter=selected_parameter) %>% rename(!!selected_fill_parameter := parameter))
+          topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="exp.decay", model_result=dec_smax_predictions, size=sort(unique(results_selected_by_parameter_df$size)), formula=dec_smax_model$formula_name, adj.r.squared=dec_smax_model$lm_exp_dec$adj.r.squared, parameter=selected_parameter) %>% rename(!!selected_fill_parameter := parameter))
           # Un-normalize y axis if necessary for exponential decay
           if(!(isTRUE(norm))){
-            topology_results_selected_analytical_df$model_result = ifelse(topology_results_selected_analytical_df$model_type == "exp.decay", topology_results_selected_analytical_df$model_result * max(results_selected_by_parameter_df[[input$boxplot_parameter]]), topology_results_selected_analytical_df$model_result)
+            topology_results_selected_analytical_df$model_result = ifelse((topology_results_selected_analytical_df[[selected_fill_parameter]] == selected_parameter & topology_results_selected_analytical_df$model_type == "exp.decay.no.smax"), topology_results_selected_analytical_df$model_result * max(results_selected_by_parameter_df[[input$boxplot_parameter]]), topology_results_selected_analytical_df$model_result)
+            topology_results_selected_analytical_df$model_result = ifelse((topology_results_selected_analytical_df[[selected_fill_parameter]] == selected_parameter & topology_results_selected_analytical_df$model_type == "exp.decay"), topology_results_selected_analytical_df$model_result * max(results_selected_by_parameter_df[[input$boxplot_parameter]]), topology_results_selected_analytical_df$model_result)
           }
         }
       }

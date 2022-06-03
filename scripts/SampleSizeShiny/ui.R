@@ -139,15 +139,11 @@ ui <- fluidPage(
                           shinyWidgets::materialSwitch(inputId = "topology_analytical", label = "Show analytical curve:", status="primary"),
                           conditionalPanel(
                             condition = "input.topology_analytical == true",
-                            #selectInput("topology_type_analytical_model", label = "Type of analytical model:", 
-                            #            choices = list("exponential decay" = "exp.decay", "logarithmic" = "log", "power law" = "power.law"),
-                            #            selected = "exp.decay"
-                            #),
                             verbatimTextOutput(outputId = "topology_type_analytical_model"),
                             shinyWidgets::pickerInput(
                               inputId = "topology_type_analytical_model",
                               label = "Type of analytical model:",
-                              choices = list("Exponential decay" = "exp.decay", "Logarithmic" = "log", "Power law" = "power.law"),
+                              choices = list("Exponential decay" = "exp.decay", "Exponential decay (no smax)" = "exp.decay.no.smax", "Logarithmic" = "log"),
                               options = list(
                                 `actions-box` = TRUE,
                                 size = 10,
