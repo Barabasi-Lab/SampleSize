@@ -103,9 +103,10 @@ get_exponential_decay = function(results_dataframe, y_parameter, x_parameter){
 #'  
 calculate_exponential_decay = function(x, a, b, norm=FALSE){
   y = (exp( (exp(b) * x**(1 + a) ) / (1 + a) ))
-  if(isTRUE(norm)){
-    y=y/max(y) # Normalize y vector
-  }
+  y=y/max(y) # Normalize y vector
+  #if(isTRUE(norm)){
+  #  y=y/max(y) # Normalize y vector
+  #}
   return(y)
 }
 
@@ -295,6 +296,10 @@ server <- function(input, output, session) {
         topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="log", model_result=(log(sort(unique(results_selected_df$size)))*coef(log_results$lm_log)[2] + coef(log_results$lm_log)[1]), size=sort(unique(results_selected_df$size)), formula=log_results$formula_name, adj.r.squared=log_results$lm_log$adj.r.squared))
         topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="power.law", model_result=((-exp(coef(pl_results$lm_pl)[1]))*sort(unique(results_selected_df$size))**(-coef(pl_results$lm_pl)[2])), size=sort(unique(results_selected_df$size)), formula=pl_results$formula_name, adj.r.squared=pl_results$lm_pl$adj.r.squared))
         topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="exp.decay", model_result=calculate_exponential_decay(x=sort(unique(results_selected_df$size)), a=coef(dec_results$lm_exp_dec)[2], b=coef(dec_results$lm_exp_dec)[1], norm=input$topology_rescale_y), size=sort(unique(results_selected_df$size)), formula=dec_results$formula_name, adj.r.squared=dec_results$lm_exp_dec$adj.r.squared))
+        # Un-normalize y axis if necessary
+        if(!(isTRUE(norm))){
+          topology_results_selected_analytical_df$model_result = ifelse(topology_results_selected_analytical_df$model_type == "exp.decay", topology_results_selected_analytical_df$model_result * max(results_selected_df[[input$boxplot_parameter]]), topology_results_selected_analytical_df$model_result)
+        }
       } else {
         # Calculate logarithmic fit for each selected fill parameter (e.g. each dataset)
         for (selected_parameter in unique(results_selected_df[[selected_fill_parameter]])){
@@ -305,6 +310,10 @@ server <- function(input, output, session) {
           topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="log", model_result=(log(sort(unique(results_selected_by_parameter_df$size)))*coef(log_results$lm_log)[2] + coef(log_results$lm_log)[1]), size=sort(unique(results_selected_by_parameter_df$size)), formula=log_results$formula_name, adj.r.squared=log_results$lm_log$adj.r.squared, parameter=selected_parameter) %>% rename(!!selected_fill_parameter := parameter))
           topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="power.law", model_result=((-exp(coef(pl_results$lm_pl)[1]))*sort(unique(results_selected_by_parameter_df$size))**(-coef(pl_results$lm_pl)[2])), size=sort(unique(results_selected_by_parameter_df$size)), formula=pl_results$formula_name, adj.r.squared=pl_results$lm_pl$adj.r.squared, parameter=selected_parameter) %>% rename(!!selected_fill_parameter := parameter))
           topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="exp.decay", model_result=calculate_exponential_decay(x=sort(unique(results_selected_by_parameter_df$size)), a=coef(dec_results$lm_exp_dec)[2], b=coef(dec_results$lm_exp_dec)[1], norm=input$topology_rescale_y), size=sort(unique(results_selected_by_parameter_df$size)), formula=dec_results$formula_name, adj.r.squared=dec_results$lm_exp_dec$adj.r.squared, parameter=selected_parameter) %>% rename(!!selected_fill_parameter := parameter))
+          # Un-normalize y axis if necessary for exponential decay
+          if(!(isTRUE(norm))){
+            topology_results_selected_analytical_df$model_result = ifelse(topology_results_selected_analytical_df$model_type == "exp.decay", topology_results_selected_analytical_df$model_result * max(results_selected_by_parameter_df[[input$boxplot_parameter]]), topology_results_selected_analytical_df$model_result)
+          }
         }
       }
       # Calculate relative error
