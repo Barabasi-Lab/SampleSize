@@ -19,6 +19,7 @@ topology_results_file = paste(input_dir, 'analysis_topology.csv', sep='/')
 ppi_results_file = paste(input_dir, 'analysis_ppi.csv', sep='/')
 disease_genes_results_file = paste(input_dir, 'analysis_disease_genes.csv', sep='/')
 essential_genes_results_file = paste(input_dir, 'analysis_essential_genes.csv', sep='/')
+numbers_complete_graph_file = paste(input_dir, 'dataset_numbers_complete_graph.txt', sep='/')
 
 # Dictionary that maps the name of the variable to a nice name for the plot
 parameter2label <- list("nodes"="Nodes", "edges"="Edges", "av_degree"="Av. degree", "av_path_length", "Av. path length", "av_clustering_coef" = "Av. clust. coef.", "num_components" = "Num. of components", "size_lcc" = "Size of the LCC", 
@@ -33,7 +34,7 @@ parameter2label <- list("nodes"="Nodes", "edges"="Edges", "av_degree"="Av. degre
                         "num_disease_genes" = "Number of disease genes", "fraction_disease_genes" = "Fraction of disease genes", "num_disease_components" = "Number of disease gene components", "num_disease_lcc_nodes" = "Number of disease genes in the LCC", "fraction_disease_lcc_nodes" = "Disease rLCC", "num_disease_lcc_edges" = "Number of disease gene edges in the LCC", "disease_lcc_z" = "Significance z-score of the disease LCC", "disease_lcc_pvalue" = "Significance p-value of the disease LCC", "log_disease_lcc_pvalue" = "Significance log(p-value) of the disease LCC",
                         "overlapindex" = "Overlap index", "jaccardIndex" = "Jaccard index",
                         "num_ppi_nodes" = "Number of PPI nodes", "num_ppi_edges" = "Number of PPI edges", "fraction_ppi_nodes" = "Fraction of PPI nodes", "fraction_ppi_edges" = "Fraction of PPI edges", "num_ppi_main_core_nodes" = "Number of PPI main core nodes", "num_ppi_main_core_edges" = "Number of PPI main core edges", "fraction_ppi_main_core_nodes" = "Fraction of PPI main core nodes", "fraction_ppi_main_core_edges" = "Fraction of PPI main core edges",
-                        "dataset" = "Dataset", "type_dataset" = "Type of dataset", "method" = "Method", "type_correlation" = "Type of correlation", "threshold" = "P-value threshold", "disease" = "Disease"
+                        "dataset" = "Dataset", "type_dataset" = "Type of dataset", "method" = "Method", "type_correlation" = "Type of correlation", "threshold" = "P-value threshold", "disease" = "Disease", "model_type" = "Model type"
 )
 
 #------------------#
@@ -80,7 +81,7 @@ get_exponential_decay = function(results_dataframe, y_parameter, x_parameter){
   # Calculate polynomial equation = logarithm of the gradient vs. logarithm of sample size (starting from 2nd position) (removing negatives)
   lm_exp_dec = summary(lm(log(frac_grad[boo])~log(results_dataframe_mean[[x_parameter]][2:length(results_dataframe_mean[[x_parameter]])][boo])))
   formula_name = paste("F(x) = exp[ (exp(", round(coef(lm_exp_dec)[1], 2), ") * x**(1 + (", round(coef(lm_exp_dec)[2], 2), "))) / (1 + (", round(coef(lm_exp_dec)[2], 2), ")) ]", sep="")
-  return(list(lm_exp_dec=lm_exp_dec, formula_name=formula_name))
+  return(list(lm_exp_dec=lm_exp_dec, dat=data.frame(log_frac_grad=log(frac_grad[boo]), log_N=log(results_dataframe_mean[[x_parameter]][2:length(results_dataframe_mean[[x_parameter]])][boo])), formula_name=formula_name))
 }
 
 #'  calculate_exponential_decay_without_s_max
@@ -161,6 +162,8 @@ results_df = inner_join(topology_results_df, ppi_results_df, by = c("method", "d
 results_df$type_dataset = paste(results_df$dataset, results_df$type_dataset, sep=":") # Join dataset and type_dataset
 results_df$type_dataset = tolower(results_df$type_dataset)
 results_df$threshold = as.character(results_df$threshold) # Consider threshold as a discrete variable
+numbers_complete_graph_df = fread(numbers_complete_graph_file) %>% rename("type_dataset" = "dataset")
+numbers_complete_graph_df$type_dataset = tolower(numbers_complete_graph_df$type_dataset)
 
 #------------------------#
 # Send information to UI #
@@ -238,7 +241,27 @@ server <- function(input, output, session) {
     }
   })
 
-  output$topologyBoxPlot <- renderPlot({
+  observeEvent(input$topology_analytical, {
+    
+    freezeReactiveValue(input, "topology_type_normalization") # Freeze topology_type_normalization until updateSelectInput is completed
+    if ((isTRUE(input$topology_analytical)) & ("exp.decay" %in% input$topology_type_analytical_model)){
+      updateSelectInput(session = session, 
+                        inputId = "topology_type_normalization", 
+                        label = "Type of y axis normalization:", 
+                        choices = c("Divide by max. value" = "divide.max.value", "Divide by max. possible value" = "divide.max.possible.value", "Divide by value of convergence" = "divide.smax"),
+                        selected = "divide.max.value")
+    } else {
+      updateSelectInput(session = session, 
+                        inputId = "topology_type_normalization", 
+                        label = "Type of y axis normalization:", 
+                        choices = c("Divide by max. value" = "divide.max.value", "Divide by max. possible value" = "divide.max.possible.value"),
+                        selected = "divide.max.value")
+    }
+  })
+  
+  
+  process_inputs = reactive({
+  #output$topologyBoxPlot <- renderPlot({
     
     #---------------------------#
     # Parse selected parameters #
@@ -314,9 +337,15 @@ server <- function(input, output, session) {
 
     # Rescale Y axis
     if(isTRUE(input$topology_rescale_y)){
-      results_selected_df = results_selected_df %>% group_by_at(selected_fill_parameter) %>% mutate(max_parameter = max(get(input$boxplot_parameter))) %>% mutate(norm = get(input$boxplot_parameter)/max_parameter) %>% select(!(all_of(c(!!input$boxplot_parameter, "max_parameter")))) %>% rename(!!input$boxplot_parameter := norm)
-      topology_results_selected_by_size_df = topology_results_selected_by_size_df %>% group_by_at(selected_fill_parameter) %>% mutate(max_mean=max(mean)) %>% mutate(mean_norm=mean/max_mean) %>% mutate(max_sd=max(sd)) %>% mutate(sd_norm=sd/max_sd)
-      combination_metric = paste(combination_metric, "norm", sep="_")
+      if((input$topology_type_normalization == "divide.max.value") | (input$topology_type_normalization == "divide.smax")){
+        results_selected_df = results_selected_df %>% group_by_at(selected_fill_parameter) %>% mutate(max_parameter = max(get(input$boxplot_parameter))) %>% mutate(norm = get(input$boxplot_parameter)/max_parameter) %>% rename(unnorm = input$boxplot_parameter) %>% rename(!!input$boxplot_parameter := norm)
+        topology_results_selected_by_size_df = topology_results_selected_by_size_df %>% group_by_at(selected_fill_parameter) %>% mutate(max_mean=max(mean)) %>% mutate(mean_norm=mean/max_mean) %>% mutate(max_sd=max(sd)) %>% mutate(sd_norm=sd/max_sd)
+        combination_metric = paste(combination_metric, "norm", sep="_")
+      } else if(input$topology_type_normalization == "divide.max.possible.value"){
+        results_selected_df = results_selected_df %>% inner_join(numbers_complete_graph_df, by = "type_dataset") %>% group_by_at(selected_fill_parameter) %>% mutate(norm = get(input$boxplot_parameter)/total_num_edges) %>% rename(unnorm = input$boxplot_parameter) %>% rename(!!input$boxplot_parameter := norm)
+        topology_results_selected_by_size_df = topology_results_selected_by_size_df %>% inner_join(numbers_complete_graph_df, by = "type_dataset") %>% group_by_at(selected_fill_parameter) %>% mutate(mean_norm=mean/total_num_edges)
+        combination_metric = paste(combination_metric, "norm", sep="_")
+      }
     }
     
     # Re-scale x axis
@@ -328,21 +357,35 @@ server <- function(input, output, session) {
     # Check if user wants to plot analytical model
     cols = c("model_type", "model_result", "size", "formula", "adj.r.squared", selected_fill_parameter)
     topology_results_selected_analytical_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+    cols = c("log_frac_grad", "log_N", "pred_log_frac_grad", selected_fill_parameter)
+    dec_model_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
     if (isTruthy(input$topology_analytical)){
       if (is.null(selected_fill_parameter)){
         # Calculate logarithmic fit for the whole selected data
         log_results = get_logarithmic_tendency(results_dataframe=results_selected_df, y_parameter=input$boxplot_parameter, x_parameter="size")
         dec_model = get_exponential_decay(results_dataframe=results_selected_df, y_parameter=input$boxplot_parameter, x_parameter="size")
+        dec_model_df = cbind(dec_model$dat, data.frame(pred_log_frac_grad=(coef(dec_model$lm_exp_dec)[2] * dec_model$dat$log_N + coef(dec_model$lm_exp_dec)[1])))
         dec_predictions = calculate_exponential_decay_without_s_max(x=sort(unique(results_selected_df$size)), a=coef(dec_model$lm_exp_dec)[2], b=coef(dec_model$lm_exp_dec)[1])
         dec_smax_model = calculate_s_max(results_dataframe=results_selected_df, y_parameter=input$boxplot_parameter, x_parameter="size", s_max_guess=c(2))
         dec_smax_predictions = calculate_exponential_decay_with_s_max(x=sort(unique(results_selected_df$size)), s_max=dec_smax_model$s_max, a=coef(dec_smax_model$lm_exp_dec)[2], b=coef(dec_smax_model$lm_exp_dec)[1])
         topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="log", model_result=(log(sort(unique(results_selected_df$size)))*coef(log_results$lm_log)[2] + coef(log_results$lm_log)[1]), size=sort(unique(results_selected_df$size)), formula=log_results$formula_name, adj.r.squared=log_results$lm_log$adj.r.squared))
         topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="exp.decay.no.smax", model_result=dec_predictions, size=sort(unique(results_selected_df$size)), formula=dec_model$formula_name, adj.r.squared=dec_model$lm_exp_dec$adj.r.squared))
         topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="exp.decay", model_result=dec_smax_predictions, size=sort(unique(results_selected_df$size)), formula=dec_smax_model$formula_name, adj.r.squared=dec_smax_model$lm_exp_dec$adj.r.squared))
-        # Un-normalize y axis if necessary
-        if(!(isTRUE(norm))){
+        # Un-normalize y axis of analytical curve if necessary (because the analyticsal curve of exp.decay is normalized by default)
+        if(!(isTRUE(input$topology_rescale_y))){
           topology_results_selected_analytical_df$model_result = ifelse(topology_results_selected_analytical_df$model_type == "exp.decay.no.smax", topology_results_selected_analytical_df$model_result * max(results_selected_df[[input$boxplot_parameter]]), topology_results_selected_analytical_df$model_result)
           topology_results_selected_analytical_df$model_result = ifelse(topology_results_selected_analytical_df$model_type == "exp.decay", topology_results_selected_analytical_df$model_result * max(results_selected_df[[input$boxplot_parameter]]), topology_results_selected_analytical_df$model_result)
+        }
+        # Un-normalize and re-normalize by total num of edges in complete graph
+        if((isTRUE(input$topology_rescale_y)) & (input$topology_type_normalization == "divide.max.possible.value")){
+          topology_results_selected_analytical_df$model_result = ifelse(topology_results_selected_analytical_df$model_type == "exp.decay.no.smax", topology_results_selected_analytical_df$model_result * max(results_selected_df$unnorm) / unique(results_selected_df$total_num_edges), topology_results_selected_analytical_df$model_result)
+          topology_results_selected_analytical_df$model_result = ifelse(topology_results_selected_analytical_df$model_type == "exp.decay", topology_results_selected_analytical_df$model_result * max(results_selected_df$unnorm) / unique(results_selected_df$total_num_edges), topology_results_selected_analytical_df$model_result)
+        }
+        # Divide by s_max to re-scale the axis using as maximum the s_max value
+        if((isTRUE(input$topology_rescale_y)) & (input$topology_type_normalization == "divide.smax")){
+          topology_results_selected_analytical_df$model_result = topology_results_selected_analytical_df$model_result / dec_smax_model$s_max
+          results_selected_df = results_selected_df %>% mutate(norm = get(input$boxplot_parameter)/dec_smax_model$s_max) %>% select(!(all_of(c(!!input$boxplot_parameter)))) %>% rename(!!input$boxplot_parameter := norm)
+          topology_results_selected_by_size_df$mean_norm = topology_results_selected_by_size_df$mean_norm / dec_smax_model$s_max
         }
       } else {
         # Calculate logarithmic fit for each selected fill parameter (e.g. each dataset)
@@ -350,16 +393,28 @@ server <- function(input, output, session) {
           results_selected_by_parameter_df = results_selected_df %>% filter(!!as.symbol(selected_fill_parameter) == selected_parameter)
           log_results = get_logarithmic_tendency(results_dataframe=results_selected_by_parameter_df, y_parameter=input$boxplot_parameter, x_parameter="size")
           dec_model = get_exponential_decay(results_dataframe=results_selected_by_parameter_df, y_parameter=input$boxplot_parameter, x_parameter="size")
+          dec_model_df = rbind(dec_model_df, cbind(dec_model$dat, data.frame(pred_log_frac_grad=(coef(dec_model$lm_exp_dec)[2] * dec_model$dat$log_N + coef(dec_model$lm_exp_dec)[1])), (data.frame(parameter = selected_parameter) %>% rename(!!selected_fill_parameter := parameter))))
           dec_predictions = calculate_exponential_decay_without_s_max(x=sort(unique(results_selected_by_parameter_df$size)), a=coef(dec_model$lm_exp_dec)[2], b=coef(dec_model$lm_exp_dec)[1])
           dec_smax_model = calculate_s_max(results_dataframe=results_selected_by_parameter_df, y_parameter=input$boxplot_parameter, x_parameter="size", s_max_guess=c(2))
           dec_smax_predictions = calculate_exponential_decay_with_s_max(x=sort(unique(results_selected_by_parameter_df$size)), s_max=dec_smax_model$s_max, a=coef(dec_smax_model$lm_exp_dec)[2], b=coef(dec_smax_model$lm_exp_dec)[1])
           topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="log", model_result=(log(sort(unique(results_selected_by_parameter_df$size)))*coef(log_results$lm_log)[2] + coef(log_results$lm_log)[1]), size=sort(unique(results_selected_by_parameter_df$size)), formula=log_results$formula_name, adj.r.squared=log_results$lm_log$adj.r.squared, parameter=selected_parameter) %>% rename(!!selected_fill_parameter := parameter))
           topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="exp.decay.no.smax", model_result=dec_predictions, size=sort(unique(results_selected_by_parameter_df$size)), formula=dec_model$formula_name, adj.r.squared=dec_model$lm_exp_dec$adj.r.squared, parameter=selected_parameter) %>% rename(!!selected_fill_parameter := parameter))
           topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model_type="exp.decay", model_result=dec_smax_predictions, size=sort(unique(results_selected_by_parameter_df$size)), formula=dec_smax_model$formula_name, adj.r.squared=dec_smax_model$lm_exp_dec$adj.r.squared, parameter=selected_parameter) %>% rename(!!selected_fill_parameter := parameter))
-          # Un-normalize y axis if necessary for exponential decay
-          if(!(isTRUE(norm))){
+          # Un-normalize y axis of analytical curve if necessary (because the analyticsal curve of exp.decay is normalized by default)
+          if(!(isTRUE(input$topology_rescale_y))){
             topology_results_selected_analytical_df$model_result = ifelse((topology_results_selected_analytical_df[[selected_fill_parameter]] == selected_parameter & topology_results_selected_analytical_df$model_type == "exp.decay.no.smax"), topology_results_selected_analytical_df$model_result * max(results_selected_by_parameter_df[[input$boxplot_parameter]]), topology_results_selected_analytical_df$model_result)
             topology_results_selected_analytical_df$model_result = ifelse((topology_results_selected_analytical_df[[selected_fill_parameter]] == selected_parameter & topology_results_selected_analytical_df$model_type == "exp.decay"), topology_results_selected_analytical_df$model_result * max(results_selected_by_parameter_df[[input$boxplot_parameter]]), topology_results_selected_analytical_df$model_result)
+          }
+          # Un-normalize and re-normalize by total num of edges in complete graph
+          if((isTRUE(input$topology_rescale_y)) & (input$topology_type_normalization == "divide.max.possible.value")){
+            topology_results_selected_analytical_df$model_result = ifelse((topology_results_selected_analytical_df[[selected_fill_parameter]] == selected_parameter & topology_results_selected_analytical_df$model_type == "exp.decay.no.smax"), topology_results_selected_analytical_df$model_result * max(results_selected_by_parameter_df$unnorm) / unique(results_selected_by_parameter_df$total_num_edges), topology_results_selected_analytical_df$model_result)
+            topology_results_selected_analytical_df$model_result = ifelse((topology_results_selected_analytical_df[[selected_fill_parameter]] == selected_parameter & topology_results_selected_analytical_df$model_type == "exp.decay"), topology_results_selected_analytical_df$model_result * max(results_selected_by_parameter_df$unnorm) / unique(results_selected_by_parameter_df$total_num_edges), topology_results_selected_analytical_df$model_result)
+          }
+          # Divide by s_max to re-scale the axis using as maximum the s_max value
+          if((isTRUE(input$topology_rescale_y)) & (input$topology_type_normalization == "divide.smax")){
+            topology_results_selected_analytical_df$model_result = ifelse(topology_results_selected_analytical_df[[selected_fill_parameter]] == selected_parameter, topology_results_selected_analytical_df$model_result / dec_smax_model$s_max, topology_results_selected_analytical_df$model_result)
+            results_selected_df[[input$boxplot_parameter]] = ifelse(results_selected_df[[selected_fill_parameter]] == selected_parameter, results_selected_df[[input$boxplot_parameter]] / dec_smax_model$s_max, results_selected_df[[input$boxplot_parameter]])
+            topology_results_selected_by_size_df$mean_norm = ifelse(topology_results_selected_by_size_df[[selected_fill_parameter]] == selected_parameter, topology_results_selected_by_size_df$mean_norm / dec_smax_model$s_max, topology_results_selected_by_size_df$mean_norm)
           }
         }
       }
@@ -378,26 +433,43 @@ server <- function(input, output, session) {
         unique() %>%
         ungroup()
       # Remove table if it is there
-      removeUI(
-        ## pass in appropriate div id
-        selector = "#topologyAnalyticalModelTableID"
-      )
+      #removeUI(selector = "#topologyAnalyticalModelTableID")
       # Insert updated table
-      insertUI(
-        selector = '#topologyAnalyticalModelTable',
-        # wrap element in a div with id for ease of removal
-        ui = tags$div(
-          renderTable(analytical_model_summary_df), 
-          id = "topologyAnalyticalModelTableID"
-        )
-      )
+      #insertUI(
+      #  selector = '#topologyAnalyticalModelTable',
+      #  # wrap element in a div with id for ease of removal
+      #  ui = tags$div(
+      #    renderTable(analytical_model_summary_df), 
+      #    id = "topologyAnalyticalModelTableID"
+      #  )
+      #)
+      # Render table
+      output$topologyAnalyticalModelTable = renderTable(analytical_model_summary_df)
     } else {
+      # Remove table if it is rendered
+      #output$topologyAnalyticalModelTable <- renderUI({return(NULL)})
+      removeUI(selector = "#topologyAnalyticalModelTableID")
       # Remove table if it is there
-      removeUI(
-        ## pass in appropriate div id
-        selector = "#topologyAnalyticalModelTableID"
-      )
+      #removeUI(selector = "#topologyAnalyticalModelTableID")
     }
+    
+    return(list(results_selected_df=results_selected_df, 
+                topology_results_selected_by_size_df=topology_results_selected_by_size_df, 
+                topology_results_selected_analytical_df=topology_results_selected_analytical_df, 
+                dec_model_df=dec_model_df,
+                selected_fill_parameter=selected_fill_parameter, 
+                combination_metric=combination_metric))
+  })
+
+  output$topologyBoxPlot <- renderPlot({
+    
+    processed_inputs = process_inputs()
+    results_selected_df=processed_inputs$results_selected_df
+    topology_results_selected_by_size_df=processed_inputs$topology_results_selected_by_size_df
+    topology_results_selected_analytical_df=processed_inputs$topology_results_selected_analytical_df
+    dec_model_df=processed_inputs$dec_model_df
+    selected_fill_parameter=processed_inputs$selected_fill_parameter
+    combination_metric=processed_inputs$combination_metric
     
     #----------------------------------#
     # Define main elements of the plot #
@@ -416,7 +488,7 @@ server <- function(input, output, session) {
                   lwd=1) +
         scale_color_brewer(name = "model_type", palette = "Accent", direction = 1)
         #scale_color_manual(name = "model_type", values = c("#1f78b4", "#33a02c"))
-        
+
       # Add analytical curve without fill
       #if (isTruthy(input$topology_analytical)){
       #  topology_results_plot = topology_results_plot +
@@ -472,7 +544,7 @@ server <- function(input, output, session) {
     }
     
     # Change axes label if re-scaling
-    if(isTRUE(input$topology_rescale_y)){
+    if(isTRUE(input$topology_rescale_x)){
       label_x= paste(label_x, " (Norm.)", sep="")
     }
     if(isTRUE(input$topology_rescale_y)){
@@ -487,8 +559,61 @@ server <- function(input, output, session) {
       theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.title=element_text(size=15, face="bold"), legend.position="bottom")
     
     topology_results_plot
-    
+
   })
 
+  output$gradPlot <- renderPlot({
+    
+    processed_inputs = process_inputs()
+    dec_model_df=processed_inputs$dec_model_df
+    selected_fill_parameter=processed_inputs$selected_fill_parameter
+    if(((isTruthy(input$topology_analytical)) & (!("log" %in% c(input$topology_type_analytical_model))) & (!(length(input$topology_type_analytical_model) == 0))) | ((isTruthy(input$topology_analytical)) & ("log" %in% c(input$topology_type_analytical_model)) & (length(c(input$topology_type_analytical_model)) > 1))){
+      #if(!((isTruthy(input$topology_analytical)) & ("log" %in% c(input$topology_type_analytical_model)) & (length(c(input$topology_type_analytical_model)) == 1))){
+      # Plot log(gradient) vs log(sample size)
+      if (is.null(selected_fill_parameter)){
+        # Plot without fill
+        gradient_plot = ggplot(dec_model_df, aes(x=log_N, y=log_frac_grad))
+        # Make it cumulative
+        if(isTruthy(input$topology_cumulative)){
+          gradient_plot = gradient_plot +
+            stat_ecdf(geom = "step", size=2, col=2)
+        } else {
+          gradient_plot = gradient_plot +
+            geom_point(alpha=0.9, size=3, col=2) +
+            geom_line(aes(x = log_N, y = pred_log_frac_grad), col=2)
+        }
+      } else {
+        # Plot with fill
+        gradient_plot = ggplot(dec_model_df, aes(x=log_N, y=log_frac_grad, col=get(selected_fill_parameter))) + 
+          guides(col=guide_legend(title=parameter2label[[selected_fill_parameter]]))
+        # Make it cumulative
+        if(isTruthy(input$topology_cumulative)){
+          gradient_plot = gradient_plot +
+            stat_ecdf(geom = "step", size=2)
+        } else {
+          gradient_plot = gradient_plot +
+            geom_point(alpha=0.9, size=3) +
+            geom_line(aes(x = log_N, y = pred_log_frac_grad, col=get(selected_fill_parameter)))
+        }
+      }
+      
+      gradient_plot = gradient_plot +
+        theme_linedraw() +
+        xlab("N (Ln)") +
+        ylab("P(N) (Ln)") +
+        theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.title=element_text(size=15, face="bold"), legend.position="bottom")
+      
+      gradient_plot
+      
+    }
+  })
+  
+  # conditional UI: we only create the space for the plot when the conditions are met
+  output$gradPlotID = renderUI({
+    if(((isTruthy(input$topology_analytical)) & (!("log" %in% c(input$topology_type_analytical_model))) & (!(length(input$topology_type_analytical_model) == 0))) | ((isTruthy(input$topology_analytical)) & ("log" %in% c(input$topology_type_analytical_model)) & (length(c(input$topology_type_analytical_model)) > 1))){
+      plotOutput(outputId = "gradPlot")
+    }
+  })
+  
 }
 

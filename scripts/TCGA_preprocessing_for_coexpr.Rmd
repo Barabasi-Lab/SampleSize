@@ -114,7 +114,8 @@ We count the following number of filtered genes for each category:
 
 ```{r}
 # Write the information about the selected genes of the dataset in a separate file
-genes_dataset_file = paste(output_dir, 'tcga_rnaseq_gene_info.csv', sep='/')
+genes_filt_dir = paste(output_dir, 'genes_filtered_files_by_project', sep='/')
+genes_dataset_file = paste(genes_filt_dir, 'tcga_rnaseq_gene_info_TCGA.csv', sep='/')
 genes_dataset_df$enough_counts = ifelse(genes_dataset_df$HGNC_Symbol %in% info_filt_df$Gene, TRUE, FALSE)
 fwrite(genes_dataset_df, genes_dataset_file)
 # Check the percentage of genes in each category after filtering by counts

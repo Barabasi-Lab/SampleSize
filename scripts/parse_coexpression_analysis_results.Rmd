@@ -102,7 +102,8 @@ edges_pearson_df = edges_pearson_df %>% select(dataset, size, rep, num_edges) %>
 head(edges_pearson_df)
 
 # Write results
-output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables'
+#output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables'
+output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data'
 edges_file = paste(output_dir, 'pearson_pval_0.05_num_edges_vs_num_samples.txt', sep='/')
 edges_pearson_df %>% fwrite(edges_file)
 ```
@@ -125,7 +126,7 @@ gdc_dir = '/home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA'
 output_dir = paste(gdc_dir, 'out', sep='/')
 genes_filt_dir = paste(output_dir, 'genes_filtered_files_by_project', sep='/')
 #genes_project_files = list.files(genes_filt_dir)
-projects = c("TCGA-BRCA", "TCGA-UCEC")
+projects = c("TCGA", "TCGA-BRCA", "TCGA-UCEC")
 for (project_id in projects){
   genes_project_file = paste(genes_filt_dir, paste("tcga_rnaseq_gene_info_", project_id, ".csv", sep=''), sep='/')
   genes_dataset_df = fread(genes_project_file)
@@ -148,7 +149,8 @@ for (tissue in tissues){
 }
 
 # Write table
-output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables'
+#output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables'
+output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data'
 numbers_file = paste(output_dir, 'dataset_numbers_complete_graph.txt', sep='/')
 numbers_df %>% fwrite(numbers_file)
 

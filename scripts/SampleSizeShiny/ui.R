@@ -136,6 +136,13 @@ ui <- fluidPage(
                           shinyWidgets::materialSwitch(inputId = "topology_sd", label = "Plot standard deviation:", status="primary"),
                           shinyWidgets::materialSwitch(inputId = "topology_rescale_x", label = "Normalize x axis:", status="primary"),
                           shinyWidgets::materialSwitch(inputId = "topology_rescale_y", label = "Normalize y axis:", status="primary"),
+                          conditionalPanel(
+                            condition = "input.topology_rescale_y == true",
+                            selectInput("topology_type_normalization", label = "Type of y axis normalization:", 
+                                        choices = list("Divide by max. value" = "divide.max.value", "Divide by max. possible value" = "divide.max.possible.value"),
+                                        selected = "divide.max.value"
+                            ),
+                          ),
                           shinyWidgets::materialSwitch(inputId = "topology_analytical", label = "Show analytical curve:", status="primary"),
                           conditionalPanel(
                             condition = "input.topology_analytical == true",
@@ -153,11 +160,17 @@ ui <- fluidPage(
                               multiple = TRUE
                             ),
                           ),
+                          conditionalPanel(
+                            condition = "input.topology_analytical == true && (input.topology_type_analytical_model.includes('exp.decay') || input.topology_type_analytical_model.includes('exp.decay.no.smax'))",
+                            shinyWidgets::materialSwitch(inputId = "topology_cumulative", label = "Cumulative gradient plot:", status="primary"),
+                          ),
                         ),
                         # Show boxplot of topological parameters
                         mainPanel(
-                          plotOutput("topologyBoxPlot"),
-                          tags$div(id = 'topologyAnalyticalModelTable')
+                          plotOutput("topologyBoxPlot", height="400px"),
+                          uiOutput(outputId = "gradPlotID", height="400px"),
+                          tableOutput('topologyAnalyticalModelTable')
+                          #tags$div(id = 'topologyAnalyticalModelTable')
                         )
                       )
              ),
