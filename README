@@ -484,6 +484,7 @@ ANALYSIS OF INDIVIDUAL EDGES
 ############################
 
 sbatch /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/merge_networks.sh
+sbatch /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analysis_individual_edges.sh
 
 ######################################
 ANALYSIS DISEASE GENES VS. SAMPLE SIZE

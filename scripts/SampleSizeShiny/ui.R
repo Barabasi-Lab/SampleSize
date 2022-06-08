@@ -150,18 +150,18 @@ ui <- fluidPage(
                             shinyWidgets::pickerInput(
                               inputId = "topology_type_analytical_model",
                               label = "Type of analytical model:",
-                              choices = list("Exponential decay" = "exp.decay", "Exponential decay (no smax)" = "exp.decay.no.smax", "Logarithmic" = "log"),
+                              choices = list("Power law (minimizing)" = "Power law (minimizing)", "Power law (linear fit)" = "Power law (linear fit)", "Logarithmic" = "Logarithmic"),
                               options = list(
                                 `actions-box` = TRUE,
                                 size = 10,
                                 `selected-text-format` = "count > 1"
                               ),
-                              selected = 'exp.decay',
+                              selected = 'Power law (minimizing)',
                               multiple = TRUE
                             ),
                           ),
                           conditionalPanel(
-                            condition = "input.topology_analytical == true && (input.topology_type_analytical_model.includes('exp.decay') || input.topology_type_analytical_model.includes('exp.decay.no.smax'))",
+                            condition = "input.topology_analytical == true && (input.topology_type_analytical_model.includes('Power law (minimizing)') || input.topology_type_analytical_model.includes('Power law (linear fit)'))",
                             shinyWidgets::materialSwitch(inputId = "topology_cumulative", label = "Cumulative gradient plot:", status="primary"),
                           ),
                         ),
