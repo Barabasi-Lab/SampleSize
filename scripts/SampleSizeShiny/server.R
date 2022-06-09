@@ -81,7 +81,7 @@ get_exponential_decay = function(results_dataframe, y_parameter, x_parameter){
   # Calculate polynomial equation = logarithm of the gradient vs. logarithm of sample size (starting from 2nd position) (removing negatives)
   lm_exp_dec = summary(lm(log(frac_grad[boo])~log(results_dataframe_mean[[x_parameter]][2:length(results_dataframe_mean[[x_parameter]])][boo])))
   formula_name = paste("F(x) = exp[ (exp(", round(coef(lm_exp_dec)[1], 2), ") * x**(1 + (", round(coef(lm_exp_dec)[2], 2), "))) / (1 + (", round(coef(lm_exp_dec)[2], 2), ")) ]", sep="")
-  return(list(lm_exp_dec=lm_exp_dec, dat=data.frame(log_frac_grad=log(frac_grad[boo]), log_N=log(results_dataframe_mean[[x_parameter]][2:length(results_dataframe_mean[[x_parameter]])][boo])), formula_name=formula_name))
+  return(list(lm_exp_dec=lm_exp_dec, dat=data.frame(log_prob_s=log(frac_grad[boo]), log_N=log(results_dataframe_mean[[x_parameter]][2:length(results_dataframe_mean[[x_parameter]])][boo])), formula_name=formula_name))
 }
 
 #'  calculate_exponential_decay_without_s_max
@@ -135,7 +135,7 @@ calculate_s_max = function(results_dataframe, y_parameter, x_parameter, s_max_gu
   lm_exp_dec = summary(lm(log(s_rec)~log(N)))
   # This is the final formula
   formula_name = paste("F(x) = ", round(s_max, 2), " * exp[(", round(coef(lm_exp_dec)[1], 2), " * x**((", round(coef(lm_exp_dec)[2], 2), ") + 1)) / ((", round(coef(lm_exp_dec)[2], 2), ") + 1) ]", sep="")
-  return(list(s_max=s_max, lm_exp_dec=lm_exp_dec, formula_name=formula_name))
+  return(list(s_max=s_max, lm_exp_dec=lm_exp_dec, dat=data.frame(log_prob_s=log(s_rec), log_N=log(N)), formula_name=formula_name))
 }
 
 #'  calculate_exponential_decay_with_s_max
@@ -357,33 +357,48 @@ server <- function(input, output, session) {
     # Check if user wants to plot analytical model
     cols = c("model", "model_result", "size", "formula", "adj.r.squared", selected_fill_parameter)
     topology_results_selected_analytical_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
-    cols = c("log_frac_grad", "log_N", "pred_log_frac_grad", selected_fill_parameter)
+    cols = c("model", "log_prob_s", "log_N", "pred_log_prob_s", selected_fill_parameter)
     dec_model_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+    cols = c("model", "model_result", "size", "type_dataset", "fill_parameter")
+    predicted_results_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
     if (isTruthy(input$topology_analytical)){
       if (is.null(selected_fill_parameter)){
         # Calculate logarithmic fit for the whole selected data
         log_results = get_logarithmic_tendency(results_dataframe=results_selected_df, y_parameter=input$boxplot_parameter, x_parameter="size")
         dec_model = get_exponential_decay(results_dataframe=results_selected_df, y_parameter=input$boxplot_parameter, x_parameter="size")
-        dec_model_df = cbind(dec_model$dat, data.frame(pred_log_frac_grad=(coef(dec_model$lm_exp_dec)[2] * dec_model$dat$log_N + coef(dec_model$lm_exp_dec)[1])))
-        dec_predictions = calculate_exponential_decay_without_s_max(x=sort(unique(results_selected_df$size)), a=coef(dec_model$lm_exp_dec)[2], b=coef(dec_model$lm_exp_dec)[1])
+        dec_model_results = calculate_exponential_decay_without_s_max(x=sort(unique(results_selected_df$size)), a=coef(dec_model$lm_exp_dec)[2], b=coef(dec_model$lm_exp_dec)[1])
         dec_smax_model = calculate_s_max(results_dataframe=results_selected_df, y_parameter=input$boxplot_parameter, x_parameter="size", s_max_guess=c(2))
-        dec_smax_predictions = calculate_exponential_decay_with_s_max(x=sort(unique(results_selected_df$size)), s_max=dec_smax_model$s_max, a=coef(dec_smax_model$lm_exp_dec)[2], b=coef(dec_smax_model$lm_exp_dec)[1])
+        dec_smax_model_results = calculate_exponential_decay_with_s_max(x=sort(unique(results_selected_df$size)), s_max=dec_smax_model$s_max, a=coef(dec_smax_model$lm_exp_dec)[2], b=coef(dec_smax_model$lm_exp_dec)[1])
+        if(input$topology_type_analytical_model == "Power law (minimizing)"){
+          dec_model_df = cbind(data.frame(model="Power law (minimizing)"), dec_smax_model$dat, data.frame(pred_log_prob_s=(coef(dec_smax_model$lm_exp_dec)[2] * dec_smax_model$dat$log_N + coef(dec_smax_model$lm_exp_dec)[1])))
+        }
+        if(input$topology_type_analytical_model == "Power law (linear fit)"){
+          dec_model_df = cbind(data.frame(model="Power law (linear fit)"), dec_model$dat, data.frame(pred_log_prob_s=(coef(dec_model$lm_exp_dec)[2] * dec_model$dat$log_N + coef(dec_model$lm_exp_dec)[1])))
+        }
         topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model="Logarithmic", model_result=(log(sort(unique(results_selected_df$size)))*coef(log_results$lm_log)[2] + coef(log_results$lm_log)[1]), size=sort(unique(results_selected_df$size)), formula=log_results$formula_name, adj.r.squared=log_results$lm_log$adj.r.squared))
-        topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model="Power law (linear fit)", model_result=dec_predictions, size=sort(unique(results_selected_df$size)), formula=dec_model$formula_name, adj.r.squared=dec_model$lm_exp_dec$adj.r.squared))
-        topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model="Power law (minimizing)", model_result=dec_smax_predictions, size=sort(unique(results_selected_df$size)), formula=dec_smax_model$formula_name, adj.r.squared=dec_smax_model$lm_exp_dec$adj.r.squared))
+        topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model="Power law (linear fit)", model_result=dec_model_results, size=sort(unique(results_selected_df$size)), formula=dec_model$formula_name, adj.r.squared=dec_model$lm_exp_dec$adj.r.squared))
+        topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model="Power law (minimizing)", model_result=dec_smax_model_results, size=sort(unique(results_selected_df$size)), formula=dec_smax_model$formula_name, adj.r.squared=dec_smax_model$lm_exp_dec$adj.r.squared))
+        # Calculate predictions
+        N_vals = seq(1, 10000, 1)
+        dec_model_predictions = calculate_exponential_decay_without_s_max(x=N_vals, a=coef(dec_model$lm_exp_dec)[2], b=coef(dec_model$lm_exp_dec)[1])
+        dec_smax_model_predictions = calculate_exponential_decay_with_s_max(x=N_vals, s_max=dec_smax_model$s_max, a=coef(dec_smax_model$lm_exp_dec)[2], b=coef(dec_smax_model$lm_exp_dec)[1])
+        predicted_results_df = rbind(predicted_results_df, data.frame(model="Logarithmic", model_result=(N_vals*coef(log_results$lm_log)[2] + coef(log_results$lm_log)[1]), size=N_vals, type_dataset=unique(results_selected_df$type_dataset)[1]))
+        predicted_results_df = rbind(predicted_results_df, data.frame(model="Power law (linear fit)", model_result=dec_model_predictions, size=N_vals, type_dataset=unique(results_selected_df$type_dataset)[1]))
+        predicted_results_df = rbind(predicted_results_df, data.frame(model="Power law (minimizing)", model_result=dec_smax_model_predictions, size=N_vals, type_dataset=unique(results_selected_df$type_dataset)[1]))
         # Un-normalize y axis of analytical curve if necessary (because the analyticsal curve of Power law (minimizing) is normalized by default)
         if(!(isTRUE(input$topology_rescale_y))){
-          topology_results_selected_analytical_df$model_result = ifelse(topology_results_selected_analytical_df$model == "Power law (linear fit)", topology_results_selected_analytical_df$model_result * max(results_selected_df[[input$boxplot_parameter]]), topology_results_selected_analytical_df$model_result)
-          topology_results_selected_analytical_df$model_result = ifelse(topology_results_selected_analytical_df$model == "Power law (minimizing)", topology_results_selected_analytical_df$model_result * max(results_selected_df[[input$boxplot_parameter]]), topology_results_selected_analytical_df$model_result)
+          topology_results_selected_analytical_df$model_result = ifelse(topology_results_selected_analytical_df$model %in% c("Power law (linear fit)", "Power law (minimizing)"), topology_results_selected_analytical_df$model_result * max(results_selected_df[[input$boxplot_parameter]]), topology_results_selected_analytical_df$model_result)
+          predicted_results_df$model_result = ifelse(predicted_results_df$model %in% c("Power law (linear fit)", "Power law (minimizing)"), predicted_results_df$model_result * max(results_selected_df[[input$boxplot_parameter]]), predicted_results_df$model_result)
         }
         # Un-normalize and re-normalize by total num of edges in complete graph
         if((isTRUE(input$topology_rescale_y)) & (input$topology_type_normalization == "divide.max.possible.value")){
-          topology_results_selected_analytical_df$model_result = ifelse(topology_results_selected_analytical_df$model == "Power law (linear fit)", topology_results_selected_analytical_df$model_result * max(results_selected_df$unnorm) / unique(results_selected_df$total_num_edges), topology_results_selected_analytical_df$model_result)
-          topology_results_selected_analytical_df$model_result = ifelse(topology_results_selected_analytical_df$model == "Power law (minimizing)", topology_results_selected_analytical_df$model_result * max(results_selected_df$unnorm) / unique(results_selected_df$total_num_edges), topology_results_selected_analytical_df$model_result)
+          topology_results_selected_analytical_df$model_result = ifelse(topology_results_selected_analytical_df$model %in% c("Power law (linear fit)", "Power law (minimizing)"), topology_results_selected_analytical_df$model_result * max(results_selected_df$unnorm) / unique(results_selected_df$total_num_edges), topology_results_selected_analytical_df$model_result)
+          predicted_results_df = predicted_results_df %>% inner_join((results_selected_df %>% select("type_dataset", "total_num_edges") %>% unique()), by=c("type_dataset")) %>% mutate(norm = model_result * max(results_selected_df$unnorm)/total_num_edges) %>% select(!c("model_result", "total_num_edges")) %>% rename(model_result = norm)
         }
         # Divide by s_max to re-scale the axis using as maximum the s_max value
         if((isTRUE(input$topology_rescale_y)) & (input$topology_type_normalization == "divide.smax")){
           topology_results_selected_analytical_df$model_result = topology_results_selected_analytical_df$model_result / dec_smax_model$s_max
+          predicted_results_df$model_result = predicted_results_df$model_result / dec_smax_model$s_max
           results_selected_df = results_selected_df %>% mutate(norm = get(input$boxplot_parameter)/dec_smax_model$s_max) %>% select(!(all_of(c(!!input$boxplot_parameter)))) %>% rename(!!input$boxplot_parameter := norm)
           topology_results_selected_by_size_df$mean_norm = topology_results_selected_by_size_df$mean_norm / dec_smax_model$s_max
         }
@@ -393,30 +408,52 @@ server <- function(input, output, session) {
           results_selected_by_parameter_df = results_selected_df %>% filter(!!as.symbol(selected_fill_parameter) == selected_parameter)
           log_results = get_logarithmic_tendency(results_dataframe=results_selected_by_parameter_df, y_parameter=input$boxplot_parameter, x_parameter="size")
           dec_model = get_exponential_decay(results_dataframe=results_selected_by_parameter_df, y_parameter=input$boxplot_parameter, x_parameter="size")
-          dec_model_df = rbind(dec_model_df, cbind(dec_model$dat, data.frame(pred_log_frac_grad=(coef(dec_model$lm_exp_dec)[2] * dec_model$dat$log_N + coef(dec_model$lm_exp_dec)[1])), (data.frame(parameter = selected_parameter) %>% rename(!!selected_fill_parameter := parameter))))
-          dec_predictions = calculate_exponential_decay_without_s_max(x=sort(unique(results_selected_by_parameter_df$size)), a=coef(dec_model$lm_exp_dec)[2], b=coef(dec_model$lm_exp_dec)[1])
+          dec_model_results = calculate_exponential_decay_without_s_max(x=sort(unique(results_selected_by_parameter_df$size)), a=coef(dec_model$lm_exp_dec)[2], b=coef(dec_model$lm_exp_dec)[1])
           dec_smax_model = calculate_s_max(results_dataframe=results_selected_by_parameter_df, y_parameter=input$boxplot_parameter, x_parameter="size", s_max_guess=c(2))
-          dec_smax_predictions = calculate_exponential_decay_with_s_max(x=sort(unique(results_selected_by_parameter_df$size)), s_max=dec_smax_model$s_max, a=coef(dec_smax_model$lm_exp_dec)[2], b=coef(dec_smax_model$lm_exp_dec)[1])
+          dec_smax_model_results = calculate_exponential_decay_with_s_max(x=sort(unique(results_selected_by_parameter_df$size)), s_max=dec_smax_model$s_max, a=coef(dec_smax_model$lm_exp_dec)[2], b=coef(dec_smax_model$lm_exp_dec)[1])
+          if(input$topology_type_analytical_model == "Power law (minimizing)"){
+            dec_model_df = rbind(dec_model_df, cbind(data.frame(model="Power law (minimizing)"), dec_smax_model$dat, data.frame(pred_log_prob_s=(coef(dec_smax_model$lm_exp_dec)[2] * dec_smax_model$dat$log_N + coef(dec_smax_model$lm_exp_dec)[1])), (data.frame(parameter = selected_parameter) %>% rename(!!selected_fill_parameter := parameter))))
+          }
+          if(input$topology_type_analytical_model == "Power law (linear fit)"){
+            dec_model_df = rbind(dec_model_df, cbind(data.frame(model="Power law (linear fit)"), dec_model$dat, data.frame(pred_log_prob_s=(coef(dec_model$lm_exp_dec)[2] * dec_model$dat$log_N + coef(dec_model$lm_exp_dec)[1])), (data.frame(parameter = selected_parameter) %>% rename(!!selected_fill_parameter := parameter))))
+          }
           topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model="Logarithmic", model_result=(log(sort(unique(results_selected_by_parameter_df$size)))*coef(log_results$lm_log)[2] + coef(log_results$lm_log)[1]), size=sort(unique(results_selected_by_parameter_df$size)), formula=log_results$formula_name, adj.r.squared=log_results$lm_log$adj.r.squared, parameter=selected_parameter) %>% rename(!!selected_fill_parameter := parameter))
-          topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model="Power law (linear fit)", model_result=dec_predictions, size=sort(unique(results_selected_by_parameter_df$size)), formula=dec_model$formula_name, adj.r.squared=dec_model$lm_exp_dec$adj.r.squared, parameter=selected_parameter) %>% rename(!!selected_fill_parameter := parameter))
-          topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model="Power law (minimizing)", model_result=dec_smax_predictions, size=sort(unique(results_selected_by_parameter_df$size)), formula=dec_smax_model$formula_name, adj.r.squared=dec_smax_model$lm_exp_dec$adj.r.squared, parameter=selected_parameter) %>% rename(!!selected_fill_parameter := parameter))
-          # Un-normalize y axis of analytical curve if necessary (because the analyticsal curve of Power law (minimizing) is normalized by default)
+          topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model="Power law (linear fit)", model_result=dec_model_results, size=sort(unique(results_selected_by_parameter_df$size)), formula=dec_model$formula_name, adj.r.squared=dec_model$lm_exp_dec$adj.r.squared, parameter=selected_parameter) %>% rename(!!selected_fill_parameter := parameter))
+          topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model="Power law (minimizing)", model_result=dec_smax_model_results, size=sort(unique(results_selected_by_parameter_df$size)), formula=dec_smax_model$formula_name, adj.r.squared=dec_smax_model$lm_exp_dec$adj.r.squared, parameter=selected_parameter) %>% rename(!!selected_fill_parameter := parameter))
+          # Calculate predictions
+          N_vals = seq(10, 10000, 10)
+          dec_model_predictions = calculate_exponential_decay_without_s_max(x=N_vals, a=coef(dec_model$lm_exp_dec)[2], b=coef(dec_model$lm_exp_dec)[1])
+          dec_smax_model_predictions = calculate_exponential_decay_with_s_max(x=N_vals, s_max=dec_smax_model$s_max, a=coef(dec_smax_model$lm_exp_dec)[2], b=coef(dec_smax_model$lm_exp_dec)[1])
+          predicted_results_df = rbind(predicted_results_df, data.frame(model="Logarithmic", model_result=(log(N_vals)*coef(log_results$lm_log)[2] + coef(log_results$lm_log)[1]), size=N_vals, type_dataset=unique(results_selected_by_parameter_df$type_dataset), fill_parameter=selected_parameter))
+          predicted_results_df = rbind(predicted_results_df, data.frame(model="Power law (linear fit)", model_result=dec_model_predictions, size=N_vals, type_dataset=unique(results_selected_by_parameter_df$type_dataset), fill_parameter=selected_parameter))
+          predicted_results_df = rbind(predicted_results_df, data.frame(model="Power law (minimizing)", model_result=dec_smax_model_predictions, size=N_vals, type_dataset=unique(results_selected_by_parameter_df$type_dataset), fill_parameter=selected_parameter))
+          # Un-normalize y axis of analytical curve if necessary (because the analytical curve of Power law (minimizing) is normalized by default)
           if(!(isTRUE(input$topology_rescale_y))){
-            topology_results_selected_analytical_df$model_result = ifelse((topology_results_selected_analytical_df[[selected_fill_parameter]] == selected_parameter & topology_results_selected_analytical_df$model == "Power law (linear fit)"), topology_results_selected_analytical_df$model_result * max(results_selected_by_parameter_df[[input$boxplot_parameter]]), topology_results_selected_analytical_df$model_result)
-            topology_results_selected_analytical_df$model_result = ifelse((topology_results_selected_analytical_df[[selected_fill_parameter]] == selected_parameter & topology_results_selected_analytical_df$model == "Power law (minimizing)"), topology_results_selected_analytical_df$model_result * max(results_selected_by_parameter_df[[input$boxplot_parameter]]), topology_results_selected_analytical_df$model_result)
+            topology_results_selected_analytical_df$model_result = ifelse((topology_results_selected_analytical_df[[selected_fill_parameter]] == selected_parameter & topology_results_selected_analytical_df$model %in% c("Power law (linear fit)", "Power law (minimizing)")), topology_results_selected_analytical_df$model_result * max(results_selected_by_parameter_df[[input$boxplot_parameter]]), topology_results_selected_analytical_df$model_result)
+            predicted_results_df$model_result = ifelse((predicted_results_df$model_result == selected_parameter & predicted_results_df$model %in% c("Power law (linear fit)", "Power law (minimizing)")), predicted_results_df$model_result * max(results_selected_by_parameter_df[[input$boxplot_parameter]]), predicted_results_df$model_result)
           }
           # Un-normalize and re-normalize by total num of edges in complete graph
           if((isTRUE(input$topology_rescale_y)) & (input$topology_type_normalization == "divide.max.possible.value")){
-            topology_results_selected_analytical_df$model_result = ifelse((topology_results_selected_analytical_df[[selected_fill_parameter]] == selected_parameter & topology_results_selected_analytical_df$model == "Power law (linear fit)"), topology_results_selected_analytical_df$model_result * max(results_selected_by_parameter_df$unnorm) / unique(results_selected_by_parameter_df$total_num_edges), topology_results_selected_analytical_df$model_result)
-            topology_results_selected_analytical_df$model_result = ifelse((topology_results_selected_analytical_df[[selected_fill_parameter]] == selected_parameter & topology_results_selected_analytical_df$model == "Power law (minimizing)"), topology_results_selected_analytical_df$model_result * max(results_selected_by_parameter_df$unnorm) / unique(results_selected_by_parameter_df$total_num_edges), topology_results_selected_analytical_df$model_result)
+            topology_results_selected_analytical_df$model_result = ifelse((topology_results_selected_analytical_df[[selected_fill_parameter]] == selected_parameter & topology_results_selected_analytical_df$model %in% c("Power law (linear fit)", "Power law (minimizing)")), topology_results_selected_analytical_df$model_result * max(results_selected_by_parameter_df$unnorm) / unique(results_selected_by_parameter_df$total_num_edges), topology_results_selected_analytical_df$model_result)
+            # Join predicted results with total number of edges
+            predicted_results_df = predicted_results_df %>% inner_join((results_selected_df %>% select("type_dataset", "total_num_edges") %>% unique()), by=c("type_dataset"))
+            # Normalize result for selected parameter
+            predicted_results_df$model_result = ifelse((predicted_results_df$fill_parameter == selected_parameter & predicted_results_df$model %in% c("Power law (linear fit)", "Power law (minimizing)")), predicted_results_df$model_result * max(results_selected_by_parameter_df$unnorm) / predicted_results_df$total_num_edges, predicted_results_df$model_result)
+            # Remove total number of edges
+            predicted_results_df = predicted_results_df %>% select(!c("total_num_edges"))
           }
           # Divide by s_max to re-scale the axis using as maximum the s_max value
           if((isTRUE(input$topology_rescale_y)) & (input$topology_type_normalization == "divide.smax")){
             topology_results_selected_analytical_df$model_result = ifelse(topology_results_selected_analytical_df[[selected_fill_parameter]] == selected_parameter, topology_results_selected_analytical_df$model_result / dec_smax_model$s_max, topology_results_selected_analytical_df$model_result)
+            predicted_results_df$model_result = ifelse(predicted_results_df$fill_parameter == selected_parameter, predicted_results_df$model_result / dec_smax_model$s_max, predicted_results_df$model_result)
             results_selected_df[[input$boxplot_parameter]] = ifelse(results_selected_df[[selected_fill_parameter]] == selected_parameter, results_selected_df[[input$boxplot_parameter]] / dec_smax_model$s_max, results_selected_df[[input$boxplot_parameter]])
             topology_results_selected_by_size_df$mean_norm = ifelse(topology_results_selected_by_size_df[[selected_fill_parameter]] == selected_parameter, topology_results_selected_by_size_df$mean_norm / dec_smax_model$s_max, topology_results_selected_by_size_df$mean_norm)
           }
         }
+      }
+      predicted_results_df = predicted_results_df %>% rename(!!input$boxplot_parameter := model_result)
+      if(("fill_parameter" %in% colnames(predicted_results_df)) && (!(is.null(selected_fill_parameter))) && (!(selected_fill_parameter == "type_dataset"))){
+        predicted_results_df = predicted_results_df %>% rename(!!selected_fill_parameter := fill_parameter)
       }
       # Calculate relative error
       topology_results_selected_pred_vs_reality_df = topology_results_selected_analytical_df %>% inner_join(topology_results_selected_by_size_df %>% ungroup() %>% select("size", !!combination_metric, !!selected_fill_parameter), by=c("size", selected_fill_parameter)) %>% unique()
@@ -457,6 +494,7 @@ server <- function(input, output, session) {
                 topology_results_selected_by_size_df=topology_results_selected_by_size_df, 
                 topology_results_selected_analytical_df=topology_results_selected_analytical_df, 
                 dec_model_df=dec_model_df,
+                predicted_results_df=predicted_results_df,
                 selected_fill_parameter=selected_fill_parameter, 
                 combination_metric=combination_metric))
   })
@@ -574,32 +612,38 @@ server <- function(input, output, session) {
         # Plot without fill
         # Make it cumulative
         if(isTruthy(input$topology_cumulative)){
-          gradient_plot  = ggplot(dec_model_df, aes(x=log_N, y = log_frac_grad))
+          gradient_plot  = ggplot(dec_model_df, aes(x=log_N, y = log_prob_s))
           gradient_plot = gradient_plot + geom_line(aes(y = 1 - ..y..), stat='ecdf', size=2, col=2) # reverse plot
         } else {
-          gradient_plot = ggplot(dec_model_df, aes(x=log_N, y=log_frac_grad)) +
+          gradient_plot = ggplot(dec_model_df, aes(x=log_N, y=log_prob_s)) +
             geom_point(alpha=0.9, size=3, col=2) +
-            geom_line(aes(x = log_N, y = pred_log_frac_grad), col=2)
+            geom_line(aes(x = log_N, y = pred_log_prob_s), col=2)
         }
       } else {
         # Plot with fill
         # Make it cumulative
         if(isTruthy(input$topology_cumulative)){
-          gradient_plot  = ggplot(dec_model_df, aes(x=log_N, y = log_frac_grad, col=get(selected_fill_parameter)))
+          gradient_plot  = ggplot(dec_model_df, aes(x=log_N, y = log_prob_s, col=get(selected_fill_parameter)))
           gradient_plot = gradient_plot + geom_line(aes(y = 1 - ..y..), stat='ecdf', size=2) + # reverse plot
             guides(col=guide_legend(title=parameter2label[[selected_fill_parameter]]))
         } else {
-          gradient_plot = ggplot(dec_model_df, aes(x=log_N, y=log_frac_grad, col=get(selected_fill_parameter))) + 
+          gradient_plot = ggplot(dec_model_df, aes(x=log_N, y=log_prob_s, col=get(selected_fill_parameter))) + 
             guides(col=guide_legend(title=parameter2label[[selected_fill_parameter]])) +
             geom_point(alpha=0.9, size=3) +
-            geom_line(aes(x = log_N, y = pred_log_frac_grad, col=get(selected_fill_parameter)))
+            geom_line(aes(x = log_N, y = pred_log_prob_s, col=get(selected_fill_parameter)))
         }
+      }
+      
+      if(input$topology_type_analytical_model == "Power law (minimizing)"){
+        label_y = "Ln( Ln(smax) - Ln(s) )"
+      } else if(input$topology_type_analytical_model == "Power law (linear fit)"){
+        label_y = "Ln(P(N))"
       }
       
       gradient_plot = gradient_plot +
         theme_linedraw() +
-        xlab("N (Ln)") +
-        ylab("P(N) (Ln)") +
+        xlab("Ln(N)") +
+        ylab(label_y) +
         theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.title=element_text(size=15, face="bold"), legend.position="bottom")
       
       gradient_plot
@@ -611,6 +655,53 @@ server <- function(input, output, session) {
   output$gradPlotID = renderUI({
     if(((isTruthy(input$topology_analytical)) & (!("Logarithmic" %in% c(input$topology_type_analytical_model))) & (!(length(input$topology_type_analytical_model) == 0))) | ((isTruthy(input$topology_analytical)) & ("Logarithmic" %in% c(input$topology_type_analytical_model)) & (length(c(input$topology_type_analytical_model)) > 1))){
       plotOutput(outputId = "gradPlot")
+    }
+  })
+  
+  output$predPlot <- renderPlot({
+    
+    processed_inputs = process_inputs()
+    predicted_results_df=processed_inputs$predicted_results_df %>% filter(model %in% c(input$topology_type_analytical_model))
+    selected_fill_parameter=processed_inputs$selected_fill_parameter
+    
+    # Change axes label if re-scaling
+    label_x = "Number of samples"
+    label_y = parameter2label[[input$boxplot_parameter]]
+    if(isTRUE(input$topology_rescale_x)){
+      label_x= paste(label_x, " (Norm.)", sep="")
+    }
+    if(isTRUE(input$topology_rescale_y)){
+      label_y= paste(label_y, " (Norm.)", sep="")
+    }
+    
+    if(((isTruthy(input$topology_analytical)) & (!("Logarithmic" %in% c(input$topology_type_analytical_model))) & (!(length(input$topology_type_analytical_model) == 0))) | ((isTruthy(input$topology_analytical)) & ("Logarithmic" %in% c(input$topology_type_analytical_model)) & (length(c(input$topology_type_analytical_model)) > 1))){
+      # Plot log(gradient) vs log(sample size)
+      if (is.null(selected_fill_parameter)){
+        # Plot without fill
+        prediction_plot = ggplot(predicted_results_df, aes(x=size, y=.data[[input$boxplot_parameter]])) +
+          geom_line(size=2, col=2)
+      } else {
+        # Plot with fill
+        prediction_plot = ggplot(predicted_results_df, aes(x=size, y=.data[[input$boxplot_parameter]], col=get(selected_fill_parameter))) +
+          geom_line(size=2) +
+          guides(col=guide_legend(title=parameter2label[[selected_fill_parameter]]))
+      }
+      
+      prediction_plot = prediction_plot +
+        theme_linedraw() +
+        xlab(label_x) +
+        ylab(label_y) +
+        theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.title=element_text(size=15, face="bold"), legend.position="bottom")
+      
+      prediction_plot
+      
+    }
+  })
+  
+  # conditional UI: we only create the space for the plot when the conditions are met
+  output$predPlotID = renderUI({
+    if(((isTruthy(input$topology_analytical)) & (!("Logarithmic" %in% c(input$topology_type_analytical_model))) & (!(length(input$topology_type_analytical_model) == 0))) | ((isTruthy(input$topology_analytical)) & ("Logarithmic" %in% c(input$topology_type_analytical_model)) & (length(c(input$topology_type_analytical_model)) > 1))){
+      plotOutput(outputId = "predPlot")
     }
   })
   

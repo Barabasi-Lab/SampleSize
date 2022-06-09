@@ -169,6 +169,7 @@ ui <- fluidPage(
                         mainPanel(
                           plotOutput("topologyBoxPlot", height="400px"),
                           uiOutput(outputId = "gradPlotID", height="400px"),
+                          uiOutput(outputId = "predPlotID", height="400px"),
                           tableOutput('topologyAnalyticalModelTable')
                           #tags$div(id = 'topologyAnalyticalModelTable')
                         )
