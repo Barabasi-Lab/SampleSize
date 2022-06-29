@@ -4,6 +4,39 @@ require(dplyr)
 require(ggplot2)
 options(bitmapType='cairo')
 
+#########################################
+# CALCULATE SAMPLE SIZE FOR CORRELATION #
+#########################################
+
+# Calculate at which sample size a given correlation value gets significant
+
+r = 0.2
+total_num_genes = 18884 # TCGA
+total_num_edges = (total_num_genes*(total_num_genes-1)/2)
+alpha_level = 0.05
+alpha_level = alpha_level / total_num_edges # Correct alpha by multiple error
+Za = qnorm(alpha_level, lower.tail=F)
+power = 0.8
+Zb = qnorm(power, lower.tail=F)
+
+N_result = ((Za + Zb) / (0.5 * log((1+r)/(1-r))))**2 + 3
+print(N_result)
+
+# Calculate until which correlation value becomes significant significant for a given sample size.
+
+N = 1000
+total_num_genes = 18884 # TCGA
+total_num_edges = (total_num_genes*(total_num_genes-1)/2)
+alpha_level = 0.05
+alpha_level = alpha_level / total_num_edges # Correct alpha by multiple error
+Za = qnorm(alpha_level, lower.tail=F)
+power = 0.8
+Zb = qnorm(power, lower.tail=F)
+
+a = (Za + Zb)/(0.5 * sqrt(N-3))
+r_result = (exp(a) - 1) / (exp(a) + 1)
+print(r_result)
+
 
 ############
 # MANUALLY #

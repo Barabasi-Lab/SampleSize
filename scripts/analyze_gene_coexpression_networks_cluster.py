@@ -99,10 +99,11 @@ def create_gene_coexpression_networks(options):
 
     # Run co-expression for all files
     datasets = [f for f in os.listdir(input_dir) if fileExist(os.path.join(input_dir, f))]
-    #sizes = [str(size) for size in range(20, 1020, 20)]
-    sizes = [str(10)] + [str(size) for size in range(100, 12000, 100)]
+    sizes = [str(size) for size in range(20, 12000, 20)]
+    #sizes = [str(10)] + [str(size) for size in range(100, 12000, 100)]
     reps = [str(rep) for rep in range(1, 11, 1)]
     #reps = ['1', '2', '3']
+    #reps = ['1']
 
     for dataset in sorted(datasets):
 
@@ -117,27 +118,18 @@ def create_gene_coexpression_networks(options):
         
         dataset_names = []
         if size in sizes and rep in reps:
-            if (method in ["pearson", "spearman"]):
-                thresholds = [0.05, 0.001]
-                #thresholds = [0.05]
-                disparity_pvalues = [None]
-                for threshold in thresholds:
-                    for disparity in disparity_pvalues:
-                        dataset_name = '{}_threshold_{}_disp_{}'.format(dataset_short, str(threshold), disparity)
-                        dataset_names.append((dataset_name, threshold, disparity))
-            elif (method == "wto"):
-                thresholds = [0.05, 0.001]
-                disparity = None
-                for threshold in thresholds:
-                    dataset_name = '{}_threshold_{}_disp_{}'.format(dataset_short, str(threshold), disparity)
-                    dataset_names.append((dataset_name, threshold, disparity))
-            else:
+            if (method == "aracne"):
                 threshold = 0
-                disparity = None
-                dataset_name = '{}_threshold_{}_disp_{}'.format(dataset_short, str(threshold), disparity)
-                dataset_names.append((dataset_name, threshold, disparity))
+                dataset_name = '{}_threshold_{}'.format(dataset_short, str(threshold))
+                dataset_names.append((dataset_name, threshold))
+            else:
+                #thresholds = [0.05, 0.001]
+                thresholds = [0.05]
+                for threshold in thresholds:
+                    dataset_name = '{}_threshold_{}'.format(dataset_short, str(threshold))
+                    dataset_names.append((dataset_name, threshold))
         
-            for dataset_name, threshold, disparity in dataset_names:
+            for dataset_name, threshold in dataset_names:
 
                 if limit: # Break the loop if a limit of jobs is introduced
                     if l > limit:
@@ -166,15 +158,12 @@ def create_gene_coexpression_networks(options):
                     #if not fileExist(bash_script_file):
                     if ((not fileExist(output_topology_file)) or (not fileExist(output_ppi_file)) or (not fileExist(output_disease_genes_file)) or (not fileExist(output_essential_genes_file))):
 
-                        if disparity:
-                            command = 'Rscript {} -c {} -o {} -s {} -f {} -t {} -i {} -p {} -d {} -e {} -g {}'.format(script_file, coexpression_file, output_analysis_dir, output_networks_dir, dataset_name, threshold, disparity, ppi_file, disease_genes_file, essential_genes_file, genes_dataset_file)
-                        else:
-                            command = 'Rscript {} -c {} -o {} -s {} -f {} -t {} -p {} -d {} -e {} -g {}'.format(script_file, coexpression_file, output_analysis_dir, output_networks_dir, dataset_name, threshold, ppi_file, disease_genes_file, essential_genes_file, genes_dataset_file)
-                        print(dataset_name, threshold, disparity)
+                        command = 'Rscript {} -c {} -o {} -s {} -f {} -t {} -p {} -d {} -e {} -g {}'.format(script_file, coexpression_file, output_analysis_dir, output_networks_dir, dataset_name, threshold, ppi_file, disease_genes_file, essential_genes_file, genes_dataset_file)
+                        print(dataset_name, threshold)
                         #print(output_topology_file)
                         print(command)
                         print(l)
-                        #submit_command_to_queue(command, max_jobs_in_queue=int(config.get("Cluster", "max_jobs_in_queue")), queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude, conda_environment=conda_environment)
+                        submit_command_to_queue(command, max_jobs_in_queue=int(config.get("Cluster", "max_jobs_in_queue")), queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude, conda_environment=conda_environment)
 
                         l += 1
 

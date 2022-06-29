@@ -35,7 +35,7 @@ ui <- fluidPage(
                             shinyWidgets::pickerInput(
                               inputId = "topology_tcga_project",
                               label = "TCGA project:",
-                              choices = c("tcga", "tcga-brca", "tcga-ucec"),
+                              choices = c("tcga", "tcga-brca", "tcga-ucec", "tcga-kirc", "tcga-lgg", "tcga-luad"),
                               options = list(
                                 `actions-box` = TRUE,
                                 size = 10,
@@ -50,7 +50,7 @@ ui <- fluidPage(
                             shinyWidgets::pickerInput(
                               inputId = "topology_gtex_tissues",
                               label = "GTEx tissue:",
-                              choices = c("spleen", "whole blood"),
+                              choices = c("spleen", "whole blood", "muscle - skeletal", "skin - sun exposed (lower leg)", "thyroid"),
                               options = list(
                                 `actions-box` = TRUE,
                                 size = 10,
@@ -80,11 +80,14 @@ ui <- fluidPage(
                           ),
                           checkboxGroupInput("topology_type_correlation", label = "Type of correlation:", 
                                              c("All" = "all",
-                                               "Very strong" = "very strong",
-                                               "Strong" = "strong",
-                                               "Moderate" = "moderate",
-                                               "Weak" = "weak",
-                                               "Very weak" = "very weak"
+                                               "Very strong (>=0.8)" = "very strong",
+                                               "Strong (>=0.6 & <0.8)" = "strong",
+                                               "Strong or higher (>=0.6)" = "strong-very strong",
+                                               "Moderate (>=0.4 & <0.6)" = "moderate",
+                                               "Moderate or higher (>=0.4)" = "moderate-strong-very strong",
+                                               "Weak (>=0.2 & <0.4)" = "weak",
+                                               "Weak or higher (>=0.2)" = "weak-moderate-strong-very strong",
+                                               "Very weak (<0.2)" = "very weak"
                                              ),
                                              selected="all"),
                           checkboxGroupInput("topology_pvalue_threshold", label = "P-value threshold:", 
@@ -134,10 +137,10 @@ ui <- fluidPage(
                           shinyWidgets::materialSwitch(inputId = "topology_log_x", label = "Turn x axis to log scale:", status="primary"),
                           shinyWidgets::materialSwitch(inputId = "topology_log_y", label = "Turn y axis to log scale:", status="primary"),
                           shinyWidgets::materialSwitch(inputId = "topology_sd", label = "Plot standard deviation:", status="primary"),
-                          shinyWidgets::materialSwitch(inputId = "topology_rescale_x", label = "Normalize x axis:", status="primary"),
-                          shinyWidgets::materialSwitch(inputId = "topology_rescale_y", label = "Normalize y axis:", status="primary"),
+                          shinyWidgets::materialSwitch(inputId = "topology_normalize_x", label = "Normalize x axis:", status="primary"),
+                          shinyWidgets::materialSwitch(inputId = "topology_normalize_y", label = "Normalize y axis:", status="primary"),
                           conditionalPanel(
-                            condition = "input.topology_rescale_y == true",
+                            condition = "input.topology_normalize_y == true",
                             selectInput("topology_type_normalization", label = "Type of y axis normalization:", 
                                         choices = list("Divide by max. value" = "divide.max.value", "Divide by max. possible value" = "divide.max.possible.value"),
                                         selected = "divide.max.value"
@@ -159,19 +162,19 @@ ui <- fluidPage(
                               selected = 'Power law (minimizing)',
                               multiple = TRUE
                             ),
-                          ),
-                          conditionalPanel(
-                            condition = "input.topology_analytical == true && (input.topology_type_analytical_model.includes('Power law (minimizing)') || input.topology_type_analytical_model.includes('Power law (linear fit)'))",
-                            shinyWidgets::materialSwitch(inputId = "topology_cumulative", label = "Cumulative gradient plot:", status="primary"),
+                            selectInput("topology_type_analytical_model_output", label = "Type of output:", 
+                                        choices = list("fit plot" = "fit.plot", "prediction plot" = "prediction.plot", "regression plot" = "regression.plot", "cumulative regression plot" = "cumulative.regression.plot"),
+                                        selected = "fit.plot"
+                            ),
                           ),
                         ),
                         # Show boxplot of topological parameters
                         mainPanel(
-                          plotOutput("topologyBoxPlot", height="400px"),
-                          uiOutput(outputId = "gradPlotID", height="400px"),
-                          uiOutput(outputId = "predPlotID", height="400px"),
+                          plotOutput("topologyBoxPlot", height="500px"),
                           tableOutput('topologyAnalyticalModelTable')
                           #tags$div(id = 'topologyAnalyticalModelTable')
+                          #uiOutput(outputId = "regressionPlotID", height="500px"),
+                          #uiOutput(outputId = "predPlotID", height="500px"),
                         )
                       )
              ),

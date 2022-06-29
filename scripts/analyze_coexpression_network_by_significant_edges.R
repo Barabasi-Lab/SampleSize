@@ -60,7 +60,7 @@ genes_dataset_file = opt$genes_dataset_file
 #coexpression_network_file = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA/pearson_RNAseq_samples_TCGA_size_100_rep_1.net"
 #output_results_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_scipher/all_samples"
 #output_subgraphs_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_scipher/all_samples"
-#file_name = "spearman_scipher_all_samples_size_100_rep_1_pvalue_0.05_disp_None"
+#file_name = "spearman_scipher_all_samples_size_100_rep_1_pvalue_0.05"
 #output_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_scipher/all_samples/analysis_by_top_scoring_edges_wgcna_scipher_all_samples_size_100_rep_1.txt"
 #ppi_file = "/home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv"
 #disease_genes_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_scipher.csv"
@@ -438,7 +438,7 @@ if(!(file.exists(output_topology_file))){
   topology_results_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
   
   # Calculate results for different levels of correlation
-  type_correlation_df = data.frame(row.names=c("all", "very weak", "weak", "moderate", "strong", "very strong"), lower_val=c(NA,0,0.2,0.4,0.6,0.8), upper_val=c(NA,0.2,0.4,0.6,0.8,NA))
+  type_correlation_df = data.frame(row.names=c("all", "very weak", "weak", "moderate", "strong", "very strong", "strong-very strong", "moderate-strong-very strong", "weak-moderate-strong-very strong"), lower_val=c(NA,0,0.2,0.4,0.6,0.8,0.6,0.4,0.2), upper_val=c(NA,0.2,0.4,0.6,0.8,NA,NA,NA,NA))
   for(type_correlation in row.names(type_correlation_df)){
     
     print(paste("Correlation type: ", type_correlation, sep=""))
@@ -479,7 +479,7 @@ if(!(file.exists(output_ppi_file))){
   ppi_results_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
 
   # Calculate results for different levels of correlation
-  type_correlation_df = data.frame(row.names=c("all", "very weak", "weak", "moderate", "strong", "very strong"), lower_val=c(NA,0,0.2,0.4,0.6,0.8), upper_val=c(NA,0.2,0.4,0.6,0.8,NA))
+  type_correlation_df = data.frame(row.names=c("all", "very weak", "weak", "moderate", "strong", "very strong", "strong-very strong", "moderate-strong-very strong", "weak-moderate-strong-very strong"), lower_val=c(NA,0,0.2,0.4,0.6,0.8,0.6,0.4,0.2), upper_val=c(NA,0.2,0.4,0.6,0.8,NA,NA,NA,NA))
   for(type_correlation in row.names(type_correlation_df)){
     
     print(paste("Correlation type: ", type_correlation, sep=""))
@@ -518,7 +518,7 @@ if(!(file.exists(output_disease_genes_file))){
   disease_gene_results_df <- setNames(data.frame(matrix(ncol = length(cols), nrow = 0)), cols)
   
   # Calculate results for different levels of correlation
-  type_correlation_df = data.frame(row.names=c("all", "very weak", "weak", "moderate", "strong", "very strong"), lower_val=c(NA,0,0.2,0.4,0.6,0.8), upper_val=c(NA,0.2,0.4,0.6,0.8,NA))
+  type_correlation_df = data.frame(row.names=c("all", "very weak", "weak", "moderate", "strong", "very strong", "strong-very strong", "moderate-strong-very strong", "weak-moderate-strong-very strong"), lower_val=c(NA,0,0.2,0.4,0.6,0.8,0.6,0.4,0.2), upper_val=c(NA,0.2,0.4,0.6,0.8,NA,NA,NA,NA))
   for(type_correlation in row.names(type_correlation_df)){
     
     print(paste("Correlation type: ", type_correlation, sep=""))
@@ -559,7 +559,7 @@ if(!(file.exists(output_essential_genes_file))){
   essential_gene_results_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
   
   # Calculate results for different levels of correlation
-  type_correlation_df = data.frame(row.names=c("all", "very weak", "weak", "moderate", "strong", "very strong"), lower_val=c(NA,0,0.2,0.4,0.6,0.8), upper_val=c(NA,0.2,0.4,0.6,0.8,NA))
+  type_correlation_df = data.frame(row.names=c("all", "very weak", "weak", "moderate", "strong", "very strong", "strong-very strong", "moderate-strong-very strong", "weak-moderate-strong-very strong"), lower_val=c(NA,0,0.2,0.4,0.6,0.8,0.6,0.4,0.2), upper_val=c(NA,0.2,0.4,0.6,0.8,NA,NA,NA,NA))
   for(type_correlation in row.names(type_correlation_df)){
     
     print(paste("Correlation type: ", type_correlation, sep=""))

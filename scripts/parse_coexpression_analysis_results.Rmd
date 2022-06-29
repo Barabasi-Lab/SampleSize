@@ -45,9 +45,9 @@ for(dataset in c('scipher', 'gtex', 'tcga')){
       file_split = strsplit(info_file, split="_")[[1]]
       if (("threshold" %in% file_split) | ("edges" %in% file_split)){
         method = file_split[1]
-        threshold = as.numeric(file_split[(length(file_split))-2])
-        size = file_split[(length(file_split)-6)]
-        r = file_split[(length(file_split))-4]
+        threshold = as.numeric(file_split[(length(file_split))])
+        size = file_split[(length(file_split)-4)]
+        r = file_split[(length(file_split))-2]
       } else {
         method = file_split[1]
         size = file_split[(length(file_split)-2)]
@@ -74,7 +74,6 @@ for(dataset in c('scipher', 'gtex', 'tcga')){
   }
 }
 ```
-
 
 
 ```{r output_results, echo=FALSE, results='hide'}
@@ -126,7 +125,8 @@ gdc_dir = '/home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA'
 output_dir = paste(gdc_dir, 'out', sep='/')
 genes_filt_dir = paste(output_dir, 'genes_filtered_files_by_project', sep='/')
 #genes_project_files = list.files(genes_filt_dir)
-projects = c("TCGA", "TCGA-BRCA", "TCGA-UCEC")
+projects = unique((topology_df %>% filter(dataset == "tcga"))$type_dataset)
+#projects = c("TCGA", "TCGA-BRCA", "TCGA-UCEC")
 for (project_id in projects){
   genes_project_file = paste(genes_filt_dir, paste("tcga_rnaseq_gene_info_", project_id, ".csv", sep=''), sep='/')
   genes_dataset_df = fread(genes_project_file)
@@ -139,7 +139,8 @@ for (project_id in projects){
 gtex_dir = '/home/j.aguirreplans/Databases/GTEx/v8'
 genes_filt_dir = paste(gtex_dir, 'genes_filtered_files_by_tissue', sep='/')
 #genes_dataset_files = list.files(genes_filt_dir)
-tissues = c("Whole.Blood")
+tissues = unique((topology_df %>% filter(dataset == "gtex"))$type_dataset)
+#tissues = c("Whole.Blood")
 for (tissue in tissues){
   genes_dataset_filt_file = paste(genes_filt_dir, paste("gtex_rnaseq_gene_info_", tissue, ".csv", sep=''), sep='/')
   genes_dataset_df = fread(genes_dataset_filt_file)
