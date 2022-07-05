@@ -1,0 +1,154 @@
+---
+title: "GTEx pre-processing of less specific tissues"
+author: "Joaquim Aguirre-Plans"
+date: "26/11/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Description
+
+Pre-process GTEx data (version v8) before creating gene co-expression networks.
+
+```{r, message=FALSE}
+library(data.table)
+library(dplyr)
+library(ggplot2)
+require(magrittr)
+library(tidyr)
+library(igraph)
+set.seed(1510)
+`%ni%` <- Negate(`%in%`)
+```
+
+## Define variables
+
+```{r}
+# Define working directories
+gtex_dir = '/home/j.aguirreplans/Databases/GTEx/v8'
+gene_annotations_dir = '/home/j.aguirreplans/data/gene_annotations/data/out'
+gene_associations_dir = '/home/j.aguirreplans/data/gene_associations/data/out'
+
+# Define input files
+samples_subjects_file = paste(gtex_dir, 'GTEx_Annotations_SamplesSubjectsMerged.txt', sep='/')
+tpm_file = paste(gtex_dir, 'GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_tpm.gct', sep='/')
+```
+
+## Read files
+
+```{r}
+tpm_df = fread(tpm_file)
+```
+
+The raw GTEx dataframe contains `r as.integer(ncol(tpm_df)-2)` sample IDs (as columns) and `r nrow(tpm_df)` genes (as rows) described in the first two columns as ***Name*** (Ensembl ID) and ***Description*** (HGNC symbol).
+
+```{r}
+head(tpm_df[1:10,1:5])
+```
+
+```{r}
+samples_df = fread(samples_subjects_file)
+```
+
+The samples are described in the samples dataframe, which contains information about the subject and tissue of the sample:
+
+```{r}
+head(samples_df)
+```
+
+We filter the samples in the TPM file by keeping the ones that are in the samples information file:
+
+```{r filter_tpm_file_samples}
+dim(tpm_df[,-2])
+tpm_df <- tpm_df %>% select(c("Name", "Description", samples_df$SAMPID))
+dim(tpm_df[,-2])
+```
+
+We end up having a gene expression matrix of `r as.integer(ncol(tpm_df)-2)` sample IDs (as columns) and `r nrow(tpm_df)` genes (as rows).
+
+# Select one sample for each patient in each broad tissue:
+
+In GTEx we have broad tissues that contain specific tissues.
+
+Let's check how many of the broad tissues that have sub-tissues:
+
+```{r}
+tissues_df = samples_df %>% select(SMTS.no.sp.char, SMTSD.no.sp.char) %>% unique() %>% group_by(SMTS.no.sp.char) %>% dplyr::summarise(n=length(SMTSD.no.sp.char)) %>% arrange(n)
+tissues_df[tissues_df$n > 1,]
+```
+
+There are `r nrow(tissues_df)` tissues in total, and `r nrow(tissues_df[tissues_df$n > 1,])` of them have multiple sub-tissues.
+
+Our objective is to focus on broad tissues instead of sub-tissues. The problem is that there are subjects with more than one sample associated to the same broad tissue because each sample belongs to a different sub-tissue. Why is this a problem? Because when creating the gene co-expression network, if there are subjects with more samples associated to them, it would create a bias towards them.
+
+Let's check the number of samples in broad tissues with multiple sub-tissues that belong to the same patient:
+
+```{r}
+subjects_repeated_df = samples_df %>% filter(SMTS.no.sp.char %in% unique(tissues_df[tissues_df$n > 1,]$SMTS.no.sp.char)) %>% unique() %>% group_by(SMTS.no.sp.char, SUBJID) %>% mutate(n=length(SUBJID)) %>% arrange(SUBJID, SMTS.no.sp.char, SAMPID)
+
+table(subjects_repeated_df$n)
+```
+
+```{r}
+subjects_repeated_df %>%
+  ggplot( aes(x=n, fill=SMTS.no.sp.char)) +
+    geom_histogram(alpha=0.5, position="identity", binwidth = 1)
+```
+
+We observe that there are many subjects with 2 or more samples associated.
+
+The ideal situation is to have the same number of samples for each individual. We have the following options:
+
+- Calculate the median expression of samples belonging to different sub-tissues from the same patient.
+- Select randomly one sample for each individual.
+- Discard subjects that do not have a sample associated to each sub-tissue.
+
+We decided to calculate the median expression of samples belonging to different sub-tissues from the same patient.
+
+```{r}
+samples_broad_tissues_df = data.frame(matrix(ncol=length(colnames(samples_df)),nrow=0, dimnames=list(NULL, colnames(samples_df))))
+for (tissue in tissues_df$SMTS.no.sp.char){
+  samples_tissue_df = samples_df %>% filter(SMTS.no.sp.char == tissue)
+  if(tissues_df[tissues_df$SMTS.no.sp.char == tissue,]$n == 1){
+    samples_broad_tissues_df = rbind(samples_broad_tissues_df, samples_tissue_df)
+  } else {
+    samples_unique_df = samples_tissue_df %>% filter(SUBJID %in% (subjects_repeated_df %>% filter(n == 1))$SUBJID)
+    samples_not_unique_df = samples_tissue_df %>% filter(SUBJID %in% (subjects_repeated_df %>% filter(n > 1))$SUBJID)
+    samples_selected = c()
+    for (subject in unique(samples_not_unique_df$SUBJID)){
+      samples_selected = c(samples_selected, sample((samples_not_unique_df %>% filter(SUBJID == subject))$SAMPID, 1))
+    }
+    samples_broad_tissues_df = rbind(samples_broad_tissues_df, samples_unique_df)
+    samples_broad_tissues_df = rbind(samples_broad_tissues_df, (samples_not_unique_df %>% filter(SAMPID %in% samples_selected)))
+  }
+}
+samples_subjects_broad_tissues_file = paste(gtex_dir, 'GTEx_Annotations_SamplesSubjectsMerged_OneSamplePerSubjectPerTissue.txt', sep='/')
+samples_df %>% fwrite(samples_subjects_file)
+```
+
+We apply the same procedure to keep only one sample per subject for all tissues:
+
+```{r}
+samples_broad_tissues_df = data.frame(matrix(ncol=length(colnames(samples_df)),nrow=0, dimnames=list(NULL, colnames(samples_df))))
+for (tissue in tissues_df$SMTS.no.sp.char){
+  samples_tissue_df = samples_df %>% filter(SMTS.no.sp.char == tissue)
+  if(tissues_df[tissues_df$SMTS.no.sp.char == tissue,]$n == 1){
+    samples_broad_tissues_df = rbind(samples_broad_tissues_df, samples_tissue_df)
+  } else {
+    samples_unique_df = samples_tissue_df %>% filter(SUBJID %in% (subjects_repeated_df %>% filter(n == 1))$SUBJID)
+    samples_not_unique_df = samples_tissue_df %>% filter(SUBJID %in% (subjects_repeated_df %>% filter(n > 1))$SUBJID)
+    samples_selected = c()
+    for (subject in unique(samples_not_unique_df$SUBJID)){
+      samples_selected = c(samples_selected, sample((samples_not_unique_df %>% filter(SUBJID == subject))$SAMPID, 1))
+    }
+    samples_broad_tissues_df = rbind(samples_broad_tissues_df, samples_unique_df)
+    samples_broad_tissues_df = rbind(samples_broad_tissues_df, (samples_not_unique_df %>% filter(SAMPID %in% samples_selected)))
+  }
+}
+samples_subjects_broad_tissues_file = paste(gtex_dir, 'GTEx_Annotations_SamplesSubjectsMerged_OneSamplePerSubjectPerTissue.txt', sep='/')
+samples_df %>% fwrite(samples_subjects_file)
+```
+

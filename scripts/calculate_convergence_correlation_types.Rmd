@@ -20,7 +20,9 @@ library(data.table)
 library(dplyr)
 library(igraph)
 library(ggplot2)
+require(ggrepel)
 require(magrittr)
+library(tidyr)
 set.seed(1510)
 options(bitmapType='cairo')
 `%ni%` <- Negate(`%in%`)
@@ -41,7 +43,7 @@ print(numbers_df)
 Define function to calculate sample size for correlation:
 
 ```{r}
-calculate_sample_size_for_pearson_correlation = function(r, total_num_edges, alpha=0.05, power=0.8){
+calculate_sample_size_for_pearson_correlation_using_z_distribution = function(r, total_num_edges, alpha=0.05, power=0.8){
   alpha_corrected = alpha / total_num_edges # Correct alpha by multiple error
   Za = qnorm(alpha, lower.tail=F)
   Za_corrected = qnorm(alpha_corrected, lower.tail=F)
@@ -50,6 +52,37 @@ calculate_sample_size_for_pearson_correlation = function(r, total_num_edges, alp
   N_corrected = ((Za_corrected + Zb) / (0.5 * log((1+r)/(1-r))))**2 + 3
   return(list(N=N, N_corrected=N_corrected))
 }
+
+calculate_sample_size_for_pearson_correlation_using_t_distribution = function(r, total_num_edges, alpha=0.05){
+  alpha_corrected = alpha / total_num_edges # Correct alpha by multiple error
+  N = ( qt(alpha, df=1, lower.tail = F) * sqrt((1-r**2)) / r )**2 + 2
+  N_corrected = ( qt(alpha_corrected, df=1, lower.tail = F) * sqrt((1-r**2)) / r )**2 + 2
+  return(list(N=N, N_corrected=N_corrected))
+}
+
+
+calculate_sample_size_for_pearson_correlation_using_t_distribution_with_optimization = function(r, total_num_edges, alpha=0.05, N_guess=c(10000)){
+  optimize_N = function(par){
+    N = par[1]
+    t_guess = qt(alpha, df=N-2, lower.tail = F)
+    t = r * sqrt((N-2)) / sqrt((1-r**2))
+    return((abs(t-t_guess)))
+  }
+  res = optim(par=N_guess, fn=optimize_N, method="Brent", lower=3, upper=50000)
+  return(res$par)
+}
+```
+
+Get the power of a correlation calculated using the package rcorr:
+
+```{r}
+require(Hmisc)
+require(pwr)
+dummy_matrix = as.matrix(mtcars[,c("wt", "mpg", "disp", "qsec")])
+correlation_result <- rcorr(dummy_matrix, type="pearson")
+power_result = pwr.r.test(r=correlation_result$r["wt","mpg"],n=correlation_result$n["wt","mpg"],sig.level=correlation_result$P["wt","mpg"],alternative="two.sided")$power
+power_result2 = pwr.r.test(r=correlation_result$r["mpg","qsec"],n=correlation_result$n["mpg","qsec"],sig.level=correlation_result$P["mpg","qsec"],alternative="two.sided")$power
+print(c(power_result, power_result2))
 ```
 
 Calculate sample size for different levels of correlation and different datasets:
@@ -58,14 +91,17 @@ Calculate sample size for different levels of correlation and different datasets
 type_correlation_df = data.frame(type_correlation=c("weak", "moderate", "strong", "very strong"), lower_val=c(0.2,0.4,0.6,0.8), upper_val=c(0.4,0.6,0.8,NA))
 types_correlation = c("weak", "moderate", "strong", "very strong")
 
-cols = c("dataset", "type_correlation", "correlation", "sample_size", "sample_size_corrected")
+cols = c("dataset", "type_correlation", "correlation", "sample_size_statistical", "sample_size_statistical_corrected")
 sample_size_correlation_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
 for (dataset in numbers_df$dataset){
   total_num_edges = (numbers_df %>% filter(dataset == !!dataset))$total_num_edges
   for (type_correlation in types_correlation){
     r = (type_correlation_df %>% filter(type_correlation == !!type_correlation))$lower_val
-    N_result = calculate_sample_size_for_pearson_correlation(r=r, total_num_edges=total_num_edges, alpha=0.05, power=0.8)
-    sample_size_correlation_df <- rbind(sample_size_correlation_df, data.frame(dataset=dataset, type_correlation=type_correlation, correlation=r, sample_size=N_result$N, sample_size_corrected=N_result$N_corrected))
+    #N_result = calculate_sample_size_for_pearson_correlation_using_z_distribution(r=r, total_num_edges=total_num_edges, alpha=0.05, power=0.5)
+    #N_result = calculate_sample_size_for_pearson_correlation_using_t_distribution(r=r, total_num_edges=total_num_edges, alpha=0.05)
+    N = calculate_sample_size_for_pearson_correlation_using_t_distribution_with_optimization(r=r, total_num_edges=total_num_edges, alpha=0.05, N_guess=c(10000))
+    N_corrected = calculate_sample_size_for_pearson_correlation_using_t_distribution_with_optimization(r=r, total_num_edges=total_num_edges, alpha=0.05/total_num_edges, N_guess=c(10000))
+    sample_size_correlation_df <- rbind(sample_size_correlation_df, data.frame(dataset=dataset, type_correlation=type_correlation, correlation=r, sample_size_statistical=N, sample_size_statistical_corrected=N_corrected))
   }
 }
 
@@ -85,17 +121,23 @@ topology_results_df$dataset = tolower(topology_results_df$dataset)
 head(topology_results_df)
 ```
 
-Calculate sample size where each type of correlation converges:
+Calculate sample size where each type of correlation converges.
 
 ```{r}
-type_correlation_df = data.frame(type_correlation=c("strong-very strong", "moderate-strong-very strong", "weak-moderate-strong-very strong"), lower_val=c(0.6,0.4,0.2), upper_val=c(NA,NA,NA))
-types_correlation = c("strong-very strong", "moderate-strong-very strong", "weak-moderate-strong-very strong")
+type_correlation_df = data.frame(type_correlation=c("very strong", "strong-very strong", "moderate-strong-very strong", "weak-moderate-strong-very strong"), lower_val=c(0.8,0.6,0.4,0.2), upper_val=c(NA,NA,NA,NA))
+types_correlation = c("very strong", "strong-very strong", "moderate-strong-very strong", "weak-moderate-strong-very strong")
 method = "pearson"
 threshold = 0.05
 
-cols = c("dataset", "type_correlation", "correlation", "sample_size_max_value", "sample_size_sliding")
+cols = c("dataset", "type_correlation", "correlation", "sample_size_difference", "sample_size_max_value")
 size_convergence_correlation_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
 for (dataset in numbers_df$dataset){
+  # Calculate mean for all correlations
+  topology_results_all_corr_df = topology_results_df %>% filter((method == !!method) & (dataset == !!dataset) & (type_correlation == "all") & (threshold == !!threshold)) %>% select(size, rep, num_edges)
+topology_results_all_corr_by_size_df = topology_results_all_corr_df %>%
+  group_by(size) %>%
+  summarise(mean=mean(num_edges), sd=sd(num_edges)) %>%
+  arrange(size)
   for (type_correlation in types_correlation){
     r = (type_correlation_df %>% filter(type_correlation == !!type_correlation))$lower_val
     topology_results_selected_df = topology_results_df %>% filter((method == !!method) & (dataset == !!dataset) & (type_correlation == !!type_correlation) & (threshold == !!threshold)) %>% select(size, rep, num_edges)
@@ -104,10 +146,237 @@ for (dataset in numbers_df$dataset){
       summarise(mean=mean(num_edges), sd=sd(num_edges)) %>%
       arrange(size)
     max_value = max(topology_results_selected_by_size_df$mean)
+    sample_size_max_value = (topology_results_selected_by_size_df %>% filter(mean == max_value))$size
+    
+    # Compare mean of selected correlation to mean of all correlations and select first sample size with different number of edges
+    sample_size_difference = sample_size_prev = NA
+    for (i in 1:(length(topology_results_selected_by_size_df$size))){
+      sample_size_selected = topology_results_selected_by_size_df$size[i]
+      value_size_selected = (topology_results_selected_by_size_df %>% filter(size == sample_size_selected))$mean
+      value_size_all_corr = (topology_results_all_corr_by_size_df %>% filter(size == sample_size_selected))$mean
+      diff = abs(value_size_selected - value_size_all_corr)
+      #print(c(dataset, type_correlation, sample_size_selected, value_size_selected, value_size_all_corr, diff))
+      if(diff > 0){
+        sample_size_difference = sample_size_prev
+        break
+      } else {
+        sample_size_prev = sample_size_selected
+      }
+    }
 
-    size_convergence_correlation_df <- rbind(size_convergence_correlation_df, data.frame(dataset=dataset, type_correlation=type_correlation, correlation=r, sample_size_max_value=max_value, sample_size_sliding=NA))
+    size_convergence_correlation_df <- rbind(size_convergence_correlation_df, data.frame(dataset=dataset, type_correlation=type_correlation, correlation=r, sample_size_difference=sample_size_difference, sample_size_max_value=sample_size_max_value))
   }
 }
 
 print(size_convergence_correlation_df)
 ```
+
+Compare statistical results with manual results
+
+```{r}
+convergence_results_df = sample_size_correlation_df %>% inner_join((size_convergence_correlation_df %>% select(-type_correlation)), by=c("dataset", "correlation")) #%>% select(-sample_size_statistical)
+convergence_results_df
+```
+
+```{r}
+ggplot(convergence_results_df, aes(x=sample_size_statistical_corrected, y=sample_size_difference, col=correlation)) + 
+  geom_point()
+
+```
+
+## Relationship between stretched exponential model parameters and saturation points
+
+We calculate the stretched exponential model for each dataset:
+
+```{r}
+#'  calculate_stretched_exponential_model_by_optimization
+#'  Formula to find linear fit between log(ln(L)-ln(s)) and log(N) that has the minimum value of 1-R**2 using optimization.
+#'  @param results_dataframe Dataframe containing the data.
+#'  @param y_parameter Parameter of the Y axis.
+#'  @param x_parameter Parameter of the X axis.
+#'  @param L_guess Initial values for the parameters to be optimized over.
+#'  
+calculate_stretched_exponential_model_by_optimization = function(results_dataframe, y_parameter, x_parameter, L_guess=c(2)){
+  # Calculate mean of repetitions from same sample size
+  results_dataframe_mean = results_dataframe %>% 
+    arrange(get(x_parameter), rep) %>%
+    group_by(get(x_parameter)) %>%
+    summarise_at(vars(all_of(y_parameter)), list(mean=mean, median=median, sd=sd)) %>%
+    rename(!!x_parameter := "get(x_parameter)") %>%
+    ungroup()
+  # Define s and N
+  s = results_dataframe_mean$mean / max(results_dataframe_mean$mean)
+  N = results_dataframe_mean$size
+  # Define function to get linear fit
+  linear_fit = function(data, par){
+    # Calculate ln(L)-ln(s)
+    L = par[1]
+    s_rec = log(L) - log(data$s)
+    # Calculate linear regression between ln(L)-ln(s) and ln(N)
+    lm_result = summary(lm(log(s_rec)~log(data$N)))
+    # The function returns the result of 1-R**2
+    return(1-lm_result$adj.r.squared)
+  }
+  # Get minimization of error in linear fit
+  #res = optim(par=L_guess, fn=linear_fit, data=data.frame(s=s, N=N), method="Nelder-Mead")
+  res = optim(par=L_guess, fn=linear_fit, data=data.frame(s=s, N=N), method="Brent", lower=0, upper=5)
+  L=res$par
+  s_rec=log(L)-log(s)
+  # This is the linear fit containing L
+  lm_summary = summary(lm(log(s_rec)~log(N)))
+  # This is the data used to obtain the final model
+  used_data = data.frame(y=log(s_rec), x=log(N))
+  return(list(lm_summary=lm_summary, used_data=used_data, a=coef(lm_summary)[2], b=coef(lm_summary)[1], L=L, adj.r.squared=lm_summary$adj.r.squared))
+}
+
+#'  calculate_predictions_using_stretched_exponential_model_optimized
+#'  Formula to calculate exponential decay of significant interactions from a list of sample sizes.
+#'  This formula requires the use of the L parameter
+#'  @param x List of sample sizes.
+#'  @param a Slope coefficient.
+#'  @param b Intercept coefficient.
+#'  
+calculate_predictions_using_stretched_exponential_model_optimized = function(x, L, a, b){
+  y = exp(log(L) - exp(b+a*log(x)))
+  return(y)
+}
+
+#'  calculate_analytical_model
+#'  Function to calculate the analytical model from different options
+#'  @param results_dataframe Dataframe containing the data.
+#'  @param y_parameter Parameter of the Y axis.
+#'  @param x_parameter Parameter of the X axis.
+#'  @param model Name of the model used.
+#'  
+calculate_analytical_model = function(results_dataframe, y_parameter, x_parameter, model){
+  if(model == "Logarithmic"){
+    model_output = get_logarithmic_tendency(results_dataframe=results_dataframe, y_parameter=y_parameter, x_parameter=x_parameter)
+    model_result = (log(sort(unique(results_dataframe[[x_parameter]])))*model_output$a + model_output$b)
+  } else if(model == "Stretched exponential (by optimization)"){
+    model_output = calculate_stretched_exponential_model_by_optimization(results_dataframe=results_dataframe, y_parameter=y_parameter, x_parameter=x_parameter, L_guess=c(2))
+    model_result = calculate_predictions_using_stretched_exponential_model_optimized(x=sort(unique(results_dataframe[[x_parameter]])), L=model_output$L, a=model_output$a, b=model_output$b)
+  } else if(model == "Stretched exponential (by linear fit)"){
+    model_output = calculate_stretched_exponential_model_by_linear_fit(results_dataframe=results_dataframe, y_parameter=y_parameter, x_parameter=x_parameter)
+    model_result = calculate_predictions_using_stretched_exponential_model_from_linear_fit(x=sort(unique(results_dataframe[[x_parameter]])), a=model_output$a, b=model_output$b)
+  }
+  return(list(model_output=model_output, model_result=model_result))
+}
+
+#'  calculate_prediction_from_analytical_model
+#'  Function to calculate predictions using a specific analytical model
+#'  @param model Name of the model used.
+#'  @param x_list List of values in the x axis (e.g. size)
+#'  @param a Parameter a.
+#'  @param b Parameter b.
+#'  @param L Parameter L.
+#'  
+calculate_prediction_from_analytical_model = function(model, x_list, a, b, L){
+  if(model == "Logarithmic"){
+    prediction_result = (log(x_list)*a + b)
+  } else if(model == "Stretched exponential (by optimization)"){
+    prediction_result = calculate_predictions_using_stretched_exponential_model_optimized(x=x_list, L=L, a=a, b=b)
+  } else if(model == "Stretched exponential (by linear fit)"){
+    prediction_result = calculate_predictions_using_stretched_exponential_model_from_linear_fit(x=x_list, a=a, b=b)
+  }
+  return(prediction_result)
+}
+```
+
+```{r}
+cols = c("dataset", "a", "b", "L")
+analytical_model_parameters_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+for (dataset in unique(convergence_results_df$dataset)){
+  # Select results
+  results_selected_df = topology_results_df %>% filter((method == !!method) & (dataset == !!dataset) & (type_correlation == !!type_correlation) & (threshold == !!threshold)) %>% select(size, rep, num_edges)
+  # Calculate the analytical model
+  output_variable = calculate_analytical_model(results_dataframe=results_selected_df, y_parameter="num_edges", x_parameter="size", model="Stretched exponential (by optimization)")
+  # Calculate prediction
+  prediction_result = calculate_prediction_from_analytical_model(model="Stretched exponential (by optimization)", x_list=seq(10, 50000, 10), a=output_variable$model_output$a, b=output_variable$model_output$b, L=output_variable$model_output$L)
+  # Un-normalize y axis of analytical curve (if necessary), because the analytical curve of Power law is normalized by default
+  max_value_in_dataset = max(results_selected_df)
+  output_variable$model_result = output_variable$model_result * max_value_in_dataset
+  prediction_result = prediction_result * max_value_in_dataset
+  # Save parameters of the analytical model
+  #print(c(dataset, output_variable$model_output$a, output_variable$model_output$b, output_variable$model_output$L))
+  analytical_model_parameters_df <- rbind(analytical_model_parameters_df, data.frame(dataset=dataset, a=output_variable$model_output$a, b=output_variable$model_output$b, L=output_variable$model_output$L))
+}
+
+print(analytical_model_parameters_df)
+```
+
+Explore the relationship between stretched exponential parameters and correlation critical values:
+
+```{r}
+convergence_results_long_df = convergence_results_df %>% select(-type_correlation) %>% pivot_longer(c(-dataset, -correlation), names_to = "correlation_parameter_name", values_to = "correlation_parameter_value") %>% unite(correlation_parameter_name, correlation_parameter_name:correlation)
+analytical_model_parameters_long_df = analytical_model_parameters_df %>% pivot_longer(-dataset, names_to="model_parameter_name", values_to="model_parameter_value")
+cols = c("correlation_parameter", "model_parameter", "cor", "pval")
+results_correlation_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+for (correlation_parameter in unique(convergence_results_long_df$correlation_parameter_name)){
+  for (model_parameter in unique(analytical_model_parameters_long_df$model_parameter_name)){
+    values_convergence = (convergence_results_long_df %>% filter(correlation_parameter_name == correlation_parameter))$correlation_parameter_value
+    values_analytical = (analytical_model_parameters_long_df %>% filter(model_parameter_name == model_parameter))$model_parameter_value
+    if (sum(!is.na(values_convergence)) > 2){
+      cor_result = cor.test(values_convergence, values_analytical, method = "pearson")
+      cor_value = as.numeric(cor_result$estimate)
+      cor_pvalue = cor_result$p.value
+    } else {
+      cor_value = NA
+      cor_pvalue = NA
+    }
+    results_correlation_df <- rbind(results_correlation_df, data.frame(correlation_parameter=correlation_parameter, model_parameter=model_parameter, cor=cor_value, pval=cor_pvalue))
+  }
+}
+```
+
+```{r}
+results_correlation_df %>% filter((correlation_parameter %in% c("sample_size_difference_0.4", "sample_size_difference_0.6", "sample_size_difference_0.8"))) %>% ggplot(aes(x=cor, fill=model_parameter, color=model_parameter)) +
+  geom_histogram(position="identity", binwidth = 0.1, alpha=0.2)
+```
+```{r}
+results_correlation_df %>% filter((correlation_parameter %in% c("sample_size_statistical_corrected_0.2", "sample_size_statistical_corrected_0.4", "sample_size_statistical_corrected_0.6", "sample_size_statistical_corrected_0.8"))) %>% ggplot(aes(x=cor, fill=model_parameter, color=model_parameter)) +
+  geom_histogram(position="identity", binwidth = 0.1, alpha=0.2)
+```
+
+```{r}
+analytical_model_parameters_df %<>% separate(dataset, c("dataset_name", "type_dataset"), sep=":", remove=FALSE) 
+analytical_model_parameters_df %>% ggplot(aes(x=a, y=L, col=dataset_name)) + 
+  geom_point() +
+  theme_linedraw() +
+  theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.title=element_text(size=15, face="bold")) +
+  guides(col=guide_legend(title="Type of dataset")) +
+  geom_text_repel(
+    data = subset(analytical_model_parameters_df, dataset %in% c("tcga:tcga", "tcga:tcga-lusc", "tcga:tcga-coad", "tcga:tcga-brca", "gtex:whole.blood", "gtex:artery.tibial", "scipher:complete.dataset")),
+    aes(label = dataset),
+    size = 5,
+    box.padding = unit(0.35, "lines"),
+    point.padding = unit(0.3, "lines")
+  )
+```
+
+We observe a clear trend between parameters a and L:the less negative a is, the higher L is. We see that there are some outliers (TCGA, TCGA-BRCA) that do not follow this trend, needing a higher number of samples to converge to a given % of edges than the rest of the datasets. This reflcts that the outliers of this plot are datasets with less quality, or more heterogeneous.
+
+
+```{r}
+analytical_model_convergence_parameters_df = analytical_model_parameters_df %>% inner_join(convergence_results_df, by="dataset")
+analytical_model_convergence_parameters_df %>% filter(type_correlation == "strong") %>% ggplot(aes(x=a, y=sample_size_difference, col=dataset_name)) + 
+  geom_point() +
+  theme_linedraw() +
+  theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.title=element_text(size=15, face="bold")) +
+  guides(col=guide_legend(title="Type of dataset")) +
+  geom_text_repel(
+    data = subset((analytical_model_convergence_parameters_df %>% filter(type_correlation == "strong")), dataset %in% c("tcga:tcga", "tcga:tcga-lusc", "tcga:tcga-coad", "tcga:tcga-brca", "gtex:whole.blood", "gtex:artery.tibial", "scipher:complete.dataset")),
+    aes(label = dataset),
+    size = 5,
+    box.padding = unit(0.35, "lines"),
+    point.padding = unit(0.3, "lines")
+  )
+```
+
+## Relationship between stretched exponential model parameters and dataset parameters
+
+For GTEx:
+
+```{r}
+
+```
+

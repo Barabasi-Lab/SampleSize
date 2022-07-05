@@ -35,7 +35,7 @@ ui <- fluidPage(
                             shinyWidgets::pickerInput(
                               inputId = "topology_tcga_project",
                               label = "TCGA project:",
-                              choices = c("tcga", "tcga-brca", "tcga-ucec", "tcga-kirc", "tcga-lgg", "tcga-luad"),
+                              choices = c("tcga", "tcga-brca", "tcga-ucec", "tcga-kirc", "tcga-lgg", "tcga-luad", "tcga-thca", "tcga-lusc", "tcga-hnsc", "tcga-prad", "tcga-skcm", "tcga-coad"),
                               options = list(
                                 `actions-box` = TRUE,
                                 size = 10,
@@ -50,7 +50,7 @@ ui <- fluidPage(
                             shinyWidgets::pickerInput(
                               inputId = "topology_gtex_tissues",
                               label = "GTEx tissue:",
-                              choices = c("spleen", "whole blood", "muscle - skeletal", "skin - sun exposed (lower leg)", "thyroid"),
+                              choices = c("whole blood", "muscle - skeletal", "skin - sun exposed (lower leg)", "thyroid", "artery - tibial", "adipose - subcutaneous", "nerve - tibial", "skin - not sun exposed (suprapubic)", "lung"),
                               options = list(
                                 `actions-box` = TRUE,
                                 size = 10,
@@ -153,13 +153,13 @@ ui <- fluidPage(
                             shinyWidgets::pickerInput(
                               inputId = "topology_type_analytical_model",
                               label = "Type of analytical model:",
-                              choices = list("Power law (minimizing)" = "Power law (minimizing)", "Power law (linear fit)" = "Power law (linear fit)", "Logarithmic" = "Logarithmic"),
+                              choices = list("Stretched exponential (by optimization)" = "Stretched exponential (by optimization)", "Stretched exponential (by linear fit)" = "Stretched exponential (by linear fit)", "Logarithmic" = "Logarithmic"),
                               options = list(
                                 `actions-box` = TRUE,
                                 size = 10,
                                 `selected-text-format` = "count > 1"
                               ),
-                              selected = 'Power law (minimizing)',
+                              selected = 'Stretched exponential (by optimization)',
                               multiple = TRUE
                             ),
                             selectInput("topology_type_analytical_model_output", label = "Type of output:", 
