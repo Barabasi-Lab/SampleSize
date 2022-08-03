@@ -735,9 +735,9 @@ UPDATE GITHUB
 cd /home/j.aguirreplans/Projects/Scipher/SampleSize
 
 # To add new changes:
-git add .
+git add --all .
 git commit -m "Calculate networks for Scipher"
-git push origin
+git push origin master
 
 # To pull changes from the repository:
 git pull origin
