@@ -367,42 +367,29 @@ set.seed(1510)
 <div id="define-variables" class="section level2">
 <h2>Define variables</h2>
 <pre class="r"><code># Define working directories
-gdc_dir = '/home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA'
+gdc_dir = '/work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA'
 output_dir = paste(gdc_dir, 'out', sep='/')
-tcga_processed_file = paste(output_dir, 'TCGA_processed.csv', sep='/')
-metadata_file = paste(output_dir, 'metadata.txt', sep='/')</code></pre>
+tcga_processed_file = paste(output_dir, 'TCGA_tpm_genes_samples_processed.csv', sep='/')
+metadata_file = paste(gdc_dir, 'raw/metadata/metadata.txt', sep='/')</code></pre>
 </div>
 <div id="read-files" class="section level2">
 <h2>Read files</h2>
 <pre class="r"><code>RNAseq = fread(tcga_processed_file)</code></pre>
-<p>The TCGA dataframe contains 10198 columns (case IDs) and 39259 rows (genes).</p>
+<p>The TCGA dataframe contains 11036 columns (case IDs) and 40019 rows (genes).</p>
 <pre class="r"><code>head(RNAseq[1:10,1:5])</code></pre>
-<pre><code>##        Gene f9306cb1-c4e4-42eb-8aa9-ee906c408e10
-## 1:   TSPAN6                                 1189
-## 2:     TNMD                                    1
-## 3:     DPM1                                  679
-## 4:    SCYL3                                  154
-## 5: C1ORF112                                   50
-## 6:      FGR                                  956
-##    3db2fdbb-ef0e-4a5d-8fb2-4e6756d29b17 8af42b33-6ab7-4ea0-860d-f3af9177ee2d
-## 1:                                  827                                 1785
-## 2:                                    1                                    2
-## 3:                                  283                                  953
-## 4:                                  224                                  316
-## 5:                                   10                                   97
-## 6:                                  101                                 3394
-##    7ef7c87e-6f11-4b9b-bb74-3c86036c8d20
-## 1:                                 4194
-## 2:                                    1
-## 3:                                 1293
-## 4:                                  682
-## 5:                                  154
-## 6:                                  576</code></pre>
+<pre><code>##        Gene   A2I6-1   A6TK-1   A78L-1  AA84-1
+## 1:   TSPAN6  44.2779  29.4381  46.5308 12.6348
+## 2:     TNMD   0.0548   0.0000   1.3162  0.0000
+## 3:     DPM1 121.0119 163.0035 129.9220 89.7465
+## 4:    SCYL3   3.8444   2.8120   2.9166  4.6962
+## 5: C1ORF112   3.6123   3.1875   8.5027 13.1129
+## 6:      FGR   2.8234  14.7796   2.8722  1.6578</code></pre>
+<pre class="r"><code>metadata_df = fread(metadata_file)</code></pre>
 </div>
 <div id="filter-genes-without-classification" class="section level2">
 <h2>Filter genes without classification</h2>
 <p>We keep genes that have a classification in HGNC:</p>
-<pre class="r"><code>gene_annotations_dir = '/home/j.aguirreplans/data/gene_annotations/data/out'
+<pre class="r"><code>gene_annotations_dir = '/work/ccnr/j.aguirreplans/data/gene_annotations/data/out'
 gene_category_file = paste(gene_annotations_dir, 'hgnc_category_set_2022-01-01.txt', sep='/')
 gene_category_df = fread(gene_category_file)
 gene_category_df$HGNC_Symbol = toupper(gene_category_df$HGNC_Symbol)
@@ -416,143 +403,156 @@ head(gene_category_df)</code></pre>
 ## 6:       A2ML1 protein-coding gene gene with protein product</code></pre>
 <p>We use this dataframe to map gene category, and we only keep genes that are in this dataframe:</p>
 <pre class="r"><code>dim(RNAseq)</code></pre>
-<pre><code>## [1] 39259 10199</code></pre>
+<pre><code>## [1] 40019 11037</code></pre>
 <pre class="r"><code>genes_with_category = RNAseq$Gene[RNAseq$Gene %in% gene_category_df$HGNC_Symbol]
 genes_dataset_df = gene_category_df %&gt;% filter(HGNC_Symbol %in% genes_with_category)
 RNAseq %&lt;&gt;% filter(Gene %in% genes_with_category)
 dim(RNAseq)</code></pre>
-<pre><code>## [1] 39187 10199</code></pre>
-<p>The TCGA dataframe contains 10198 case IDs and 39187 genes with category.</p>
+<pre><code>## [1] 39944 11037</code></pre>
+<p>The TCGA dataframe contains 11036 case IDs and 39944 genes with category.</p>
 <p>It contains the following number of genes for each category:</p>
 <pre class="r"><code>table(genes_dataset_df$HGNC_category)</code></pre>
 <pre><code>## 
 ##      non-coding RNA               other protein-coding gene          pseudogene 
-##                7126                 648               19041               12372</code></pre>
+##                7638                 699               19148               12459</code></pre>
 <pre class="r"><code>round(prop.table(table(genes_dataset_df$HGNC_category))*100,2)</code></pre>
 <pre><code>## 
 ##      non-coding RNA               other protein-coding gene          pseudogene 
-##               18.18                1.65               48.59               31.57</code></pre>
+##               19.12                1.75               47.94               31.19</code></pre>
 </div>
-<div id="filtering-the-genes-with-low-counts" class="section level2">
-<h2>Filtering the genes with low counts</h2>
+<div id="filter-genes-with-empty-counts-in-half-of-the-samples-or-more" class="section level2">
+<h2>Filter genes with empty counts in half of the samples or more</h2>
+<p>We only keep the genes that have empty counts in less than half of the samples:</p>
+<pre class="r"><code>for(sample_type_selected in unique(metadata_df$sample_type_simplified)){
+  # We separate samples depending on sample type
+  sample_type_dir = paste(output_dir, sample_type_selected, sep='/')
+  filter_zeros_dir = paste(sample_type_dir, 'filter_genes_with_zeros', sep='/')
+  dir.create(sample_type_dir, showWarnings = FALSE)
+  dir.create(filter_zeros_dir, showWarnings = FALSE)
+  samples_selected_by_type = unique((metadata_df %&gt;% filter(sample_type_simplified == sample_type_selected))$participant_sample)
+  RNAseq_by_type = RNAseq %&gt;% select(c(&quot;Gene&quot;, all_of(samples_selected_by_type)))
+  # We calculate the number of times that a gene has 0 counts
+  info_df = data.frame(Gene=RNAseq_by_type$Gene, sum=rowSums(RNAseq_by_type[,-1]))
+  info_df$sum_zero_counts = as.numeric(apply(RNAseq_by_type[,-1], 1, function(i) sum(i == 0) )) # Number of times that the counts are equal to 0
+  # We keep genes that have empty counts in less than half of the samples
+  info_filt_df = info_df[(info_df$sum_zero_counts &lt; dim(RNAseq_by_type[, -1])[2]/2) ,]
+  print(paste(&quot;Sample type:&quot;, sample_type_selected, &quot;Number of genes with empty counts in less than half of samples&quot;, length(info_filt_df$Gene)))
+  # We filter the gene expression
+  RNAseq_filt_zeros = RNAseq_by_type %&gt;% filter(Gene %in% info_filt_df$Gene)
+  # We write final file
+  tcga_final_file = paste(filter_zeros_dir, 'TCGA_tpm_processed_filter_genes_with_zeros.csv', sep='/')
+  fwrite(RNAseq_filt_zeros, tcga_final_file, sep='\t')
+  print(paste(&quot;Sample type:&quot;, sample_type_selected, &quot;Number of columns (samples):&quot;, as.integer(ncol(RNAseq_filt_zeros)-1), &quot;Number of rows (genes):&quot;, nrow(RNAseq_filt_zeros)))
+  # Write the information about the selected genes of the dataset in a separate file
+  genes_dataset_df$enough_counts = ifelse(genes_dataset_df$HGNC_Symbol %in% info_filt_df$Gene, TRUE, FALSE)
+  genes_dataset_file = paste(filter_zeros_dir, 'rnaseq_gene_info_filter_genes_with_zeros.csv', sep='/')
+  fwrite(genes_dataset_df, genes_dataset_file)
+  # Check the percentage of genes in each category after filtering by counts
+  genes_dataset_filtered_df = genes_dataset_df %&gt;% filter(HGNC_Symbol %in% info_filt_df$Gene) %&gt;% unique
+  table(genes_dataset_filtered_df$HGNC_category)
+  round(prop.table(table(genes_dataset_filtered_df$HGNC_category))*100,2)
+}</code></pre>
+<pre><code>## [1] &quot;Sample type: tumor Number of genes with empty counts in less than half of samples 24225&quot;
+## [1] &quot;Sample type: tumor Number of columns (samples): 10304 Number of rows (genes): 24225&quot;
+## [1] &quot;Sample type: normal Number of genes with empty counts in less than half of samples 24062&quot;
+## [1] &quot;Sample type: normal Number of columns (samples): 732 Number of rows (genes): 24062&quot;</code></pre>
+<pre class="r"><code>rm(RNAseq_by_type)
+rm(RNAseq_filt_zeros)</code></pre>
+</div>
+<div id="filter-genes-with-low-counts" class="section level2">
+<h2>Filter genes with low counts</h2>
 <p>We filter the genes that have low expression in all samples, keeping the ones that meet these rules:</p>
 <ul>
 <li>Sum of the expression of all samples above 0.</li>
-<li>Mean of the expression of all samples above 5.</li>
-<li>Median of the expression of all samples above 5.</li>
-<li>Standard deviation of all samples above 1.</li>
-<li>More than half of the genes with counts above 0.</li>
+<li>Mean of the expression of all samples above 1.</li>
+<li>Median of the expression of all samples above 1.</li>
+<li>Standard deviation of all samples above 0.</li>
+<li>Less than half of the samples with empty counts (0s).</li>
 </ul>
-<pre class="r"><code># Calculate sum, mean, median and standard deviation
-info_df = data.frame(Gene=RNAseq$Gene, sum=rowSums(RNAseq[,-1]))
-info_df$sd = apply(RNAseq[,-1], 1, sd)
-info_df$mean = rowMeans(RNAseq[,-1])
-info_df$median = apply(RNAseq[,-1], 1, median)
-info_df$zero_sum_counts = as.numeric(apply(RNAseq[,-1], 1, function(i) sum(i == 0) )) # Number of times that the counts are equal to 0
-
-# We keep the genes following all criteria
-info_filt_df = info_df[(info_df$sum &gt; 0) &amp; (info_df$mean &gt; 5) &amp; (info_df$median &gt; 5) &amp; (info_df$sd &gt; 1) &amp; (info_df$zero_sum_counts &lt; dim(RNAseq[, -1])[2]/2) ,]</code></pre>
-<p>There are 18884 genes accomplishing all the rules.</p>
-<p>We count the following number of genes accomplishing each rule:</p>
-<ul>
-<li>Sum of the expression of all samples above 0: 38687.</li>
-<li>Mean of the expression of all samples above 5: 22927.</li>
-<li>Median of the expression of all samples above 5: 18884.</li>
-<li>Standard deviation of all samples above 1: 33280.</li>
-<li>More than half of the genes with counts above 0: 24579.</li>
-</ul>
-<p>We count the following number of filtered genes for each category:</p>
-<pre class="r"><code># Write the information about the selected genes of the dataset in a separate file
-genes_dataset_file = paste(output_dir, 'tcga_rnaseq_gene_info.csv', sep='/')
-genes_dataset_df$enough_counts = ifelse(genes_dataset_df$HGNC_Symbol %in% info_filt_df$Gene, TRUE, FALSE)
-fwrite(genes_dataset_df, genes_dataset_file)
-# Check the percentage of genes in each category after filtering by counts
-genes_dataset_filtered_df = genes_dataset_df %&gt;% filter(HGNC_Symbol %in% info_filt_df$Gene) %&gt;% unique
-table(genes_dataset_filtered_df$HGNC_category)</code></pre>
-<pre><code>## 
-##      non-coding RNA               other protein-coding gene          pseudogene 
-##                1779                 233               15642                1230</code></pre>
-<pre class="r"><code>round(prop.table(table(genes_dataset_filtered_df$HGNC_category))*100,2)</code></pre>
-<pre><code>## 
-##      non-coding RNA               other protein-coding gene          pseudogene 
-##                9.42                1.23               82.83                6.51</code></pre>
-<pre class="r"><code># We filter the gene expression
-RNAseq_filt = RNAseq %&gt;% filter(Gene %in% info_filt_df$Gene)
-
-# We write final file
-tcga_final_file = paste(output_dir, 'TCGA_processed_for_coexpression.csv', sep='/')
-fwrite(RNAseq_filt, tcga_final_file, sep='\t')</code></pre>
-<p>The filtered TCGA dataframe contains 10198 columns (case IDs) and 18884 rows (genes).</p>
-<pre class="r"><code>head(RNAseq_filt[1:10,1:5])</code></pre>
-<pre><code>##        Gene f9306cb1-c4e4-42eb-8aa9-ee906c408e10
-## 1:   TSPAN6                                 1189
-## 2:     DPM1                                  679
-## 3:    SCYL3                                  154
-## 4: C1ORF112                                   50
-## 5:      FGR                                  956
-## 6:      CFH                                  576
-##    3db2fdbb-ef0e-4a5d-8fb2-4e6756d29b17 8af42b33-6ab7-4ea0-860d-f3af9177ee2d
-## 1:                                  827                                 1785
-## 2:                                  283                                  953
-## 3:                                  224                                  316
-## 4:                                   10                                   97
-## 5:                                  101                                 3394
-## 6:                                  244                                 1492
-##    7ef7c87e-6f11-4b9b-bb74-3c86036c8d20
-## 1:                                 4194
-## 2:                                 1293
-## 3:                                  682
-## 4:                                  154
-## 5:                                  576
-## 6:                                 5172</code></pre>
+<pre class="r"><code>cols = c(&quot;project&quot;, &quot;sample_type_simplified&quot;, &quot;n_genes_raw&quot;, &quot;n_genes_processed&quot;, &quot;sum&quot;,  &quot;mean&quot;, &quot;median&quot;, &quot;sd&quot;, &quot;sum_zero_counts&quot;)
+statistics_low_counts_df &lt;- setNames(data.frame(matrix(ncol = length(cols), nrow = 0)), cols)
+for(sample_type_selected in unique(metadata_df$sample_type_simplified)){
+  # We separate samples depending on sample type
+  sample_type_dir = paste(output_dir, sample_type_selected, sep='/')
+  filter_low_counts_dir = paste(sample_type_dir, 'filter_genes_low_counts', sep='/')
+  dir.create(sample_type_dir, showWarnings = FALSE)
+  dir.create(filter_low_counts_dir, showWarnings = FALSE)
+  samples_selected_by_type = unique((metadata_df %&gt;% filter(sample_type_simplified == sample_type_selected))$participant_sample)
+  RNAseq_by_type = RNAseq %&gt;% select(c(&quot;Gene&quot;, all_of(samples_selected_by_type)))
+  # We calculate the number of times that a gene has 0 counts
+  info_df = data.frame(Gene=RNAseq_by_type$Gene, sum=rowSums(RNAseq_by_type[,-1]))
+  info_df$sd = apply(RNAseq_by_type[,-1], 1, sd)
+  info_df$mean = rowMeans(RNAseq_by_type[,-1])
+  info_df$median = apply(RNAseq_by_type[,-1], 1, median)
+  info_df$sum_zero_counts = as.numeric(apply(RNAseq_by_type[,-1], 1, function(i) sum(i == 0) )) # Number of times that the counts are equal to 0
+  # We keep the genes following all criteria
+info_filt_df = info_df[(info_df$sum &gt; 0) &amp; (info_df$mean &gt; 1) &amp; (info_df$median &gt; 1) &amp; (info_df$sd &gt; 0) &amp; (info_df$sum_zero_counts &lt; dim(RNAseq_by_type[, -1])[2]/2) ,]
+  # We filter the gene expression
+  RNAseq_filt_low_counts = RNAseq_by_type %&gt;% filter(Gene %in% info_filt_df$Gene)
+  # We write final file
+  tcga_final_file = paste(filter_low_counts_dir, 'tcga_tpm_processed_filter_genes_low_counts.csv', sep='/')
+  fwrite(RNAseq_filt_low_counts, tcga_final_file, sep='\t')
+  print(paste(&quot;Sample type:&quot;, sample_type_selected, &quot;Number of columns (samples):&quot;, as.integer(ncol(RNAseq_filt_low_counts)-1), &quot;Number of rows (genes):&quot;, nrow(RNAseq_filt_low_counts)))
+  # Write the information about the selected genes of the dataset in a separate file
+  genes_dataset_df$enough_counts = ifelse(genes_dataset_df$HGNC_Symbol %in% info_filt_df$Gene, TRUE, FALSE)
+  genes_dataset_file = paste(filter_low_counts_dir, 'rnaseq_gene_info_filter_genes_low_counts.csv', sep='/')
+  fwrite(genes_dataset_df, genes_dataset_file)
+  # Check the percentage of genes in each category after filtering by counts
+  genes_dataset_filtered_df = genes_dataset_df %&gt;% filter(HGNC_Symbol %in% info_filt_df$Gene) %&gt;% unique
+  table(genes_dataset_filtered_df$HGNC_category)
+  round(prop.table(table(genes_dataset_filtered_df$HGNC_category))*100,2)
+  # Count statistics about the filter
+  statistics_low_counts_df = rbind(statistics_low_counts_df, data.frame(project=&quot;TCGA&quot;, sample_type_simplified=sample_type_selected, n_genes_raw=length(RNAseq_by_type$Gene), n_genes_processed=length(RNAseq_filt_low_counts$Gene), sum=length(info_df[(info_df$sum &gt; 0),]$Gene), mean=length(info_df[(info_df$mean &gt; 1),]$Gene), median=length(info_df[(info_df$median &gt; 1),]$Gene), sd=length(info_df[(info_df$sd &gt; 0),]$Gene), sum_zero_counts=length(info_df[(info_df$sum_zero_counts &lt; dim(RNAseq_by_type[, -1])[2]/2),]$Gene)))
+}</code></pre>
+<pre><code>## [1] &quot;Sample type: tumor Number of columns (samples): 10304 Number of rows (genes): 14659&quot;
+## [1] &quot;Sample type: normal Number of columns (samples): 732 Number of rows (genes): 14741&quot;</code></pre>
+<pre class="r"><code>rm(RNAseq_by_type)
+rm(RNAseq_filt_low_counts)</code></pre>
+<pre class="r"><code>statistics_low_counts_df</code></pre>
+<pre><code>##   project sample_type_simplified n_genes_raw n_genes_processed   sum  mean
+## 1    TCGA                  tumor       39944             14659 38931 18911
+## 2    TCGA                 normal       39944             14741 38598 17759
+##   median    sd sum_zero_counts
+## 1  14659 38931           24225
+## 2  14741 38598           24062</code></pre>
 </div>
 <div id="filtering-the-genes-with-low-counts-by-type-of-cancer" class="section level2">
 <h2>Filtering the genes with low counts by type of cancer</h2>
 <p>We repeat the same procedure but specific for the different types of cancer:</p>
-<pre class="r"><code>metadata_df = fread(metadata_file) %&gt;% select(case_id, project_id) %&gt;% unique()
-table(metadata_df$project_id)</code></pre>
-<pre><code>## 
-##  TCGA-ACC TCGA-BLCA TCGA-BRCA TCGA-CESC TCGA-CHOL TCGA-COAD TCGA-DLBC TCGA-ESCA 
-##        79       408      1091       304        36       454        48       164 
-##  TCGA-GBM TCGA-HNSC TCGA-KICH TCGA-KIRC TCGA-KIRP TCGA-LAML  TCGA-LGG TCGA-LIHC 
-##       160       501        66       530       289       151       510       371 
-## TCGA-LUAD TCGA-LUSC TCGA-MESO   TCGA-OV TCGA-PAAD TCGA-PCPG TCGA-PRAD TCGA-READ 
-##       515       501        86       376       177       179       495       166 
-## TCGA-SARC TCGA-SKCM TCGA-STAD TCGA-TGCT TCGA-THCA TCGA-THYM TCGA-UCEC  TCGA-UCS 
-##       259       468       380       134       502       119       543        56 
-##  TCGA-UVM 
-##        80</code></pre>
-<pre class="r"><code>rnaseq_filt_dir = paste(output_dir, 'rnaseq_filtered_files_by_project', sep='/')
-genes_filt_dir = paste(output_dir, 'genes_filtered_files_by_project', sep='/')
-dir.create(rnaseq_filt_dir, showWarnings = FALSE)
-dir.create(genes_filt_dir, showWarnings = FALSE)
-cols = c(&quot;project&quot;, &quot;n_genes_raw&quot;, &quot;n_genes_processed&quot;, &quot;sum&quot;,  &quot;mean&quot;, &quot;median&quot;, &quot;sd&quot;, &quot;zero_sum_counts&quot;)
+<pre class="r"><code>cols = c(&quot;project&quot;, &quot;sample_type_simplified&quot;, &quot;n_genes_raw&quot;, &quot;n_genes_processed&quot;, &quot;sum&quot;,  &quot;mean&quot;, &quot;median&quot;, &quot;sd&quot;, &quot;sum_zero_counts&quot;)
 statistics_low_counts_df &lt;- setNames(data.frame(matrix(ncol = length(cols), nrow = 0)), cols)
 projects = unique(metadata_df$project_id)
-for (project_id in projects){
-  samples_project = metadata_df[metadata_df$project_id == .GlobalEnv$project_id,]$case_id
-  rnaseq_project_file = paste(rnaseq_filt_dir, paste(&quot;tcga_rnaseq_&quot;, project_id, &quot;.csv&quot;, sep=''), sep='/')
-  genes_project_file = paste(genes_filt_dir, paste(&quot;tcga_rnaseq_gene_info_&quot;, project_id, &quot;.csv&quot;, sep=''), sep='/')
-  # Consider only projects of more than 10 samples
-  if (length(samples_project) &gt; 10){
-    # Select expression from selected samples
-    RNAseq_project = RNAseq %&gt;% select(c(&quot;Gene&quot;, all_of(samples_project)))
-    # Calculate metrics of expression
-    info_df = data.frame(Gene=RNAseq_project$Gene, sum=rowSums(RNAseq_project[,-1]))
-    info_df$sd = apply(RNAseq_project[,-1], 1, sd)
-    info_df$mean = rowMeans(RNAseq_project[,-1])
-    info_df$median = apply(RNAseq_project[,-1], 1, median)
-    info_df$zero_sum_counts = as.numeric(apply(RNAseq_project[,-1], 1, function(i) sum(i == 0) )) # Number of times that the counts are equal to 0
-    # Filter low expressed genes
-    info_filt_df = info_df[(info_df$sum &gt; 0) &amp; (info_df$mean &gt; 5) &amp; (info_df$median &gt; 5) &amp; (info_df$sd &gt; 1) &amp; (info_df$zero_sum_counts &lt; dim(RNAseq_project[, -1])[2]/2) ,]
-    RNAseq_project_filt = RNAseq_project[RNAseq_project$Gene %in% info_filt_df$Gene,]
-    fwrite(RNAseq_project_filt, rnaseq_project_file)
-    # Count statistics about the filter
-    statistics_low_counts_df = rbind(statistics_low_counts_df, data.frame(project=project_id, n_genes_raw=length(RNAseq_project$Gene), n_genes_processed=length(RNAseq_project_filt$Gene), sum=length(info_df[(info_df$sum &gt; 0),]$Gene), mean=length(info_df[(info_df$mean &gt; 1),]$Gene), median=length(info_df[(info_df$median &gt; 1),]$Gene), sd=length(info_df[(info_df$sd &gt; 0),]$Gene), zero_sum_counts=length(info_df[(info_df$zero_sum_counts &lt; dim(RNAseq_project[, -1])[2]/2),]$Gene)))
-    # Write gene info file
-    genes_dataset_filt_project_df = data.frame(genes_dataset_df)
-    genes_dataset_filt_project_df$enough_counts = ifelse(genes_dataset_filt_project_df$HGNC_Symbol %in% info_filt_df$Gene, TRUE, FALSE)
-    fwrite(genes_dataset_filt_project_df, genes_project_file)
+for(sample_type_selected in unique(metadata_df$sample_type_simplified)){
+  sample_type_dir = paste(output_dir, sample_type_selected, sep='/')
+  filter_low_counts_dir = paste(sample_type_dir, 'filter_genes_low_counts', sep='/')
+  for (project_id_selected in projects){
+    rnaseq_filt_dir = paste(filter_low_counts_dir, 'rnaseq_filtered_files_by_project', sep='/')
+    genes_filt_dir = paste(filter_low_counts_dir, 'genes_filtered_files_by_project', sep='/')
+    dir.create(rnaseq_filt_dir, showWarnings = FALSE)
+    dir.create(genes_filt_dir, showWarnings = FALSE)
+    samples_project = unique((metadata_df %&gt;% filter((sample_type_simplified == sample_type_selected) &amp; (project_id == project_id_selected)))$participant_sample)
+    if(length(samples_project) &gt;= 10){
+      rnaseq_project_file = paste(rnaseq_filt_dir, paste(&quot;tcga_rnaseq_&quot;, project_id_selected, &quot;.csv&quot;, sep=''), sep='/')
+      genes_project_file = paste(genes_filt_dir, paste(&quot;rnaseq_gene_info_&quot;, project_id_selected, &quot;.csv&quot;, sep=''), sep='/')
+      # Select expression from selected samples
+      RNAseq_project = RNAseq %&gt;% select(c(&quot;Gene&quot;, all_of(samples_project)))
+      # Calculate metrics of expression
+      info_df = data.frame(Gene=RNAseq_project$Gene, sum=rowSums(RNAseq_project[,-1]))
+      info_df$sd = apply(RNAseq_project[,-1], 1, sd)
+      info_df$mean = rowMeans(RNAseq_project[,-1])
+      info_df$median = apply(RNAseq_project[,-1], 1, median)
+      info_df$sum_zero_counts = as.numeric(apply(RNAseq_project[,-1], 1, function(i) sum(i == 0) )) # Number of times that the counts are equal to 0
+      # Filter low expressed genes
+      info_filt_df = info_df[(info_df$sum &gt; 0) &amp; (info_df$mean &gt; 5) &amp; (info_df$median &gt; 5) &amp; (info_df$sd &gt; 1) &amp; (info_df$sum_zero_counts &lt; dim(RNAseq_project[, -1])[2]/2) ,]
+      RNAseq_project_filt = RNAseq_project[RNAseq_project$Gene %in% info_filt_df$Gene,]
+      fwrite(RNAseq_project_filt, rnaseq_project_file)
+      # Count statistics about the filter
+      statistics_low_counts_df = rbind(statistics_low_counts_df, data.frame(project=project_id_selected, n_genes_raw=length(RNAseq_project$Gene), n_genes_processed=length(RNAseq_project_filt$Gene), sum=length(info_df[(info_df$sum &gt; 0),]$Gene), mean=length(info_df[(info_df$mean &gt; 1),]$Gene), median=length(info_df[(info_df$median &gt; 1),]$Gene), sd=length(info_df[(info_df$sd &gt; 0),]$Gene), sum_zero_counts=length(info_df[(info_df$sum_zero_counts &lt; dim(RNAseq_project[, -1])[2]/2),]$Gene)))
+      # Write gene info file
+      genes_dataset_filt_project_df = data.frame(genes_dataset_df)
+      genes_dataset_filt_project_df$enough_counts = ifelse(genes_dataset_filt_project_df$HGNC_Symbol %in% info_filt_df$Gene, TRUE, FALSE)
+      fwrite(genes_dataset_filt_project_df, genes_project_file)
+    }
   }
 }
 statistics_low_counts_file = paste(output_dir, &quot;tcga_rnaseq_project_low_counts_statistics.csv&quot;, sep='/')
@@ -560,24 +560,24 @@ fwrite(statistics_low_counts_df, statistics_low_counts_file)</code></pre>
 <p>These are the different number of genes after filtering by the criteria mentioned above:</p>
 <pre class="r"><code>head(statistics_low_counts_df)</code></pre>
 <pre><code>##     project n_genes_raw n_genes_processed   sum  mean median    sd
-## 1 TCGA-KIRP       39187             18797 38117 25061  21684 38117
-## 2 TCGA-COAD       39187             17969 37927 24375  20920 37927
-## 3 TCGA-READ       39187             18050 36574 23992  20997 36574
-## 4 TCGA-SARC       39187             18028 37927 25356  20870 37927
-## 5 TCGA-HNSC       39187             18545 38343 25182  21551 38343
-## 6 TCGA-KIRC       39187             19572 38478 26300  22751 38478
-##   zero_sum_counts
-## 1           24034
-## 2           23216
-## 3           23250
-## 4           23181
-## 5           24072
-## 6           25475</code></pre>
+## 1 TCGA-BLCA       39944             10209 38287 16738  14358 38287
+## 2 TCGA-HNSC       39944             10184 38523 15950  14072 38523
+## 3 TCGA-KIRP       39944             10202 38227 16345  14529 38227
+## 4 TCGA-CESC       39944             10553 37830 16739  14569 37830
+## 5  TCGA-UCS       39944             11184 36188 17957  15645 36188
+## 6 TCGA-READ       39944             10548 36571 16145  14679 36571
+##   sum_zero_counts
+## 1           23477
+## 2           23707
+## 3           23572
+## 4           23817
+## 5           24540
+## 6           22971</code></pre>
 </div>
 <div id="prepare-disease-genes-information-dataset" class="section level2">
 <h2>Prepare disease genes information dataset</h2>
 <p>Read the disease-gene associations dataset:</p>
-<pre class="r"><code>gene_associations_dir = '/home/j.aguirreplans/data/gene_associations/data/out'
+<pre class="r"><code>gene_associations_dir = '/work/ccnr/j.aguirreplans/data/gene_associations/data/out'
 disease_genes_file = paste(gene_associations_dir, 'GDA_Filtered_04042022.csv', sep='/')
 GDA = fread(disease_genes_file) %&gt;% unique()
 GDA$HGNC_Symbol = toupper(GDA$HGNC_Symbol)
@@ -661,13 +661,13 @@ head(GDA)</code></pre>
 ## 4:                                             digestive.system.diseases|neoplasms
 ## 5:                                        mental.disorders|nervous.system.diseases
 ## 6:                                             digestive.system.diseases|neoplasms</code></pre>
-<p>There are 65425 disease-gene associations (870 diseases, 14833 genes), and 60340 disease-gene associations in the TCGA dataset (870 diseases, 14231 genes).</p>
+<p>There are 65425 disease-gene associations (870 diseases, 14833 genes), and 64800 disease-gene associations in the TCGA dataset (870 diseases, 14504 genes).</p>
 </div>
 <div id="prepare-essential-genes-dataset" class="section level2">
 <h2>Prepare essential genes dataset</h2>
 <p>Prepare the essential genes of the TCGA dataset:</p>
 <pre class="r"><code># Read the essential genes file
-essential_genes_dir = '/home/j.aguirreplans/Databases/OGEE'
+essential_genes_dir = '/work/ccnr/j.aguirreplans/Databases/OGEE'
 essential_genes_original_file = paste(essential_genes_dir, 'OGEE_esential_genes_20190416.txt', sep='/')
 # Filter by human genes
 essential_genes_df = fread(essential_genes_original_file, header=TRUE) %&gt;% rename(&quot;taxID&quot;=&quot;#taxID&quot;)
@@ -687,7 +687,7 @@ head(essential_genes_df)</code></pre>
 ## 5: PMID: 18239125
 ## 6: PMID: 26472760</code></pre>
 <pre class="r"><code># Read the gene annotations dictionary
-gene_annotations_dir = '/home/j.aguirreplans/data/gene_annotations/data/out'
+gene_annotations_dir = '/work/ccnr/j.aguirreplans/data/gene_annotations/data/out'
 gene_dict_file = paste(gene_annotations_dir, 'multiple_hgnc_dict_set_2022-01-01.txt', sep='/')
 gene_dict_df = fread(gene_dict_file) %&gt;% unique()
 gene_dict_df = gene_dict_df[!((gene_dict_df$HGNC_Symbol==&quot;&quot;)|(gene_dict_df$alias==&quot;&quot;)),]

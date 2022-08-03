@@ -28,42 +28,34 @@ set.seed(1510)
 
 ```{r}
 # Define working directories
-gdc_dir = '/home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA'
+gdc_dir = '/work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA'
 output_dir = paste(gdc_dir, 'out', sep='/')
+sampling_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset'
+dir.create(sampling_dir, showWarnings = FALSE)
+sampling_dir = paste(sampling_dir, "sampling_with_repetition", sep="/")
+dir.create(sampling_dir, showWarnings = FALSE)
 
 # Read metadata file
-metadata_file = paste(output_dir, 'metadata.txt', sep='/')
+metadata_file = paste(gdc_dir, 'raw/metadata/metadata.txt', sep='/')
 metadata_df = fread(metadata_file)
-metadata_df %<>% select(case_id, project_id) %>% unique()
+metadata_df %<>% select(participant_sample, sample_type_simplified, project_id) %>% unique()
 ```
-
-There are `r length(unique(metadata_df$case_id))` case IDs.
 
 ```{r}
 head(metadata_df)
 ```
 
-```{r}
-# Join metadata with ICD10 names
-# Download ICD10 at: https://www.cms.gov/medicare/icd-10/2022-icd-10-cm 
-#icd10_file = '/home/j.aguirreplans/Databases/ICD10/icd10cm_codes_2022.txt'
-#icd10_df = read.delim(icd10_file, sep=" ", header=F)
-#icd10_df = as.data.frame(cbind(icd10_df[,1], trimws(apply( icd10_df[ , 2:length(icd10_df)] , 1 , paste , collapse = " " ))))
-#colnames(icd10_df) = c("ID", "Name")
-#metadata_df$icd_10_code = gsub(".","",metadata_df$icd_10_code, fixed=T)
-#metadata_df %,>% left_join(as.data.frame(icd10_df), by = c("icd_10_code" = "ID"))
-```
-
-
 ## Subsampling
 
-We define the list of projects that we want to analyze:
+We define the list of projects and types of samples that we want to analyze:
 
 ```{r}
 project_ids <- unique(metadata_df$project_id)
+sample_types <- unique(metadata_df$sample_type_simplified)
 ```
 
 There are `r length(unique(metadata_df$project_id))` projects.
+There are `r length(unique(metadata_df$sample_type_simplified))` sample types.
 
 We define the sampling function:
 
@@ -108,46 +100,53 @@ create_random_subsamples_with_replacement <- function(samples_list, size_list, r
 For all samples, we select groups of samples from different sizes:
 
 ```{r}
-sampling_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-03-28-Dataset/sampling_with_repetition'
-tcga_sampling_dir = paste(sampling_dir, "TCGA", sep='/')
-project_samples = unique(metadata_df$case_id)
-size_list <- seq(10, length(project_samples), 10)
-dir.create(tcga_sampling_dir, showWarnings = FALSE)
-# Create a file with a list of all samples
-all_samples_output_file = paste(tcga_sampling_dir, paste('tcga_TCGA_all_samples.txt', sep=''), sep='/')
-all_samples_df <- data.frame(samples=project_samples)
-all_samples_df %>% write.table(all_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
-# Create files with lists of subsamples
-output_file_name = 'tcga_TCGA'
-subsamples_df <- create_random_subsamples_with_replacement(samples_list=project_samples, size_list=size_list, rep=10, output_dir=tcga_sampling_dir, output_file_name=output_file_name)
-# Create a final file with a compilation of all selected samples for the same project
-compilation_samples_output_file = paste(sampling_dir, 'tcga_TCGA.txt', sep='/')
-subsamples_df %>% write.table(compilation_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
+for(sample_type_selected in sample_types){
+  # Create directory to store sample groups
+  sample_type_dir = paste(sampling_dir, sample_type_selected, sep='/')
+  dir.create(sample_type_dir, showWarnings = FALSE)
+  tcga_sampling_dir = paste(sample_type_dir, "TCGA", sep='/')
+  dir.create(tcga_sampling_dir, showWarnings = FALSE)
+  # Define available samples
+  project_samples = unique((metadata_df %>% filter(sample_type_simplified == sample_type_selected))$participant_sample)
+  # Define sizes
+  size_list <- seq(10, length(project_samples), 10)
+  # Create a file with a list of all samples
+  all_samples_output_file = paste(tcga_sampling_dir, paste('tcga_TCGA_all_samples.txt', sep=''), sep='/')
+  all_samples_df <- data.frame(samples=project_samples)
+  all_samples_df %>% write.table(all_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
+  # Create files with lists of subsamples
+  output_file_name = 'tcga_TCGA'
+  subsamples_df <- create_random_subsamples_with_replacement(samples_list=project_samples, size_list=size_list, rep=10, output_dir=tcga_sampling_dir, output_file_name=output_file_name)
+  # Create a final file with a compilation of all selected samples for the same project
+  compilation_samples_output_file = paste(sample_type_dir, 'tcga_TCGA.txt', sep='/')
+  subsamples_df %>% write.table(compilation_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
+}
 ```
 
 For each project, we select groups of samples from different sizes:
 
 ```{r}
-sampling_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-03-28-Dataset/sampling_with_repetition'
-
-for (project_id in project_ids){
-  # Select samples of the project
-  project_samples = metadata_df[metadata_df$project_id == .GlobalEnv$project_id,]$case_id
-  project_sampling_dir = paste(sampling_dir, project_id, sep='/')
-  all_samples_output_file = paste(project_sampling_dir, paste('tcga_', project_id, '_all_samples.txt', sep=''), sep='/')
-  output_file_name = paste(paste(paste('tcga', project_id, sep="_")))
-  compilation_samples_output_file = paste(sampling_dir, paste(paste('tcga', project_id, sep="_"), '.txt', sep=''), sep='/')
-  if (length(project_samples) > 10){
-    # Define list of different sample sizes
-    size_list <- seq(10, length(project_samples), 10)
-    dir.create(project_sampling_dir, showWarnings = FALSE)
-    # Create a file with a list of all samples
-    all_samples_df <- data.frame(samples=project_samples)
-    all_samples_df %>% write.table(all_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
-    # Create files with lists of subsamples
-    subsamples_df <- create_random_subsamples_with_replacement(samples_list=project_samples, size_list=size_list, rep=10, output_dir=project_sampling_dir, output_file_name=output_file_name)
-    # Create a final file with a compilation of all selected samples for the same project
-    subsamples_df %>% write.table(compilation_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
+for(sample_type_selected in sample_types){
+  sample_type_dir = paste(sampling_dir, sample_type_selected, sep='/')
+  for (project_id_selected in project_ids){
+    # Select samples of the project
+    project_samples = unique((metadata_df %>% filter((sample_type_simplified == sample_type_selected) & (project_id == project_id_selected)))$participant_sample)
+    project_sampling_dir = paste(sample_type_dir, project_id_selected, sep='/')
+    all_samples_output_file = paste(project_sampling_dir, paste('tcga_', project_id_selected, '_all_samples.txt', sep=''), sep='/')
+    output_file_name = paste(paste(paste('tcga', project_id_selected, sep="_")))
+    compilation_samples_output_file = paste(sample_type_dir, paste(paste('tcga', project_id_selected, sep="_"), '.txt', sep=''), sep='/')
+    if (length(project_samples) > 10){
+      # Define list of different sample sizes
+      size_list <- seq(10, length(project_samples), 10)
+      dir.create(project_sampling_dir, showWarnings = FALSE)
+      # Create a file with a list of all samples
+      all_samples_df <- data.frame(samples=project_samples)
+      all_samples_df %>% write.table(all_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
+      # Create files with lists of subsamples
+      subsamples_df <- create_random_subsamples_with_replacement(samples_list=project_samples, size_list=size_list, rep=10, output_dir=project_sampling_dir, output_file_name=output_file_name)
+      # Create a final file with a compilation of all selected samples for the same project
+      subsamples_df %>% write.table(compilation_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
+    }
   }
 }
 ```

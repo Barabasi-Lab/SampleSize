@@ -1,0 +1,294 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Description
+
+Obtain data and metadata from TCGA.
+Tutorial based on: 
+https://bioconductor.org/packages/devel/bioc/vignettes/GenomicDataCommons/inst/doc/overview.html 
+https://sciwiki.fredhutch.org/compdemos/GDC_Data_Download/
+
+Info about TCGA barcode:
+https://docs.gdc.cancer.gov/Encyclopedia/pages/TCGA_Barcode/ 
+
+```{r, message=FALSE}
+library(GenomicDataCommons)
+library(data.table)
+library(dplyr)
+library(ggplot2)
+require(magrittr)
+library(tidyr)
+set.seed(1510)
+`%ni%` <- Negate(`%in%`)
+```
+
+### Create a query
+
+Check connectivity and status:
+
+```{r}
+GenomicDataCommons::status()
+```
+
+Explore the available fields in the data:
+
+```{r}
+GenomicDataCommons::available_fields('projects') %>% length()
+GenomicDataCommons::available_fields('files') %>% length()
+GenomicDataCommons::available_fields('cases') %>% length()
+GenomicDataCommons::available_fields('annotations') %>% length()
+```
+
+```{r}
+grep('project', GenomicDataCommons::available_fields('files'),value=TRUE)
+```
+
+```{r}
+grep('demographic', GenomicDataCommons::available_fields('files'),value=TRUE)
+```
+
+```{r}
+grep('tumor', GenomicDataCommons::available_fields('files'),value=TRUE)
+```
+
+```{r}
+grep('disease', GenomicDataCommons::available_fields('files'),value=TRUE)
+```
+
+```{r}
+grep('treatments', GenomicDataCommons::available_fields('files'),value=TRUE)
+```
+
+To start a query at GDC we use the function `files()`, which creates a `pquery` object of class S3 (in our case, the object `res`). Using the functions `facet()` and `aggregations()` we can obtain information about the query:
+
+```{r}
+# Get file names and add information from fields of our interest
+res = GenomicDataCommons::files() %>%
+  #Default is to set facets from default_fields()
+  GenomicDataCommons::facet(c('type','data_type','data_format',
+          'cases.project.project_id', 'cases.project.program.name')) %>%
+  GenomicDataCommons::aggregations()
+
+str(res)
+res$cases.project.project_id$key %>% .[order(.)]
+res$cases.project.program.name$key %>% .[order(.)]
+```
+
+Here we start a query at GDC using the function `files()` and specifying the fields that we want information from. Then, we use the function `filter` to specify which type of gene expressio data we want to retrieve. The `pquery` object is stored in the variable `qfiles`:
+
+```{r}
+desired_fields <-c("cases.project.project_id", "cases.project.program.name", default_fields('files'), grep_fields('files', "associated_entities"), grep_fields('files', "demographic"), "analysis.analysis_type", "analysis.workflow_type", "analysis.workflow_version", "cases.samples.sample_id", "cases.samples.sample_type", "cases.disease_type", "cases.project.disease_type")
+length(desired_fields)
+
+# Non informative fields that I have checked:
+# "cases.diagnoses.classification_of_tumor", "cases.diagnoses.tumor_grade", "cases.diagnoses.tumor_stage", "cases.diagnoses.treatments.treatment_outcome", "cases.diagnoses.treatments.therapeutic_agents", "cases.diagnoses.treatments.initial_disease_status", "cases.diagnoses.treatments.treatment_type" (it returns "Radiation Therapy, NOS" or "Pharmaceutical Therapy, NOS"), "cases.diagnoses.primary_disease", "cases.follow_ups.disease_response"
+
+
+qfiles <- GenomicDataCommons::files(fields=desired_fields) %>%
+  GenomicDataCommons::filter(~ type == 'gene_expression' &
+           data_category == 'Transcriptome Profiling' &
+           data_type == 'Gene Expression Quantification' &
+           experimental_strategy == 'RNA-Seq' &
+           analysis.workflow_type == 'STAR - Counts' &
+           cases.project.program.name == "TCGA")
+```
+
+```{r}
+str(qfiles)
+```
+
+### Retrieve results
+
+With a query object available, the next step is to retrieve results from the GDC. The most basic type of results we can get is a simple `count()` of records available that satisfy the filter criteria:
+
+```{r}
+qfiles %>% GenomicDataCommons::count()
+```
+
+The function `results_all` permits to fetch all the available results given a query. Here, we use this function to retrieve the results of the query `qfiles` and store it in the variable `res.expn`:
+
+```{r}
+res.expn <- GenomicDataCommons::results_all(x=qfiles)
+```
+
+```{r}
+head(res.expn$file_name)
+```
+
+```{r}
+head(res.expn$file_id)
+```
+
+```{r}
+res.expn$associated_entities$`05e5accb-e761-4534-a81e-bf0354f7810c`
+```
+
+Next, we have to manipulate the results into a more conventional R data structure.
+
+First we check if there are multiple sample ids associated to the same file. If it is the case, it's better to filter them out.
+
+```{r}
+#there are 2 Sample IDs associated with a single file.
+#Filter these out, since they are suspect.
+idx <- sapply(res.expn$associated_entities , nrow) %>% grep(2, .)
+#check that these are the expected files/samples which more than 1 ID associated
+print(idx)
+```
+
+Next, we transform the results that are in lists of dataframes into dataframes and bind them together:
+
+```{r}
+names(res.expn)
+```
+
+```{r}
+# Get fields that are vectors (they are neither dataframes or lists)
+ID.map = bind_rows(res.expn[ !grepl("list|data.frame", sapply(res.expn, class)) ], .id = "id") %>% as.data.frame()
+
+# Convert list of dataframes from res.expn$cases into a unique table
+cases_df = bind_rows(res.expn$cases, .id = "id")
+cases_samples_info_df = bind_rows(cases_df$samples)
+cases_df = cbind(cases_df$id, cases_df$disease_type, cases_df$project$project_id, cases_df$project$disease_type, cases_samples_info_df$sample_id, cases_samples_info_df$sample_type, cases_df$demographic$gender, cases_df$demographic$race, cases_df$demographic$ethnicity, cases_df$demographic$vital_status, cases_df$demographic$age_at_index) %>% as.data.frame() %>% rename("id"="V1", "disease_type"="V2", "project_id"="V3", "project_disease_type"="V4", "sample_id"="V5", "sample_type"="V6", "gender"="V7", "race"="V8", "ethnicity"="V9", "vital_status"="V10", "age_at_index"="V11")
+
+# Convert list of dataframes from res.expn$associated_entities into a unique table
+associated_entities_df = bind_rows(res.expn$associated_entities, .id = "id")
+
+# Merge all info
+ID.map = ID.map %>% inner_join(cases_df, by="id") %>% inner_join(associated_entities_df, by="id")
+
+head(ID.map)
+dim(ID.map)
+```
+
+We can analyze the fields that we have.
+
+How many entity types do we have?
+
+```{r}
+unique(ID.map$entity_type)
+```
+
+How many samples do we have for each TCGA project?
+
+```{r}
+table(ID.map$project_id)
+```
+
+This is the same as before, but with the names of the tumor types for each TCGA project:
+
+```{r}
+table(ID.map$project_disease_type)
+```
+
+This is using different disease names:
+
+```{r}
+table(ID.map$disease_type)
+```
+
+How many samples do we have from different genders/races?
+
+```{r}
+table(ID.map$gender)
+```
+
+```{r}
+table(ID.map$race)
+```
+
+We can analyze the `entity_submitter_id` to extract information about the sample:
+
+```{r}
+barcode_df = ID.map %>% 
+  select(id, entity_submitter_id) %>% 
+  separate(entity_submitter_id, into=c("project", "tss", "participant", "sample_code", "portion_code", "plate", "center"), sep="-", remove=FALSE) %>% 
+  separate(sample_code, into=c("sample", "vial"), sep=2, remove=FALSE) %>%
+  separate(portion_code, into=c("portion", "analyte"), sep=2, remove=FALSE)
+head(barcode_df)
+```
+
+Here we have a web explaining all types of codes in the barcode:
+https://gdc.cancer.gov/resources-tcga-users/tcga-code-tables
+
+Here, specifically, sample type codes:
+https://gdc.cancer.gov/resources-tcga-users/tcga-code-tables/sample-type-codes
+
+* 01: Primary Solid Tumor
+* 02: Recurrent Solid Tumor
+* 03: Primary Blood Derived Cancer - Peripheral Blood
+* 05: Additional - New Primary
+* 06: Metastatic
+* 07: Additional Metastatic	
+* 11: Solid Tissue Normal	
+
+Let's check the different sample types that we have:
+
+```{r}
+table(barcode_df$sample)
+```
+
+```{r}
+table(ID.map$sample_type)
+```
+
+We join this information with the main table:
+
+```{r}
+ID.map = ID.map %>% inner_join(barcode_df, by=c("id", "entity_submitter_id"))
+```
+
+Let's check different types of samples in different cancer types:
+
+```{r}
+table(ID.map$project_id, ID.map$sample_type)
+```
+
+```{r}
+ID.map$sample_type_simplified = ifelse(as.integer(ID.map$sample) %in% seq(1,9,1), "tumor", "normal")
+table(ID.map$sample_type_simplified)
+```
+
+```{r}
+counts_sample_type_simplified_by_project = ID.map %>% select(id, project_id, sample_type_simplified) %>% unique() %>% group_by(project_id) %>% count(sample_type_simplified) %>% mutate(freq = n / sum(n)) %>% mutate(percent = freq*100) %>% ungroup()
+cbind(counts_sample_type_simplified_by_project %>% select(-freq, -percent) %>% pivot_wider(names_from = sample_type_simplified, values_from = n) %>% rename(n_tumor=tumor, n_normal=normal), counts_sample_type_simplified_by_project %>% select(-freq, -n) %>% pivot_wider(names_from = sample_type_simplified, values_from = percent) %>% rename(p_tumor=tumor, p_normal=normal) %>% select(-project_id))
+```
+
+And we save the final table:
+
+```{r}
+# Create directories of the database
+output_dir = paste('/work/ccnr/j.aguirreplans/Databases/TCGA/', Sys.Date(), '-Dataset', sep='')
+dir.create(output_dir, showWarnings = FALSE)
+dir.create(paste(output_dir, "TCGA", sep="/"), showWarnings = FALSE)
+dir.create(paste(output_dir, "TCGA/out", sep="/"), showWarnings = FALSE)
+dir.create(paste(output_dir, "TCGA/raw", sep="/"), showWarnings = FALSE)
+dir.create(paste(output_dir, "TCGA/raw/data", sep="/"), showWarnings = FALSE)
+dir.create(paste(output_dir, "TCGA/raw/metadata", sep="/"), showWarnings = FALSE)
+dir.create(paste(output_dir, "TCGA/raw/additional", sep="/"), showWarnings = FALSE)
+
+# Write ID map file
+manifest_name = paste('gdc_manifest.', Sys.Date(), sep="")
+manifest_idmap_file = paste(output_dir, "TCGA/raw/metadata/metadata.txt", sep="/")
+ID.map %>% fwrite(manifest_idmap_file)
+```
+
+Finally, we create the manifest file that we will use to obtain the files:
+
+```{r}
+# Create manifest
+manifest_df = qfiles %>% manifest()
+head(manifest_df)
+dim(manifest_df) #469
+
+# Write manifest
+manifest_name = paste('gdc_manifest.', Sys.Date(), sep="")
+manifest_file = paste(output_dir, '/TCGA/raw/additional/', manifest_name, '.txt', sep='')
+write.table(manifest_df, manifest_file, row.names = FALSE, sep="\t", quote=FALSE)
+```
+

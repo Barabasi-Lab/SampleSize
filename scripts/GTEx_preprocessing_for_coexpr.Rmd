@@ -146,8 +146,10 @@ We filter the genes that have low expression in most of the samples of each tiss
 * More than half of the genes with counts above 0.
 
 ```{r}
+tpm_no_filt_dir = paste(gtex_dir, 'tpm_by_tissue', sep='/')
 tpm_filt_dir = paste(gtex_dir, 'tpm_filtered_files_by_tissue', sep='/')
 genes_filt_dir = paste(gtex_dir, 'genes_filtered_files_by_tissue', sep='/')
+dir.create(tpm_no_filt_dir, showWarnings = FALSE)
 dir.create(tpm_filt_dir, showWarnings = FALSE)
 dir.create(genes_filt_dir, showWarnings = FALSE)
 cols = c("tissue", "sex", "n_genes_raw", "n_genes_processed", "sum",  "mean", "median", "sd", "zero_sum_counts")
@@ -159,11 +161,13 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
     # Get the samples of the selected tissue/sex
     if (sex == ""){
       samples_tissue_sex = samples_df[samples_df$SMTSD.no.sp.char == tissue,]$SAMPID
+      tpm_tissue_sex_no_filt_file = paste(tpm_filt_dir, paste("gtex_rnaseq_", tissue, ".gct", sep=''), sep='/')
       tpm_tissue_sex_filt_file = paste(tpm_filt_dir, paste("gtex_rnaseq_", tissue, ".gct", sep=''), sep='/')
       genes_dataset_filt_file = paste(genes_filt_dir, paste("gtex_rnaseq_gene_info_", tissue, ".csv", sep=''), sep='/')
     } else {
       sex_id = sex_to_id[sex,]
       samples_tissue_sex = samples_df[(samples_df$SMTSD.no.sp.char == tissue) & (samples_df$SEX == sex_id),]$SAMPID
+      tpm_tissue_sex_no_filt_file = paste(tpm_filt_dir, paste("gtex_rnaseq_", tissue, "_", sex, ".gct", sep=''), sep='/')
       tpm_tissue_sex_filt_file = paste(tpm_filt_dir, paste("gtex_rnaseq_", tissue, "_", sex, ".gct", sep=''), sep='/')
       genes_dataset_filt_file = paste(genes_filt_dir, paste("gtex_rnaseq_gene_info_", tissue, "_", sex, ".csv", sep=''), sep='/')
     }
@@ -172,6 +176,9 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
     if (length(samples_tissue_sex) > 10){
       # Select expression from selected samples
       tpm_tissue_sex_df = tpm_df %>% select(c("Gene", all_of(samples_tissue_sex)))
+      # Save file without filters
+      fwrite(tpm_tissue_sex_df, tpm_tissue_sex_no_filt_file)
+      
       # Calculate metrics of expression
       info_df = data.frame(Gene=tpm_tissue_sex_df$Gene, sum=rowSums(tpm_tissue_sex_df[,-1]))
       info_df$sd = apply(tpm_tissue_sex_df[,-1], 1, sd)

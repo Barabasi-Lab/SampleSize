@@ -103,7 +103,7 @@ head(edges_pearson_df)
 # Write results
 #output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables'
 output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data'
-edges_file = paste(output_dir, 'pearson_pval_0.05_num_edges_vs_num_samples.txt', sep='/')
+edges_file = paste(output_dir, 'example_pearson_pval_0.05', 'pearson_pval_0.05_num_edges_vs_num_samples.txt', sep='/')
 edges_pearson_df %>% fwrite(edges_file)
 ```
 

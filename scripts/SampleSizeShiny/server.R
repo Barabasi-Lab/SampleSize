@@ -53,13 +53,13 @@ get_logarithmic_tendency = function(results_dataframe, y_parameter, x_parameter)
   return(list(lm_summary=lm_summary, used_data=used_data, a=coef(lm_summary)[2], b=coef(lm_summary)[1], L=NaN, adj.r.squared=lm_summary$adj.r.squared))
 }
 
-#'  calculate_stretched_exponential_model_by_linear_fit
-#'  Method to obtain an stretched exponential linear fit from the data.
+#'  calculate_stretched_exponential_model_without_L
+#'  Method to obtain an stretched exponential from the data without L.
 #'  @param results_dataframe Dataframe containing the data.
 #'  @param y_parameter Parameter of the Y axis.
 #'  @param x_parameter Parameter of the X axis.
 #'  
-calculate_stretched_exponential_model_by_linear_fit = function(results_dataframe, y_parameter, x_parameter){
+calculate_stretched_exponential_model_without_L = function(results_dataframe, y_parameter, x_parameter){
   # Calculate mean of repetitions from same sample size
   results_dataframe_mean = results_dataframe %>% 
     arrange(get(x_parameter), rep) %>%
@@ -84,17 +84,44 @@ calculate_stretched_exponential_model_by_linear_fit = function(results_dataframe
   return(list(lm_summary=lm_summary, used_data=used_data, a=coef(lm_summary)[2], b=coef(lm_summary)[1], L=NaN, adj.r.squared=lm_summary$adj.r.squared))
 }
 
-#'  calculate_predictions_using_stretched_exponential_model_from_linear_fit
-#'  Formula to calculate stretched exponential of significant interactions from a list of sample sizes using linear fit.
+#'  calculate_predictions_using_stretched_exponential_model_without_L
+#'  Formula to calculate stretched exponential of significant interactions from a list of sample sizes without using L.
 #'  This formula does not require the use of L
 #'  @param x List of sample sizes.
 #'  @param a Slope coefficient.
 #'  @param b Intercept coefficient.
 #'  
-calculate_predictions_using_stretched_exponential_model_from_linear_fit = function(x, a, b){
+calculate_predictions_using_stretched_exponential_model_without_L = function(x, a, b){
   y = (exp( (exp(b) * x**(1 + a) ) / (1 + a) ))
   y=y/max(y) # Normalize y vector
   return(y)
+}
+
+#'  calculate_stretched_exponential_model_by_linear_fit
+#'  Formula to find linear fit between log(ln(L)-ln(s)) and log(N).
+#'  @param results_dataframe Dataframe containing the data.
+#'  @param y_parameter Parameter of the Y axis.
+#'  @param x_parameter Parameter of the X axis.
+#'  @param L_guess Initial values for the parameters to be optimized over.
+#'  
+calculate_stretched_exponential_model_by_linear_fit = function(results_dataframe, y_parameter, x_parameter, L){
+  # Calculate mean of repetitions from same sample size
+  results_dataframe_mean = results_dataframe %>% 
+    arrange(get(x_parameter), rep) %>%
+    group_by(get(x_parameter)) %>%
+    summarise_at(vars(all_of(y_parameter)), list(mean=mean, median=median, sd=sd)) %>%
+    rename(!!x_parameter := "get(x_parameter)") %>%
+    ungroup()
+  # Define s and N
+  s = results_dataframe_mean$mean / max(results_dataframe_mean$mean)
+  N = results_dataframe_mean$size
+  # Calculate ln(L)-ln(s)
+  s_rec = log(L) - log(s)
+  # Calculate linear regression between ln(L)-ln(s) and ln(N)
+  lm_summary = summary(lm(log(s_rec)~log(N)))
+  # This is the data used to obtain the final model
+  used_data = data.frame(y=log(s_rec), x=log(N))
+  return(list(lm_summary=lm_summary, used_data=used_data, a=coef(lm_summary)[2], b=coef(lm_summary)[1], L=L, adj.r.squared=lm_summary$adj.r.squared))
 }
 
 #'  calculate_stretched_exponential_model_by_optimization
@@ -156,16 +183,19 @@ calculate_predictions_using_stretched_exponential_model_optimized = function(x, 
 #'  @param x_parameter Parameter of the X axis.
 #'  @param model Name of the model used.
 #'  
-calculate_analytical_model = function(results_dataframe, y_parameter, x_parameter, model){
+calculate_analytical_model = function(results_dataframe, y_parameter, x_parameter, model, L=2){
   if(model == "Logarithmic"){
     model_output = get_logarithmic_tendency(results_dataframe=results_dataframe, y_parameter=y_parameter, x_parameter=x_parameter)
     model_result = (log(sort(unique(results_dataframe[[x_parameter]])))*model_output$a + model_output$b)
   } else if(model == "Stretched exponential (by optimization)"){
-    model_output = calculate_stretched_exponential_model_by_optimization(results_dataframe=results_dataframe, y_parameter=y_parameter, x_parameter=x_parameter, L_guess=c(2))
+    model_output = calculate_stretched_exponential_model_by_optimization(results_dataframe=results_dataframe, y_parameter=y_parameter, x_parameter=x_parameter, L_guess=c(L))
     model_result = calculate_predictions_using_stretched_exponential_model_optimized(x=sort(unique(results_dataframe[[x_parameter]])), L=model_output$L, a=model_output$a, b=model_output$b)
   } else if(model == "Stretched exponential (by linear fit)"){
-    model_output = calculate_stretched_exponential_model_by_linear_fit(results_dataframe=results_dataframe, y_parameter=y_parameter, x_parameter=x_parameter)
-    model_result = calculate_predictions_using_stretched_exponential_model_from_linear_fit(x=sort(unique(results_dataframe[[x_parameter]])), a=model_output$a, b=model_output$b)
+    model_output = calculate_stretched_exponential_model_by_linear_fit(results_dataframe=results_dataframe, y_parameter=y_parameter, x_parameter=x_parameter, L=L)
+    model_result = calculate_predictions_using_stretched_exponential_model_optimized(x=sort(unique(results_dataframe[[x_parameter]])), L=model_output$L, a=model_output$a, b=model_output$b)
+  } else if(model == "Stretched exponential (without L)"){
+    model_output = calculate_stretched_exponential_model_without_L(results_dataframe=results_dataframe, y_parameter=y_parameter, x_parameter=x_parameter)
+    model_result = calculate_predictions_using_stretched_exponential_model_without_L(x=sort(unique(results_dataframe[[x_parameter]])), a=model_output$a, b=model_output$b)
   }
   return(list(model_output=model_output, model_result=model_result))
 }
@@ -181,10 +211,10 @@ calculate_analytical_model = function(results_dataframe, y_parameter, x_paramete
 calculate_prediction_from_analytical_model = function(model, x_list, a, b, L){
   if(model == "Logarithmic"){
     prediction_result = (log(x_list)*a + b)
-  } else if(model == "Stretched exponential (by optimization)"){
+  } else if((model == "Stretched exponential (by optimization)") | (model == "Stretched exponential (by linear fit)")){
     prediction_result = calculate_predictions_using_stretched_exponential_model_optimized(x=x_list, L=L, a=a, b=b)
-  } else if(model == "Stretched exponential (by linear fit)"){
-    prediction_result = calculate_predictions_using_stretched_exponential_model_from_linear_fit(x=x_list, a=a, b=b)
+  } else if(model == "Stretched exponential (without L)"){
+    prediction_result = calculate_predictions_using_stretched_exponential_model_without_L(x=x_list, a=a, b=b)
   }
   return(prediction_result)
 }
@@ -199,9 +229,9 @@ calculate_prediction_from_analytical_model = function(model, x_list, a, b, L){
 get_formula = function(model, a, b, L){
   if(model == "Logarithmic"){
     formula_name = paste("F(x) = (", formatC(round(a, 2), format = "e", digits = 2), ")*ln(x) + (", formatC(round(b, 2), format = "e", digits = 2), ")", sep="")
-  } else if(model == "Stretched exponential (by optimization)"){
+  } else if((model == "Stretched exponential (by optimization)") | (model == "Stretched exponential (by linear fit)")){
     formula_name = paste("F(x) = ", round(L, 2), " * exp[(", round(b, 2), " * x**((", round(a, 2), ") + 1)) / ((", round(a, 2), ") + 1) ]", sep="")
-  } else if(model == "Stretched exponential (by linear fit)"){
+  } else if(model == "Stretched exponential (without L)"){
     formula_name = paste("F(x) = exp[ (exp(", round(b, 2), ") * x**(1 + (", round(a, 2), "))) / (1 + (", round(a, 2), ")) ]", sep="")
   }
   return(formula_name)
@@ -304,11 +334,11 @@ server <- function(input, output, session) {
   observeEvent(input$topology_analytical, {
     
     freezeReactiveValue(input, "topology_type_normalization") # Freeze topology_type_normalization until updateSelectInput is completed
-    if ((isTRUE(input$topology_analytical)) & ("Stretched exponential (by optimization)" %in% input$topology_type_analytical_model)){
+    if ((isTRUE(input$topology_analytical)) & (("Stretched exponential (by optimization)" %in% input$topology_type_analytical_model) | ("Stretched exponential (by linear fit)" %in% input$topology_type_analytical_model))){
       updateSelectInput(session = session, 
                         inputId = "topology_type_normalization", 
                         label = "Type of y axis normalization:", 
-                        choices = c("Divide by max. value" = "divide.max.value", "Divide by max. possible value" = "divide.max.possible.value", "Divide by value of convergence" = "divide.smax"),
+                        choices = c("Divide by max. value" = "divide.max.value", "Divide by max. possible value" = "divide.max.possible.value", "Divide by value of convergence" = "divide.L"),
                         selected = "divide.max.value")
     } else {
       updateSelectInput(session = session, 
@@ -357,15 +387,19 @@ server <- function(input, output, session) {
     #results_selected_df = results_df %>% filter((type_dataset %in% c("tcga:tcga")) & (method %in% c("pearson")) & (type_correlation %in% c("all")) & (threshold %in% c(0.05))) # For a test
     #results_selected_df = results_df %>% filter((type_dataset %in% c("tcga:tcga-brca", "tcga:tcga-ucec")) & (method %in% c("pearson")) & (type_correlation %in% c("all")) & (threshold %in% c(0.05))) # For a test with multiple parameters
 
+    # Merge with total number of edges
+    results_selected_df = results_selected_df %>% inner_join(numbers_complete_graph_df %>% select("type_dataset", "total_num_edges"), by = "type_dataset") %>% group_by_at(c("dataset", "type_dataset")) %>% mutate(total_num_edges_norm=total_num_edges/max(num_edges)) %>% ungroup() %>% as.data.frame()
+    
     # Select by diseases
-    group_vars = c("type_dataset", "method", "size", "type_correlation", "threshold")
+    group_vars = c("type_dataset", "method", "size", "type_correlation", "threshold", "total_num_edges")
     if(input$type_analysis == "disease_genes"){
       diseases_selected <- unlist(strsplit(renderText(input$diseases, sep='___')(), split='___'))
       results_selected_df %<>% filter(disease %in% diseases_selected) %>% select(-disease_class) %>% unique()
       group_vars = c(group_vars, "disease")
     } else {
-      results_selected_df %<>% select(!(c("num_disease_genes", "num_disease_edges", "fraction_disease_genes", "num_disease_components", "disease", "disease_class", "num_disease_lcc_nodes", "num_disease_lcc_edges", "fraction_disease_lcc_nodes", "disease_lcc_z", "disease_lcc_pvalue"))) %>% unique()
+      results_selected_df %<>% select(!(c("num_disease_genes", "num_disease_edges", "fraction_disease_genes", "num_disease_components", "disease", "disease_class", "num_disease_lcc_nodes", "num_disease_lcc_edges", "fraction_disease_lcc_nodes", "disease_lcc_z", "disease_lcc_pvalue", "log_disease_lcc_pvalue"))) %>% unique()
     }
+    
     
     #--------------------------#
     # Calculate mean / sd line #
@@ -409,12 +443,12 @@ server <- function(input, output, session) {
     analytical_model_summary_df = data.frame()
     N_vals = seq(10, 50000, 10)
     
-    types_analytical_model = c("Stretched exponential (by optimization)", "Stretched exponential (by linear fit)", "Logarithmic")
+    types_analytical_model = c("Stretched exponential (by optimization)", "Stretched exponential (by linear fit)", "Stretched exponential (without L)", "Logarithmic")
     if (isTruthy(input$topology_analytical)){
       for(model in types_analytical_model){
         if (is.null(selected_fill_parameter)){
           # Calculate the analytical model
-          output_variable = calculate_analytical_model(results_dataframe=results_selected_df, y_parameter=input$boxplot_parameter, x_parameter="size", model=model)
+          output_variable = calculate_analytical_model(results_dataframe=results_selected_df, y_parameter=input$boxplot_parameter, x_parameter="size", model=model, L=unique(results_selected_df$total_num_edges_norm))
           # Calculate prediction
           prediction_result = calculate_prediction_from_analytical_model(model=model, x_list=N_vals, a=output_variable$model_output$a, b=output_variable$model_output$b, L=output_variable$model_output$L)
           # Un-normalize y axis of analytical curve (if necessary), because the analytical curve of stretched exponential is normalized by default
@@ -435,7 +469,7 @@ server <- function(input, output, session) {
             # Select results for a specific parameter
             results_selected_by_parameter_df = results_selected_df %>% filter(!!as.symbol(selected_fill_parameter) == selected_parameter)
             # Calculate the analytical model
-            output_variable = calculate_analytical_model(results_dataframe=results_selected_by_parameter_df, y_parameter=input$boxplot_parameter, x_parameter="size", model=model)
+            output_variable = calculate_analytical_model(results_dataframe=results_selected_by_parameter_df, y_parameter=input$boxplot_parameter, x_parameter="size", model=model, L=unique(results_selected_by_parameter_df$total_num_edges_norm))
             # Calculate prediction
             prediction_result = calculate_prediction_from_analytical_model(model=model, x_list=N_vals, a=output_variable$model_output$a, b=output_variable$model_output$b, L=output_variable$model_output$L)
             # Un-normalize y axis of analytical curve (if necessary), because the analytical curve of stretched exponential is normalized by default
@@ -478,9 +512,11 @@ server <- function(input, output, session) {
         unique() %>%
         ungroup()
       analytical_model_summary_df$unnorm_L = analytical_model_summary_df$L * analytical_model_summary_df$max_value_in_dataset
+      analytical_model_summary_df$a_b_ratio = analytical_model_summary_df$a / analytical_model_summary_df$b
       analytical_model_summary_df = analytical_model_summary_df %>% inner_join(numbers_complete_graph_df %>% select("type_dataset", "total_num_edges"), by = "type_dataset") %>% group_by_at(selected_fill_parameter) %>% mutate(density = unnorm_L/total_num_edges)
       # Render table
-      output$topologyAnalyticalModelTable = renderTable(analytical_model_summary_df)
+      #output$topologyAnalyticalModelTable = renderTable(analytical_model_summary_df)
+      output$topologyAnalyticalModelTable = DT::renderDataTable(analytical_model_summary_df)
     } else {
       # Rename fill parameter if necessary
       if(("fill_parameter" %in% colnames(predicted_results_df)) && (!(is.null(selected_fill_parameter))) && (!(selected_fill_parameter == "type_dataset"))){
@@ -509,20 +545,22 @@ server <- function(input, output, session) {
         topology_results_selected_by_size_df = topology_results_selected_by_size_df %>% group_by_at(selected_fill_parameter) %>% mutate(max_mean=max(mean)) %>% mutate(mean_norm=mean/max_mean) %>% mutate(max_sd=max(sd)) %>% mutate(sd_norm=sd/max_sd)
         topology_results_selected_analytical_df = topology_results_selected_analytical_df %>% group_by_at(selected_fill_parameter) %>% mutate(model_result = model_result/max_value_in_dataset)
         predicted_results_df = predicted_results_df %>% group_by_at(selected_fill_parameter) %>% mutate(model_result = model_result/max_value_in_dataset)
-      } else if(input$topology_type_normalization == "divide.smax"){
+      } else if(input$topology_type_normalization == "divide.L"){
         if (is.null(selected_fill_parameter)){
-          results_selected_df = results_selected_df %>% inner_join(topology_results_selected_analytical_df %>% select("L", "max_value_in_dataset", "type_dataset"), by="type_dataset") %>% mutate(norm = (get(input$boxplot_parameter)/max_value_in_dataset)/L) %>% rename(unnorm = input$boxplot_parameter) %>% rename(!!input$boxplot_parameter := norm)
-          topology_results_selected_by_size_df = topology_results_selected_by_size_df %>% inner_join(topology_results_selected_analytical_df %>% select("L", "max_value_in_dataset", "type_dataset"), by="type_dataset") %>% group_by_at(selected_fill_parameter) %>% mutate(mean_norm = (mean/max_value_in_dataset)/L)
+          results_selected_df = results_selected_df %>% inner_join((topology_results_selected_analytical_df %>% filter(model %in% input$topology_type_analytical_model) %>% select("L", "max_value_in_dataset", "type_dataset") %>% unique()), by="type_dataset") %>% mutate(norm = (get(input$boxplot_parameter)/max_value_in_dataset)/L) %>% rename(unnorm = input$boxplot_parameter) %>% rename(!!input$boxplot_parameter := norm)
+          topology_results_selected_by_size_df = topology_results_selected_by_size_df %>% inner_join((topology_results_selected_analytical_df %>% filter(model %in% input$topology_type_analytical_model) %>% select("L", "max_value_in_dataset", "type_dataset") %>% unique()), by="type_dataset") %>% group_by_at(selected_fill_parameter) %>% mutate(mean_norm = (mean/max_value_in_dataset)/L)
+          predicted_results_df = predicted_results_df %>% inner_join((topology_results_selected_analytical_df %>% filter(model %in% input$topology_type_analytical_model) %>% select("L", "type_dataset") %>% unique()), by="type_dataset") %>% group_by_at(selected_fill_parameter) %>% mutate(model_result = (model_result / max_value_in_dataset)/L)
           topology_results_selected_analytical_df = topology_results_selected_analytical_df %>% group_by_at(selected_fill_parameter) %>% mutate(norm = (model_result/max_value_in_dataset)/L) %>% rename(unnorm = model_result) %>% rename(model_result = norm)
-          predicted_results_df = predicted_results_df %>% inner_join(topology_results_selected_analytical_df %>% select("L", "max_value_in_dataset", "type_dataset"), by="type_dataset") %>% group_by_at(selected_fill_parameter) %>% mutate(model_result = (model_result / max_value_in_dataset)/L)
         } else{
-          results_selected_df = results_selected_df %>% inner_join(topology_results_selected_analytical_df %>% select("L", "max_value_in_dataset", !!selected_fill_parameter), by=selected_fill_parameter) %>% group_by_at(selected_fill_parameter) %>% mutate(norm = (get(input$boxplot_parameter)/max_value_in_dataset)/L) %>% rename(unnorm = input$boxplot_parameter) %>% rename(!!input$boxplot_parameter := norm)
-          topology_results_selected_by_size_df = topology_results_selected_by_size_df %>% inner_join(topology_results_selected_analytical_df %>% select("L", "max_value_in_dataset", !!selected_fill_parameter), by=selected_fill_parameter) %>% group_by_at(selected_fill_parameter) %>% mutate(mean_norm = (mean/max_value_in_dataset)/L)
+          results_selected_df = results_selected_df %>% inner_join((topology_results_selected_analytical_df %>% filter(model %in% input$topology_type_analytical_model) %>% select("L", "max_value_in_dataset", !!selected_fill_parameter) %>% unique()), by=selected_fill_parameter) %>% group_by_at(selected_fill_parameter) %>% mutate(norm = (get(input$boxplot_parameter)/max_value_in_dataset)/L) %>% rename(unnorm = input$boxplot_parameter) %>% rename(!!input$boxplot_parameter := norm)
+          topology_results_selected_by_size_df = topology_results_selected_by_size_df %>% inner_join((topology_results_selected_analytical_df %>% filter(model %in% input$topology_type_analytical_model) %>% select("L", "max_value_in_dataset", !!selected_fill_parameter) %>% unique()), by=selected_fill_parameter) %>% group_by_at(selected_fill_parameter) %>% mutate(mean_norm = (mean/max_value_in_dataset)/L)
+          predicted_results_df = predicted_results_df %>% inner_join((topology_results_selected_analytical_df %>% filter(model %in% input$topology_type_analytical_model) %>% select("L", !!selected_fill_parameter) %>% unique()), by=selected_fill_parameter) %>% group_by_at(selected_fill_parameter) %>% mutate(model_result = (model_result / max_value_in_dataset)/L)
           topology_results_selected_analytical_df = topology_results_selected_analytical_df %>% group_by_at(selected_fill_parameter) %>% mutate(norm = (model_result/max_value_in_dataset)/L) %>% rename(unnorm = model_result) %>% rename(model_result = norm)
-          predicted_results_df = predicted_results_df %>% inner_join(topology_results_selected_analytical_df %>% select("L", "max_value_in_dataset", !!selected_fill_parameter), by=selected_fill_parameter) %>% group_by_at(selected_fill_parameter) %>% mutate(model_result = (model_result / max_value_in_dataset)/L)
         }
       } else if(input$topology_type_normalization == "divide.max.possible.value"){
-        results_selected_df = results_selected_df %>% inner_join(numbers_complete_graph_df, by = "type_dataset") %>% group_by_at(selected_fill_parameter) %>% mutate(norm = get(input$boxplot_parameter)/total_num_edges) %>% rename(unnorm = input$boxplot_parameter) %>% rename(!!input$boxplot_parameter := norm)
+        results_selected_df = results_selected_df %>% 
+          #inner_join(numbers_complete_graph_df, by = "type_dataset") %>% 
+          group_by_at(selected_fill_parameter) %>% mutate(norm = get(input$boxplot_parameter)/total_num_edges) %>% rename(unnorm = input$boxplot_parameter) %>% rename(!!input$boxplot_parameter := norm)
         topology_results_selected_by_size_df = topology_results_selected_by_size_df %>% inner_join(numbers_complete_graph_df, by = "type_dataset") %>% group_by_at(selected_fill_parameter) %>% mutate(mean_norm=mean/total_num_edges)
         if (isTruthy(input$topology_analytical)){
           topology_results_selected_analytical_df = topology_results_selected_analytical_df %>% inner_join(numbers_complete_graph_df, by = "type_dataset") %>% group_by_at(selected_fill_parameter) %>% mutate(norm = model_result/total_num_edges) %>% rename(unnorm = model_result) %>% rename(model_result = norm)
@@ -543,37 +581,37 @@ server <- function(input, output, session) {
     #   if (is.null(selected_fill_parameter)){
     #     # Calculate logarithmic fit for the whole selected data
     #     log_results = get_logarithmic_tendency(results_dataframe=results_selected_df, y_parameter=input$boxplot_parameter, x_parameter="size")
-    #     dec_model = calculate_stretched_exponential_model_by_linear_fit(results_dataframe=results_selected_df, y_parameter=input$boxplot_parameter, x_parameter="size")
-    #     dec_model_results = calculate_predictions_using_stretched_exponential_model_from_linear_fit(x=sort(unique(results_selected_df$size)), a=coef(dec_model$lm_summary)[2], b=coef(dec_model$lm_summary)[1])
+    #     dec_model = calculate_stretched_exponential_model_without_L(results_dataframe=results_selected_df, y_parameter=input$boxplot_parameter, x_parameter="size")
+    #     dec_model_results = calculate_predictions_using_stretched_exponential_model_without_L(x=sort(unique(results_selected_df$size)), a=coef(dec_model$lm_summary)[2], b=coef(dec_model$lm_summary)[1])
     #     dec_smax_model = calculate_stretched_exponential_model_by_optimization(results_dataframe=results_selected_df, y_parameter=input$boxplot_parameter, x_parameter="size", L_guess=c(2))
     #     dec_smax_model_results = calculate_predictions_using_stretched_exponential_model_optimized(x=sort(unique(results_selected_df$size)), L=dec_smax_model$L, a=coef(dec_smax_model$lm_summary)[2], b=coef(dec_smax_model$lm_summary)[1])
     #     if(input$topology_type_analytical_model == "Stretched exponential (by optimization)"){
     #       stretched_exponential_regression_df = cbind(data.frame(model="Stretched exponential (by optimization)"), dec_smax_model$dat, data.frame(regression_line=(coef(dec_smax_model$lm_summary)[2] * dec_smax_model$dat$x + coef(dec_smax_model$lm_summary)[1])))
     #     }
-    #     if(input$topology_type_analytical_model == "Stretched exponential (by linear fit)"){
-    #       stretched_exponential_regression_df = cbind(data.frame(model="Stretched exponential (by linear fit)"), dec_model$dat, data.frame(regression_line=(coef(dec_model$lm_summary)[2] * dec_model$dat$x + coef(dec_model$lm_summary)[1])))
+    #     if(input$topology_type_analytical_model == "Stretched exponential (without L)"){
+    #       stretched_exponential_regression_df = cbind(data.frame(model="Stretched exponential (without L)"), dec_model$dat, data.frame(regression_line=(coef(dec_model$lm_summary)[2] * dec_model$dat$x + coef(dec_model$lm_summary)[1])))
     #     }
     #     topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model="Logarithmic", model_result=(log(sort(unique(results_selected_df$size)))*coef(log_results$lm_summary)[2] + coef(log_results$lm_summary)[1]), size=sort(unique(results_selected_df$size)), formula=log_results$formula_name, adj.r.squared=log_results$lm_summary$adj.r.squared))
-    #     topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model="Stretched exponential (by linear fit)", model_result=dec_model_results, size=sort(unique(results_selected_df$size)), formula=dec_model$formula_name, adj.r.squared=dec_model$lm_summary$adj.r.squared))
+    #     topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model="Stretched exponential (without L)", model_result=dec_model_results, size=sort(unique(results_selected_df$size)), formula=dec_model$formula_name, adj.r.squared=dec_model$lm_summary$adj.r.squared))
     #     topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model="Stretched exponential (by optimization)", model_result=dec_smax_model_results, size=sort(unique(results_selected_df$size)), formula=dec_smax_model$formula_name, adj.r.squared=dec_smax_model$lm_summary$adj.r.squared))
     #     # Calculate predictions
-    #     dec_model_predictions = calculate_predictions_using_stretched_exponential_model_from_linear_fit(x=N_vals, a=coef(dec_model$lm_summary)[2], b=coef(dec_model$lm_summary)[1])
+    #     dec_model_predictions = calculate_predictions_using_stretched_exponential_model_without_L(x=N_vals, a=coef(dec_model$lm_summary)[2], b=coef(dec_model$lm_summary)[1])
     #     dec_smax_model_predictions = calculate_predictions_using_stretched_exponential_model_optimized(x=N_vals, L=dec_smax_model$L, a=coef(dec_smax_model$lm_summary)[2], b=coef(dec_smax_model$lm_summary)[1])
     #     predicted_results_df = rbind(predicted_results_df, data.frame(model="Logarithmic", model_result=(N_vals*coef(log_results$lm_summary)[2] + coef(log_results$lm_summary)[1]), size=N_vals, type_dataset=unique(results_selected_df$type_dataset)[1]))
-    #     predicted_results_df = rbind(predicted_results_df, data.frame(model="Stretched exponential (by linear fit)", model_result=dec_model_predictions, size=N_vals, type_dataset=unique(results_selected_df$type_dataset)[1]))
+    #     predicted_results_df = rbind(predicted_results_df, data.frame(model="Stretched exponential (without L)", model_result=dec_model_predictions, size=N_vals, type_dataset=unique(results_selected_df$type_dataset)[1]))
     #     predicted_results_df = rbind(predicted_results_df, data.frame(model="Stretched exponential (by optimization)", model_result=dec_smax_model_predictions, size=N_vals, type_dataset=unique(results_selected_df$type_dataset)[1]))
     #     # Un-normalize y axis of analytical curve if necessary (because the analyticsal curve of Stretched exponential (by optimization) is normalized by default)
     #     if(!(isTRUE(input$topology_normalize_y))){
-    #       topology_results_selected_analytical_df$model_result = ifelse(topology_results_selected_analytical_df$model %in% c("Stretched exponential (by linear fit)", "Stretched exponential (by optimization)"), topology_results_selected_analytical_df$model_result * max(results_selected_df[[input$boxplot_parameter]]), topology_results_selected_analytical_df$model_result)
-    #       predicted_results_df$model_result = ifelse(predicted_results_df$model %in% c("Stretched exponential (by linear fit)", "Stretched exponential (by optimization)"), predicted_results_df$model_result * max(results_selected_df[[input$boxplot_parameter]]), predicted_results_df$model_result)
+    #       topology_results_selected_analytical_df$model_result = ifelse(topology_results_selected_analytical_df$model %in% c("Stretched exponential (without L)", "Stretched exponential (by optimization)"), topology_results_selected_analytical_df$model_result * max(results_selected_df[[input$boxplot_parameter]]), topology_results_selected_analytical_df$model_result)
+    #       predicted_results_df$model_result = ifelse(predicted_results_df$model %in% c("Stretched exponential (without L)", "Stretched exponential (by optimization)"), predicted_results_df$model_result * max(results_selected_df[[input$boxplot_parameter]]), predicted_results_df$model_result)
     #     }
     #     # Un-normalize and re-normalize by total num of edges in complete graph
     #     if((isTRUE(input$topology_normalize_y)) & (input$topology_type_normalization == "divide.max.possible.value")){
-    #       topology_results_selected_analytical_df$model_result = ifelse(topology_results_selected_analytical_df$model %in% c("Stretched exponential (by linear fit)", "Stretched exponential (by optimization)"), topology_results_selected_analytical_df$model_result * max(results_selected_df$unnorm) / unique(results_selected_df$total_num_edges), topology_results_selected_analytical_df$model_result)
+    #       topology_results_selected_analytical_df$model_result = ifelse(topology_results_selected_analytical_df$model %in% c("Stretched exponential (without L)", "Stretched exponential (by optimization)"), topology_results_selected_analytical_df$model_result * max(results_selected_df$unnorm) / unique(results_selected_df$total_num_edges), topology_results_selected_analytical_df$model_result)
     #       predicted_results_df = predicted_results_df %>% inner_join((results_selected_df %>% select("type_dataset", "total_num_edges") %>% unique()), by=c("type_dataset")) %>% mutate(norm = model_result * max(results_selected_df$unnorm)/total_num_edges) %>% select(!c("model_result", "total_num_edges")) %>% rename(model_result = norm)
     #     }
     #     # Divide by L to re-scale the axis using as maximum the L value
-    #     if((isTRUE(input$topology_normalize_y)) & (input$topology_type_normalization == "divide.smax")){
+    #     if((isTRUE(input$topology_normalize_y)) & (input$topology_type_normalization == "divide.L")){
     #       topology_results_selected_analytical_df$model_result = topology_results_selected_analytical_df$model_result / dec_smax_model$L
     #       predicted_results_df$model_result = predicted_results_df$model_result / dec_smax_model$L
     #       results_selected_df = results_selected_df %>% mutate(norm = get(input$boxplot_parameter)/dec_smax_model$L) %>% select(!(all_of(c(!!input$boxplot_parameter)))) %>% rename(!!input$boxplot_parameter := norm)
@@ -584,42 +622,42 @@ server <- function(input, output, session) {
     #     for (selected_parameter in unique(results_selected_df[[selected_fill_parameter]])){
     #       results_selected_by_parameter_df = results_selected_df %>% filter(!!as.symbol(selected_fill_parameter) == selected_parameter)
     #       log_results = get_logarithmic_tendency(results_dataframe=results_selected_by_parameter_df, y_parameter=input$boxplot_parameter, x_parameter="size")
-    #       dec_model = calculate_stretched_exponential_model_by_linear_fit(results_dataframe=results_selected_by_parameter_df, y_parameter=input$boxplot_parameter, x_parameter="size")
-    #       dec_model_results = calculate_predictions_using_stretched_exponential_model_from_linear_fit(x=sort(unique(results_selected_by_parameter_df$size)), a=coef(dec_model$lm_summary)[2], b=coef(dec_model$lm_summary)[1])
+    #       dec_model = calculate_stretched_exponential_model_without_L(results_dataframe=results_selected_by_parameter_df, y_parameter=input$boxplot_parameter, x_parameter="size")
+    #       dec_model_results = calculate_predictions_using_stretched_exponential_model_without_L(x=sort(unique(results_selected_by_parameter_df$size)), a=coef(dec_model$lm_summary)[2], b=coef(dec_model$lm_summary)[1])
     #       dec_smax_model = calculate_stretched_exponential_model_by_optimization(results_dataframe=results_selected_by_parameter_df, y_parameter=input$boxplot_parameter, x_parameter="size", L_guess=c(2))
     #       dec_smax_model_results = calculate_predictions_using_stretched_exponential_model_optimized(x=sort(unique(results_selected_by_parameter_df$size)), L=dec_smax_model$L, a=coef(dec_smax_model$lm_summary)[2], b=coef(dec_smax_model$lm_summary)[1])
     #       if(input$topology_type_analytical_model == "Stretched exponential (by optimization)"){
     #         stretched_exponential_regression_df = rbind(stretched_exponential_regression_df, cbind(data.frame(model="Stretched exponential (by optimization)"), dec_smax_model$dat, data.frame(regression_line=(coef(dec_smax_model$lm_summary)[2] * dec_smax_model$dat$x + coef(dec_smax_model$lm_summary)[1])), (data.frame(parameter = selected_parameter) %>% rename(!!selected_fill_parameter := parameter))))
     #       }
-    #       if(input$topology_type_analytical_model == "Stretched exponential (by linear fit)"){
-    #         stretched_exponential_regression_df = rbind(stretched_exponential_regression_df, cbind(data.frame(model="Stretched exponential (by linear fit)"), dec_model$dat, data.frame(regression_line=(coef(dec_model$lm_summary)[2] * dec_model$dat$x + coef(dec_model$lm_summary)[1])), (data.frame(parameter = selected_parameter) %>% rename(!!selected_fill_parameter := parameter))))
+    #       if(input$topology_type_analytical_model == "Stretched exponential (without L)"){
+    #         stretched_exponential_regression_df = rbind(stretched_exponential_regression_df, cbind(data.frame(model="Stretched exponential (without L)"), dec_model$dat, data.frame(regression_line=(coef(dec_model$lm_summary)[2] * dec_model$dat$x + coef(dec_model$lm_summary)[1])), (data.frame(parameter = selected_parameter) %>% rename(!!selected_fill_parameter := parameter))))
     #       }
     #       topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model="Logarithmic", model_result=(log(sort(unique(results_selected_by_parameter_df$size)))*coef(log_results$lm_summary)[2] + coef(log_results$lm_summary)[1]), size=sort(unique(results_selected_by_parameter_df$size)), formula=log_results$formula_name, adj.r.squared=log_results$lm_summary$adj.r.squared, parameter=selected_parameter) %>% rename(!!selected_fill_parameter := parameter))
-    #       topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model="Stretched exponential (by linear fit)", model_result=dec_model_results, size=sort(unique(results_selected_by_parameter_df$size)), formula=dec_model$formula_name, adj.r.squared=dec_model$lm_summary$adj.r.squared, parameter=selected_parameter) %>% rename(!!selected_fill_parameter := parameter))
+    #       topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model="Stretched exponential (without L)", model_result=dec_model_results, size=sort(unique(results_selected_by_parameter_df$size)), formula=dec_model$formula_name, adj.r.squared=dec_model$lm_summary$adj.r.squared, parameter=selected_parameter) %>% rename(!!selected_fill_parameter := parameter))
     #       topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model="Stretched exponential (by optimization)", model_result=dec_smax_model_results, size=sort(unique(results_selected_by_parameter_df$size)), formula=dec_smax_model$formula_name, adj.r.squared=dec_smax_model$lm_summary$adj.r.squared, parameter=selected_parameter) %>% rename(!!selected_fill_parameter := parameter))
     #       # Calculate predictions
-    #       dec_model_predictions = calculate_predictions_using_stretched_exponential_model_from_linear_fit(x=N_vals, a=coef(dec_model$lm_summary)[2], b=coef(dec_model$lm_summary)[1])
+    #       dec_model_predictions = calculate_predictions_using_stretched_exponential_model_without_L(x=N_vals, a=coef(dec_model$lm_summary)[2], b=coef(dec_model$lm_summary)[1])
     #       dec_smax_model_predictions = calculate_predictions_using_stretched_exponential_model_optimized(x=N_vals, L=dec_smax_model$L, a=coef(dec_smax_model$lm_summary)[2], b=coef(dec_smax_model$lm_summary)[1])
     #       predicted_results_df = rbind(predicted_results_df, data.frame(model="Logarithmic", model_result=(log(N_vals)*coef(log_results$lm_summary)[2] + coef(log_results$lm_summary)[1]), size=N_vals, type_dataset=unique(results_selected_by_parameter_df$type_dataset), fill_parameter=selected_parameter))
-    #       predicted_results_df = rbind(predicted_results_df, data.frame(model="Stretched exponential (by linear fit)", model_result=dec_model_predictions, size=N_vals, type_dataset=unique(results_selected_by_parameter_df$type_dataset), fill_parameter=selected_parameter))
+    #       predicted_results_df = rbind(predicted_results_df, data.frame(model="Stretched exponential (without L)", model_result=dec_model_predictions, size=N_vals, type_dataset=unique(results_selected_by_parameter_df$type_dataset), fill_parameter=selected_parameter))
     #       predicted_results_df = rbind(predicted_results_df, data.frame(model="Stretched exponential (by optimization)", model_result=dec_smax_model_predictions, size=N_vals, type_dataset=unique(results_selected_by_parameter_df$type_dataset), fill_parameter=selected_parameter))
     #       # Un-normalize y axis of analytical curve if necessary (because the analytical curve of Stretched exponential (by optimization) is normalized by default)
     #       if(!(isTRUE(input$topology_normalize_y))){
-    #         topology_results_selected_analytical_df$model_result = ifelse((topology_results_selected_analytical_df[[selected_fill_parameter]] == selected_parameter & topology_results_selected_analytical_df$model %in% c("Stretched exponential (by linear fit)", "Stretched exponential (by optimization)")), topology_results_selected_analytical_df$model_result * max(results_selected_by_parameter_df[[input$boxplot_parameter]]), topology_results_selected_analytical_df$model_result)
-    #         predicted_results_df$model_result = ifelse((predicted_results_df$fill_parameter == selected_parameter & predicted_results_df$model %in% c("Stretched exponential (by linear fit)", "Stretched exponential (by optimization)")), predicted_results_df$model_result * max(results_selected_by_parameter_df[[input$boxplot_parameter]]), predicted_results_df$model_result)
+    #         topology_results_selected_analytical_df$model_result = ifelse((topology_results_selected_analytical_df[[selected_fill_parameter]] == selected_parameter & topology_results_selected_analytical_df$model %in% c("Stretched exponential (without L)", "Stretched exponential (by optimization)")), topology_results_selected_analytical_df$model_result * max(results_selected_by_parameter_df[[input$boxplot_parameter]]), topology_results_selected_analytical_df$model_result)
+    #         predicted_results_df$model_result = ifelse((predicted_results_df$fill_parameter == selected_parameter & predicted_results_df$model %in% c("Stretched exponential (without L)", "Stretched exponential (by optimization)")), predicted_results_df$model_result * max(results_selected_by_parameter_df[[input$boxplot_parameter]]), predicted_results_df$model_result)
     #       }
     #       # Un-normalize and re-normalize by total num of edges in complete graph
     #       if((isTRUE(input$topology_normalize_y)) & (input$topology_type_normalization == "divide.max.possible.value")){
-    #         topology_results_selected_analytical_df$model_result = ifelse((topology_results_selected_analytical_df[[selected_fill_parameter]] == selected_parameter & topology_results_selected_analytical_df$model %in% c("Stretched exponential (by linear fit)", "Stretched exponential (by optimization)")), topology_results_selected_analytical_df$model_result * max(results_selected_by_parameter_df$unnorm) / unique(results_selected_by_parameter_df$total_num_edges), topology_results_selected_analytical_df$model_result)
+    #         topology_results_selected_analytical_df$model_result = ifelse((topology_results_selected_analytical_df[[selected_fill_parameter]] == selected_parameter & topology_results_selected_analytical_df$model %in% c("Stretched exponential (without L)", "Stretched exponential (by optimization)")), topology_results_selected_analytical_df$model_result * max(results_selected_by_parameter_df$unnorm) / unique(results_selected_by_parameter_df$total_num_edges), topology_results_selected_analytical_df$model_result)
     #         # Join predicted results with total number of edges
     #         predicted_results_df = predicted_results_df %>% inner_join((results_selected_df %>% select("type_dataset", "total_num_edges") %>% unique()), by=c("type_dataset"))
     #         # Normalize result for selected parameter
-    #         predicted_results_df$model_result = ifelse((predicted_results_df$fill_parameter == selected_parameter & predicted_results_df$model %in% c("Stretched exponential (by linear fit)", "Stretched exponential (by optimization)")), predicted_results_df$model_result * max(results_selected_by_parameter_df$unnorm) / predicted_results_df$total_num_edges, predicted_results_df$model_result)
+    #         predicted_results_df$model_result = ifelse((predicted_results_df$fill_parameter == selected_parameter & predicted_results_df$model %in% c("Stretched exponential (without L)", "Stretched exponential (by optimization)")), predicted_results_df$model_result * max(results_selected_by_parameter_df$unnorm) / predicted_results_df$total_num_edges, predicted_results_df$model_result)
     #         # Remove total number of edges
     #         predicted_results_df = predicted_results_df %>% select(!c("total_num_edges"))
     #       }
     #       # Divide by L to re-scale the axis using as maximum the L value
-    #       if((isTRUE(input$topology_normalize_y)) & (input$topology_type_normalization == "divide.smax")){
+    #       if((isTRUE(input$topology_normalize_y)) & (input$topology_type_normalization == "divide.L")){
     #         topology_results_selected_analytical_df$model_result = ifelse(topology_results_selected_analytical_df[[selected_fill_parameter]] == selected_parameter, topology_results_selected_analytical_df$model_result / dec_smax_model$L, topology_results_selected_analytical_df$model_result)
     #         predicted_results_df$model_result = ifelse(predicted_results_df$fill_parameter == selected_parameter, predicted_results_df$model_result / dec_smax_model$L, predicted_results_df$model_result)
     #         results_selected_df[[input$boxplot_parameter]] = ifelse(results_selected_df[[selected_fill_parameter]] == selected_parameter, results_selected_df[[input$boxplot_parameter]] / dec_smax_model$L, results_selected_df[[input$boxplot_parameter]])
@@ -752,7 +790,7 @@ server <- function(input, output, session) {
         } else if (input$topology_type_normalization == "divide.max.possible.value"){
           label_y= paste(label_y, " / Max. num. edges", sep="")
           #label_y= paste(label_y, " / (V*(V-1)/2)", sep="")
-        } else if(input$topology_type_normalization == "divide.smax") {
+        } else if(input$topology_type_normalization == "divide.L") {
           label_y= paste(label_y, " / L", sep="")
         }
       }
@@ -816,7 +854,7 @@ server <- function(input, output, session) {
           } else if (input$topology_type_normalization == "divide.max.possible.value"){
             label_y= paste(label_y, " / Max. num. edges", sep="")
             #label_y= paste(label_y, " / (V*(V-1)/2)", sep="")
-          } else if(input$topology_type_normalization == "divide.smax") {
+          } else if(input$topology_type_normalization == "divide.L") {
             label_y= paste(label_y, " / L", sep="")
           }
         }
@@ -889,9 +927,9 @@ server <- function(input, output, session) {
             }
           }
           
-          if(input$topology_type_analytical_model == "Stretched exponential (by optimization)"){
+          if((input$topology_type_analytical_model == "Stretched exponential (by optimization)") | (input$topology_type_analytical_model == "Stretched exponential (by linear fit)")){
             label_y = "Ln( Ln(smax) - Ln(s) )"
-          } else if(input$topology_type_analytical_model == "Stretched exponential (by linear fit)"){
+          } else if(input$topology_type_analytical_model == "Stretched exponential (without L)"){
             label_y = "Ln(P(N))"
           }
           
@@ -951,9 +989,9 @@ server <- function(input, output, session) {
         }
       }
       
-      if(input$topology_type_analytical_model == "Stretched exponential (by optimization)"){
+      if((input$topology_type_analytical_model == "Stretched exponential (by optimization)") | (input$topology_type_analytical_model == "Stretched exponential (by linear fit)")){
         label_y = "Ln( Ln(smax) - Ln(s) )"
-      } else if(input$topology_type_analytical_model == "Stretched exponential (by linear fit)"){
+      } else if(input$topology_type_analytical_model == "Stretched exponential (without L)"){
         label_y = "Ln(P(N))"
       }
       

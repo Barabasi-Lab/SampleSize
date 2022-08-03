@@ -153,13 +153,13 @@ ui <- fluidPage(
                             shinyWidgets::pickerInput(
                               inputId = "topology_type_analytical_model",
                               label = "Type of analytical model:",
-                              choices = list("Stretched exponential (by optimization)" = "Stretched exponential (by optimization)", "Stretched exponential (by linear fit)" = "Stretched exponential (by linear fit)", "Logarithmic" = "Logarithmic"),
+                              choices = list("Stretched exponential (by optimization)" = "Stretched exponential (by optimization)", "Stretched exponential (by linear fit)" = "Stretched exponential (by linear fit)", "Stretched exponential (without L)" = "Stretched exponential (without L)", "Logarithmic" = "Logarithmic"),
                               options = list(
                                 `actions-box` = TRUE,
                                 size = 10,
                                 `selected-text-format` = "count > 1"
                               ),
-                              selected = 'Stretched exponential (by optimization)',
+                              selected = 'Stretched exponential (by linear fit)',
                               multiple = TRUE
                             ),
                             selectInput("topology_type_analytical_model_output", label = "Type of output:", 
@@ -171,7 +171,8 @@ ui <- fluidPage(
                         # Show boxplot of topological parameters
                         mainPanel(
                           plotOutput("topologyBoxPlot", height="500px"),
-                          tableOutput('topologyAnalyticalModelTable')
+                          #tableOutput('topologyAnalyticalModelTable')
+                          DT::dataTableOutput('topologyAnalyticalModelTable')
                           #tags$div(id = 'topologyAnalyticalModelTable')
                           #uiOutput(outputId = "regressionPlotID", height="500px"),
                           #uiOutput(outputId = "predPlotID", height="500px"),

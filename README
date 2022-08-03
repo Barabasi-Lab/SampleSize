@@ -209,6 +209,10 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coex
 
 #### GTEx ####
 
+# Pearson: COMPLETE DATASET
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_for_complete_dataset_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue -o /work/ccnr/j.aguirreplans/Scipher/SampleSize/networks_gtex -m pearson
+
 # WTO CONVERGENCE: All genes - Muscle.Skeletal - Female
 module load python/3.8.1
 # For the moment only 20 to try how much time do they take (2021/12/16, 17:14)
@@ -312,6 +316,13 @@ module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/complete.dataset -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete.dataset -m aracne
 
 #### TCGA (GDC) ####
+
+# Pearson: COMPLETE DATASET (tumor)
+module load python/3.8.1
+# With different RNA-seq files
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_for_complete_dataset_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project -o /work/ccnr/j.aguirreplans/Scipher/SampleSize/networks_tcga/tumor -m pearson
+# With a unique RNA-seq file
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_for_complete_dataset_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/tumor/filter_genes_with_zeros/TCGA_tpm_processed_filter_genes_with_zeros.csv -o /work/ccnr/j.aguirreplans/Scipher/SampleSize/networks_tcga_unique_rnaseq_file/tumor -m pearson -u
 
 # Pearson: All samples
 module load python/3.8.1

@@ -34,6 +34,7 @@ Read the number of edges of each dataset:
 
 ```{r}
 input_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data'
+plots_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots'
 numbers_file = paste(input_dir, 'dataset_numbers_complete_graph.txt', sep='/')
 numbers_df = fread(numbers_file)
 numbers_df$dataset = tolower(numbers_df$dataset)
@@ -73,18 +74,6 @@ calculate_sample_size_for_pearson_correlation_using_t_distribution_with_optimiza
 }
 ```
 
-Get the power of a correlation calculated using the package rcorr:
-
-```{r}
-require(Hmisc)
-require(pwr)
-dummy_matrix = as.matrix(mtcars[,c("wt", "mpg", "disp", "qsec")])
-correlation_result <- rcorr(dummy_matrix, type="pearson")
-power_result = pwr.r.test(r=correlation_result$r["wt","mpg"],n=correlation_result$n["wt","mpg"],sig.level=correlation_result$P["wt","mpg"],alternative="two.sided")$power
-power_result2 = pwr.r.test(r=correlation_result$r["mpg","qsec"],n=correlation_result$n["mpg","qsec"],sig.level=correlation_result$P["mpg","qsec"],alternative="two.sided")$power
-print(c(power_result, power_result2))
-```
-
 Calculate sample size for different levels of correlation and different datasets:
 
 ```{r}
@@ -104,6 +93,10 @@ for (dataset in numbers_df$dataset){
     sample_size_correlation_df <- rbind(sample_size_correlation_df, data.frame(dataset=dataset, type_correlation=type_correlation, correlation=r, sample_size_statistical=N, sample_size_statistical_corrected=N_corrected))
   }
 }
+
+output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/example_pearson_pval_0.05'
+theoretical_sample_size_file = paste(output_dir, 'theoretical_sample_size_for_correlations_of_datasets.txt', sep='/')
+sample_size_correlation_df %>% fwrite(theoretical_sample_size_file)
 
 print(sample_size_correlation_df)
 ```
@@ -129,7 +122,7 @@ types_correlation = c("very strong", "strong-very strong", "moderate-strong-very
 method = "pearson"
 threshold = 0.05
 
-cols = c("dataset", "type_correlation", "correlation", "sample_size_difference", "sample_size_max_value")
+cols = c("dataset", "type_correlation", "correlation", "sample_size_from_graphic", "num_edges_from_graphic", "sample_size_max_value")
 size_convergence_correlation_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
 for (dataset in numbers_df$dataset){
   # Calculate mean for all correlations
@@ -149,7 +142,8 @@ topology_results_all_corr_by_size_df = topology_results_all_corr_df %>%
     sample_size_max_value = (topology_results_selected_by_size_df %>% filter(mean == max_value))$size
     
     # Compare mean of selected correlation to mean of all correlations and select first sample size with different number of edges
-    sample_size_difference = sample_size_prev = NA
+    sample_size_from_graphic = sample_size_prev = NA
+    num_edges_from_graphic = num_edges_prev = NA
     for (i in 1:(length(topology_results_selected_by_size_df$size))){
       sample_size_selected = topology_results_selected_by_size_df$size[i]
       value_size_selected = (topology_results_selected_by_size_df %>% filter(size == sample_size_selected))$mean
@@ -157,31 +151,79 @@ topology_results_all_corr_by_size_df = topology_results_all_corr_df %>%
       diff = abs(value_size_selected - value_size_all_corr)
       #print(c(dataset, type_correlation, sample_size_selected, value_size_selected, value_size_all_corr, diff))
       if(diff > 0){
-        sample_size_difference = sample_size_prev
+        sample_size_from_graphic = sample_size_prev
+        num_edges_from_graphic = num_edges_prev
         break
       } else {
         sample_size_prev = sample_size_selected
+        num_edges_prev = value_size_selected
       }
     }
 
-    size_convergence_correlation_df <- rbind(size_convergence_correlation_df, data.frame(dataset=dataset, type_correlation=type_correlation, correlation=r, sample_size_difference=sample_size_difference, sample_size_max_value=sample_size_max_value))
+    size_convergence_correlation_df <- rbind(size_convergence_correlation_df, data.frame(dataset=dataset, type_correlation=type_correlation, correlation=r, sample_size_from_graphic=sample_size_from_graphic, num_edges_from_graphic=num_edges_from_graphic, sample_size_max_value=sample_size_max_value))
   }
 }
 
 print(size_convergence_correlation_df)
 ```
 
+```{r}
+topology_results_selected_df = topology_results_df %>% filter((method == "pearson") & (dataset == "tcga:tcga") & (threshold == 0.05) & (type_correlation %in% c("all", "very strong", "strong-very strong", "moderate-strong-very strong", "weak-moderate-strong-very strong"))) %>% select(size, rep, num_edges, type_correlation)
+topology_results_selected_by_size_df = topology_results_selected_df %>%
+  group_by(size, type_correlation) %>%
+  summarise(mean=mean(num_edges), sd=sd(num_edges)) %>%
+  arrange(size)
+
+topology_results_plot = ggplot(topology_results_selected_df, aes(x=size, y=num_edges, col=type_correlation)) + 
+  guides(col=guide_legend(title="Type of correlation")) +
+  geom_point(alpha=0.5, size=3) +
+  geom_line(data = topology_results_selected_by_size_df,
+            aes(x = size, y = mean),
+            lwd=1)
+
+# Customize axes/labels/grid
+topology_results_plot = topology_results_plot + 
+  theme_linedraw() +
+  xlab("Number of samples") +
+  ylab("Number of significant edges") +
+  theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.title=element_text(size=15, face="bold"), legend.position="bottom")
+
+topology_results_plot
+
+```
+
 Compare statistical results with manual results
 
 ```{r}
-convergence_results_df = sample_size_correlation_df %>% inner_join((size_convergence_correlation_df %>% select(-type_correlation)), by=c("dataset", "correlation")) #%>% select(-sample_size_statistical)
+convergence_results_df = sample_size_correlation_df %>% inner_join((size_convergence_correlation_df %>% select(-type_correlation)), by=c("dataset", "correlation")) %>% select(-sample_size_statistical, -sample_size_max_value)
+convergence_results_df$sample_size_error = abs(convergence_results_df$sample_size_statistical_corrected - convergence_results_df$sample_size_from_graphic)
+convergence_results_df %<>% separate(dataset, c("dataset_name", "type_dataset"), sep=":", remove=FALSE) 
 convergence_results_df
 ```
 
 ```{r}
-ggplot(convergence_results_df, aes(x=sample_size_statistical_corrected, y=sample_size_difference, col=correlation)) + 
-  geom_point()
-
+ggplot(convergence_results_df, aes(x=sample_size_error, y=correlation, col=dataset_name)) + 
+  geom_point() +
+  theme_linedraw() +
+  theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.title=element_text(size=15, face="bold")) +
+  xlab("Sample size error") +
+  ylab("Correlation threshold") +
+  guides(col=guide_legend(title="Type of dataset")) +
+  geom_text_repel(
+    data = subset(convergence_results_df, dataset %in% c("tcga:tcga")),
+    aes(label = dataset),
+    size = 5,
+    box.padding = unit(0.35, "lines"),
+    point.padding = unit(0.3, "lines")
+  )
+plot_file = paste(plots_dir, "error_predicting_correlation_convergence_points.png", sep="/")
+ggsave(
+  plot_file,
+  dpi = 1200,
+  width = 10000,
+  height = 6000,
+  units = c("px")
+)
 ```
 
 ## Relationship between stretched exponential model parameters and saturation points
@@ -283,7 +325,7 @@ calculate_prediction_from_analytical_model = function(model, x_list, a, b, L){
 ```
 
 ```{r}
-cols = c("dataset", "a", "b", "L")
+cols = c("dataset", "a", "b", "L", "max_value_in_dataset")
 analytical_model_parameters_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
 for (dataset in unique(convergence_results_df$dataset)){
   # Select results
@@ -298,7 +340,7 @@ for (dataset in unique(convergence_results_df$dataset)){
   prediction_result = prediction_result * max_value_in_dataset
   # Save parameters of the analytical model
   #print(c(dataset, output_variable$model_output$a, output_variable$model_output$b, output_variable$model_output$L))
-  analytical_model_parameters_df <- rbind(analytical_model_parameters_df, data.frame(dataset=dataset, a=output_variable$model_output$a, b=output_variable$model_output$b, L=output_variable$model_output$L))
+  analytical_model_parameters_df <- rbind(analytical_model_parameters_df, data.frame(dataset=dataset, a=output_variable$model_output$a, b=output_variable$model_output$b, L=output_variable$model_output$L, max_value_in_dataset=max_value_in_dataset))
 }
 
 print(analytical_model_parameters_df)
@@ -307,7 +349,7 @@ print(analytical_model_parameters_df)
 Explore the relationship between stretched exponential parameters and correlation critical values:
 
 ```{r}
-convergence_results_long_df = convergence_results_df %>% select(-type_correlation) %>% pivot_longer(c(-dataset, -correlation), names_to = "correlation_parameter_name", values_to = "correlation_parameter_value") %>% unite(correlation_parameter_name, correlation_parameter_name:correlation)
+convergence_results_long_df = convergence_results_df %>% select(-type_correlation,-dataset_name, -type_dataset) %>% pivot_longer(c(-dataset, -correlation), names_to = "correlation_parameter_name", values_to = "correlation_parameter_value") %>% unite(correlation_parameter_name, correlation_parameter_name:correlation)
 analytical_model_parameters_long_df = analytical_model_parameters_df %>% pivot_longer(-dataset, names_to="model_parameter_name", values_to="model_parameter_value")
 cols = c("correlation_parameter", "model_parameter", "cor", "pval")
 results_correlation_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
@@ -329,9 +371,10 @@ for (correlation_parameter in unique(convergence_results_long_df$correlation_par
 ```
 
 ```{r}
-results_correlation_df %>% filter((correlation_parameter %in% c("sample_size_difference_0.4", "sample_size_difference_0.6", "sample_size_difference_0.8"))) %>% ggplot(aes(x=cor, fill=model_parameter, color=model_parameter)) +
+results_correlation_df %>% filter((correlation_parameter %in% c("sample_size_from_graphic_0.4", "sample_size_from_graphic_0.6", "sample_size_from_graphic_0.8"))) %>% ggplot(aes(x=cor, fill=model_parameter, color=model_parameter)) +
   geom_histogram(position="identity", binwidth = 0.1, alpha=0.2)
 ```
+
 ```{r}
 results_correlation_df %>% filter((correlation_parameter %in% c("sample_size_statistical_corrected_0.2", "sample_size_statistical_corrected_0.4", "sample_size_statistical_corrected_0.6", "sample_size_statistical_corrected_0.8"))) %>% ggplot(aes(x=cor, fill=model_parameter, color=model_parameter)) +
   geom_histogram(position="identity", binwidth = 0.1, alpha=0.2)
@@ -339,44 +382,174 @@ results_correlation_df %>% filter((correlation_parameter %in% c("sample_size_sta
 
 ```{r}
 analytical_model_parameters_df %<>% separate(dataset, c("dataset_name", "type_dataset"), sep=":", remove=FALSE) 
-analytical_model_parameters_df %>% ggplot(aes(x=a, y=L, col=dataset_name)) + 
-  geom_point() +
+analytical_model_parameters_df %>% ggplot(aes(x=a, y=L)) + 
+  geom_point(aes(col=dataset_name)) +
+  #geom_smooth(method='lm', col="black", size=0.5) +
   theme_linedraw() +
   theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.title=element_text(size=15, face="bold")) +
   guides(col=guide_legend(title="Type of dataset")) +
   geom_text_repel(
     data = subset(analytical_model_parameters_df, dataset %in% c("tcga:tcga", "tcga:tcga-lusc", "tcga:tcga-coad", "tcga:tcga-brca", "gtex:whole.blood", "gtex:artery.tibial", "scipher:complete.dataset")),
-    aes(label = dataset),
+    aes(label = dataset, col = dataset_name),
     size = 5,
     box.padding = unit(0.35, "lines"),
     point.padding = unit(0.3, "lines")
   )
+plot_file = paste(plots_dir, "a_vs_L.png", sep="/")
+ggsave(
+  plot_file,
+  dpi = 1200,
+  width = 10000,
+  height = 6000,
+  units = c("px")
+)
 ```
 
 We observe a clear trend between parameters a and L:the less negative a is, the higher L is. We see that there are some outliers (TCGA, TCGA-BRCA) that do not follow this trend, needing a higher number of samples to converge to a given % of edges than the rest of the datasets. This reflcts that the outliers of this plot are datasets with less quality, or more heterogeneous.
 
 
 ```{r}
-analytical_model_convergence_parameters_df = analytical_model_parameters_df %>% inner_join(convergence_results_df, by="dataset")
-analytical_model_convergence_parameters_df %>% filter(type_correlation == "strong") %>% ggplot(aes(x=a, y=sample_size_difference, col=dataset_name)) + 
+analytical_model_convergence_parameters_df = analytical_model_parameters_df %>% inner_join(convergence_results_df, by=c("dataset", "dataset_name", "type_dataset")) %>% inner_join(numbers_df, by="dataset")
+analytical_model_convergence_parameters_df$num_edges_from_statistical_corrected = calculate_prediction_from_analytical_model(model="Stretched exponential (by optimization)", x_list=analytical_model_convergence_parameters_df$sample_size_statistical_corrected, a=analytical_model_convergence_parameters_df$a, b=analytical_model_convergence_parameters_df$b, L=analytical_model_convergence_parameters_df$L)
+analytical_model_convergence_parameters_df$num_edges_from_statistical_corrected = analytical_model_convergence_parameters_df$num_edges_from_statistical_corrected * analytical_model_convergence_parameters_df$max_value_in_dataset
+analytical_model_convergence_parameters_df$num_edges_from_graphic_norm = analytical_model_convergence_parameters_df$num_edges_from_graphic / analytical_model_convergence_parameters_df$total_num_edges
+analytical_model_convergence_parameters_df$num_edges_from_statistical_corrected_norm = analytical_model_convergence_parameters_df$num_edges_from_statistical_corrected / analytical_model_convergence_parameters_df$total_num_edges
+analytical_model_convergence_parameters_df$correlation = as.numeric(analytical_model_convergence_parameters_df$correlation)
+analytical_model_convergence_parameters_df %>% ggplot(aes(x=a, y=num_edges_from_statistical_corrected_norm, col=correlation)) + 
   geom_point() +
   theme_linedraw() +
   theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.title=element_text(size=15, face="bold")) +
   guides(col=guide_legend(title="Type of dataset")) +
   geom_text_repel(
-    data = subset((analytical_model_convergence_parameters_df %>% filter(type_correlation == "strong")), dataset %in% c("tcga:tcga", "tcga:tcga-lusc", "tcga:tcga-coad", "tcga:tcga-brca", "gtex:whole.blood", "gtex:artery.tibial", "scipher:complete.dataset")),
+    data = subset(analytical_model_convergence_parameters_df, dataset %in% c("tcga:tcga", "tcga:tcga-lusc", "tcga:tcga-coad", "tcga:tcga-brca", "gtex:whole.blood", "gtex:artery.tibial", "scipher:complete.dataset")),
     aes(label = dataset),
     size = 5,
     box.padding = unit(0.35, "lines"),
     point.padding = unit(0.3, "lines")
   )
+
+for (type_correlation_selected in unique(analytical_model_convergence_parameters_df$type_correlation)){
+  print(type_correlation_selected)
+  corr_specific_plot = analytical_model_convergence_parameters_df %>% filter(type_correlation == type_correlation_selected)  %>% filter(!(dataset == "tcga:tcga")) %>% 
+    ggplot(aes(x=a, y=num_edges_from_statistical_corrected_norm, col=dataset_name)) + 
+    geom_point() +
+    theme_linedraw() +
+    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.title=element_text(size=15, face="bold")) +
+    xlab("a") +
+    ylab("Num. of correlations / total at convergence") +
+    guides(col=guide_legend(title="Type of dataset")) +
+    geom_text_repel(
+      data = subset((analytical_model_convergence_parameters_df %>% filter(type_correlation == type_correlation_selected)), dataset %in% c("tcga:tcga-lusc", "tcga:tcga-coad", "tcga:tcga-brca", "gtex:whole.blood", "gtex:artery.tibial", "scipher:complete.dataset")),
+      aes(label = dataset),
+      size = 5,
+      box.padding = unit(0.35, "lines"),
+      point.padding = unit(0.3, "lines")
+    )
+  print(corr_specific_plot)
+  plot_file = paste(plots_dir, paste("a_vs_percentage_correlation_at_convergence_", type_correlation_selected, ".png", sep=""), sep="/")
+  ggsave(
+    plot_file,
+    dpi = 1200,
+    width = 10000,
+    height = 6000,
+    units = c("px")
+  )
+}
+
 ```
 
 ## Relationship between stretched exponential model parameters and dataset parameters
 
+```{r}
+#'  calculate_mean_variance_across_genes
+#'  Function to calculate the mean variance across expression of genes
+#'  @param rnaseq_df Dataframe containing the data.
+#'  
+calculate_mean_variance_across_genes = function(rnaseq_df){
+  return(mean(apply(rnaseq_df[,-1], 1, sd)))
+}
+```
+
 For GTEx:
 
 ```{r}
+gtex_rnaseq_dir = "/home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue"
+gtex_samples_subjects_file = '/home/j.aguirreplans/Databases/GTEx/v8/GTEx_Annotations_SamplesSubjectsMerged.txt'
+gtex_samples_df = fread(gtex_samples_subjects_file)
+topology_results_df = topology_results_df %>% separate(dataset, c("dataset_name", NA), sep=":", remove=FALSE)
+numbers_df %<>% separate(dataset, c("dataset_name", "type_dataset"), sep=":", remove=FALSE)
+gtex_datasets = unique((topology_results_df %>% filter(dataset_name == "gtex"))$dataset)
+cols = c("dataset", "tissue", "num_genes", "mean_iqr_genes", "median_iqr_genes", "num_male", "num_female", "num_age_20_29", "num_age_30_39", "num_age_40_49", "num_age_50_59", "num_age_60_69", "num_age_70_79")
+gtex_parameters_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+for (gtex_dataset in gtex_datasets){
+  tissue = unique((topology_results_df %>% filter(dataset == gtex_dataset))$type_dataset)
+  gtex_samples_tissue_df = gtex_samples_df %>% filter(SMTSD.no.sp.char == tissue)
+  num_genes = (numbers_df %>% filter(dataset == gtex_dataset))$total_num_nodes
+  num_male = length(unique((gtex_samples_tissue_df %>% filter(SEX == 1))$SUBJID))
+  num_female = length(unique((gtex_samples_tissue_df %>% filter(SEX == 2))$SUBJID))
+  num_age_20_29 = length(unique((gtex_samples_tissue_df %>% filter(AGE == "20-29"))$SUBJID))
+  num_age_30_39 = length(unique((gtex_samples_tissue_df %>% filter(AGE == "30-39"))$SUBJID))
+  num_age_40_49 = length(unique((gtex_samples_tissue_df %>% filter(AGE == "40-49"))$SUBJID))
+  num_age_50_59 = length(unique((gtex_samples_tissue_df %>% filter(AGE == "50-59"))$SUBJID))
+  num_age_60_69 = length(unique((gtex_samples_tissue_df %>% filter(AGE == "60-69"))$SUBJID))
+  num_age_70_79 = length(unique((gtex_samples_tissue_df %>% filter(AGE == "70-79"))$SUBJID))
+  gtex_rnaseq_file = paste(gtex_rnaseq_dir, paste("gtex_rnaseq_", tissue, ".gct", sep=""), sep="/")
+  gtex_rnaseq_df = fread(gtex_rnaseq_file)
+  iqr_across_genes = apply(gtex_rnaseq_df[,-1], 1, IQR)
+  mean_iqr_genes = mean(iqr_across_genes)
+  median_iqr_genes = median(iqr_across_genes)
+  gtex_parameters_df = rbind(gtex_parameters_df, data.frame(dataset=gtex_dataset, tissue=tissue, num_genes=num_genes, mean_iqr_genes=mean_iqr_genes, median_iqr_genes=median_iqr_genes, num_male=num_male, num_female=num_female, num_age_20_29=num_age_20_29, num_age_30_39=num_age_30_39, num_age_40_49=num_age_40_49, num_age_50_59=num_age_50_59, num_age_60_69=num_age_60_69, num_age_70_79=num_age_70_79))
+}
+gtex_parameters_df$fraction_male = gtex_parameters_df$num_male / (gtex_parameters_df$num_male + gtex_parameters_df$num_female)
+gtex_parameters_df$fraction_female = gtex_parameters_df$num_female / (gtex_parameters_df$num_male + gtex_parameters_df$num_female)
+gtex_parameters_df$fraction_age_20_29 = gtex_parameters_df$num_age_20_29 / (gtex_parameters_df$num_age_20_29 + gtex_parameters_df$num_age_30_39 + gtex_parameters_df$num_age_40_49 + gtex_parameters_df$num_age_50_59 + gtex_parameters_df$num_age_60_69 + gtex_parameters_df$num_age_70_79)
+gtex_parameters_df$fraction_age_30_39 = gtex_parameters_df$num_age_30_39 / (gtex_parameters_df$num_age_20_29 + gtex_parameters_df$num_age_30_39 + gtex_parameters_df$num_age_40_49 + gtex_parameters_df$num_age_50_59 + gtex_parameters_df$num_age_60_69 + gtex_parameters_df$num_age_70_79)
+gtex_parameters_df$fraction_age_40_49 = gtex_parameters_df$num_age_40_49 / (gtex_parameters_df$num_age_20_29 + gtex_parameters_df$num_age_30_39 + gtex_parameters_df$num_age_40_49 + gtex_parameters_df$num_age_50_59 + gtex_parameters_df$num_age_60_69 + gtex_parameters_df$num_age_70_79)
+gtex_parameters_df$fraction_age_50_59 = gtex_parameters_df$num_age_50_59 / (gtex_parameters_df$num_age_20_29 + gtex_parameters_df$num_age_30_39 + gtex_parameters_df$num_age_40_49 + gtex_parameters_df$num_age_50_59 + gtex_parameters_df$num_age_60_69 + gtex_parameters_df$num_age_70_79)
+gtex_parameters_df$fraction_age_60_69 = gtex_parameters_df$num_age_60_69 / (gtex_parameters_df$num_age_20_29 + gtex_parameters_df$num_age_30_39 + gtex_parameters_df$num_age_40_49 + gtex_parameters_df$num_age_50_59 + gtex_parameters_df$num_age_60_69 + gtex_parameters_df$num_age_70_79)
+gtex_parameters_df$fraction_age_70_79 = gtex_parameters_df$num_age_70_79 / (gtex_parameters_df$num_age_20_29 + gtex_parameters_df$num_age_30_39 + gtex_parameters_df$num_age_40_49 + gtex_parameters_df$num_age_50_59 + gtex_parameters_df$num_age_60_69 + gtex_parameters_df$num_age_70_79)
+gtex_parameters_df
+```
+
+```{r}
+gtex_parameters_long_df = gtex_parameters_df %>% inner_join((analytical_model_parameters_df %>% select(-type_dataset, -dataset_name, -max_value_in_dataset)), by=c("dataset")) %>% pivot_longer(c(-dataset, -tissue, -a, -b, -L), names_to = "dataset_parameter_name", values_to = "dataset_parameter_value")
+gtex_dataset_parameters = c("num_genes", "mean_iqr_genes", "median_iqr_genes", "fraction_male", "fraction_female", "fraction_age_20_29", "fraction_age_30_39", "fraction_age_40_49", "fraction_age_50_59", "fraction_age_60_69", "fraction_age_70_79")
+for (parameter in gtex_dataset_parameters){
+  a_vs_parameter_plot = gtex_parameters_long_df %>% filter(dataset_parameter_name == parameter) %>%
+    ggplot(aes(x=a, y=dataset_parameter_value, col=tissue)) + 
+    geom_point() +
+    theme_linedraw() +
+    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.title=element_text(size=15, face="bold")) +
+    xlab("a") +
+    ylab(parameter) +
+    guides(col=guide_legend(title="Tissue")) +
+    geom_text_repel(
+      data = subset((gtex_parameters_long_df %>% filter(dataset_parameter_name == parameter)), dataset %in% c("gtex:whole.blood", "gtex:artery.tibial")),
+      aes(label = tissue),
+      size = 5,
+      box.padding = unit(0.35, "lines"),
+      point.padding = unit(0.3, "lines")
+    )
+  print(a_vs_parameter_plot)
+  plot_file = paste(plots_dir, paste("a_vs_dataset_parameter_", parameter, ".png", sep=""), sep="/")
+  ggsave(
+    plot_file,
+    dpi = 1200,
+    width = 10000,
+    height = 6000,
+    units = c("px")
+  )
+}
+
+```
+
+```{r}
+gtex_rnaseq_wh_file = paste(gtex_rnaseq_dir, "gtex_rnaseq_Whole.Blood.gct", sep="/")
+gtex_rnaseq_wh_df = fread(gtex_rnaseq_wh_file)
+gtex_rnaseq_at_file = paste(gtex_rnaseq_dir, "gtex_rnaseq_Artery.Tibial.gct", sep="/")
+gtex_rnaseq_at_df = fread(gtex_rnaseq_at_file)
+sd_across_genes = apply(gtex_rnaseq_df[,-1], 1, IQR)
+
 
 ```
 

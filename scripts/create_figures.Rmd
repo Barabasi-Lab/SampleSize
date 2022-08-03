@@ -1,0 +1,272 @@
+---
+title: "Create Figures"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Description
+
+Create figures for the manuscript, extended abstract and poster.
+
+```{r}
+library(data.table)
+library(dplyr)
+library(igraph)
+library(ggplot2)
+require(ggrepel)
+require(magrittr)
+library(tidyr)
+set.seed(1510)
+options(bitmapType='cairo')
+`%ni%` <- Negate(`%in%`)
+```
+
+### Load data
+
+Un-normalized data:
+
+```{r}
+input_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data'
+plots_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots'
+numbers_file = paste(input_dir, 'dataset_numbers_complete_graph.txt', sep='/')
+numbers_df = fread(numbers_file)
+numbers_df$dataset = tolower(numbers_df$dataset)
+
+input_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/example_pearson_pval_0.05'
+topology_results_file = paste(input_dir, 'topology_results_pearson_pval_0.05.txt', sep='/')
+results_selected_df = fread(topology_results_file)
+topology_results_by_size_file = paste(input_dir, 'topology_results_mean_pearson_pval_0.05.txt', sep='/')
+topology_results_selected_by_size_df = fread(topology_results_by_size_file)
+predictions_file = paste(input_dir, 'predictions_pearson_pval_0.05.txt', sep='/')
+predicted_results_df = fread(predictions_file)
+analytical_results_file = paste(input_dir, 'analytical_model_results_pearson_pval_0.05.txt', sep='/')
+topology_results_selected_analytical_df = fread(analytical_results_file)
+analytical_summary_file = paste(input_dir, 'analytical_model_summary_pearson_pval_0.05.txt', sep='/')
+analytical_model_summary_df = fread(analytical_summary_file)
+analytical_regression_results_file = paste(input_dir, 'analytical_model_regression_results_pearson_pval_0.05.txt', sep='/')
+stretched_exponential_regression_df = fread(analytical_regression_results_file)
+theoretical_sample_size_file = paste(input_dir, 'theoretical_sample_size_for_correlations_of_datasets.txt', sep='/')
+sample_size_correlation_df = fread(theoretical_sample_size_file)
+```
+
+Normalized data:
+
+```{r}
+topology_type_normalization = "divide.L"
+input_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/example_pearson_pval_0.05'
+topology_results_file = paste(input_dir, '/', 'topology_results_norm_', topology_type_normalization, '_pearson_pval_0.05.txt', sep='')
+results_selected_norm_df = fread(topology_results_file)
+topology_results_by_size_file = paste(input_dir, '/', 'topology_results_mean_norm_', topology_type_normalization, '_pearson_pval_0.05.txt', sep='')
+topology_results_selected_by_size_norm_df = fread(topology_results_by_size_file)
+predictions_file = paste(input_dir, '/', 'predictions_', topology_type_normalization, '_pearson_pval_0.05.txt', sep='')
+predicted_results_norm_df = fread(predictions_file)
+analytical_results_file = paste(input_dir, '/', 'analytical_model_results_', topology_type_normalization, '_pearson_pval_0.05.txt', sep='')
+topology_results_selected_analytical_norm_df = fread(analytical_results_file)
+```
+
+Number of networks and maximum sample size:
+
+```{r}
+nrow((results_selected_df %>% dplyr::select(method, type_dataset, size, rep) %>% unique()))
+max(((results_selected_df %>% dplyr::select(method, type_dataset, size, rep) %>% unique()))$size)
+```
+
+Number of networks and maximum sample size without counting TCGA full dataset:
+
+```{r}
+nrow((results_selected_df %>% dplyr::select(method, type_dataset, size, rep) %>% filter(!(type_dataset == "tcga:tcga")) %>% unique()))
+max(((results_selected_df %>% dplyr::select(method, type_dataset, size, rep) %>% filter(!(type_dataset == "tcga:tcga")) %>% unique()))$size)
+```
+
+### Make plots
+
+#### Regression plot
+
+```{r}
+#datasets_selected = c("gtex:whole.blood", "gtex:artery.tibial", "tcga:tcga-coad", "tcga:tcga-brca")
+datasets_selected = c("gtex:whole.blood", "gtex:artery.tibial", "tcga:tcga-coad", "tcga:tcga-brca", "scipher:complete.dataset")
+#model_selected = "Stretched exponential (by optimization)"
+model_selected = "Stretched exponential (by linear fit)"
+stretched_exponential_regression_df %>% inner_join((topology_results_selected_analytical_df %>% dplyr::select(type_dataset, model, a, b) %>% unique()), by=c("type_dataset", "model")) %>%
+  filter((type_dataset %in% datasets_selected) & (model == model_selected)) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:complete.dataset", "scipher")) %>%
+  ggplot(aes(x=x, y=y, col=type_dataset)) +
+  geom_point(alpha=0.5, size=3) +
+  geom_abline(aes(intercept=b, slope=a, col=type_dataset), size=1) +
+  theme_linedraw() +
+  xlab("log(N)") +
+  ylab("log[ log(L) - log(S) ]") +
+  scale_color_manual(values = c("#D55E00", "#E69F00", "#44AA99", "#0072B2", "#56B4E9")) +
+  guides(col=guide_legend(title="Dataset")) +
+  theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.title=element_text(size=15, face="bold"))
+plot_file = paste(plots_dir, "regression_pearson_pval_0.05.png", sep="/")
+ggsave(
+  plot_file,
+  dpi = 1200,
+  width = 9000,
+  height = 6000,
+  units = c("px")
+)
+```
+
+```{r}
+#datasets_selected = c("gtex:whole.blood", "gtex:artery.tibial", "tcga:tcga-coad", "tcga:tcga-brca")
+datasets_selected = c("gtex:whole.blood", "gtex:artery.tibial", "tcga:tcga-coad", "tcga:tcga-brca", "scipher:complete.dataset")
+#model_selected = "Stretched exponential (by optimization)"
+model_selected = "Stretched exponential (by linear fit)"
+analytical_model_summary_df %>% 
+  dplyr::select(type_dataset, model, a, b, L, adj.r.squared, relative.error.mean) %>% 
+  filter((type_dataset %in% datasets_selected) & (model == model_selected)) %>% unique()
+```
+
+#### Prediction plot
+
+```{r}
+#datasets_selected = c("gtex:whole.blood", "gtex:artery.tibial", "tcga:tcga-coad", "tcga:tcga-brca")
+datasets_selected = c("gtex:whole.blood", "gtex:artery.tibial", "tcga:tcga-coad", "tcga:tcga-brca", "scipher:complete.dataset")
+#model_selected = "Stretched exponential (by optimization)"
+model_selected = "Stretched exponential (by linear fit)"
+results_selected_norm_df %>% right_join((predicted_results_norm_df %>% dplyr::select(type_dataset, model, model_result, size) %>% unique()), by=c("type_dataset", "size")) %>%
+  filter((type_dataset %in% datasets_selected) & (model == model_selected)) %>%
+#results_selected_norm_df %>%
+#  filter(type_dataset %in% datasets_selected) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:complete.dataset", "scipher")) %>%
+  ggplot(aes(x=size, y=num_edges, col=type_dataset)) +
+  geom_point(alpha=0.5, size=3) +
+  #geom_line(data=(predicted_results_norm_df %>% filter((type_dataset %in% datasets_selected) & (model == model_selected)) %>% unique()), aes(x=size, y=model_result, col=type_dataset), size=1) +
+  geom_line(aes(x=size, y=model_result, col=type_dataset), size=1) +
+  scale_x_continuous(trans = scales::log10_trans()) +
+  scale_color_manual(values = c("#D55E00", "#E69F00", "#44AA99", "#0072B2", "#56B4E9")) +
+  theme_linedraw() +
+  xlab("log(N)") +
+  ylab("S / L") +
+  guides(col=guide_legend(title="Dataset")) +
+  theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.title=element_text(size=15, face="bold"))
+plot_file = paste(plots_dir, "prediction_pearson_pval_0.05.png", sep="/")
+ggsave(
+  plot_file,
+  dpi = 1200,
+  width = 9000,
+  height = 6000,
+  units = c("px")
+)
+```
+
+#### a vs. fraction of significant correlations plot
+
+```{r}
+#'  calculate_predictions_using_stretched_exponential_model_optimized
+#'  Formula to calculate exponential decay of significant interactions from a list of sample sizes.
+#'  This formula requires the use of the L parameter
+#'  @param x List of sample sizes.
+#'  @param a Slope coefficient.
+#'  @param b Intercept coefficient.
+#'  
+calculate_predictions_using_stretched_exponential_model_optimized = function(x, L, a, b){
+  y = exp(log(L) - exp(b+a*log(x)))
+  return(y)
+}
+
+#'  calculate_prediction_from_analytical_model
+#'  Function to calculate predictions using a specific analytical model
+#'  @param model Name of the model used.
+#'  @param x_list List of values in the x axis (e.g. size)
+#'  @param a Parameter a.
+#'  @param b Parameter b.
+#'  @param L Parameter L.
+#'  
+calculate_prediction_from_analytical_model = function(model, x_list, a, b, L){
+  if(model == "Logarithmic"){
+    prediction_result = (log(x_list)*a + b)
+  } else if((model == "Stretched exponential (by optimization)") | (model == "Stretched exponential (by linear fit)")){
+    prediction_result = calculate_predictions_using_stretched_exponential_model_optimized(x=x_list, L=L, a=a, b=b)
+  } else if(model == "Stretched exponential (without L)"){
+    prediction_result = calculate_predictions_using_stretched_exponential_model_without_L(x=x_list, a=a, b=b)
+  }
+  return(prediction_result)
+}
+```
+
+```{r}
+#datasets_selected = c("gtex:whole.blood", "gtex:artery.tibial", "tcga:tcga-coad", "tcga:tcga-brca")
+datasets_selected = c("gtex:whole.blood", "gtex:artery.tibial", "tcga:tcga-coad", "tcga:tcga-brca", "scipher:complete.dataset")
+#model_selected = "Stretched exponential (by optimization)"
+model_selected = "Stretched exponential (by linear fit)"
+sample_size_vs_a_df = analytical_model_summary_df %>% inner_join(sample_size_correlation_df, by=c("type_dataset"="dataset")) %>% 
+  #filter((type_dataset %in% datasets_selected) & (model == model_selected)) 
+  filter(model == model_selected)
+
+# Calculate number of edges for each critical correlation using model
+sample_size_vs_a_df$num_edges_from_statistical_corrected = calculate_prediction_from_analytical_model(model=model_selected, x_list=sample_size_vs_a_df$sample_size_statistical_corrected, a=sample_size_vs_a_df$a, b=sample_size_vs_a_df$b, L=sample_size_vs_a_df$L)
+sample_size_vs_a_df$num_edges_from_statistical_corrected = sample_size_vs_a_df$num_edges_from_statistical_corrected * sample_size_vs_a_df$max_value_in_dataset
+sample_size_vs_a_df$num_edges_from_statistical_corrected_norm = sample_size_vs_a_df$num_edges_from_statistical_corrected / sample_size_vs_a_df$total_num_edges
+```
+
+```{r}
+type_correlation_selected = "weak"
+#sample_size_vs_a_df$data_col = ifelse(sample_size_vs_a_df$type_dataset == "gtex:whole.blood", "#E69F00", ifelse(sample_size_vs_a_df$type_dataset == "gtex:artery.tibial", "#D55E00", ifelse(sample_size_vs_a_df$type_dataset == "tcga:tcga-coad", "#56B4E9", ifelse(sample_size_vs_a_df$type_dataset == "tcga:tcga-brca", "#0072B2", "black"))))
+
+sample_size_vs_a_df %>% 
+  filter(type_correlation == type_correlation_selected) %>% 
+  filter(!(type_dataset == "tcga:tcga")) %>% 
+  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:complete.dataset", "scipher")) %>%
+  ggplot(aes(x=a, y=num_edges_from_statistical_corrected_norm)) + 
+  geom_point() +
+  geom_point(data = . %>% filter(type_dataset == "tcga:tcga-coad"), color = "#56B4E9") +
+  geom_point(data = . %>% filter(type_dataset == "tcga:tcga-brca"), color = "#0072B2") +
+  geom_point(data = . %>% filter(type_dataset == "scipher"), color = "#44AA99") +
+  geom_point(data = . %>% filter(type_dataset == "gtex:whole.blood"), color = "#E69F00") +
+  geom_point(data = . %>% filter(type_dataset == "gtex:artery.tibial"), color = "#D55E00") +
+  xlab(expression(alpha)) +
+  ylab("Fraction of correlations above 0.2") +
+  #guides(col=guide_legend(title="Dataset")) +
+  theme_linedraw() +
+  theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.title=element_text(size=15, face="bold")) +
+  geom_text_repel(
+    data = subset((sample_size_vs_a_df %>% filter(type_correlation == type_correlation_selected)), type_dataset == "gtex:whole.blood"),
+    aes(label = type_dataset), col = "#E69F00",
+    size = 5,
+    box.padding = unit(0.5, "lines"),
+    point.padding = unit(0.3, "lines")
+  ) +
+  geom_text_repel(
+    data = subset((sample_size_vs_a_df %>% filter(type_correlation == type_correlation_selected)), type_dataset == "gtex:artery.tibial"),
+    aes(label = type_dataset), col = "#D55E00",
+    size = 5,
+    box.padding = unit(0.35, "lines"),
+    point.padding = unit(0.3, "lines")
+  ) +
+  geom_text_repel(
+    data = subset((sample_size_vs_a_df %>% filter(type_correlation == type_correlation_selected) %>% mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:complete.dataset", "scipher"))), type_dataset == "scipher"),
+    aes(label = type_dataset), col = "#44AA99",
+    size = 5,
+    box.padding = unit(0.5, "lines"),
+    point.padding = unit(0.3, "lines")
+  ) +
+  geom_text_repel(
+    data = subset((sample_size_vs_a_df %>% filter(type_correlation == type_correlation_selected)), type_dataset == "tcga:tcga-brca"),
+    aes(label = type_dataset), col = "#0072B2",
+    size = 5,
+    box.padding = unit(0.35, "lines"),
+    point.padding = unit(0.3, "lines")
+  ) +
+  geom_text_repel(
+    data = subset((sample_size_vs_a_df %>% filter(type_correlation == type_correlation_selected)), type_dataset == "tcga:tcga-coad"),
+    aes(label = type_dataset), col = "#56B4E9",
+    size = 5,
+    box.padding = unit(0.5, "lines"),
+    point.padding = unit(0.3, "lines")
+  )
+
+plot_file = paste(plots_dir, "a_vs_fraction_sig_correlations_pearson_pval_0.05.png", sep="/")
+ggsave(
+  plot_file,
+  dpi = 1200,
+  width = 6400,
+  height = 6000,
+  units = c("px")
+)
+```

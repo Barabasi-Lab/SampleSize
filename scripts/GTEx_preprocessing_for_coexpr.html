@@ -530,8 +530,10 @@ fwrite(gtex_gene_category_df, genes_dataset_file)</code></pre>
 <li>Standard deviation of all samples above 0.</li>
 <li>More than half of the genes with counts above 0.</li>
 </ul>
-<pre class="r"><code>tpm_filt_dir = paste(gtex_dir, 'tpm_filtered_files_by_tissue', sep='/')
+<pre class="r"><code>tpm_no_filt_dir = paste(gtex_dir, 'tpm_by_tissue', sep='/')
+tpm_filt_dir = paste(gtex_dir, 'tpm_filtered_files_by_tissue', sep='/')
 genes_filt_dir = paste(gtex_dir, 'genes_filtered_files_by_tissue', sep='/')
+dir.create(tpm_no_filt_dir, showWarnings = FALSE)
 dir.create(tpm_filt_dir, showWarnings = FALSE)
 dir.create(genes_filt_dir, showWarnings = FALSE)
 cols = c(&quot;tissue&quot;, &quot;sex&quot;, &quot;n_genes_raw&quot;, &quot;n_genes_processed&quot;, &quot;sum&quot;,  &quot;mean&quot;, &quot;median&quot;, &quot;sd&quot;, &quot;zero_sum_counts&quot;)
@@ -543,11 +545,13 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
     # Get the samples of the selected tissue/sex
     if (sex == &quot;&quot;){
       samples_tissue_sex = samples_df[samples_df$SMTSD.no.sp.char == tissue,]$SAMPID
+      tpm_tissue_sex_no_filt_file = paste(tpm_filt_dir, paste(&quot;gtex_rnaseq_&quot;, tissue, &quot;.gct&quot;, sep=''), sep='/')
       tpm_tissue_sex_filt_file = paste(tpm_filt_dir, paste(&quot;gtex_rnaseq_&quot;, tissue, &quot;.gct&quot;, sep=''), sep='/')
       genes_dataset_filt_file = paste(genes_filt_dir, paste(&quot;gtex_rnaseq_gene_info_&quot;, tissue, &quot;.csv&quot;, sep=''), sep='/')
     } else {
       sex_id = sex_to_id[sex,]
       samples_tissue_sex = samples_df[(samples_df$SMTSD.no.sp.char == tissue) &amp; (samples_df$SEX == sex_id),]$SAMPID
+      tpm_tissue_sex_no_filt_file = paste(tpm_filt_dir, paste(&quot;gtex_rnaseq_&quot;, tissue, &quot;_&quot;, sex, &quot;.gct&quot;, sep=''), sep='/')
       tpm_tissue_sex_filt_file = paste(tpm_filt_dir, paste(&quot;gtex_rnaseq_&quot;, tissue, &quot;_&quot;, sex, &quot;.gct&quot;, sep=''), sep='/')
       genes_dataset_filt_file = paste(genes_filt_dir, paste(&quot;gtex_rnaseq_gene_info_&quot;, tissue, &quot;_&quot;, sex, &quot;.csv&quot;, sep=''), sep='/')
     }
@@ -556,6 +560,9 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
     if (length(samples_tissue_sex) &gt; 10){
       # Select expression from selected samples
       tpm_tissue_sex_df = tpm_df %&gt;% select(c(&quot;Gene&quot;, all_of(samples_tissue_sex)))
+      # Save file without filters
+      fwrite(tpm_tissue_sex_df, tpm_tissue_sex_no_filt_file)
+      
       # Calculate metrics of expression
       info_df = data.frame(Gene=tpm_tissue_sex_df$Gene, sum=rowSums(tpm_tissue_sex_df[,-1]))
       info_df$sd = apply(tpm_tissue_sex_df[,-1], 1, sd)
