@@ -37,9 +37,9 @@ opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
 
 # Check for missing arguments
-if (is.null(opt$coexpression_network_file)){
+if (is.null(opt$coexpression_network_file_D)){
   print_help(opt_parser)
-  stop("At least one argument must be supplied (coexpression_network_file, ppi_file).n", call.=FALSE)
+  stop("At least one argument must be supplied (coexpression_network_file_D).n", call.=FALSE)
 }
 
 coexpression_network_file_D = opt$coexpression_network_file_D
