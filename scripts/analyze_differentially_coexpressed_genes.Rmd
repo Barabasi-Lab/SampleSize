@@ -7,22 +7,166 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+### Description
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+Analyze differentially co-expressed genes.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+Based on this tutorial:
+[https://deisygysi.github.io/teaching/minipeb2021/](https://deisygysi.github.io/teaching/minipeb2021/)
 
-```{r cars}
-summary(cars)
+```{r, message=FALSE}
+library(data.table)
+library(dplyr)
+library(igraph)
+library(ggplot2)
+require(magrittr)
+library(tidyr)
+set.seed(1510)
+options(bitmapType='cairo')
+`%ni%` <- Negate(`%in%`)
 ```
 
-## Including Plots
+### Load data
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+input_dir = "/work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/TCGA-BRCA_Breast.Mammary.Tissue"
+plots_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots"
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+cols = c("Node.1", "Node.2", "D", "N", "Phi", "Phi_tilde", "Group", "Score_center", "Score_Phi", "Score_Phi_tilde", "Score_internal", "Score_ratio", "type_correlation", "size", "rep_D", "rep_N", "method", "threshold")
+DiffNet_cl_all = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+cols = c("Node", "Phi", "pval_Phi", "Group_pval_Phi", "Phi_tilde", "pval_Phi_Tilde", "Group_pval_Phi_tilde", "type_correlation", "size", "rep_D", "rep_N", "method", "threshold")
+Nodes_all = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+
+result_files = list.files(input_dir)
+
+for(file_name in result_files){
+  input_file = paste(input_dir, file_name, sep="/")
+  info_file = gsub(".txt","",file_name)
+  file_split1 = strsplit(info_file, split="_")[[1]]
+  if(file_split1[1] == "diffanalysis"){
+    type_analysis = file_split1[2]
+    pval = tail(file_split1, n=1)
+    info_file = gsub(paste("diffanalysis_", type_analysis, "_", sep=""),"",info_file)
+    info_file = gsub(paste("_pval_", pval, sep=""),"",info_file)
+    file_split2 = strsplit(info_file, split="___")[[1]]
+    file_D_split = strsplit(gsub(".net","",file_split2[1]), split="_")[[1]]
+    file_N_split = strsplit(gsub(".net","",file_split2[2]), split="_")[[1]]
+    method = file_D_split[1]
+    size = as.numeric(file_D_split[(length(file_D_split)-2)])
+    r_D = as.numeric(file_D_split[(length(file_D_split))])
+    r_N = as.numeric(file_N_split[(length(file_N_split))])
+    dataset_D = file_D_split[(length(file_D_split)-4)]
+    dataset_N = file_N_split[(length(file_N_split)-4)]
+    individual_df <- fread(input_file)
+    if(type_analysis=="edges"){
+      DiffNet_cl_all <- rbind(DiffNet_cl_all, cbind(individual_df, data.frame(size=rep(size, nrow(individual_df)), rep_D=rep(r_D, nrow(individual_df)), rep_N=rep(r_N, nrow(individual_df)), method=rep(method, nrow(individual_df)), threshold=rep(threshold, nrow(individual_df)))))
+    } else {
+      Nodes_all <- rbind(Nodes_all, cbind(individual_df, data.frame(size=rep(size, nrow(individual_df)), rep_D=rep(r_D, nrow(individual_df)), rep_N=rep(r_N, nrow(individual_df)), method=rep(method, nrow(individual_df)), threshold=rep(threshold, nrow(individual_df)))))
+    }
+  }
+}
+```
+
+```{r}
+input_file = "/work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/TCGA-BRCA_Breast.Mammary.Tissue/diffanalysis_edges_pearson_tcga_TCGA-BRCA_size_100_rep_5.net___pearson_RNAseq_samples_Breast.Mammary.Tissue_size_100_rep_1.net_pval_0.05.txt"
+individual_df <- fread(input_file)
+
+stats_df = individual_df %>% 
+  filter(type_correlation=="all") %>% 
+  select(Node.1, Node.2, Phi_tilde) %>% unique() %>% 
+  group_by(Phi_tilde) %>%
+  count() %>% 
+  ungroup() %>% 
+  mutate(pcnt = `n` / sum(`n`)) %>% 
+  arrange(pcnt) %>%
+  mutate(plot_labels = scales::percent(pcnt))
+
+print(stats_df)
+stats_df %>%
+  ggplot(aes(x = "", y = pcnt, fill = Phi_tilde)) +
+  geom_col() +
+  geom_label(aes(label = plot_labels),
+             position = position_stack(vjust = 0.5),
+             show.legend = FALSE) +
+  coord_polar(theta = "y") +
+  theme_void()
+```
+
+```{r}
+input_file = "/work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/TCGA-BRCA_Breast.Mammary.Tissue/diffanalysis_edges_pearson_tcga_TCGA-BRCA_size_400_rep_5.net___pearson_RNAseq_samples_Breast.Mammary.Tissue_size_400_rep_5.net_pval_0.05.txt"
+individual_df <- fread(input_file)
+
+stats_df = individual_df %>% 
+  filter(type_correlation=="all") %>% 
+  select(Node.1, Node.2, Phi_tilde) %>% unique() %>% 
+  group_by(Phi_tilde) %>%
+  count() %>% 
+  ungroup() %>% 
+  mutate(pcnt = `n` / sum(`n`)) %>% 
+  arrange(pcnt) %>%
+  mutate(plot_labels = scales::percent(pcnt))
+
+print(stats_df)
+stats_df %>%
+  ggplot(aes(x = "", y = pcnt, fill = Phi_tilde)) +
+  geom_col() +
+  geom_label(aes(label = plot_labels),
+             position = position_stack(vjust = 0.5),
+             show.legend = FALSE) +
+  coord_polar(theta = "y") +
+  theme_void()
+```
+
+```{r}
+input_file = "/work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/TCGA-BRCA_Breast.Mammary.Tissue/diffanalysis_nodes_pearson_tcga_TCGA-BRCA_size_100_rep_5.net___pearson_RNAseq_samples_Breast.Mammary.Tissue_size_100_rep_1.net_pval_0.05.txt"
+individual_df <- fread(input_file)
+
+stats_df = individual_df %>% 
+  filter(type_correlation=="all") %>% 
+  select(Node, Phi_tilde) %>% unique() %>% 
+  group_by(Phi_tilde) %>%
+  count() %>% 
+  ungroup() %>% 
+  mutate(pcnt = `n` / sum(`n`)) %>% 
+  arrange(pcnt) %>%
+  mutate(plot_labels = scales::percent(pcnt))
+
+print(stats_df)
+stats_df %>%
+  ggplot(aes(x = "", y = pcnt, fill = Phi_tilde)) +
+  geom_col() +
+  geom_label(aes(label = plot_labels),
+             position = position_stack(vjust = 0.5),
+             show.legend = FALSE) +
+  coord_polar(theta = "y") +
+  theme_void()
+```
+
+```{r}
+input_file = "/work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/TCGA-BRCA_Breast.Mammary.Tissue/diffanalysis_nodes_pearson_tcga_TCGA-BRCA_size_400_rep_5.net___pearson_RNAseq_samples_Breast.Mammary.Tissue_size_400_rep_5.net_pval_0.05.txt"
+individual_df <- fread(input_file)
+
+stats_df = individual_df %>% 
+  filter(type_correlation=="all") %>% 
+  select(Node, Phi_tilde) %>% unique() %>% 
+  group_by(Phi_tilde) %>%
+  count() %>% 
+  ungroup() %>% 
+  mutate(pcnt = `n` / sum(`n`)) %>% 
+  arrange(pcnt) %>%
+  mutate(plot_labels = scales::percent(pcnt))
+
+print(stats_df)
+stats_df %>%
+  ggplot(aes(x = "", y = pcnt, fill = Phi_tilde)) +
+  geom_col() +
+  geom_label(aes(label = plot_labels),
+             position = position_stack(vjust = 0.5),
+             show.legend = FALSE) +
+  coord_polar(theta = "y") +
+  theme_void()
+```
+
+

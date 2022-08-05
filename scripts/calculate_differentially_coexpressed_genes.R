@@ -12,16 +12,18 @@ set.seed(1510)
 
 
 option_list = list(
-  make_option(c("-d", "--coexpression_network_file_D"), type="character", 
+  make_option(c("-d", "--coexpression_network_file_D"), action="store", type="character", 
               help="Co-expression network file of condition 1 (e.g., disease)", metavar="character"),
-  make_option(c("-n", "--coexpression_network_file_N"), type="character", 
+  make_option(c("-n", "--coexpression_network_file_N"), action="store", type="character", 
               help="Co-expression network file of condition 2  (e.g., normal)", metavar="character"),
-  make_option(c("-l", "--output_edges_file"), type="character", default="./results_diff_net.txt", 
+  make_option(c("-l", "--output_edges_file"), action="store", type="character", default="./results_diff_net.txt", 
               help="Output results of the differentially co-expressed edges [default= %default]", metavar="character"),
-  make_option(c("-v", "--output_nodes_file"), type="character", default="./results_diff_nodes.txt", 
+  make_option(c("-v", "--output_nodes_file"), action="store", type="character", default="./results_diff_nodes.txt", 
               help="Output results of the differentially co-expressed nodes [default= %default]", metavar="character"),
-  make_option(c("-t", "--threshold"), type="double", default = 0.05,
-              help="P-value threshold", metavar="double")
+  make_option(c("-t", "--threshold"), action="store", type="double", default = 0.05,
+              help="P-value threshold", metavar="double"),
+  make_option(c("-s", "--normalize"), action="store_true", type="double",
+              help="If TRUE, uses stretch parameter to normalize networks before running CODINA")
 ); 
 # Example of execution
 # Rscript /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differentially_coexpressed_genes.R
@@ -37,7 +39,7 @@ opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
 
 # Check for missing arguments
-if (is.null(opt$coexpression_network_file_D)){
+if (is.null(opt$coexpression_network_file_D) | is.null(opt$coexpression_network_file_N)){
   print_help(opt_parser)
   stop("At least one argument must be supplied (coexpression_network_file_D).n", call.=FALSE)
 }
@@ -47,12 +49,14 @@ coexpression_network_file_N = opt$coexpression_network_file_N
 output_edges_file = opt$output_edges_file
 output_nodes_file = opt$output_nodes_file
 threshold = as.double(opt$threshold)
+normalize = opt$normalize
 
 #coexpression_network_file_D = "/work/ccnr/j.aguirreplans/Scipher/SampleSize/networks_tcga/tumor/TCGA-BRCA/pearson_tcga_TCGA-BRCA_size_200_rep_1.net"
 #coexpression_network_file_N = "/work/ccnr/j.aguirreplans/Scipher/SampleSize/networks_gtex/Breast.Mammary.Tissue/pearson_RNAseq_samples_Breast.Mammary.Tissue_size_200_rep_1.net"
 #threshold=0.05
 
-
+print(normalize)
+stop("Bye bye baby")
 
 #-------------------------#
 # DEFINITION OF FUNCTIONS #
@@ -141,7 +145,7 @@ print(time_diff)
 # print("Calculating differentially co-expressed edges")
 # DiffNet = MakeDiffNet(Data = list(coexpression_df_D, coexpression_df_N),
 #                       Code = c("D", "N"),
-#                       stretch = T) # stretch is used when the networks come from different studies
+#                       stretch = normalize) # stretch is used when the networks come from different studies
 # end_time <- Sys.time()
 # time_diff = end_time - start_time
 # print(time_diff)
@@ -201,7 +205,7 @@ for(type_correlation_selected in row.names(type_correlation_df)){
     # Calculate differential co-expression analysis
     start_time <- Sys.time()
     print("Calculating differentially co-expressed edges")
-    DiffNet = tryCatch(MakeDiffNet(Data = list(coexpression_filt_df_D, coexpression_filt_df_N), Code = c("D", "N"), stretch = T),
+    DiffNet = tryCatch(MakeDiffNet(Data = list(coexpression_filt_df_D, coexpression_filt_df_N), Code = c("D", "N"), stretch = normalize),
                        error=function(cond){
                          print("Not enough nodes to make differential co-expression analysis")
                          # Empty table

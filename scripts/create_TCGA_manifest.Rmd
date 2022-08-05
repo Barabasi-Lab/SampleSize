@@ -11,11 +11,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Obtain data and metadata from TCGA.
 Tutorial based on: 
-https://bioconductor.org/packages/devel/bioc/vignettes/GenomicDataCommons/inst/doc/overview.html 
-https://sciwiki.fredhutch.org/compdemos/GDC_Data_Download/
+[https://bioconductor.org/packages/devel/bioc/vignettes/GenomicDataCommons/inst/doc/overview.html](https://bioconductor.org/packages/devel/bioc/vignettes/GenomicDataCommons/inst/doc/overview.html) 
+[https://sciwiki.fredhutch.org/compdemos/GDC_Data_Download/](https://sciwiki.fredhutch.org/compdemos/GDC_Data_Download/)
 
 Info about TCGA barcode:
-https://docs.gdc.cancer.gov/Encyclopedia/pages/TCGA_Barcode/ 
+[https://docs.gdc.cancer.gov/Encyclopedia/pages/TCGA_Barcode/](https://docs.gdc.cancer.gov/Encyclopedia/pages/TCGA_Barcode/)
 
 ```{r, message=FALSE}
 library(GenomicDataCommons)
