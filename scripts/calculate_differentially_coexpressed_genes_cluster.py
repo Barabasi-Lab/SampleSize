@@ -29,6 +29,7 @@ def parse_options():
     parser.add_option("-n", action="store", type="string", dest="networks_dir_N", help="Directory with the input networks of condition 2 (e.g., normal)", metavar="NETWORKS_DIR_N")
     parser.add_option("-o", action="store", type="string", dest="output_dir", help="Directory for the output files", metavar="OUTPUT_DIR")
     parser.add_option("-p", action="store", type="float", dest="pval_adj_cutoff", default=0.05, help="Cut-off of the adjusted p-value to consider an edge significant", metavar="PVAL_ADJ_CUTOFF")
+    parser.add_option("-s", action="store_true", dest="stretch_normalization", help="If included, uses stretch parameter to normalize networks before running CODINA")
 
     (options, args) = parser.parse_args()
 
@@ -91,6 +92,12 @@ def calculate_differentially_coexpressed_genes(options):
     limit = int(config.get("Cluster", "max_jobs_in_queue"))
     l = 1
 
+    # Define additional parameters
+    if options.stretch_normalization:
+        stretch_normalization = '-s'
+    else:
+        stretch_normalization = ''
+
     # Get all possible files in both directories
     pval_adj_cutoff = float(options.pval_adj_cutoff)
     networks_D = [f for f in os.listdir(networks_dir_D) if fileExist(os.path.join(networks_dir_D, f))]
@@ -124,7 +131,7 @@ def calculate_differentially_coexpressed_genes(options):
         #if not fileExist(bash_script_file):
         if not fileExist(output_edges_file) or not fileExist(output_nodes_file):
 
-            command = 'Rscript {} -d {} -n {} -l {} -v {} -t {}'.format(script_file, os.path.join(networks_dir_D, network_name_d), os.path.join(networks_dir_N, network_name_n), output_edges_file, output_nodes_file, pval_adj_cutoff)
+            command = 'Rscript {} -d {} -n {} -l {} -v {} -t {} {}'.format(script_file, os.path.join(networks_dir_D, network_name_d), os.path.join(networks_dir_N, network_name_n), output_edges_file, output_nodes_file, pval_adj_cutoff, stretch_normalization)
             print(command)
             print(l)
             #submit_command_to_queue(command, max_jobs_in_queue=int(config.get("Cluster", "max_jobs_in_queue")), queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude, conda_environment=conda_environment)

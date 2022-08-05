@@ -22,7 +22,7 @@ option_list = list(
               help="Output results of the differentially co-expressed nodes [default= %default]", metavar="character"),
   make_option(c("-t", "--threshold"), action="store", type="double", default = 0.05,
               help="P-value threshold", metavar="double"),
-  make_option(c("-s", "--normalize"), action="store_true", type="double",
+  make_option(c("-s", "--stretch_normalization"), action="store_true", type="double",
               help="If TRUE, uses stretch parameter to normalize networks before running CODINA")
 ); 
 # Example of execution
@@ -49,13 +49,13 @@ coexpression_network_file_N = opt$coexpression_network_file_N
 output_edges_file = opt$output_edges_file
 output_nodes_file = opt$output_nodes_file
 threshold = as.double(opt$threshold)
-normalize = opt$normalize
+stretch_normalization = opt$stretch_normalization
 
 #coexpression_network_file_D = "/work/ccnr/j.aguirreplans/Scipher/SampleSize/networks_tcga/tumor/TCGA-BRCA/pearson_tcga_TCGA-BRCA_size_200_rep_1.net"
 #coexpression_network_file_N = "/work/ccnr/j.aguirreplans/Scipher/SampleSize/networks_gtex/Breast.Mammary.Tissue/pearson_RNAseq_samples_Breast.Mammary.Tissue_size_200_rep_1.net"
 #threshold=0.05
 
-print(normalize)
+print(stretch_normalization)
 stop("Bye bye baby")
 
 #-------------------------#
@@ -145,7 +145,7 @@ print(time_diff)
 # print("Calculating differentially co-expressed edges")
 # DiffNet = MakeDiffNet(Data = list(coexpression_df_D, coexpression_df_N),
 #                       Code = c("D", "N"),
-#                       stretch = normalize) # stretch is used when the networks come from different studies
+#                       stretch = stretch_normalization) # stretch is used when the networks come from different studies
 # end_time <- Sys.time()
 # time_diff = end_time - start_time
 # print(time_diff)
@@ -205,7 +205,7 @@ for(type_correlation_selected in row.names(type_correlation_df)){
     # Calculate differential co-expression analysis
     start_time <- Sys.time()
     print("Calculating differentially co-expressed edges")
-    DiffNet = tryCatch(MakeDiffNet(Data = list(coexpression_filt_df_D, coexpression_filt_df_N), Code = c("D", "N"), stretch = normalize),
+    DiffNet = tryCatch(MakeDiffNet(Data = list(coexpression_filt_df_D, coexpression_filt_df_N), Code = c("D", "N"), stretch = stretch_normalization),
                        error=function(cond){
                          print("Not enough nodes to make differential co-expression analysis")
                          # Empty table
