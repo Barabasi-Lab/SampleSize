@@ -30,6 +30,7 @@ def parse_options():
     parser.add_option("-o", action="store", type="string", dest="output_dir", help="Directory for the output files", metavar="OUTPUT_DIR")
     parser.add_option("-p", action="store", type="float", dest="pval_adj_cutoff", default=0.05, help="Cut-off of the adjusted p-value to consider an edge significant", metavar="PVAL_ADJ_CUTOFF")
     parser.add_option("-s", action="store_true", dest="stretch_normalization", help="If included, uses stretch parameter to normalize networks before running CODINA")
+    parser.add_option("-f", action="store_true", dest="filter_by_common_nodes", help="If included, filters networks by keeping nodes that are common in both networks")
 
     (options, args) = parser.parse_args()
 
@@ -97,6 +98,11 @@ def calculate_differentially_coexpressed_genes(options):
         stretch_normalization = '-s'
     else:
         stretch_normalization = ''
+    
+    if options.filter_by_common_nodes:
+        filter_by_common_nodes = '-f'
+    else:
+        filter_by_common_nodes = ''
 
     # Get all possible files in both directories
     pval_adj_cutoff = float(options.pval_adj_cutoff)
@@ -107,12 +113,24 @@ def calculate_differentially_coexpressed_genes(options):
     sizes_d = set(networks_df[networks_df['dataset_name']=='D']['size'].tolist())
     sizes_n = set(networks_df[networks_df['dataset_name']=='N']['size'].tolist())
     shared_sizes = sorted(sizes_d & sizes_n)
+    reps_d = set(networks_df[networks_df['dataset_name']=='D']['rep'].tolist())
+    reps_n = set(networks_df[networks_df['dataset_name']=='N']['rep'].tolist())
+    shared_reps = sorted(reps_d & reps_n)
     all_combinations = []
     for size in shared_sizes:
-        networks_d_selected = networks_df[(networks_df['size']==size) & (networks_df['dataset_name']=='D')]['network'].tolist()
-        networks_n_selected = networks_df[(networks_df['size']==size) & (networks_df['dataset_name']=='N')]['network'].tolist()
-        unique_combinations = list(itertools.product(networks_d_selected, networks_n_selected))
-        all_combinations = all_combinations + unique_combinations
+        # Select any combinations between networks of same size
+        #networks_d_selected = networks_df[(networks_df['size']==size) & (networks_df['dataset_name']=='D')]['network'].tolist()
+        #networks_n_selected = networks_df[(networks_df['size']==size) & (networks_df['dataset_name']=='N')]['network'].tolist()
+        #unique_combinations = list(itertools.product(networks_d_selected, networks_n_selected))
+        #all_combinations = all_combinations + unique_combinations
+
+        # Select networks that have both same size and repetition number
+        for rep in shared_reps:
+            network_d_selected = networks_df[(networks_df['size']==size) & (networks_df['rep']==rep) & (networks_df['dataset_name']=='D')]['network'].tolist()
+            network_n_selected = networks_df[(networks_df['size']==size) & (networks_df['rep']==rep) & (networks_df['dataset_name']=='N')]['network'].tolist()
+            if (len(network_d_selected) == 1) & (len(network_n_selected) == 1):
+                #print([network_d_selected[0], network_n_selected[0]])
+                all_combinations = all_combinations + [[network_d_selected[0], network_n_selected[0]]]
 
     for combination in all_combinations:
 
@@ -131,7 +149,7 @@ def calculate_differentially_coexpressed_genes(options):
         #if not fileExist(bash_script_file):
         if not fileExist(output_edges_file) or not fileExist(output_nodes_file):
 
-            command = 'Rscript {} -d {} -n {} -l {} -v {} -t {} {}'.format(script_file, os.path.join(networks_dir_D, network_name_d), os.path.join(networks_dir_N, network_name_n), output_edges_file, output_nodes_file, pval_adj_cutoff, stretch_normalization)
+            command = 'Rscript {} -d {} -n {} -l {} -v {} -t {} {} {}'.format(script_file, os.path.join(networks_dir_D, network_name_d), os.path.join(networks_dir_N, network_name_n), output_edges_file, output_nodes_file, pval_adj_cutoff, stretch_normalization, filter_by_common_nodes)
             print(command)
             print(l)
             #submit_command_to_queue(command, max_jobs_in_queue=int(config.get("Cluster", "max_jobs_in_queue")), queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude, conda_environment=conda_environment)

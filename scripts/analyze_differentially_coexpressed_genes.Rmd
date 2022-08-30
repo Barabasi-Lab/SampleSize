@@ -18,6 +18,7 @@ Based on this tutorial:
 library(data.table)
 library(dplyr)
 library(igraph)
+library(ggalluvial)
 library(ggplot2)
 require(magrittr)
 library(tidyr)
@@ -29,144 +30,400 @@ options(bitmapType='cairo')
 ### Load data
 
 ```{r}
-input_dir = "/work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/TCGA-BRCA_Breast.Mammary.Tissue"
 plots_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots"
 ```
 
-```{r}
-cols = c("Node.1", "Node.2", "D", "N", "Phi", "Phi_tilde", "Group", "Score_center", "Score_Phi", "Score_Phi_tilde", "Score_internal", "Score_ratio", "type_correlation", "size", "rep_D", "rep_N", "method", "threshold")
-DiffNet_cl_all = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
-cols = c("Node", "Phi", "pval_Phi", "Group_pval_Phi", "Phi_tilde", "pval_Phi_Tilde", "Group_pval_Phi_tilde", "type_correlation", "size", "rep_D", "rep_N", "method", "threshold")
-Nodes_all = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+## Prepare disease genes information dataset
 
+Prepare the disease-gene associations: 
+
+```{r}
+disease_genes_info_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022.csv"
+
+if(!(file.exists(disease_genes_info_file))){
+  gene_associations_dir = '/work/ccnr/j.aguirreplans/data/gene_associations/data/out'
+  disease_genes_file = paste(gene_associations_dir, 'GDA_Filtered_04042022.csv', sep='/')
+  GDA = fread(disease_genes_file) %>% unique()
+  GDA$HGNC_Symbol = toupper(GDA$HGNC_Symbol)
+  GDA[is.na(GDA)]<-0
+  GDA$NewName = tolower(GDA$NewName)
+  GDA$DescriptorName = tolower(GDA$DescriptorName)
+  GDA$MESHID = toupper(GDA$MESHID)
+  GDA$HGNC_Symbol = toupper(GDA$HGNC_Symbol)
+  GDA %<>% 
+    filter(Strong > 0 | 
+             Weak > 0 |
+             Incompatible > 0) %>%
+    mutate(DiseaseName = NewName) %>%
+    filter(DescriptorName %ni% c("behavioral disciplines and activities")) %>%
+    mutate(MESHID_remove = stringr::str_detect(TreeNumber, pattern = "C22|C25|F04")) %>%
+    mutate(MESHID_remove = ifelse(TreeNumber == "F01", TRUE,MESHID_remove)) %>%
+    filter(!(MESHID_remove)) %>%
+    select(DiseaseName, HGNC_Symbol, DescriptorName) %>% 
+    unique()
+  
+  # Make columns without special characters  
+  GDA$DiseaseName.no.sp.char <- gsub(' ', '.', gsub(', ', '.', gsub('-', '.', gsub('[\\(\\)]', '', GDA$DiseaseName))))
+  GDA$DescriptorName.no.sp.char <- gsub(' ', '.', gsub(', ', '.', gsub('-', '.', gsub('[\\(\\)]', '', GDA$DescriptorName))))
+  
+  # Write output file
+  GDA %>% fwrite(disease_genes_info_file)
+} else {
+  GDA = fread(disease_genes_info_file)
+}
+
+head(GDA)
+```
+
+There are `r nrow(GDA)` disease-gene associations (`r length(unique(GDA$DiseaseName))` diseases, `r length(unique(GDA$HGNC_Symbol))` genes).
+
+Now, filter by the disease selected:
+
+```{r}
+disease_name = "breast.neoplasms"
+GDA_breast = GDA %>% select("DiseaseName.no.sp.char", "HGNC_Symbol") %>% filter(DiseaseName.no.sp.char == disease_name)
+dim(GDA_breast)
+head(GDA_breast)
+```
+
+### Analyze the nodes of breast carcinoma
+
+First compile all files and order them for the comparisons:
+
+```{r}
+input_dir = "/work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/TCGA-BRCA_Breast.Mammary.Tissue"
 result_files = list.files(input_dir)
 
+cols = c("file_name", "size", "rep_D", "rep_N")
+file_info_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+
 for(file_name in result_files){
-  input_file = paste(input_dir, file_name, sep="/")
   info_file = gsub(".txt","",file_name)
   file_split1 = strsplit(info_file, split="_")[[1]]
   if(file_split1[1] == "diffanalysis"){
     type_analysis = file_split1[2]
-    pval = tail(file_split1, n=1)
-    info_file = gsub(paste("diffanalysis_", type_analysis, "_", sep=""),"",info_file)
-    info_file = gsub(paste("_pval_", pval, sep=""),"",info_file)
-    file_split2 = strsplit(info_file, split="___")[[1]]
-    file_D_split = strsplit(gsub(".net","",file_split2[1]), split="_")[[1]]
-    file_N_split = strsplit(gsub(".net","",file_split2[2]), split="_")[[1]]
-    method = file_D_split[1]
-    size = as.numeric(file_D_split[(length(file_D_split)-2)])
-    r_D = as.numeric(file_D_split[(length(file_D_split))])
-    r_N = as.numeric(file_N_split[(length(file_N_split))])
-    dataset_D = file_D_split[(length(file_D_split)-4)]
-    dataset_N = file_N_split[(length(file_N_split)-4)]
-    individual_df <- fread(input_file)
-    if(type_analysis=="edges"){
-      DiffNet_cl_all <- rbind(DiffNet_cl_all, cbind(individual_df, data.frame(size=rep(size, nrow(individual_df)), rep_D=rep(r_D, nrow(individual_df)), rep_N=rep(r_N, nrow(individual_df)), method=rep(method, nrow(individual_df)), threshold=rep(threshold, nrow(individual_df)))))
-    } else {
-      Nodes_all <- rbind(Nodes_all, cbind(individual_df, data.frame(size=rep(size, nrow(individual_df)), rep_D=rep(r_D, nrow(individual_df)), rep_N=rep(r_N, nrow(individual_df)), method=rep(method, nrow(individual_df)), threshold=rep(threshold, nrow(individual_df)))))
+    if(type_analysis == "nodes"){
+      pval = tail(file_split1, n=1)
+      info_file = gsub(paste("diffanalysis_", type_analysis, "_", sep=""),"",info_file)
+      info_file = gsub(paste("_pval_", pval, sep=""),"",info_file)
+      file_split2 = strsplit(info_file, split="___")[[1]]
+      file_D_split = strsplit(gsub(".net","",file_split2[1]), split="_")[[1]]
+      file_N_split = strsplit(gsub(".net","",file_split2[2]), split="_")[[1]]
+      method = file_D_split[1]
+      size = as.numeric(file_D_split[(length(file_D_split)-2)])
+      r_D = as.numeric(file_D_split[(length(file_D_split))])
+      r_N = as.numeric(file_N_split[(length(file_N_split))])
+      dataset_D = file_D_split[(length(file_D_split)-4)]
+      dataset_N = file_N_split[(length(file_N_split)-4)]
+      file_info_df <- rbind(file_info_df, data.frame(file_name=file_name, size=size, rep_D=r_D, rep_N=r_N))
     }
   }
 }
+
+head(file_info_df)
+```
+
+Then analyze files, first counting genes per category and then comparing networks of different sizes:
+
+```{r}
+############################################
+## count_differentially_coexpressed_nodes ##
+############################################
+#'  @param node_results_df Node results table from the differentially co-expression analysis of CODINA.
+#'  @param disease_genes_df Table of genes associated to a specific disease.
+#'  @param type_pval_correction Type of p-value correction for multiple testing. It can be "fdr", "bonferroni" or NA.
+#'  @param pval_threshold P-value threshold to filter the differentially co-expressed nodes.
+
+count_differentially_coexpressed_nodes <- function(node_results_df, disease_genes_df, type_pval_correction="fdr", pval_threshold=0.05){
+  
+  # Check type of p-value correction
+  if(type_pval_correction == "fdr"){
+    pval_correction_field = "pval_Phi_Tilde.adj.fdr"
+  } else if(type_pval_correction == "bonferroni"){
+    pval_correction_field = "pval_Phi_Tilde.adj.bonf"
+  } else if(is.na(type_pval_correction)){
+    pval_correction_field = "pval_Phi"
+  } else {
+    stop(paste("Unrecognized type of p-value correction: ", type_pval_correction, sep=""))
+  }
+  
+  # Filter by p-value and join the disease-gene associations
+  node_results_filt_df = node_results_df %>% select(Node, Phi_tilde, !!as.symbol(pval_correction_field)) %>% unique() %>% filter(!!as.symbol(pval_correction_field) < pval_threshold) %>% left_join(disease_genes_df, by=c("Node"="HGNC_Symbol"))
+  # Count number of nodes in each category
+  counts_df = node_results_filt_df %>% 
+    group_by(Phi_tilde) %>%
+    count() %>% 
+    ungroup()
+  # Count number of nodes that are disease-gene associations in each category
+  counts_disease_df = node_results_filt_df %>% 
+    filter(!(is.na(DiseaseName.no.sp.char))) %>%
+    group_by(Phi_tilde) %>%
+    count() %>% 
+    ungroup() %>%
+    rename("n_disease"="n")
+  # Merge results
+  counts_df = counts_df %>% full_join(counts_disease_df, by="Phi_tilde") %>% replace_na(list(n = 0, n_disease = 0))
+
+  return(list(counts_df=counts_df, node_results_filt_df=node_results_filt_df))
+}  
 ```
 
 ```{r}
-input_file = "/work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/TCGA-BRCA_Breast.Mammary.Tissue/diffanalysis_edges_pearson_tcga_TCGA-BRCA_size_100_rep_5.net___pearson_RNAseq_samples_Breast.Mammary.Tissue_size_100_rep_1.net_pval_0.05.txt"
-individual_df <- fread(input_file)
+type_pval_correction = "fdr"
+pval_threshold = 0.05
+sizes_list = sort(unique(file_info_df$size))
+cols = c("Phi_tilde", "n", "n_disease", "size", "rep_D", "rep_N")
+counts_nodes_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+cols = c("Node", "DiseaseName.no.sp.char", "Phi_tilde", "size", "rep_D", "rep_N")
+nodes_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+#cols = c("Node", "DiseaseName.no.sp.char", "Phi_tilde_prev", "size_prev", "rep_D_prev", "rep_N_prev", "Phi_tilde_curr", "size_curr", "rep_D_curr", "rep_N_curr")
+#change_nodes_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
 
-stats_df = individual_df %>% 
-  filter(type_correlation=="all") %>% 
-  select(Node.1, Node.2, Phi_tilde) %>% unique() %>% 
-  group_by(Phi_tilde) %>%
-  count() %>% 
-  ungroup() %>% 
-  mutate(pcnt = `n` / sum(`n`)) %>% 
-  arrange(pcnt) %>%
-  mutate(plot_labels = scales::percent(pcnt))
+for(x in seq(sizes_list)){
+  size = sizes_list[x]
+  #print(size)
+  same_size_files_df = file_info_df %>% filter(size==!!size) %>% arrange(rep_D, rep_N)
+  input_files = same_size_files_df$file_name
+  # same_size_info_df = data.frame()
+  for(input_file in input_files){
+    r_D = (same_size_files_df %>% filter(file_name == input_file))$rep_D
+    r_N = (same_size_files_df %>% filter(file_name == input_file))$rep_N
+    individual_df = fread(paste(input_dir, input_file, sep="/"))
+    results_count = count_differentially_coexpressed_nodes(individual_df, GDA_breast, type_pval_correction=type_pval_correction, pval_threshold=pval_threshold)
+    counts_nodes_df = rbind(counts_nodes_df, cbind(results_count$counts_df, data.frame(size=size, rep_D=r_D, rep_N=r_N)))
+    if(nrow(nodes_df) == 0){
+      nodes_df = cbind((results_count$node_results_filt_df %>% select("Node", "DiseaseName.no.sp.char", "Phi_tilde")), data.frame(size=size, rep_D=r_D, rep_N=r_N))
+    } else {
+      nodes_df = nodes_df %>% full_join(cbind((results_count$node_results_filt_df %>% select("Node", "DiseaseName.no.sp.char", "Phi_tilde")), data.frame(size=size, rep_D=r_D, rep_N=r_N)), by=c("Node", "DiseaseName.no.sp.char", "Phi_tilde", "size", "rep_D", "rep_N"))
+    }
+    # if(nrow(same_size_info_df) == 0){
+    #   same_size_info_df = cbind(results_count$node_results_filt_df, data.frame(size=size, rep_D=r_D, rep_N=r_N))
+    # } else {
+    #   same_size_info_df = rbind(same_size_info_df, cbind(results_count$node_results_filt_df, data.frame(size=size, rep_D=r_D, rep_N=r_N)))
+    # }
+  }
+  # if(x > 1){
+  #   reps_curr = unique(paste(same_size_info_df$rep_D, same_size_info_df$rep_N, sep="-"))
+  #   reps_prev = unique(paste(previous_size_info_df$rep_D, previous_size_info_df$rep_N, sep="-"))
+  #   for(rep_curr in reps_curr){
+  #     curr_df = same_size_info_df %>% filter((rep_D == strsplit(rep_curr, split="-")[[1]][1]) & (rep_N == strsplit(rep_curr, split="-")[[1]][2]))
+  #     for(rep_prev in reps_prev){
+  #       print(c(rep_curr, rep_prev))
+  #       prev_df = previous_size_info_df %>% filter((rep_D == strsplit(rep_prev, split="-")[[1]][1]) & (rep_N == strsplit(rep_prev, split="-")[[1]][2]))
+  #       change_df = (prev_df %>% select("Node", "DiseaseName.no.sp.char", "Phi_tilde", "size", "rep_D", "rep_N") %>% rename("Phi_tilde_prev"="Phi_tilde", "size_prev"="size", "rep_D_prev"="rep_D", "rep_N_prev"="rep_N")) %>% full_join((curr_df %>% select("Node", "DiseaseName.no.sp.char", "Phi_tilde", "size", "rep_D", "rep_N") %>% rename("Phi_tilde_curr"="Phi_tilde", "size_curr"="size", "rep_D_curr"="rep_D", "rep_N_curr"="rep_N")), by=c("Node", "DiseaseName.no.sp.char"))
+  #       change_nodes_df = rbind(change_nodes_df, change_df)
+  #     }
+  #   }
+  # }
+  # previous_size_info_df = data.frame(same_size_info_df)
+}
 
-print(stats_df)
-stats_df %>%
-  ggplot(aes(x = "", y = pcnt, fill = Phi_tilde)) +
-  geom_col() +
-  geom_label(aes(label = plot_labels),
-             position = position_stack(vjust = 0.5),
-             show.legend = FALSE) +
-  coord_polar(theta = "y") +
-  theme_void()
+head(counts_nodes_df)
+head(nodes_df)
+#head(change_nodes_df)
+```
+
+We plot the number of genes in each category:
+
+```{r}
+counts_nodes_df %>% 
+  group_by(Phi_tilde, size) %>%
+  summarize(mean = mean(n), sd = sd(n), max=max(n), min=min(n)) %>%
+  ggplot(aes(x = size, y = mean, fill = Phi_tilde)) + 
+  geom_line(aes(col = Phi_tilde)) +
+  geom_ribbon(aes(ymin=min, ymax=max), alpha=0.2)
+
+counts_nodes_df %>% 
+  group_by(Phi_tilde, size) %>%
+  summarize(mean_disease = mean(n_disease), sd_disease = sd(n_disease), max_disease=max(n_disease), min_disease=min(n_disease)) %>%
+  ggplot(aes(x = size, y = mean_disease, fill = Phi_tilde)) + 
+  geom_line(aes(col = Phi_tilde)) +
+  geom_ribbon(aes(ymin=min_disease, ymax=max_disease), alpha=0.2)
+
 ```
 
 ```{r}
-input_file = "/work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/TCGA-BRCA_Breast.Mammary.Tissue/diffanalysis_edges_pearson_tcga_TCGA-BRCA_size_400_rep_5.net___pearson_RNAseq_samples_Breast.Mammary.Tissue_size_400_rep_5.net_pval_0.05.txt"
-individual_df <- fread(input_file)
-
-stats_df = individual_df %>% 
-  filter(type_correlation=="all") %>% 
-  select(Node.1, Node.2, Phi_tilde) %>% unique() %>% 
-  group_by(Phi_tilde) %>%
-  count() %>% 
-  ungroup() %>% 
-  mutate(pcnt = `n` / sum(`n`)) %>% 
-  arrange(pcnt) %>%
-  mutate(plot_labels = scales::percent(pcnt))
-
-print(stats_df)
-stats_df %>%
-  ggplot(aes(x = "", y = pcnt, fill = Phi_tilde)) +
-  geom_col() +
-  geom_label(aes(label = plot_labels),
-             position = position_stack(vjust = 0.5),
-             show.legend = FALSE) +
-  coord_polar(theta = "y") +
-  theme_void()
+nodes_empty_df = expand.grid(sort(unique(nodes_df$Node)),sort(unique(nodes_df$size)), seq(1,5,1))
+colnames(nodes_empty_df) = c("Node", "size", "rep_D")
+nodes_empty_df$rep_N = nodes_empty_df$rep_D
+nodes_empty_df = nodes_empty_df %>% left_join((nodes_df %>% select(Node, DiseaseName.no.sp.char) %>% unique()), by="Node") %>% arrange(Node, size, rep_D)
+nodes_expanded_df = nodes_df %>% full_join(nodes_empty_df, by = c("Node", "DiseaseName.no.sp.char", "size", "rep_D", "rep_N")) %>% arrange(Node, size, rep_D)
 ```
 
 ```{r}
-input_file = "/work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/TCGA-BRCA_Breast.Mammary.Tissue/diffanalysis_nodes_pearson_tcga_TCGA-BRCA_size_100_rep_5.net___pearson_RNAseq_samples_Breast.Mammary.Tissue_size_100_rep_1.net_pval_0.05.txt"
-individual_df <- fread(input_file)
-
-stats_df = individual_df %>% 
-  filter(type_correlation=="all") %>% 
-  select(Node, Phi_tilde) %>% unique() %>% 
-  group_by(Phi_tilde) %>%
-  count() %>% 
-  ungroup() %>% 
-  mutate(pcnt = `n` / sum(`n`)) %>% 
-  arrange(pcnt) %>%
-  mutate(plot_labels = scales::percent(pcnt))
-
-print(stats_df)
-stats_df %>%
-  ggplot(aes(x = "", y = pcnt, fill = Phi_tilde)) +
-  geom_col() +
-  geom_label(aes(label = plot_labels),
-             position = position_stack(vjust = 0.5),
-             show.legend = FALSE) +
-  coord_polar(theta = "y") +
-  theme_void()
+# Select the for each gene the node type that occurs more times in the different repetitions
+nodes_summary_df = nodes_expanded_df %>% 
+  group_by(Node, DiseaseName.no.sp.char, Phi_tilde, size) %>% 
+  summarize(n_phi = n()) %>% 
+  ungroup() %>%
+  group_by(Node, DiseaseName.no.sp.char, size) %>%
+  filter(n_phi == max(n_phi)) %>% 
+  arrange(Node, size) %>% 
+  sample_n(1) # Choose randomly cases in which there is the same number of node types 
+ 
+nodes_summary_df
 ```
 
 ```{r}
-input_file = "/work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/TCGA-BRCA_Breast.Mammary.Tissue/diffanalysis_nodes_pearson_tcga_TCGA-BRCA_size_400_rep_5.net___pearson_RNAseq_samples_Breast.Mammary.Tissue_size_400_rep_5.net_pval_0.05.txt"
-individual_df <- fread(input_file)
+nodes_summary_df$Phi_tilde[is.na(nodes_summary_df$Phi_tilde)] = "U"
+nodes_summary_df$Phi_tilde <- as.factor(nodes_summary_df$Phi_tilde)
+nodes_summary_df$size = as.character(nodes_summary_df$size)
+levels(nodes_summary_df$Phi_tilde) = sort(unique(nodes_summary_df$Phi_tilde))
+nodes_summary_df$size <- factor(nodes_summary_df$size, levels=as.character(sort(unique(as.integer(nodes_summary_df$size)))))
 
-stats_df = individual_df %>% 
-  filter(type_correlation=="all") %>% 
-  select(Node, Phi_tilde) %>% unique() %>% 
-  group_by(Phi_tilde) %>%
-  count() %>% 
-  ungroup() %>% 
-  mutate(pcnt = `n` / sum(`n`)) %>% 
-  arrange(pcnt) %>%
-  mutate(plot_labels = scales::percent(pcnt))
+nodes_summary_df %>% 
+  #filter(size %in% c(100, 200, 300, 400)) %>%
+  filter(size %in% c(60, 120, 180, 240, 300, 360, 420)) %>%
+  filter(!(is.na(DiseaseName.no.sp.char))) %>%
+  #filter(!(is.na(Phi_tilde))) %>%
+  ggplot(aes(x = size, stratum = Phi_tilde, alluvium = Node, 
+             fill = Phi_tilde, label = Phi_tilde)) +
+  scale_fill_brewer(type = "qual", palette = "Set2") +
+  geom_flow(stat = "alluvium", lode.guidance = "frontback") +
+  geom_stratum() +
+  theme(legend.position = "bottom")
 
-print(stats_df)
-stats_df %>%
-  ggplot(aes(x = "", y = pcnt, fill = Phi_tilde)) +
-  geom_col() +
-  geom_label(aes(label = plot_labels),
-             position = position_stack(vjust = 0.5),
-             show.legend = FALSE) +
-  coord_polar(theta = "y") +
-  theme_void()
 ```
 
+### Analyze the nodes of rheumatoid arthritis
 
+Select genes associated with the disease:
+
+```{r}
+disease_name = "arthritis.rheumatoid"
+GDA_ra = GDA %>% select("DiseaseName.no.sp.char", "HGNC_Symbol") %>% filter(DiseaseName.no.sp.char == disease_name)
+dim(GDA_ra)
+head(GDA_ra)
+```
+
+Compile all files and order them for the comparisons:
+
+```{r}
+input_dir = "/work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/complete.dataset_Whole.Blood"
+result_files = list.files(input_dir)
+
+cols = c("file_name", "size", "rep_D", "rep_N")
+file_info_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+
+for(file_name in result_files){
+  info_file = gsub(".txt","",file_name)
+  file_split1 = strsplit(info_file, split="_")[[1]]
+  if(file_split1[1] == "diffanalysis"){
+    type_analysis = file_split1[2]
+    if(type_analysis == "nodes"){
+      pval = tail(file_split1, n=1)
+      info_file = gsub(paste("diffanalysis_", type_analysis, "_", sep=""),"",info_file)
+      info_file = gsub(paste("_pval_", pval, sep=""),"",info_file)
+      file_split2 = strsplit(info_file, split="___")[[1]]
+      file_D_split = strsplit(gsub(".net","",file_split2[1]), split="_")[[1]]
+      file_N_split = strsplit(gsub(".net","",file_split2[2]), split="_")[[1]]
+      method = file_D_split[1]
+      size = as.numeric(file_D_split[(length(file_D_split)-2)])
+      r_D = as.numeric(file_D_split[(length(file_D_split))])
+      r_N = as.numeric(file_N_split[(length(file_N_split))])
+      dataset_D = file_D_split[(length(file_D_split)-4)]
+      dataset_N = file_N_split[(length(file_N_split)-4)]
+      file_info_df <- rbind(file_info_df, data.frame(file_name=file_name, size=size, rep_D=r_D, rep_N=r_N))
+    }
+  }
+}
+
+head(file_info_df)
+```
+
+Then analyze files, first counting genes per category and then comparing networks of different sizes:
+
+```{r}
+type_pval_correction = "fdr"
+pval_threshold = 0.05
+sizes_list = sort(unique(file_info_df$size))
+cols = c("Phi_tilde", "n", "n_disease", "size", "rep_D", "rep_N")
+counts_nodes_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+cols = c("Node", "DiseaseName.no.sp.char", "Phi_tilde", "size", "rep_D", "rep_N")
+nodes_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+
+for(x in seq(sizes_list)){
+  size = sizes_list[x]
+  #print(size)
+  same_size_files_df = file_info_df %>% filter(size==!!size) %>% arrange(rep_D, rep_N)
+  input_files = same_size_files_df$file_name
+  # same_size_info_df = data.frame()
+  for(input_file in input_files){
+    r_D = (same_size_files_df %>% filter(file_name == input_file))$rep_D
+    r_N = (same_size_files_df %>% filter(file_name == input_file))$rep_N
+    individual_df = fread(paste(input_dir, input_file, sep="/"))
+    results_count = count_differentially_coexpressed_nodes(individual_df, GDA_ra, type_pval_correction=type_pval_correction, pval_threshold=pval_threshold)
+    counts_nodes_df = rbind(counts_nodes_df, cbind(results_count$counts_df, data.frame(size=size, rep_D=r_D, rep_N=r_N)))
+    if(nrow(nodes_df) == 0){
+      nodes_df = cbind((results_count$node_results_filt_df %>% select("Node", "DiseaseName.no.sp.char", "Phi_tilde")), data.frame(size=size, rep_D=r_D, rep_N=r_N))
+    } else {
+      nodes_df = nodes_df %>% full_join(cbind((results_count$node_results_filt_df %>% select("Node", "DiseaseName.no.sp.char", "Phi_tilde")), data.frame(size=size, rep_D=r_D, rep_N=r_N)), by=c("Node", "DiseaseName.no.sp.char", "Phi_tilde", "size", "rep_D", "rep_N"))
+    }
+  }
+}
+
+head(counts_nodes_df)
+head(nodes_df)
+```
+
+We plot the number of genes in each category:
+
+```{r}
+counts_nodes_df %>% 
+  group_by(Phi_tilde, size) %>%
+  summarize(mean = mean(n), sd = sd(n), max=max(n), min=min(n)) %>%
+  ggplot(aes(x = size, y = mean, fill = Phi_tilde)) + 
+  geom_line(aes(col = Phi_tilde)) +
+  geom_ribbon(aes(ymin=min, ymax=max), alpha=0.2)
+
+counts_nodes_df %>% 
+  group_by(Phi_tilde, size) %>%
+  summarize(mean_disease = mean(n_disease), sd_disease = sd(n_disease), max_disease=max(n_disease), min_disease=min(n_disease)) %>%
+  ggplot(aes(x = size, y = mean_disease, fill = Phi_tilde)) + 
+  geom_line(aes(col = Phi_tilde)) +
+  geom_ribbon(aes(ymin=min_disease, ymax=max_disease), alpha=0.2)
+
+```
+
+```{r}
+nodes_empty_df = expand.grid(sort(unique(nodes_df$Node)),sort(unique(nodes_df$size)), seq(1,5,1))
+colnames(nodes_empty_df) = c("Node", "size", "rep_D")
+nodes_empty_df$rep_N = nodes_empty_df$rep_D
+nodes_empty_df = nodes_empty_df %>% left_join((nodes_df %>% select(Node, DiseaseName.no.sp.char) %>% unique()), by="Node") %>% arrange(Node, size, rep_D)
+nodes_expanded_df = nodes_df %>% full_join(nodes_empty_df, by = c("Node", "DiseaseName.no.sp.char", "size", "rep_D", "rep_N")) %>% arrange(Node, size, rep_D)
+```
+
+```{r}
+# Select the for each gene the node type that occurs more times in the different repetitions
+nodes_summary_df = nodes_expanded_df %>% 
+  group_by(Node, DiseaseName.no.sp.char, Phi_tilde, size) %>% 
+  summarize(n_phi = n()) %>% 
+  ungroup() %>%
+  group_by(Node, DiseaseName.no.sp.char, size) %>%
+  filter(n_phi == max(n_phi)) %>% 
+  arrange(Node, size) %>% 
+  sample_n(1) # Choose randomly cases in which there is the same number of node types 
+ 
+nodes_summary_df
+```
+
+```{r}
+nodes_summary_df$Phi_tilde[is.na(nodes_summary_df$Phi_tilde)] = "U"
+nodes_summary_df$Phi_tilde <- as.factor(nodes_summary_df$Phi_tilde)
+nodes_summary_df$size = as.character(nodes_summary_df$size)
+levels(nodes_summary_df$Phi_tilde) = sort(unique(nodes_summary_df$Phi_tilde))
+nodes_summary_df$size <- factor(nodes_summary_df$size, levels=as.character(sort(unique(as.integer(nodes_summary_df$size)))))
+
+nodes_summary_df %>% 
+  #filter(size %in% c(100, 200, 300, 400)) %>%
+  filter(size %in% c(60, 120, 180, 240, 300, 360, 420)) %>%
+  filter(!(is.na(DiseaseName.no.sp.char))) %>%
+  #filter(!(is.na(Phi_tilde))) %>%
+  ggplot(aes(x = size, stratum = Phi_tilde, alluvium = Node, 
+             fill = Phi_tilde, label = Phi_tilde)) +
+  scale_fill_brewer(type = "qual", palette = "Set2") +
+  geom_flow(stat = "alluvium", lode.guidance = "frontback") +
+  geom_stratum() +
+  theme(legend.position = "bottom")
+
+```

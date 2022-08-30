@@ -25,13 +25,15 @@ set.seed(1510)
 
 ```{r define_files}
 # Define working directories
-databases_dir = '/home/j.aguirreplans/Databases'
+databases_dir = '/work/ccnr/j.aguirreplans/Databases'
+#databases_dir = '/home/j.aguirreplans/Databases'
 #databases_dir = '/Users/j.aguirreplans/Databases'
 
 # Define input files
 subjects_file = paste(databases_dir, 'GTEx/v8/GTEx_Analysis_v8_Annotations_SubjectPhenotypesDS.txt', sep='/')
 samples_file = paste(databases_dir, 'GTEx/v8/GTEx_Analysis_v8_Annotations_SampleAttributesDS.txt', sep='/')
 tpm_file = paste(databases_dir, 'GTEx/v8/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_tpm.gct', sep='/')
+reads_file = paste(databases_dir, 'GTEx/v8/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_reads.gct', sep='/')
 
 # Define output file
 samples_subjects_file = paste(databases_dir, 'GTEx/v8/GTEx_Annotations_SamplesSubjectsMerged.txt', sep='/')
@@ -43,7 +45,7 @@ samples_subjects_file = paste(databases_dir, 'GTEx/v8/GTEx_Annotations_SamplesSu
 subjects_df = fread(subjects_file)
 samples_df = fread(samples_file)
 tpm_df = fread(tpm_file)
-
+reads_df = fread(reads_file)
 ```
 
 ### TPM information
@@ -52,8 +54,24 @@ The TPM data is organized os that the rows are the tpm values for each gene, and
 
 ```{r}
 tpm_df[1:5,1:5]
-
 ```
+
+```{r}
+dim(tpm_df)
+```
+
+### Reads information
+
+The reads data is organized the same way as TPM data:
+
+```{r}
+reads_df[1:5, 1:5]
+```
+
+```{r}
+dim(reads_df)
+```
+
 
 ### Subjects information
 
@@ -96,6 +114,12 @@ head(samples_df)
 ```
 
 We filter the samples by just keeping the ones present in the TPM data:
+
+```{r}
+dim(samples_df[samples_df$SAMPID %in% colnames(tpm_df),])
+dim(samples_df[samples_df$SAMPID %in% colnames(reads_df),])
+dim(samples_df[(samples_df$SAMPID %in% colnames(tpm_df)) & (samples_df$SAMPID %in% colnames(reads_df)),])
+```
 
 ```{r keep_only_samples_in_expression_data}
 samples_df <- samples_df[samples_df$SAMPID %in% colnames(tpm_df),]

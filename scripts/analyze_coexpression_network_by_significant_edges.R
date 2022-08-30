@@ -65,6 +65,7 @@ genes_dataset_file = opt$genes_dataset_file
 #ppi_file = "/home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv"
 #disease_genes_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_scipher.csv"
 #disease_genes_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv"
+#disease_genes_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_gtex.csv"
 #essential_genes_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_scipher.csv"
 #genes_dataset_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_gene_info.csv"
 #genes_dataset_file = "/home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/tcga_rnaseq_gene_info.csv"

@@ -367,33 +367,43 @@ set.seed(1510)
 <div id="define-variables" class="section level2">
 <h2>Define variables</h2>
 <pre class="r"><code># Define working directories
-gtex_dir = '/home/j.aguirreplans/Databases/GTEx/v8'
-gene_annotations_dir = '/home/j.aguirreplans/data/gene_annotations/data/out'
-gene_associations_dir = '/home/j.aguirreplans/data/gene_associations/data/out'
+gtex_dir = '/work/ccnr/j.aguirreplans/Databases/GTEx/v8'
+gene_annotations_dir = '/work/ccnr/j.aguirreplans/data/gene_annotations/data/out'
+gene_associations_dir = '/work/ccnr/j.aguirreplans/data/gene_associations/data/out'
 
 # Define input files
 samples_subjects_file = paste(gtex_dir, 'GTEx_Annotations_SamplesSubjectsMerged.txt', sep='/')
-tpm_file = paste(gtex_dir, 'GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_tpm.gct', sep='/')</code></pre>
+tpm_file = paste(gtex_dir, 'GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_tpm.gct', sep='/')
+reads_file = paste(gtex_dir, 'GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_reads.gct', sep='/')
+
+# Define type of counts used
+type_counts = &quot;reads&quot; # tpm, reads</code></pre>
 </div>
 <div id="read-files" class="section level2">
 <h2>Read files</h2>
-<pre class="r"><code>tpm_df = fread(tpm_file)</code></pre>
+<pre class="r"><code>if(type_counts == &quot;tpm&quot;){
+  rnaseq = fread(tpm_file)
+} else if(type_counts == &quot;reads&quot;){
+  rnaseq = fread(reads_file)
+} else {
+  stop(&quot;Unknown type of data&quot;)
+}</code></pre>
 <p>The raw GTEx dataframe contains 17382 sample IDs (as columns) and 56200 genes (as rows) described in the first two columns as <strong><em>Name</em></strong> (Ensembl ID) and <strong><em>Description</em></strong> (HGNC symbol).</p>
-<pre class="r"><code>head(tpm_df[1:10,1:5])</code></pre>
+<pre class="r"><code>head(rnaseq[1:10,1:5])</code></pre>
 <pre><code>##                 Name Description GTEX-1117F-0226-SM-5GZZ7
-## 1: ENSG00000223972.5     DDX11L1                  0.00000
-## 2: ENSG00000227232.5      WASH7P                  8.76400
-## 3: ENSG00000278267.1   MIR6859-1                  0.00000
-## 4: ENSG00000243485.5 MIR1302-2HG                  0.07187
-## 5: ENSG00000237613.2     FAM138A                  0.00000
-## 6: ENSG00000268020.3      OR4G4P                  0.00000
+## 1: ENSG00000223972.5     DDX11L1                        0
+## 2: ENSG00000227232.5      WASH7P                      187
+## 3: ENSG00000278267.1   MIR6859-1                        0
+## 4: ENSG00000243485.5 MIR1302-2HG                        1
+## 5: ENSG00000237613.2     FAM138A                        0
+## 6: ENSG00000268020.3      OR4G4P                        0
 ##    GTEX-1117F-0426-SM-5EGHI GTEX-1117F-0526-SM-5EGHJ
-## 1:                    0.000                    0.000
-## 2:                    3.861                    7.349
-## 3:                    0.000                    1.004
-## 4:                    0.000                    0.000
-## 5:                    0.000                    0.000
-## 6:                    0.056                    0.000</code></pre>
+## 1:                        0                        0
+## 2:                      109                      143
+## 3:                        0                        1
+## 4:                        0                        0
+## 5:                        0                        0
+## 6:                        1                        0</code></pre>
 <pre class="r"><code>samples_df = fread(samples_subjects_file)</code></pre>
 <p>The samples are described in the samples dataframe, which contains information about the subject and tissue of the sample:</p>
 <pre class="r"><code>head(samples_df)</code></pre>
@@ -411,11 +421,11 @@ tpm_file = paste(gtex_dir, 'GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_tpm.g
 ## 4:            Artery - Coronary    Blood.Vessel          Artery.Coronary
 ## 5:     Heart - Atrial Appendage           Heart   Heart.Atrial.Appendage
 ## 6: Adipose - Visceral (Omentum)  Adipose.Tissue Adipose.Visceral.Omentum</code></pre>
-<p>We filter the samples in the TPM file by keeping the ones that are in the samples information file:</p>
-<pre class="r"><code>dim(tpm_df[,-2])</code></pre>
+<p>We filter the samples in the RNAseq file by keeping the ones that are in the samples information file:</p>
+<pre class="r"><code>dim(rnaseq[,-2])</code></pre>
 <pre><code>## [1] 56200 17383</code></pre>
-<pre class="r"><code>tpm_df &lt;- tpm_df %&gt;% select(c(&quot;Name&quot;, &quot;Description&quot;, samples_df$SAMPID))
-dim(tpm_df[,-2])</code></pre>
+<pre class="r"><code>rnaseq &lt;- rnaseq %&gt;% select(c(&quot;Name&quot;, &quot;Description&quot;, samples_df$SAMPID))
+dim(rnaseq[,-2])</code></pre>
 <pre><code>## [1] 56200 17272</code></pre>
 <p>We end up having a gene expression matrix of 17271 sample IDs (as columns) and 56200 genes (as rows).</p>
 </div>
@@ -424,42 +434,42 @@ dim(tpm_df[,-2])</code></pre>
 <div id="merge-repeated-hgnc-symbols" class="section level3">
 <h3>Merge repeated HGNC symbols</h3>
 <p>The genes in GTEx are annotated both as Ensembl IDs and HGNC symbols. We only want to keep HGNC symbol annotations. However, there are Ensembl IDs with the same HGNC symbols, probably isoforms:</p>
-<pre class="r"><code>repeated_genes &lt;- unique(tpm_df$Description[duplicated(tpm_df$Description)])
-tpm_df[tpm_df$Description %in% repeated_genes[1:10],][1:10,1:5][order(Description),]</code></pre>
+<pre class="r"><code>repeated_genes &lt;- unique(rnaseq$Description[duplicated(rnaseq$Description)])
+rnaseq[rnaseq$Description %in% repeated_genes[1:10],][1:10,1:5][order(Description),]</code></pre>
 <pre><code>##                  Name Description GTEX-1117F-0226-SM-5GZZ7
-##  1: ENSG00000252404.1    SCARNA16                   0.6765
-##  2: ENSG00000278757.1          U6                   0.0000
-##  3: ENSG00000200344.1       Y_RNA                   0.0000
-##  4: ENSG00000252254.1       Y_RNA                   0.0000
-##  5: ENSG00000222511.2       Y_RNA                   0.0000
-##  6: ENSG00000202461.1       Y_RNA                   1.1020
-##  7: ENSG00000239106.1       Y_RNA                   0.0000
-##  8: ENSG00000207302.1       Y_RNA                   0.0000
-##  9: ENSG00000252802.1       Y_RNA                   0.0000
-## 10: ENSG00000238316.1      snoU13                   0.0000
+##  1: ENSG00000252404.1    SCARNA16                        2
+##  2: ENSG00000278757.1          U6                        0
+##  3: ENSG00000200344.1       Y_RNA                        0
+##  4: ENSG00000252254.1       Y_RNA                        0
+##  5: ENSG00000222511.2       Y_RNA                        0
+##  6: ENSG00000202461.1       Y_RNA                        2
+##  7: ENSG00000239106.1       Y_RNA                        0
+##  8: ENSG00000207302.1       Y_RNA                        0
+##  9: ENSG00000252802.1       Y_RNA                        0
+## 10: ENSG00000238316.1      snoU13                        0
 ##     GTEX-1117F-0426-SM-5EGHI GTEX-1117F-0526-SM-5EGHJ
-##  1:                   0.0000                   0.0000
-##  2:                   0.0000                   0.0000
-##  3:                   0.9134                   0.6626
-##  4:                   0.8325                   0.6040
-##  5:                   0.0000                   0.0000
-##  6:                   0.0000                   1.8120
-##  7:                   0.0000                   0.0000
-##  8:                   0.0000                   0.0000
-##  9:                   0.0000                   0.0000
-## 10:                   0.0000                   0.0000</code></pre>
+##  1:                        0                        0
+##  2:                        0                        0
+##  3:                        2                        1
+##  4:                        2                        1
+##  5:                        0                        0
+##  6:                        0                        3
+##  7:                        0                        0
+##  8:                        0                        0
+##  9:                        0                        0
+## 10:                        0                        0</code></pre>
 <p>In total, there are 199 repeated HGNC symbols. We merge these genes by calculating the median expression between them:</p>
-<pre class="r"><code>tpm_no_duplicates_file = paste(gtex_dir, 'GTEx_RNASeq_gene_tpm_no_duplicates.gct', sep='/')
-if (!(file.exists(tpm_no_duplicates_file))){
-  tpm_df = subset(tpm_df, select=-Name)
-  repeated_genes_aggregated = aggregate(.~Description, tpm_df[tpm_df$Description %in% repeated_genes,], median)
-  tpm_df = rbind(tpm_df[!(tpm_df$Description %in% repeated_genes),], repeated_genes_aggregated) %&gt;% rename(&quot;Gene&quot;=&quot;Description&quot;)
-  fwrite(tpm_df, tpm_no_duplicates_file)
+<pre class="r"><code>rnaseq_no_duplicates_file = paste(gtex_dir, paste('GTEx_RNASeq_gene_', type_counts, '_no_duplicates.gct', sep=&quot;&quot;), sep='/')
+if (!(file.exists(rnaseq_no_duplicates_file))){
+  rnaseq = subset(rnaseq, select=-Name)
+  repeated_genes_aggregated = aggregate(.~Description, rnaseq[rnaseq$Description %in% repeated_genes,], median)
+  rnaseq = rbind(rnaseq[!(rnaseq$Description %in% repeated_genes),], repeated_genes_aggregated) %&gt;% rename(&quot;Gene&quot;=&quot;Description&quot;)
+  fwrite(rnaseq, rnaseq_no_duplicates_file)
 } else {
-  tpm_df = fread(tpm_no_duplicates_file)
+  rnaseq = fread(rnaseq_no_duplicates_file)
 }</code></pre>
 <p>After merging the repeated HGNC symbols, we end up having a gene expression matrix of 17271 sample IDs (as columns) and 54592 genes (as rows).</p>
-<pre class="r"><code>tpm_df[tpm_df$Gene %in% repeated_genes[1:10],][1:10,1:5][order(Gene),]</code></pre>
+<pre class="r"><code>rnaseq[rnaseq$Gene %in% repeated_genes[1:10],][1:10,1:5][order(Gene),]</code></pre>
 <pre><code>##            Gene GTEX-1117F-0226-SM-5GZZ7 GTEX-1117F-0426-SM-5EGHI
 ##  1:         7SK                        0                        0
 ##  2: Metazoa_SRP                        0                        0
@@ -486,7 +496,7 @@ if (!(file.exists(tpm_no_duplicates_file))){
 <div id="keep-genes-properly-annotated-and-classified-by-the-hgnc-database" class="section level3">
 <h3>Keep genes properly annotated and classified by the HGNC database</h3>
 <p><a href="https://www.genenames.org/">HGNC</a> is a database of annotation, description and classification of genes. We use the information in this database to keep the genes that have been properly annotated using HGNC symbols and classified in different gene categories. We use the file <code>hgnc_category_set_2022-01-01.txt</code>, which is a dataframe that has been created after parsing and processing the HGNC database:</p>
-<pre class="r"><code>gene_annotations_dir = '/home/j.aguirreplans/data/gene_annotations/data/out'
+<pre class="r"><code>gene_annotations_dir = '/work/ccnr/j.aguirreplans/data/gene_annotations/data/out'
 gene_category_file = paste(gene_annotations_dir, 'hgnc_category_set_2022-01-01.txt', sep='/')
 gene_category_df = fread(gene_category_file)
 gene_category_df$HGNC_Symbol = toupper(gene_category_df$HGNC_Symbol)
@@ -499,11 +509,11 @@ head(gene_category_df)</code></pre>
 ## 5:     A2M-AS1      non-coding RNA      RNA, long non-coding
 ## 6:       A2ML1 protein-coding gene gene with protein product</code></pre>
 <p>We use this dataframe to map gene category, and we only keep genes that are in this dataframe:</p>
-<pre class="r"><code>dim(tpm_df)</code></pre>
+<pre class="r"><code>dim(rnaseq)</code></pre>
 <pre><code>## [1] 54592 17272</code></pre>
-<pre class="r"><code>genes_with_category = tpm_df$Gene[tpm_df$Gene %in% gene_category_df$HGNC_Symbol]
-tpm_df %&lt;&gt;% filter(Gene %in% genes_with_category)
-dim(tpm_df)</code></pre>
+<pre class="r"><code>genes_with_category = rnaseq$Gene[rnaseq$Gene %in% gene_category_df$HGNC_Symbol]
+rnaseq %&lt;&gt;% filter(Gene %in% genes_with_category)
+dim(rnaseq)</code></pre>
 <pre><code>## [1] 34487 17272</code></pre>
 <p>The filtered dataframe contains17271 sample IDs (as columns) and 34487 genes with category (as rows).</p>
 <p>It contains the following number of genes for each category:</p>
@@ -522,19 +532,28 @@ fwrite(gtex_gene_category_df, genes_dataset_file)</code></pre>
 </div>
 <div id="filter-genes-with-low-counts" class="section level3">
 <h3>Filter genes with low counts</h3>
-<p>We filter the genes that have low expression in most of the samples of each tissue/sex, keeping the ones that meet these rules:</p>
+<p>We filter the genes that have low expression in most of the samples of each tissue/sex, keeping the ones that meet these rules.</p>
+<p>In the case of TPM:</p>
 <ul>
 <li>Sum of the expression of all samples above 0.</li>
 <li>Mean of the expression of all samples above 1.</li>
 <li>Median of the expression of all samples above 1.</li>
 <li>Standard deviation of all samples above 0.</li>
-<li>More than half of the genes with counts above 0.</li>
+<li>Less than half of the samples with empty counts (0s).</li>
 </ul>
-<pre class="r"><code>tpm_no_filt_dir = paste(gtex_dir, 'tpm_by_tissue', sep='/')
-tpm_filt_dir = paste(gtex_dir, 'tpm_filtered_files_by_tissue', sep='/')
+<p>In the case of reads:</p>
+<ul>
+<li>Sum of the expression of all samples above 0.</li>
+<li>Mean of the expression of all samples above 5.</li>
+<li>Median of the expression of all samples above 5.</li>
+<li>Standard deviation of all samples above 1.</li>
+<li>Less than half of the samples with empty counts (0s).</li>
+</ul>
+<pre class="r"><code>rnaseq_no_filt_dir = paste(gtex_dir, paste(type_counts, '_by_tissue', sep=''), sep='/')
+rnaseq_filt_dir = paste(gtex_dir, paste(type_counts, '_filtered_files_by_tissue', sep=''), sep='/')
 genes_filt_dir = paste(gtex_dir, 'genes_filtered_files_by_tissue', sep='/')
-dir.create(tpm_no_filt_dir, showWarnings = FALSE)
-dir.create(tpm_filt_dir, showWarnings = FALSE)
+dir.create(rnaseq_no_filt_dir, showWarnings = FALSE)
+dir.create(rnaseq_filt_dir, showWarnings = FALSE)
 dir.create(genes_filt_dir, showWarnings = FALSE)
 cols = c(&quot;tissue&quot;, &quot;sex&quot;, &quot;n_genes_raw&quot;, &quot;n_genes_processed&quot;, &quot;sum&quot;,  &quot;mean&quot;, &quot;median&quot;, &quot;sd&quot;, &quot;zero_sum_counts&quot;)
 statistics_low_counts_df &lt;- setNames(data.frame(matrix(ncol = length(cols), nrow = 0)), cols)
@@ -545,37 +564,46 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
     # Get the samples of the selected tissue/sex
     if (sex == &quot;&quot;){
       samples_tissue_sex = samples_df[samples_df$SMTSD.no.sp.char == tissue,]$SAMPID
-      tpm_tissue_sex_no_filt_file = paste(tpm_filt_dir, paste(&quot;gtex_rnaseq_&quot;, tissue, &quot;.gct&quot;, sep=''), sep='/')
-      tpm_tissue_sex_filt_file = paste(tpm_filt_dir, paste(&quot;gtex_rnaseq_&quot;, tissue, &quot;.gct&quot;, sep=''), sep='/')
+      rnaseq_tissue_sex_no_filt_file = paste(rnaseq_filt_dir, paste(&quot;gtex_rnaseq_&quot;, tissue, &quot;.gct&quot;, sep=''), sep='/')
+      rnaseq_tissue_sex_filt_file = paste(rnaseq_filt_dir, paste(&quot;gtex_rnaseq_&quot;, tissue, &quot;.gct&quot;, sep=''), sep='/')
       genes_dataset_filt_file = paste(genes_filt_dir, paste(&quot;gtex_rnaseq_gene_info_&quot;, tissue, &quot;.csv&quot;, sep=''), sep='/')
     } else {
       sex_id = sex_to_id[sex,]
       samples_tissue_sex = samples_df[(samples_df$SMTSD.no.sp.char == tissue) &amp; (samples_df$SEX == sex_id),]$SAMPID
-      tpm_tissue_sex_no_filt_file = paste(tpm_filt_dir, paste(&quot;gtex_rnaseq_&quot;, tissue, &quot;_&quot;, sex, &quot;.gct&quot;, sep=''), sep='/')
-      tpm_tissue_sex_filt_file = paste(tpm_filt_dir, paste(&quot;gtex_rnaseq_&quot;, tissue, &quot;_&quot;, sex, &quot;.gct&quot;, sep=''), sep='/')
+      rnaseq_tissue_sex_no_filt_file = paste(rnaseq_filt_dir, paste(&quot;gtex_rnaseq_&quot;, tissue, &quot;_&quot;, sex, &quot;.gct&quot;, sep=''), sep='/')
+      rnaseq_tissue_sex_filt_file = paste(rnaseq_filt_dir, paste(&quot;gtex_rnaseq_&quot;, tissue, &quot;_&quot;, sex, &quot;.gct&quot;, sep=''), sep='/')
       genes_dataset_filt_file = paste(genes_filt_dir, paste(&quot;gtex_rnaseq_gene_info_&quot;, tissue, &quot;_&quot;, sex, &quot;.csv&quot;, sep=''), sep='/')
     }
     
     # Consider only tissue/sex combinations of more than 10 samples
     if (length(samples_tissue_sex) &gt; 10){
       # Select expression from selected samples
-      tpm_tissue_sex_df = tpm_df %&gt;% select(c(&quot;Gene&quot;, all_of(samples_tissue_sex)))
+      rnaseq_tissue_sex_df = rnaseq %&gt;% select(c(&quot;Gene&quot;, all_of(samples_tissue_sex)))
       # Save file without filters
-      fwrite(tpm_tissue_sex_df, tpm_tissue_sex_no_filt_file)
+      fwrite(rnaseq_tissue_sex_df, rnaseq_tissue_sex_no_filt_file)
       
       # Calculate metrics of expression
-      info_df = data.frame(Gene=tpm_tissue_sex_df$Gene, sum=rowSums(tpm_tissue_sex_df[,-1]))
-      info_df$sd = apply(tpm_tissue_sex_df[,-1], 1, sd)
-      info_df$mean = rowMeans(tpm_tissue_sex_df[,-1])
-      info_df$median = apply(tpm_tissue_sex_df[,-1], 1, median)
-      info_df$zero_sum_counts = as.numeric(apply(tpm_tissue_sex_df[,-1], 1, function(i) sum(i == 0) )) # Number of times that the counts are equal to 0
+      info_df = data.frame(Gene=rnaseq_tissue_sex_df$Gene, sum=rowSums(rnaseq_tissue_sex_df[,-1]))
+      info_df$sd = apply(rnaseq_tissue_sex_df[,-1], 1, sd)
+      info_df$mean = rowMeans(rnaseq_tissue_sex_df[,-1])
+      info_df$median = apply(rnaseq_tissue_sex_df[,-1], 1, median)
+      info_df$zero_sum_counts = as.numeric(apply(rnaseq_tissue_sex_df[,-1], 1, function(i) sum(i == 0) )) # Number of times that the counts are equal to 0
       # Filter low expressed genes
-      info_filt_df = info_df[(info_df$sum &gt; 0) &amp; (info_df$mean &gt; 1) &amp; (info_df$median &gt; 1) &amp; (info_df$sd &gt; 0) &amp; (info_df$zero_sum_counts &lt; dim(tpm_tissue_sex_df[, -1])[2]/2) ,]
-      tpm_tissue_sex_filt_df = tpm_tissue_sex_df[tpm_tissue_sex_df$Gene %in% info_filt_df$Gene,]
-      fwrite(tpm_tissue_sex_filt_df, tpm_tissue_sex_filt_file)
+      if(type_counts == &quot;tpm&quot;){
+        info_filt_df = info_df[(info_df$sum &gt; 0) &amp; (info_df$mean &gt; 1) &amp; (info_df$median &gt; 1) &amp; (info_df$sd &gt; 0) &amp; (info_df$zero_sum_counts &lt; dim(rnaseq_tissue_sex_df[, -1])[2]/2) ,]
+      } else if(type_counts == &quot;reads&quot;){
+        info_filt_df = info_df[(info_df$sum &gt; 0) &amp; (info_df$mean &gt; 5) &amp; (info_df$median &gt; 5) &amp; (info_df$sd &gt; 1) &amp; (info_df$zero_sum_counts &lt; dim(rnaseq_tissue_sex_df[, -1])[2]/2) ,]
+      } else {
+        stop(&quot;Unknown type of data&quot;)
+      }
+      rnaseq_tissue_sex_filt_df = rnaseq_tissue_sex_df[rnaseq_tissue_sex_df$Gene %in% info_filt_df$Gene,]
+      fwrite(rnaseq_tissue_sex_filt_df, rnaseq_tissue_sex_filt_file)
       # Count statistics about the filter
-      statistics_low_counts_df = rbind(statistics_low_counts_df, data.frame(tissue=tissue, sex=sex, n_genes_raw=length(tpm_tissue_sex_df$Gene), n_genes_processed=length(tpm_tissue_sex_filt_df$Gene), sum=length(info_df[(info_df$sum &gt; 0),]$Gene), mean=length(info_df[(info_df$mean &gt; 1),]$Gene), median=length(info_df[(info_df$median &gt; 1),]$Gene), sd=length(info_df[(info_df$sd &gt; 0),]$Gene), zero_sum_counts=length(info_df[(info_df$zero_sum_counts &lt; dim(tpm_tissue_sex_df[, -1])[2]/2),]$Gene)))
-      
+      if(type_counts == &quot;tpm&quot;){
+        statistics_low_counts_df = rbind(statistics_low_counts_df, data.frame(tissue=tissue, sex=sex, n_genes_raw=length(rnaseq_tissue_sex_df$Gene), n_genes_processed=length(rnaseq_tissue_sex_filt_df$Gene), sum=length(info_df[(info_df$sum &gt; 0),]$Gene), mean=length(info_df[(info_df$mean &gt; 1),]$Gene), median=length(info_df[(info_df$median &gt; 1),]$Gene), sd=length(info_df[(info_df$sd &gt; 0),]$Gene), zero_sum_counts=length(info_df[(info_df$zero_sum_counts &lt; dim(rnaseq_tissue_sex_df[, -1])[2]/2),]$Gene)))
+      } else if(type_counts == &quot;reads&quot;){
+        statistics_low_counts_df = rbind(statistics_low_counts_df, data.frame(tissue=tissue, sex=sex, n_genes_raw=length(rnaseq_tissue_sex_df$Gene), n_genes_processed=length(rnaseq_tissue_sex_filt_df$Gene), sum=length(info_df[(info_df$sum &gt; 0),]$Gene), mean=length(info_df[(info_df$mean &gt; 5),]$Gene), median=length(info_df[(info_df$median &gt; 5),]$Gene), sd=length(info_df[(info_df$sd &gt; 1),]$Gene), zero_sum_counts=length(info_df[(info_df$zero_sum_counts &lt; dim(rnaseq_tissue_sex_df[, -1])[2]/2),]$Gene)))
+      }
       # Write gene info file
       genes_dataset_filt_df = data.frame(gtex_gene_category_df)
       genes_dataset_filt_df$enough_counts = ifelse(genes_dataset_filt_df$HGNC_Symbol %in% info_filt_df$Gene, TRUE, FALSE)
@@ -590,19 +618,19 @@ fwrite(statistics_low_counts_df, statistics_low_counts_file)</code></pre>
 <p>These are the different number of genes after filtering by the criteria mentioned above:</p>
 <pre class="r"><code>head(statistics_low_counts_df)</code></pre>
 <pre><code>##                 tissue    sex n_genes_raw n_genes_processed   sum  mean median
-## 1 Adipose.Subcutaneous   male       34487             13788 32774 14449  13788
-## 2 Adipose.Subcutaneous female       34487             13738 31895 14309  13738
-## 3 Adipose.Subcutaneous              34487             13770 33102 14416  13771
-## 4      Muscle.Skeletal   male       34487             11204 32556 11769  11204
-## 5      Muscle.Skeletal female       34487             11270 32004 11885  11270
-## 6      Muscle.Skeletal              34487             11230 33037 11824  11230
+## 1 Adipose.Subcutaneous   male       34487             17322 32774 18462  17322
+## 2 Adipose.Subcutaneous female       34487             17356 31895 18353  17356
+## 3 Adipose.Subcutaneous              34487             17331 33102 18458  17331
+## 4      Muscle.Skeletal   male       34487             15902 32556 16839  15902
+## 5      Muscle.Skeletal female       34487             15891 32004 16915  15891
+## 6      Muscle.Skeletal              34487             15900 33037 16881  15900
 ##      sd zero_sum_counts
-## 1 32774           20508
-## 2 31895           20587
-## 3 33102           20527
-## 4 32556           19075
-## 5 32004           19073
-## 6 33037           19083</code></pre>
+## 1 23501           20508
+## 2 23240           20587
+## 3 23498           20527
+## 4 22202           19075
+## 5 21985           19073
+## 6 22256           19083</code></pre>
 <p>Here, we show an example (whole blood) of the number of genes for each gene category before/after filtering by gene counts. Before filtering:</p>
 <pre class="r"><code>genes_dataset_filt_file = paste(genes_filt_dir, &quot;gtex_rnaseq_gene_info_Whole.Blood.csv&quot;, sep='/')
 genes_dataset_filt_df = fread(genes_dataset_filt_file)
@@ -618,17 +646,17 @@ table(genes_dataset_filt_df$HGNC_category)</code></pre>
 <pre class="r"><code>table((genes_dataset_filt_df %&gt;% filter(enough_counts == TRUE))$HGNC_category)</code></pre>
 <pre><code>## 
 ##      non-coding RNA               other protein-coding gene          pseudogene 
-##                 282                 234                9449                 286</code></pre>
+##                 674                 256               13510                 708</code></pre>
 <pre class="r"><code>round(prop.table(table((genes_dataset_filt_df %&gt;% filter(enough_counts == TRUE))$HGNC_category))*100,2)</code></pre>
 <pre><code>## 
 ##      non-coding RNA               other protein-coding gene          pseudogene 
-##                2.75                2.28               92.18                2.79</code></pre>
+##                4.45                1.69               89.19                4.67</code></pre>
 </div>
 </div>
 <div id="prepare-disease-genes-information-dataset" class="section level2">
 <h2>Prepare disease genes information dataset</h2>
 <p>Read the disease-gene associations dataset:</p>
-<pre class="r"><code>gene_associations_dir = '/home/j.aguirreplans/data/gene_associations/data/out'
+<pre class="r"><code>gene_associations_dir = '/work/ccnr/j.aguirreplans/data/gene_associations/data/out'
 disease_genes_file = paste(gene_associations_dir, 'GDA_Filtered_04042022.csv', sep='/')
 GDA = fread(disease_genes_file) %&gt;% unique()
 GDA$HGNC_Symbol = toupper(GDA$HGNC_Symbol)
@@ -672,7 +700,7 @@ GDA %&lt;&gt;%
   filter(!(MESHID_remove)) %&gt;%
   select(DiseaseName, HGNC_Symbol, DescriptorName) %&gt;% 
   unique() %&gt;% 
-  mutate(gene_in_dataset = ifelse(HGNC_Symbol %in% tpm_df$Gene, TRUE, FALSE))
+  mutate(gene_in_dataset = ifelse(HGNC_Symbol %in% rnaseq$Gene, TRUE, FALSE))
 
 # Make columns without special characters  
 GDA$DiseaseName.no.sp.char &lt;- gsub(' ', '.', gsub(', ', '.', gsub('-', '.', gsub('[\\(\\)]', '', GDA$DiseaseName))))
@@ -717,7 +745,7 @@ head(GDA)</code></pre>
 <h2>Prepare essential genes dataset</h2>
 <p>Prepare the essential genes of the TCGA dataset:</p>
 <pre class="r"><code># Read the essential genes file
-essential_genes_dir = '/home/j.aguirreplans/Databases/OGEE'
+essential_genes_dir = '/work/ccnr/j.aguirreplans/Databases/OGEE'
 essential_genes_original_file = paste(essential_genes_dir, 'OGEE_esential_genes_20190416.txt', sep='/')
 # Filter by human genes
 essential_genes_df = fread(essential_genes_original_file, header=TRUE) %&gt;% rename(&quot;taxID&quot;=&quot;#taxID&quot;)
@@ -737,7 +765,7 @@ head(essential_genes_df)</code></pre>
 ## 5: PMID: 18239125
 ## 6: PMID: 26472760</code></pre>
 <pre class="r"><code># Read the gene annotations dictionary
-gene_annotations_dir = '/home/j.aguirreplans/data/gene_annotations/data/out'
+gene_annotations_dir = '/work/ccnr/j.aguirreplans/data/gene_annotations/data/out'
 gene_dict_file = paste(gene_annotations_dir, 'multiple_hgnc_dict_set_2022-01-01.txt', sep='/')
 gene_dict_df = fread(gene_dict_file) %&gt;% unique()
 gene_dict_df = gene_dict_df[!((gene_dict_df$HGNC_Symbol==&quot;&quot;)|(gene_dict_df$alias==&quot;&quot;)),]
@@ -755,7 +783,7 @@ head(gene_dict_df)</code></pre>
 <pre class="r"><code># Map ENSEMBL IDs to HGNC symbols
 essential_genes_df = essential_genes_df %&gt;% filter((taxID == 9606) &amp; (essential==&quot;E&quot;))
 essential_genes_df = essential_genes_df %&gt;% inner_join(gene_dict_df, by=c(&quot;locus&quot;=&quot;alias&quot;)) %&gt;% select(taxID, sciName, HGNC_Symbol) %&gt;% unique()
-essential_genes_df$gene_in_dataset = ifelse(essential_genes_df$HGNC_Symbol %in% tpm_df$Gene, TRUE, FALSE)
+essential_genes_df$gene_in_dataset = ifelse(essential_genes_df$HGNC_Symbol %in% rnaseq$Gene, TRUE, FALSE)
 head(essential_genes_df)</code></pre>
 <pre><code>##    taxID      sciName HGNC_Symbol gene_in_dataset
 ## 1:  9606 Homo sapiens        DPM1            TRUE
