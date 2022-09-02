@@ -2,6 +2,11 @@
 cluster_scripts/
 logs/
 
+# Work related folders
+Documents/
+Manuscript/
+Read/
+
 # Packages and environments
 scripts/infomap
 scripts/SampleSizeR
