@@ -33,7 +33,7 @@ options(bitmapType='cairo')
 plots_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots"
 ```
 
-## Prepare disease genes information dataset
+### Prepare disease genes information dataset
 
 Prepare the disease-gene associations: 
 
@@ -77,7 +77,10 @@ head(GDA)
 
 There are `r nrow(GDA)` disease-gene associations (`r length(unique(GDA$DiseaseName))` diseases, `r length(unique(GDA$HGNC_Symbol))` genes).
 
-Now, filter by the disease selected:
+
+### Analyze breast carcinoma
+
+Filter disease-gene associations by the disease "breast neoplasms":
 
 ```{r}
 disease_name = "breast.neoplasms"
@@ -86,9 +89,7 @@ dim(GDA_breast)
 head(GDA_breast)
 ```
 
-### Analyze the nodes of breast carcinoma
-
-First compile all files and order them for the comparisons:
+Compile the files of the differential co-expression analysis from CODINA:
 
 ```{r}
 input_dir = "/work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/TCGA-BRCA_Breast.Mammary.Tissue"
@@ -123,7 +124,7 @@ for(file_name in result_files){
 head(file_info_df)
 ```
 
-Then analyze files, first counting genes per category and then comparing networks of different sizes:
+Analyze differential co-expression analysis files, first counting genes per category and then analyzing if change across sample size:
 
 ```{r}
 ############################################
@@ -176,8 +177,6 @@ cols = c("Phi_tilde", "n", "n_disease", "size", "rep_D", "rep_N")
 counts_nodes_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
 cols = c("Node", "DiseaseName.no.sp.char", "Phi_tilde", "size", "rep_D", "rep_N")
 nodes_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
-#cols = c("Node", "DiseaseName.no.sp.char", "Phi_tilde_prev", "size_prev", "rep_D_prev", "rep_N_prev", "Phi_tilde_curr", "size_curr", "rep_D_curr", "rep_N_curr")
-#change_nodes_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
 
 for(x in seq(sizes_list)){
   size = sizes_list[x]
@@ -196,51 +195,81 @@ for(x in seq(sizes_list)){
     } else {
       nodes_df = nodes_df %>% full_join(cbind((results_count$node_results_filt_df %>% select("Node", "DiseaseName.no.sp.char", "Phi_tilde")), data.frame(size=size, rep_D=r_D, rep_N=r_N)), by=c("Node", "DiseaseName.no.sp.char", "Phi_tilde", "size", "rep_D", "rep_N"))
     }
-    # if(nrow(same_size_info_df) == 0){
-    #   same_size_info_df = cbind(results_count$node_results_filt_df, data.frame(size=size, rep_D=r_D, rep_N=r_N))
-    # } else {
-    #   same_size_info_df = rbind(same_size_info_df, cbind(results_count$node_results_filt_df, data.frame(size=size, rep_D=r_D, rep_N=r_N)))
-    # }
   }
-  # if(x > 1){
-  #   reps_curr = unique(paste(same_size_info_df$rep_D, same_size_info_df$rep_N, sep="-"))
-  #   reps_prev = unique(paste(previous_size_info_df$rep_D, previous_size_info_df$rep_N, sep="-"))
-  #   for(rep_curr in reps_curr){
-  #     curr_df = same_size_info_df %>% filter((rep_D == strsplit(rep_curr, split="-")[[1]][1]) & (rep_N == strsplit(rep_curr, split="-")[[1]][2]))
-  #     for(rep_prev in reps_prev){
-  #       print(c(rep_curr, rep_prev))
-  #       prev_df = previous_size_info_df %>% filter((rep_D == strsplit(rep_prev, split="-")[[1]][1]) & (rep_N == strsplit(rep_prev, split="-")[[1]][2]))
-  #       change_df = (prev_df %>% select("Node", "DiseaseName.no.sp.char", "Phi_tilde", "size", "rep_D", "rep_N") %>% rename("Phi_tilde_prev"="Phi_tilde", "size_prev"="size", "rep_D_prev"="rep_D", "rep_N_prev"="rep_N")) %>% full_join((curr_df %>% select("Node", "DiseaseName.no.sp.char", "Phi_tilde", "size", "rep_D", "rep_N") %>% rename("Phi_tilde_curr"="Phi_tilde", "size_curr"="size", "rep_D_curr"="rep_D", "rep_N_curr"="rep_N")), by=c("Node", "DiseaseName.no.sp.char"))
-  #       change_nodes_df = rbind(change_nodes_df, change_df)
-  #     }
-  #   }
-  # }
-  # previous_size_info_df = data.frame(same_size_info_df)
 }
 
 head(counts_nodes_df)
 head(nodes_df)
-#head(change_nodes_df)
 ```
 
 We plot the number of genes in each category:
 
 ```{r}
+plot_file = paste(plots_dir, "codina_tcga_brca_gtex_breast_counts_all_genes.png", sep="/")
 counts_nodes_df %>% 
   group_by(Phi_tilde, size) %>%
   summarize(mean = mean(n), sd = sd(n), max=max(n), min=min(n)) %>%
   ggplot(aes(x = size, y = mean, fill = Phi_tilde)) + 
   geom_line(aes(col = Phi_tilde)) +
-  geom_ribbon(aes(ymin=min, ymax=max), alpha=0.2)
+  geom_ribbon(aes(ymin=min, ymax=max), alpha=0.2) +
+  xlab("Number of samples") +
+  ylab("Number of genes") +
+  guides(col=guide_legend(title="Gene category"), fill=guide_legend(title="Gene category")) +
+  theme_linedraw() +
+  theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 12), legend.text = element_text(size = 12), legend.title=element_text(size=14, face="bold"))
+ggsave(plot_file, type='cairo', dpi = 300, height=7, width = 10)
 
+plot_file = paste(plots_dir, "codina_tcga_brca_gtex_breast_counts_all_genes_log.png", sep="/")
+counts_nodes_df %>% 
+  group_by(Phi_tilde, size) %>%
+  summarize(mean = mean(n), sd = sd(n), max=max(n), min=min(n)) %>%
+  ggplot(aes(x = size, y = mean, fill = Phi_tilde)) + 
+  geom_line(aes(col = Phi_tilde)) +
+  geom_ribbon(aes(ymin=min, ymax=max), alpha=0.2) +
+  scale_x_continuous(trans = scales::log10_trans()) +
+  xlab("Number of samples (Log)") +
+  ylab("Number of genes") +
+  guides(col=guide_legend(title="Gene category"), fill=guide_legend(title="Gene category")) +
+  theme_linedraw() +
+  theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 12), legend.text = element_text(size = 12), legend.title=element_text(size=14, face="bold"))
+ggsave(plot_file, type='cairo', dpi = 300, height=7, width = 10)
+```
+
+We plot specifically the number of breast neoplasms genes in each category:
+
+```{r}
+plot_file = paste(plots_dir, "codina_tcga_brca_gtex_breast_counts_disease_genes.png", sep="/")
 counts_nodes_df %>% 
   group_by(Phi_tilde, size) %>%
   summarize(mean_disease = mean(n_disease), sd_disease = sd(n_disease), max_disease=max(n_disease), min_disease=min(n_disease)) %>%
   ggplot(aes(x = size, y = mean_disease, fill = Phi_tilde)) + 
   geom_line(aes(col = Phi_tilde)) +
-  geom_ribbon(aes(ymin=min_disease, ymax=max_disease), alpha=0.2)
+  geom_ribbon(aes(ymin=min_disease, ymax=max_disease), alpha=0.2) +
+  xlab("Number of samples") +
+  ylab("Number of disease genes") +
+  guides(col=guide_legend(title="Gene category"), fill=guide_legend(title="Gene category")) +
+  theme_linedraw() +
+  theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 12), legend.text = element_text(size = 12), legend.title=element_text(size=14, face="bold"))
+ggsave(plot_file, type='cairo', dpi = 300, height=7, width = 10)
 
+plot_file = paste(plots_dir, "codina_tcga_brca_gtex_breast_counts_disease_genes_log.png", sep="/")
+counts_nodes_df %>% 
+  group_by(Phi_tilde, size) %>%
+  summarize(mean_disease = mean(n_disease), sd_disease = sd(n_disease), max_disease=max(n_disease), min_disease=min(n_disease)) %>%
+  ggplot(aes(x = size, y = mean_disease, fill = Phi_tilde)) + 
+  geom_line(aes(col = Phi_tilde)) +
+  geom_ribbon(aes(ymin=min_disease, ymax=max_disease), alpha=0.2) +
+  scale_x_continuous(trans = scales::log10_trans()) +
+  xlab("Number of samples (Log)") +
+  ylab("Number of disease genes") +
+  guides(col=guide_legend(title="Gene category"), fill=guide_legend(title="Gene category")) +
+  theme_linedraw() +
+  theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 12), legend.text = element_text(size = 12), legend.title=element_text(size=14, face="bold"))
+ggsave(plot_file, type='cairo', dpi = 300, height=7, width = 10)
 ```
+
+We analyze the change of categories in genes across sample size.
+To achieve it, we introduce as NA the genes that were not found in different sample sizes or repetitions:
 
 ```{r}
 nodes_empty_df = expand.grid(sort(unique(nodes_df$Node)),sort(unique(nodes_df$size)), seq(1,5,1))
@@ -249,6 +278,8 @@ nodes_empty_df$rep_N = nodes_empty_df$rep_D
 nodes_empty_df = nodes_empty_df %>% left_join((nodes_df %>% select(Node, DiseaseName.no.sp.char) %>% unique()), by="Node") %>% arrange(Node, size, rep_D)
 nodes_expanded_df = nodes_df %>% full_join(nodes_empty_df, by = c("Node", "DiseaseName.no.sp.char", "size", "rep_D", "rep_N")) %>% arrange(Node, size, rep_D)
 ```
+
+We select the gene category that appears more in the different repetitions of each sample size:
 
 ```{r}
 # Select the for each gene the node type that occurs more times in the different repetitions
@@ -264,6 +295,8 @@ nodes_summary_df = nodes_expanded_df %>%
 nodes_summary_df
 ```
 
+We create the alluvium plot showing the flow between gene categories across sample size:
+
 ```{r}
 nodes_summary_df$Phi_tilde[is.na(nodes_summary_df$Phi_tilde)] = "U"
 nodes_summary_df$Phi_tilde <- as.factor(nodes_summary_df$Phi_tilde)
@@ -271,6 +304,7 @@ nodes_summary_df$size = as.character(nodes_summary_df$size)
 levels(nodes_summary_df$Phi_tilde) = sort(unique(nodes_summary_df$Phi_tilde))
 nodes_summary_df$size <- factor(nodes_summary_df$size, levels=as.character(sort(unique(as.integer(nodes_summary_df$size)))))
 
+plot_file = paste(plots_dir, "codina_tcga_brca_gtex_breast_change_disease_genes.png", sep="/")
 nodes_summary_df %>% 
   #filter(size %in% c(100, 200, 300, 400)) %>%
   filter(size %in% c(60, 120, 180, 240, 300, 360, 420)) %>%
@@ -281,13 +315,17 @@ nodes_summary_df %>%
   scale_fill_brewer(type = "qual", palette = "Set2") +
   geom_flow(stat = "alluvium", lode.guidance = "frontback") +
   geom_stratum() +
-  theme(legend.position = "bottom")
-
+  xlab("Number of samples") +
+  ylab("Number of disease genes") +
+  guides(fill=guide_legend(title="Gene category")) +
+  theme_linedraw() +
+  theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 12), legend.text = element_text(size = 12), legend.title=element_text(size=14, face="bold"), legend.position = "bottom")
+ggsave(plot_file, type='cairo', dpi = 300, height=7, width = 10)
 ```
 
-### Analyze the nodes of rheumatoid arthritis
+### Analyze rheumatoid arthritis
 
-Select genes associated with the disease:
+Filter disease-gene associations by the disease "arthritis rheumatoid":
 
 ```{r}
 disease_name = "arthritis.rheumatoid"
@@ -296,7 +334,7 @@ dim(GDA_ra)
 head(GDA_ra)
 ```
 
-Compile all files and order them for the comparisons:
+Compile the files of the differential co-expression analysis from CODINA:
 
 ```{r}
 input_dir = "/work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/complete.dataset_Whole.Blood"
@@ -331,7 +369,7 @@ for(file_name in result_files){
 head(file_info_df)
 ```
 
-Then analyze files, first counting genes per category and then comparing networks of different sizes:
+Analyze differential co-expression analysis files, first counting genes per category and then analyzing if change across sample size:
 
 ```{r}
 type_pval_correction = "fdr"
@@ -369,21 +407,72 @@ head(nodes_df)
 We plot the number of genes in each category:
 
 ```{r}
+plot_file = paste(plots_dir, "codina_scipher_ra_gtex_wholeblood_counts_all_genes.png", sep="/")
 counts_nodes_df %>% 
   group_by(Phi_tilde, size) %>%
   summarize(mean = mean(n), sd = sd(n), max=max(n), min=min(n)) %>%
   ggplot(aes(x = size, y = mean, fill = Phi_tilde)) + 
   geom_line(aes(col = Phi_tilde)) +
-  geom_ribbon(aes(ymin=min, ymax=max), alpha=0.2)
+  geom_ribbon(aes(ymin=min, ymax=max), alpha=0.2) +
+  xlab("Number of samples") +
+  ylab("Number of genes") +
+  guides(col=guide_legend(title="Gene category"), fill=guide_legend(title="Gene category")) +
+  theme_linedraw() +
+  theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 12), legend.text = element_text(size = 12), legend.title=element_text(size=14, face="bold"))
+ggsave(plot_file, type='cairo', dpi = 300, height=7, width = 10)
 
+plot_file = paste(plots_dir, "codina_scipher_ra_gtex_wholeblood_counts_all_genes_log.png", sep="/")
+counts_nodes_df %>% 
+  group_by(Phi_tilde, size) %>%
+  summarize(mean = mean(n), sd = sd(n), max=max(n), min=min(n)) %>%
+  ggplot(aes(x = size, y = mean, fill = Phi_tilde)) + 
+  geom_line(aes(col = Phi_tilde)) +
+  geom_ribbon(aes(ymin=min, ymax=max), alpha=0.2) +
+  scale_x_continuous(trans = scales::log10_trans()) +
+  xlab("Number of samples (Log)") +
+  ylab("Number of genes") +
+  guides(col=guide_legend(title="Gene category"), fill=guide_legend(title="Gene category")) +
+  theme_linedraw() +
+  theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 12), legend.text = element_text(size = 12), legend.title=element_text(size=14, face="bold"))
+ggsave(plot_file, type='cairo', dpi = 300, height=7, width = 10)
+```
+
+We plot specifically the number of arthritis rheumatoid genes in each category:
+
+```{r}
+plot_file = paste(plots_dir, "codina_scipher_ra_gtex_wholeblood_counts_disease_genes.png", sep="/")
 counts_nodes_df %>% 
   group_by(Phi_tilde, size) %>%
   summarize(mean_disease = mean(n_disease), sd_disease = sd(n_disease), max_disease=max(n_disease), min_disease=min(n_disease)) %>%
   ggplot(aes(x = size, y = mean_disease, fill = Phi_tilde)) + 
   geom_line(aes(col = Phi_tilde)) +
-  geom_ribbon(aes(ymin=min_disease, ymax=max_disease), alpha=0.2)
+  geom_ribbon(aes(ymin=min_disease, ymax=max_disease), alpha=0.2) +
+  xlab("Number of samples") +
+  ylab("Number of disease genes") +
+  guides(col=guide_legend(title="Gene category"), fill=guide_legend(title="Gene category")) +
+  theme_linedraw() +
+  theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 12), legend.text = element_text(size = 12), legend.title=element_text(size=14, face="bold"))
+ggsave(plot_file, type='cairo', dpi = 300, height=7, width = 10)
+
+plot_file = paste(plots_dir, "codina_scipher_ra_gtex_wholeblood_counts_disease_genes_log.png", sep="/")
+counts_nodes_df %>% 
+  group_by(Phi_tilde, size) %>%
+  summarize(mean_disease = mean(n_disease), sd_disease = sd(n_disease), max_disease=max(n_disease), min_disease=min(n_disease)) %>%
+  ggplot(aes(x = size, y = mean_disease, fill = Phi_tilde)) + 
+  geom_line(aes(col = Phi_tilde)) +
+  geom_ribbon(aes(ymin=min_disease, ymax=max_disease), alpha=0.2) +
+  scale_x_continuous(trans = scales::log10_trans()) +
+  xlab("Number of samples") +
+  ylab("Number of disease genes") +
+  guides(col=guide_legend(title="Gene category"), fill=guide_legend(title="Gene category")) +
+  theme_linedraw() +
+  theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 12), legend.text = element_text(size = 12), legend.title=element_text(size=14, face="bold"))
+ggsave(plot_file, type='cairo', dpi = 300, height=7, width = 10)
 
 ```
+
+We analyze the change of categories in genes across sample size.
+To achieve it, we introduce as NA the genes that were not found in different sample sizes or repetitions:
 
 ```{r}
 nodes_empty_df = expand.grid(sort(unique(nodes_df$Node)),sort(unique(nodes_df$size)), seq(1,5,1))
@@ -392,6 +481,8 @@ nodes_empty_df$rep_N = nodes_empty_df$rep_D
 nodes_empty_df = nodes_empty_df %>% left_join((nodes_df %>% select(Node, DiseaseName.no.sp.char) %>% unique()), by="Node") %>% arrange(Node, size, rep_D)
 nodes_expanded_df = nodes_df %>% full_join(nodes_empty_df, by = c("Node", "DiseaseName.no.sp.char", "size", "rep_D", "rep_N")) %>% arrange(Node, size, rep_D)
 ```
+
+We select the gene category that appears more in the different repetitions of each sample size:
 
 ```{r}
 # Select the for each gene the node type that occurs more times in the different repetitions
@@ -407,6 +498,8 @@ nodes_summary_df = nodes_expanded_df %>%
 nodes_summary_df
 ```
 
+We create the alluvium plot showing the flow between gene categories across sample size:
+
 ```{r}
 nodes_summary_df$Phi_tilde[is.na(nodes_summary_df$Phi_tilde)] = "U"
 nodes_summary_df$Phi_tilde <- as.factor(nodes_summary_df$Phi_tilde)
@@ -414,6 +507,7 @@ nodes_summary_df$size = as.character(nodes_summary_df$size)
 levels(nodes_summary_df$Phi_tilde) = sort(unique(nodes_summary_df$Phi_tilde))
 nodes_summary_df$size <- factor(nodes_summary_df$size, levels=as.character(sort(unique(as.integer(nodes_summary_df$size)))))
 
+plot_file = paste(plots_dir, "codina_scipher_ra_gtex_wholeblood_change_disease_genes.png", sep="/")
 nodes_summary_df %>% 
   #filter(size %in% c(100, 200, 300, 400)) %>%
   filter(size %in% c(60, 120, 180, 240, 300, 360, 420)) %>%
@@ -424,6 +518,11 @@ nodes_summary_df %>%
   scale_fill_brewer(type = "qual", palette = "Set2") +
   geom_flow(stat = "alluvium", lode.guidance = "frontback") +
   geom_stratum() +
-  theme(legend.position = "bottom")
+  xlab("Number of samples") +
+  ylab("Number of disease genes") +
+  guides(fill=guide_legend(title="Gene category")) +
+  theme_linedraw() +
+  theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 12), legend.text = element_text(size = 12), legend.title=element_text(size=14, face="bold"), legend.position = "bottom")
+ggsave(plot_file, type='cairo', dpi = 300, height=7, width = 10)
 
 ```
