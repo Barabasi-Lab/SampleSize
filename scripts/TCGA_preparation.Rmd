@@ -29,13 +29,16 @@ set.seed(1510)
 
 
 ```{r}
+# Define type of counts used
+type_counts = "tpm" # tpm, reads
+
 # Define working directories
 gdc_dir = '/work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA'
 input_dir = paste(gdc_dir, 'raw', sep='/')
 data_dir = paste(input_dir, 'data', sep='/')
 metadata_dir = paste(input_dir, 'metadata', sep='/')
 additional_dir = paste(input_dir, 'additional', sep='/')
-output_dir = paste(gdc_dir, 'out', sep='/')
+output_dir = paste(gdc_dir, 'out', type_counts, sep='/')
 ```
 
 ## Metadata
@@ -120,7 +123,10 @@ We read the processed file:
 
 ```{r}
 # Define and read data file
-tcga_file = paste(output_dir, 'TCGA_tpm.csv', sep='/')
+if(!(type_counts %in% c("tpm", "reads"))){
+  stop("Unknown type of data")
+}
+tcga_file = paste(output_dir, paste("TCGA_", type_counts, ".csv", sep=""), sep='/')
 tcga_df = fread(tcga_file, header=TRUE)
 ```
 
@@ -230,7 +236,7 @@ dim(tcga_df)
 ```
 
 ```{r}
-tcga_processed_file = paste(output_dir, 'TCGA_tpm_genes_processed.csv', sep='/')
+tcga_processed_file = paste(output_dir, "TCGA_genes_processed.csv", sep='/')
 fwrite(tcga_df, tcga_processed_file, sep='\t')
 ```
 
@@ -274,7 +280,7 @@ tcga_df = cbind(data.frame(Gene=genes), tcga_df)
 ```
 
 ```{r}
-tcga_processed_file = paste(output_dir, 'TCGA_tpm_genes_samples_processed.csv', sep='/')
+tcga_processed_file = paste(output_dir, "TCGA_genes_and_samples_processed.csv", sep='/')
 fwrite(tcga_df, tcga_processed_file, sep='\t')
 ```
 
@@ -283,3 +289,5 @@ The processed `tcga_df` dataframe contains `r as.integer(ncol(tcga_df)-1)` colum
 ```{r}
 head(tcga_df[1:10,1:5])
 ```
+
+

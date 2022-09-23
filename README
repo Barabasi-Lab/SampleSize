@@ -190,205 +190,403 @@ squeue -u j.aguirreplans
 sacct
 
 
-#######################################################################
-RUN GENERATION OF CO-EXPRESSION NETWORKS USING OTHER METRICS IN CLUSTER
-#######################################################################
+#######################################################
+RUN GENERATION OF CO-EXPRESSION NETWORKS IN THE CLUSTER 
+#######################################################
 
+#------#
+# GTEx #
+#------#
+
+# SAMPLES INPUT DIRS: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition
+# RNASEQ INPUT DIRS: /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue
+# OUTPUT DIRS: /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads
+
+#---- PEARSON ----#
+
+# MULTIPLE DATASETS - READS
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_for_complete_dataset_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads -m pearson
+
+# Whole.Blood - PEARSON - READS - BOTH SEX
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/bootstrap/nonresponders -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_N100 -m wto
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/bootstrap/responders -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_responders_wto_N100 -m wto
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_cluster.py -m wgcna
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_cluster.py -m pearson
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_cluster.py -m spearman
-
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/bootstrap/nonresponders -o /scratch/j.aguirreplans/Scipher/SampleSize/example_wto -m wto
-
-# Using samples files
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Whole.Blood -m pearson
+# Whole.Blood - PEARSON - TPM - BOTH SEX
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Liver -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Liver -m wto
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/tpm/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/tpm/Whole.Blood -m pearson
 
-#### GTEx ####
+# Breast.Mammary.Tissue - PEARSON - READS - FEMALE
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Breast.Mammary.Tissue_female -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Breast.Mammary.Tissue_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Breast.Mammary.Tissue_female -m pearson
+# Breast.Mammary.Tissue - PEARSON - READS - BOTH SEX
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Breast.Mammary.Tissue -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Breast.Mammary.Tissue.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Breast.Mammary.Tissue -m pearson
+# Breast.Mammary.Tissue - PEARSON - TPM - FEMALE
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Breast.Mammary.Tissue_female -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/tpm/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Breast.Mammary.Tissue_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/tpm/Breast.Mammary.Tissue_female -m pearson
 
-# Pearson: COMPLETE DATASET
+# Artery.Tibial - PEARSON - READS - BOTH SEX
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_for_complete_dataset_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue -o /work/ccnr/j.aguirreplans/Scipher/SampleSize/networks_gtex -m pearson
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Artery.Tibial -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Artery.Tibial.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Artery.Tibial -m pearson
+# Artery.Tibial - PEARSON - TPM - BOTH SEX
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Artery.Tibial -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/tpm/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Artery.Tibial.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/tpm/Artery.Tibial -m pearson
 
-# WTO CONVERGENCE: All genes - Muscle.Skeletal - Female
+# Muscle.Skeletal - PEARSON - READS - BOTH SEX
 module load python/3.8.1
-# For the moment only 20 to try how much time do they take (2021/12/16, 17:14)
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_with_wto_finding_pvalue_convergence_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Muscle.Skeletal_female -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Muscle.Skeletal_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Muscle.Skeletal_female
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Muscle.Skeletal -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Muscle.Skeletal.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Muscle.Skeletal -m pearson
 
-# WTO FASTER: All genes - Muscle.Skeletal
+# Skin.Sun.Exposed.Lower.leg - PEARSON - READS - BOTH SEX
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Muscle.Skeletal_female -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Muscle.Skeletal_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Muscle.Skeletal_female -m wto
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Muscle.Skeletal_male -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Muscle.Skeletal_male.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Muscle.Skeletal_male -m wto
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Skin.Sun.Exposed.Lower.leg -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Skin.Sun.Exposed.Lower.leg.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Skin.Sun.Exposed.Lower.leg -m pearson
 
-# WTO FASTER: All genes - Whole blood
+# Thyroid - PEARSON - READS - BOTH SEX
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Whole.Blood -m wto
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Thyroid -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Thyroid.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Thyroid -m pearson
 
-# WGCNA: All genes - Muscle.Skeletal
+# Adipose.Subcutaneous - PEARSON - READS - BOTH SEX
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Muscle.Skeletal_female -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Muscle.Skeletal_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Muscle.Skeletal_female -m wgcna
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Muscle.Skeletal_male -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Muscle.Skeletal_male.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Muscle.Skeletal_male -m wgcna
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Adipose.Subcutaneous -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Adipose.Subcutaneous.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Adipose.Subcutaneous -m pearson
 
-# WGCNA: All genes - Whole Blood
+# Nerve.Tibial - PEARSON - READS - BOTH SEX
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood_female -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Whole.Blood_female -m wgcna
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood_male -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood_male.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Whole.Blood_male -m wgcna
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Whole.Blood -m wgcna
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Nerve.Tibial -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Nerve.Tibial.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Nerve.Tibial -m pearson
 
-# Pearson: All samples - Whole Blood - TPM
+# Skin.Not.Sun.Exposed.Suprapubic - PEARSON - READS - BOTH SEX
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Whole.Blood -m pearson
-# Pearson: All samples - Whole Blood - READS
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood.gct -o /work/ccnr/j.aguirreplans/Scipher/SampleSize/networks_gtex_reads/Whole.Blood -m pearson
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Skin.Not.Sun.Exposed.Suprapubic -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Skin.Not.Sun.Exposed.Suprapubic.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Skin.Not.Sun.Exposed.Suprapubic -m pearson
 
-# Pearson: All samples - Muscle.Skeletal
+# Lung - PEARSON - READS - BOTH SEX
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Muscle.Skeletal -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Muscle.Skeletal.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Muscle.Skeletal -m pearson
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Lung -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Lung.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Lung -m pearson
 
-# Pearson: All samples - Skin.Sun.Exposed.Lower.leg
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Skin.Sun.Exposed.Lower.leg -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Skin.Sun.Exposed.Lower.leg.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Skin.Sun.Exposed.Lower.leg -m pearson
 
-# Pearson: All samples - Thyroid
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Thyroid -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Thyroid.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Thyroid -m pearson
 
-# Pearson: All samples - Artery.Tibial
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Artery.Tibial -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Artery.Tibial.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Artery.Tibial -m pearson
+#---------#
+# SCIPHER #
+#---------#
 
-# Pearson: All samples - Adipose.Subcutaneous
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Adipose.Subcutaneous -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Adipose.Subcutaneous.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Adipose.Subcutaneous -m pearson
+# SAMPLES INPUT DIRS: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/complete.dataset
+# RNASEQ INPUT DIRS: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_counts_processed.csv
+# OUTPUT DIRS: /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/reads/complete.dataset
 
-# Pearson: All samples - Nerve.Tibial
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Nerve.Tibial -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Nerve.Tibial.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Nerve.Tibial -m pearson
+#---- PEARSON ----#
 
-# Pearson: All samples - Skin.Not.Sun.Exposed.Suprapubic
+# complete.dataset - PEARSON - READS 
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Skin.Not.Sun.Exposed.Suprapubic -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Skin.Not.Sun.Exposed.Suprapubic.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Skin.Not.Sun.Exposed.Suprapubic -m pearson
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/complete.dataset -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/reads/complete.dataset -m pearson
 
-# Pearson: All samples - Lung
+# sample.per.patient.baseline - PEARSON - READS 
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Lung -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Lung.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Lung -m pearson
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/sample.per.patient.baseline -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_unique_patients_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/reads/sample.per.patient.baseline -m pearson
 
-# Spearman: All samples - Whole Blood
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Whole.Blood -m spearman
 
-# ARACNE: All genes - Muscle.Skeletal
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Muscle.Skeletal_female -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Muscle.Skeletal_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Muscle.Skeletal_female -m aracne
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Muscle.Skeletal_male -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/GTEx_RNASeq_Muscle.Skeletal_male.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Muscle.Skeletal_male -m aracne
 
-# ARACNE: All genes - Whole Blood
+#------#
+# TCGA #
+#------#
+
+# SAMPLES INPUT DIRS: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor/TCGA-BRCA
+# RNASEQ INPUT DIRS: /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-BRCA.csv
+# OUTPUT DIRS: /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor
+
+#---- PEARSON ----#
+
+# MULTIPLE DATASETS - READS
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_for_complete_dataset_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor -m pearson
+
+# TCGA - PEARSON - READS - BOTH SEX
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood_female -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Whole.Blood_female -m aracne
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood_male -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood_male.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Whole.Blood_male -m aracne
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood -r /home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood.gct -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Whole.Blood -m aracne
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor/TCGA -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/tcga_rnaseq_TCGA.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA -m pearson
+
+# TCGA-BRCA - PEARSON - READS - FEMALE
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor/TCGA-BRCA_female -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-BRCA_female.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-BRCA_female -m pearson
+# TCGA-BRCA - PEARSON - READS - BOTH SEX
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor/TCGA-BRCA -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-BRCA.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-BRCA -m pearson
+
+# TCGA-COAD - PEARSON - READS - BOTH SEX
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor/TCGA-COAD -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-COAD.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-COAD -m pearson
+
+# TCGA-UCEC - PEARSON - READS - BOTH SEX
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor/TCGA-UCEC -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-UCEC.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-UCEC -m pearson
+
+# TCGA-KIRC - PEARSON - READS - BOTH SEX
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor/TCGA-KIRC -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-KIRC.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-KIRC -m pearson
+
+# TCGA-LUAD - PEARSON - READS - BOTH SEX
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor/TCGA-LUAD -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-LUAD.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-LUAD -m pearson
+
+# TCGA-LGG - PEARSON - READS - BOTH SEX
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor/TCGA-LGG -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-LGG.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-LGG -m pearson
+
+# TCGA-THCA - PEARSON - READS - BOTH SEX
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor/TCGA-THCA -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-THCA.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-THCA -m pearson
+
+# TCGA-LUSC - PEARSON - READS - BOTH SEX
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor/TCGA-LUSC -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-LUSC.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-LUSC -m pearson
+
+# TCGA-HNSC - PEARSON - READS - BOTH SEX
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor/TCGA-HNSC -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-HNSC.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-HNSC -m pearson
+
+# TCGA-PRAD - PEARSON - READS - BOTH SEX
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor/TCGA-PRAD -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-PRAD.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-PRAD -m pearson
+
+# TCGA-SKCM - PEARSON - READS - BOTH SEX
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor/TCGA-SKCM -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-SKCM.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-SKCM -m pearson
+
+
+
+######################################################
+ANALYSIS OF GENE CO-EXPRESSION NETWORKS IN THE CLUSTER
+######################################################
+
+# GTEx: All genes - Whole.Blood (TPM)
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/tpm/Whole.Blood -p /work/ccnr/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_gtex.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_gtex.csv -g /work/ccnr/j.aguirreplans/Databases/GTEx/v8/genes_filtered_files_by_tissue/gtex_rnaseq_gene_info_Whole.Blood.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/tpm/Whole.Blood -n /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/tpm/Whole.Blood
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/tpm/Whole.Blood
+# output networks: /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/tpm/Whole.Blood
+
+# GTEx: All genes - Muscle.Skeletal (TPM)
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/tpm/Muscle.Skeletal -p /work/ccnr/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_gtex.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_gtex.csv -g /work/ccnr/j.aguirreplans/Databases/GTEx/v8/genes_filtered_files_by_tissue/gtex_rnaseq_gene_info_Muscle.Skeletal.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/tpm/Muscle.Skeletal -n /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/tpm/Muscle.Skeletal
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/tpm/Muscle.Skeletal
+# output networks: /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/tpm/Muscle.Skeletal
+
+# GTEx: All genes - Skin.Sun.Exposed.Lower.leg (TPM)
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/tpm/Skin.Sun.Exposed.Lower.leg -p /work/ccnr/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_gtex.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_gtex.csv -g /work/ccnr/j.aguirreplans/Databases/GTEx/v8/genes_filtered_files_by_tissue/gtex_rnaseq_gene_info_Skin.Sun.Exposed.Lower.leg.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/tpm/Skin.Sun.Exposed.Lower.leg -n /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/tpm/Skin.Sun.Exposed.Lower.leg
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/tpm/Skin.Sun.Exposed.Lower.leg
+# output networks: /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/tpm/Skin.Sun.Exposed.Lower.leg
+
+# GTEx: All genes - Thyroid (TPM)
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/tpm/Thyroid -p /work/ccnr/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_gtex.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_gtex.csv -g /work/ccnr/j.aguirreplans/Databases/GTEx/v8/genes_filtered_files_by_tissue/gtex_rnaseq_gene_info_Thyroid.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/tpm/Thyroid -n /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/tpm/Thyroid
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/tpm/Thyroid
+# output networks: /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/tpm/Thyroid
+
+# GTEx: All genes - Artery.Tibial (TPM)
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/tpm/Artery.Tibial -p /work/ccnr/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_gtex.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_gtex.csv -g /work/ccnr/j.aguirreplans/Databases/GTEx/v8/genes_filtered_files_by_tissue/gtex_rnaseq_gene_info_Artery.Tibial.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/tpm/Artery.Tibial -n /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/tpm/Artery.Tibial
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/tpm/Artery.Tibial
+# output networks: /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/tpm/Artery.Tibial
+
+# GTEx: All genes - Adipose.Subcutaneous (TPM)
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/tpm/Adipose.Subcutaneous -p /work/ccnr/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_gtex.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_gtex.csv -g /work/ccnr/j.aguirreplans/Databases/GTEx/v8/genes_filtered_files_by_tissue/gtex_rnaseq_gene_info_Adipose.Subcutaneous.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/tpm/Adipose.Subcutaneous -n /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/tpm/Adipose.Subcutaneous
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/tpm/Adipose.Subcutaneous
+# output networks: /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/tpm/Adipose.Subcutaneous
+
+# GTEx: All genes - Nerve.Tibial (TPM)
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/tpm/Nerve.Tibial -p /work/ccnr/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_gtex.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_gtex.csv -g /work/ccnr/j.aguirreplans/Databases/GTEx/v8/genes_filtered_files_by_tissue/gtex_rnaseq_gene_info_Nerve.Tibial.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/tpm/Nerve.Tibial -n /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/tpm/Nerve.Tibial
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/tpm/Nerve.Tibial
+# output networks: /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/tpm/Nerve.Tibial
+
+# GTEx: All genes - Skin.Not.Sun.Exposed.Suprapubic (TPM)
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/tpm/Skin.Not.Sun.Exposed.Suprapubic -p /work/ccnr/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_gtex.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_gtex.csv -g /work/ccnr/j.aguirreplans/Databases/GTEx/v8/genes_filtered_files_by_tissue/gtex_rnaseq_gene_info_Skin.Not.Sun.Exposed.Suprapubic.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/tpm/Skin.Not.Sun.Exposed.Suprapubic -n /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/tpm/Skin.Not.Sun.Exposed.Suprapubic
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/tpm/Skin.Not.Sun.Exposed.Suprapubic
+# output networks: /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/tpm/Skin.Not.Sun.Exposed.Suprapubic
+
+# GTEx: All genes - Lung (TPM)
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/tpm/Lung -p /work/ccnr/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_gtex.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_gtex.csv -g /work/ccnr/j.aguirreplans/Databases/GTEx/v8/genes_filtered_files_by_tissue/gtex_rnaseq_gene_info_Lung.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/tpm/Lung -n /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/tpm/Lung
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/tpm/Lung
+# output networks: /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/tpm/Lung
+
 
 #### SCIPHER ####
 
-# WTO FASTER: complete.dataset
+# complete.dataset
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/complete.dataset -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete.dataset -m wto
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete.dataset -p /work/ccnr/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_scipher.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_scipher.csv -g /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_gene_info.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_scipher/reads/complete.dataset -n /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_scipher/reads/complete.dataset
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_scipher/reads/complete.dataset
+# output networks: /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_scipher/reads/complete.dataset
 
-# Spearman: complete.dataset
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/complete.dataset -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete.dataset -m spearman
-# Spearman: sample.per.patient.all.visits
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/sample.per.patient.all.visits -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_unique_patients_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/sample.per.patient.all.visits -m spearman
-# Spearman: sample.per.patient.baseline
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/sample.per.patient.baseline -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_unique_patients_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/sample.per.patient.baseline -m spearman
-# Spearman: responder.baseline
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/responder.baseline -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_unique_patients_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/responder.baseline -m spearman
-# Spearman: nonresponder.baseline
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/nonresponder.baseline -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_unique_patients_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/nonresponder.baseline -m spearman
-
-# Pearson: complete.dataset
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/complete.dataset -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_counts_processed.csv -o /work/ccnr/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete.dataset -m pearson
-# Pearson: sample.per.patient.baseline
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/sample.per.patient.baseline -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_counts_processed.csv -o /work/ccnr/j.aguirreplans/Scipher/SampleSize/networks_scipher/sample.per.patient.baseline -m pearson
-
-
-# ARACNE: complete.dataset
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/complete.dataset -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete.dataset -m aracne
 
 #### TCGA (GDC) ####
 
-# Pearson: COMPLETE DATASET (tumor)
+# ALL (TPM)
 module load python/3.8.1
-# With different RNA-seq files
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_for_complete_dataset_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project -o /work/ccnr/j.aguirreplans/Scipher/SampleSize/networks_tcga/tumor -m pearson
-# With a unique RNA-seq file
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_for_complete_dataset_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/tumor/filter_genes_with_zeros/TCGA_tpm_processed_filter_genes_with_zeros.csv -o /work/ccnr/j.aguirreplans/Scipher/SampleSize/networks_tcga_unique_rnaseq_file/tumor -m pearson -u
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/tpm/tumor/tpm/TCGA -p /work/ccnr/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/tumor/filter_genes_low_counts/rnaseq_gene_info_filter_genes_low_counts.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/tpm/tumor/TCGA -n /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/tpm/tumor/TCGA
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/tpm/tumor/TCGA
+# output networks: /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/tpm/tumor/TCGA
 
-# Pearson: All samples
+# TCGA-BRCA (TPM)
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-03-28-Dataset/sampling_with_repetition/TCGA -r /home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/TCGA_processed_for_coexpression.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA -m pearson
-# Spearman: All samples
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-03-28-Dataset/sampling_with_repetition/TCGA -r /home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/TCGA_processed_for_coexpression.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA -m spearman
-# ARACNE: All samples
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-03-28-Dataset/sampling_with_repetition/TCGA -r /home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/TCGA_processed_for_coexpression.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA -m aracne
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/tpm/tumor/TCGA-BRCA -p /work/ccnr/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/tumor/filter_genes_low_counts/genes_filtered_files_by_project/rnaseq_gene_info_TCGA-BRCA.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/tpm/tumor/TCGA-BRCA -n /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/tpm/tumor/TCGA-BRCA
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/tpm/tumor/TCGA-BRCA
+# output networks: /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/tpm/tumor/TCGA-BRCA
 
-# Pearson: TCGA-BRCA
+# TCGA-LGG (TPM)
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-03-28-Dataset/sampling_with_repetition/TCGA-BRCA -r /home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-BRCA.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA-BRCA -m pearson
-# Spearman: TCGA-BRCA
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-03-28-Dataset/sampling_with_repetition/TCGA-BRCA -r /home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-BRCA.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA-BRCA -m spearman
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/tpm/tumor/TCGA-LGG -p /work/ccnr/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/tumor/filter_genes_low_counts/genes_filtered_files_by_project/rnaseq_gene_info_TCGA-LGG.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/tpm/tumor/TCGA-LGG -n /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/tpm/tumor/TCGA-LGG
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/tpm/tumor/TCGA-LGG
+# output networks: /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/tpm/tumor/TCGA-LGG
 
-# Pearson: TCGA-UCEC
+# TCGA-THCA (TPM)
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-03-28-Dataset/sampling_with_repetition/TCGA-UCEC -r /home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-UCEC.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA-UCEC -m pearson
-# Spearman: TCGA-UCEC
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-03-28-Dataset/sampling_with_repetition/TCGA-UCEC -r /home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-UCEC.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA-UCEC -m spearman
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/tpm/tumor/TCGA-THCA -p /work/ccnr/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/tumor/filter_genes_low_counts/genes_filtered_files_by_project/rnaseq_gene_info_TCGA-THCA.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/tpm/tumor/TCGA-THCA -n /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/tpm/tumor/TCGA-THCA
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/tpm/tumor/TCGA-THCA
+# output networks: /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/tpm/tumor/TCGA-THCA
 
-# Pearson: TCGA-KIRC
+# TCGA-LUSC (TPM)
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-03-28-Dataset/sampling_with_repetition/TCGA-KIRC -r /home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-KIRC.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA-KIRC -m pearson
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/tpm/tumor/TCGA-LUSC -p /work/ccnr/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/tumor/filter_genes_low_counts/genes_filtered_files_by_project/rnaseq_gene_info_TCGA-LUSC.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/tpm/tumor/TCGA-LUSC -n /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/tpm/tumor/TCGA-LUSC
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/tpm/tumor/TCGA-LUSC
+# output networks: /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/tpm/tumor/TCGA-LUSC
 
-# Pearson: TCGA-LUAD
+# TCGA-COAD (TPM)
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-03-28-Dataset/sampling_with_repetition/TCGA-LUAD -r /home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-LUAD.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA-LUAD -m pearson
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/tpm/tumor/TCGA-COAD -p /work/ccnr/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/tumor/filter_genes_low_counts/genes_filtered_files_by_project/rnaseq_gene_info_TCGA-COAD.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/tpm/tumor/TCGA-COAD -n /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/tpm/tumor/TCGA-COAD
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/tpm/tumor/TCGA-COAD
+# output networks: /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/tpm/tumor/TCGA-COAD
 
-# Pearson: TCGA-LGG
+# TCGA-LUAD (TPM)
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-03-28-Dataset/sampling_with_repetition/TCGA-LGG -r /home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-LGG.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA-LGG -m pearson
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/tpm/tumor/TCGA-LUAD -p /work/ccnr/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/tumor/filter_genes_low_counts/genes_filtered_files_by_project/rnaseq_gene_info_TCGA-LUAD.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/tpm/tumor/TCGA-LUAD -n /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/tpm/tumor/TCGA-LUAD
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/tpm/tumor/TCGA-LUAD
+# output networks: /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/tpm/tumor/TCGA-LUAD
 
-# Pearson: TCGA-THCA
+# TCGA-PRAD (TPM)
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-03-28-Dataset/sampling_with_repetition/TCGA-THCA -r /home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-THCA.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA-THCA -m pearson
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/tpm/tumor/TCGA-PRAD -p /work/ccnr/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/tumor/filter_genes_low_counts/genes_filtered_files_by_project/rnaseq_gene_info_TCGA-PRAD.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/tpm/tumor/TCGA-PRAD -n /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/tpm/tumor/TCGA-PRAD
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/tpm/tumor/TCGA-PRAD
+# output networks: /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/tpm/tumor/TCGA-PRAD
 
-# Pearson: TCGA-LUSC
+# TCGA-HNSC (TPM)
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-03-28-Dataset/sampling_with_repetition/TCGA-LUSC -r /home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-LUSC.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA-LUSC -m pearson
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/tpm/tumor/TCGA-HNSC -p /work/ccnr/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/tumor/filter_genes_low_counts/genes_filtered_files_by_project/rnaseq_gene_info_TCGA-HNSC.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/tpm/tumor/TCGA-HNSC -n /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/tpm/tumor/TCGA-HNSC
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/tpm/tumor/TCGA-HNSC
+# output networks: /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/tpm/tumor/TCGA-HNSC
 
-# Pearson: TCGA-HNSC
+# TCGA-SKCM (TPM)
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-03-28-Dataset/sampling_with_repetition/TCGA-HNSC -r /home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-HNSC.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA-HNSC -m pearson
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/tpm/tumor/TCGA-SKCM -p /work/ccnr/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/tumor/filter_genes_low_counts/genes_filtered_files_by_project/rnaseq_gene_info_TCGA-SKCM.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/tpm/tumor/TCGA-SKCM -n /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/tpm/tumor/TCGA-SKCM
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/tpm/tumor/TCGA-SKCM
+# output networks: /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/tpm/tumor/TCGA-SKCM
 
-# Pearson: TCGA-PRAD
+# TCGA-UCEC (TPM)
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-03-28-Dataset/sampling_with_repetition/TCGA-PRAD -r /home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-PRAD.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA-PRAD -m pearson
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/tpm/tumor/TCGA-UCEC -p /work/ccnr/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/tumor/filter_genes_low_counts/genes_filtered_files_by_project/rnaseq_gene_info_TCGA-UCEC.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/tpm/tumor/TCGA-UCEC -n /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/tpm/tumor/TCGA-UCEC
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/tpm/tumor/TCGA-UCEC
+# output networks: /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/tpm/tumor/TCGA-UCEC
 
-# Pearson: TCGA-SKCM
+# TCGA-KIRC (TPM)
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-03-28-Dataset/sampling_with_repetition/TCGA-SKCM -r /home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-SKCM.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA-SKCM -m pearson
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/tpm/tumor/TCGA-KIRC -p /work/ccnr/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/tumor/filter_genes_low_counts/genes_filtered_files_by_project/rnaseq_gene_info_TCGA-KIRC.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/tpm/tumor/TCGA-KIRC -n /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/tpm/tumor/TCGA-KIRC
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/tpm/tumor/TCGA-KIRC
+# output networks: /work/ccnr/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/tpm/tumor/TCGA-KIRC
 
-# Pearson: TCGA-COAD
+# Copy results
+scp -r discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots_N100 /Users/quim/Desktop
+
+###################################
+DIFFERENTIAL CO-EXPRESSION ANALYSIS
+###################################
+
+# TCGA-BRCA vs. GTEx: Breast.Mammary.Tissue
+-d /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-BRCA
+-n /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/tpm/Breast.Mammary.Tissue
+-o /work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/TCGA-BRCA_Breast.Mammary.Tissue
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-03-28-Dataset/sampling_with_repetition/TCGA-COAD -r /home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-COAD.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA-COAD -m pearson
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differentially_coexpressed_genes_cluster.py -d /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-BRCA -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/tpm/Breast.Mammary.Tissue -o /work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/TCGA-BRCA_Breast.Mammary.Tissue -p 0.05 -s -f
 
+# Scipher-RA vs. GTEx: Whole.Blood
+-d /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete.dataset
+-n /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Whole.Blood
+-o /work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/complete.dataset_Whole.Blood
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differentially_coexpressed_genes_cluster.py -d /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete.dataset -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Whole.Blood -o /work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/complete.dataset_Whole.Blood -p 0.05 -s -f
+
+
+############################
+ANALYSIS OF INDIVIDUAL EDGES
+############################
+
+sbatch /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/merge_networks.sh
+sbatch /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analysis_individual_edges.sh
+
+######################################
+ANALYSIS DISEASE GENES VS. SAMPLE SIZE
+######################################
+
+Download data from COVID-19 project: https://github.com/Barabasi-Lab/COVID-19/blob/main/data/Guney2016_GenesDisease.tsv
+Download data from Entrez to Gene symbol: https://ftp.ncbi.nih.gov/gene/DATA/GENE_INFO/Mammalia/
+Download data from MeSH (mtrees2021.bin): https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/meshtrees/ 
+
+Transfer data to the cluster:
+scp /Users/quim/Dropbox/References/Gysi_PNAS21_Supplementary/Guney2016_GenesDisease.tsv discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/data
+scp /Users/quim/Documents/DATA/BioGroup/Scipher/data/Homo_sapiens.gene_info discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/data
+scp /Users/quim/Documents/Databases/MeSH/mtrees2021.bin discovery:/work/ccnr/j.aguirreplans/Databases/MeSH
+
+How to plot it?
+---------------
+- Group diseases by disease type: for example, first branch of MeSH.
+- Make a plot for each group of diseases and check which diseases are more representative of each group.
+- Choose the most representative diseases of each group and make a plot of it.
+- Get the genes of all diseases of each group to make another plot.
+
+#########
+SHINY APP
+#########
+
+Run shiny app:
+
+module load R/4.0.3
+R
+setwd('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts')
+shiny::runApp(SampleSizeShiny)
+
+or
+shiny::runApp('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny')
+
+Deploy Shiny app:
+-----------------
+
+STEP 1 - INSTALL RSCONNECT
+install.packages('rsconnect')
+
+STEP 2 - AUTHORIZE ACCOUNT
+rsconnect::setAccountInfo(name='joaquimaguirreplans',
+			  token='4DC11654508D7B2460595CBBB4C28FA4',
+			  secret='1PW1nxzeiXCoWMwLDV7al1iT/QSwgdTMHTilLlII')
+
+STEP 3 - DEPLOY
+library(rsconnect)
+rsconnect::deployApp('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny')
+
+
+###################################
+ANALYSIS USING RA DATASET FROM ENZO
+###################################
+
+Download data from: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE97810
+
+- Non normalized data: GSE97810_non-normalized_baseline.txt.gz
+- Soft formatted family file: GSE97810_family.soft
+
+Transfer data to the cluster:
+scp -r /Users/quim/Documents/DATA/BioGroup/Scipher/data/RA discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/data
+
+Run script to import data:
+sbatch /home/j.aguirreplans/Projects/Scipher/SampleSize/data/RA/scripts/data_import_GSE97810.sh
+
+
+################
+CLUSTER COMMANDS
+################
 
 squeue -u j.aguirreplans
 sacct
@@ -431,13 +629,14 @@ Job Wall-clock time: 15:50:47
 Memory Utilized: 31.67 GB
 Memory Efficiency: 81.08% of 39.06 GB
 
+
 #################################
 TRANSFER FILES OUT OF THE CLUSTER
 #################################
 
 Network files:
 
-sshfs j.aguirreplans@xfer.discovery.neu.edu:/scratch/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_N100/* /System/Volumes/Data/Volumes/QUIM/DATA/Scipher/SampleSize/networks_nonresponders_wto_N100
+sshfs j.aguirreplans@xfer.discovery.neu.edu:/work/ccnr/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_N100/* /System/Volumes/Data/Volumes/QUIM/DATA/Scipher/SampleSize/networks_nonresponders_wto_N100
 
 Scripts:
 
@@ -482,274 +681,6 @@ pip install GEOparse
 To use the function girvan_newman of networkx, there was an incompatibility with the package decorator, it required a version of decorator lower than 5. So I have downgraded it:
 source activate ScipherSampleSizeEnv
 pip install --upgrade decorator==4.3
-
-######################################################
-ANALYSIS OF GENE CO-EXPRESSION NETWORKS IN THE CLUSTER
-######################################################
-
-
-# 10,000 genes, NONRESPONDERS, N20, pvals 0.05, 0.01, 0.001
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_N50 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_sample_size
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_G10000_N20 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_sample_size_G10000_N20_pval_0.05 -p 0.05
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_G10000_N20 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_sample_size_G10000_N20_pval_0.01 -p 0.01
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_G10000_N20 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_sample_size_G10000_N20_pval_0.001 -p 0.001
-
-# All genes, NONRESPONDERS, N100, pvals 0.05, 0.01, top 100
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_nonresponders_wto_N100_pval_0.05_top_100 -p 0.05
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_nonresponders_wto_N100_pval_0.01_top_100 -p 0.01
-
-# All genes, NONRESPONDERS, N100, pvals 0.01, 0.05, tops 0.1, 0.5, 1
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_nonresponders_wto_N100_pval_0.01_top_0.1 -p 0.01 -t 0.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_nonresponders_wto_N100_pval_0.01_top_0.5 -p 0.01 -t 0.5
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_nonresponders_wto_N100_pval_0.01_top_1 -p 0.01 -t 1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_nonresponders_wto_N100_pval_0.05_top_0.1 -p 0.05 -t 0.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_nonresponders_wto_N100_pval_0.05_top_0.5 -p 0.05 -t 0.5
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_nonresponders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_nonresponders_wto_N100_pval_0.05_top_1 -p 0.05 -t 1
-
-# All genes, RESPONDERS, N100, pvals 0.01, 0.05, tops 0.1, 0.5, 1
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_responders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_responders_wto_N100_pval_0.01_top_0.1 -p 0.01 -t 0.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_responders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_responders_wto_N100_pval_0.01_top_0.5 -p 0.01 -t 0.5
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_responders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_responders_wto_N100_pval_0.01_top_1 -p 0.01 -t 1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_responders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_responders_wto_N100_pval_0.05_top_0.1 -p 0.05 -t 0.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_responders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_responders_wto_N100_pval_0.05_top_0.5 -p 0.05 -t 0.5
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_by_size_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_responders_wto_N100 -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_responders_wto_N100_pval_0.05_top_1 -p 0.05 -t 1
-
-
-# GTEx: All genes - Whole.Blood TPM
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Whole.Blood -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_gtex.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_gtex.csv -g /home/j.aguirreplans/Databases/GTEx/v8/genes_filtered_files_by_tissue/gtex_rnaseq_gene_info_Whole.Blood.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Whole.Blood -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/Whole.Blood
-# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Whole.Blood
-# output networks: /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/Whole.Blood
-
-# GTEx: All genes - Muscle.Skeletal
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Muscle.Skeletal -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_gtex.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_gtex.csv -g /home/j.aguirreplans/Databases/GTEx/v8/genes_filtered_files_by_tissue/gtex_rnaseq_gene_info_Muscle.Skeletal.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Muscle.Skeletal -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/Muscle.Skeletal
-# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Muscle.Skeletal
-# output networks: /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/Muscle.Skeletal
-
-# GTEx: All genes - Skin.Sun.Exposed.Lower.leg
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Skin.Sun.Exposed.Lower.leg -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_gtex.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_gtex.csv -g /home/j.aguirreplans/Databases/GTEx/v8/genes_filtered_files_by_tissue/gtex_rnaseq_gene_info_Skin.Sun.Exposed.Lower.leg.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Skin.Sun.Exposed.Lower.leg -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/Skin.Sun.Exposed.Lower.leg
-# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Skin.Sun.Exposed.Lower.leg
-# output networks: /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/Skin.Sun.Exposed.Lower.leg
-
-# GTEx: All genes - Thyroid
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Thyroid -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_gtex.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_gtex.csv -g /home/j.aguirreplans/Databases/GTEx/v8/genes_filtered_files_by_tissue/gtex_rnaseq_gene_info_Thyroid.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Thyroid -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/Thyroid
-# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Thyroid
-# output networks: /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/Thyroid
-
-# GTEx: All genes - Artery.Tibial
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Artery.Tibial -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_gtex.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_gtex.csv -g /home/j.aguirreplans/Databases/GTEx/v8/genes_filtered_files_by_tissue/gtex_rnaseq_gene_info_Artery.Tibial.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Artery.Tibial -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/Artery.Tibial
-# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Artery.Tibial
-# output networks: /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/Artery.Tibial
-
-# GTEx: All genes - Adipose.Subcutaneous
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Adipose.Subcutaneous -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_gtex.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_gtex.csv -g /home/j.aguirreplans/Databases/GTEx/v8/genes_filtered_files_by_tissue/gtex_rnaseq_gene_info_Adipose.Subcutaneous.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Adipose.Subcutaneous -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/Adipose.Subcutaneous
-# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Adipose.Subcutaneous
-# output networks: /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/Adipose.Subcutaneous
-
-# GTEx: All genes - Nerve.Tibial
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Nerve.Tibial -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_gtex.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_gtex.csv -g /home/j.aguirreplans/Databases/GTEx/v8/genes_filtered_files_by_tissue/gtex_rnaseq_gene_info_Nerve.Tibial.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Nerve.Tibial -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/Nerve.Tibial
-# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Nerve.Tibial
-# output networks: /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/Nerve.Tibial
-
-# GTEx: All genes - Skin.Not.Sun.Exposed.Suprapubic
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Skin.Not.Sun.Exposed.Suprapubic -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_gtex.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_gtex.csv -g /home/j.aguirreplans/Databases/GTEx/v8/genes_filtered_files_by_tissue/gtex_rnaseq_gene_info_Skin.Not.Sun.Exposed.Suprapubic.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Skin.Not.Sun.Exposed.Suprapubic -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/Skin.Not.Sun.Exposed.Suprapubic
-# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Skin.Not.Sun.Exposed.Suprapubic
-# output networks: /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/Skin.Not.Sun.Exposed.Suprapubic
-
-# GTEx: All genes - Lung
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Lung -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_gtex.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_gtex.csv -g /home/j.aguirreplans/Databases/GTEx/v8/genes_filtered_files_by_tissue/gtex_rnaseq_gene_info_Lung.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Lung -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/Lung
-# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/Lung
-# output networks: /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/Lung
-
-
-#### SCIPHER ####
-
-# complete.dataset
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete.dataset -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_scipher.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_scipher.csv -g /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_gene_info.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_scipher/complete.dataset -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_scipher/complete.dataset
-# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_scipher/complete.dataset
-# output networks: /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_scipher/complete.dataset
-
-
-#### TCGA (GDC) ####
-
-# ALL
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/genes_filtered_files_by_project/tcga_rnaseq_gene_info_TCGA.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/TCGA -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/TCGA
-# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/TCGA
-# output networks: /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/TCGA
-
-# TCGA-BRCA
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA-BRCA -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/genes_filtered_files_by_project/tcga_rnaseq_gene_info_TCGA-BRCA.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/TCGA-BRCA -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/TCGA-BRCA
-# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/TCGA-BRCA
-# output networks: /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/TCGA-BRCA
-
-# TCGA-UCEC
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA-UCEC -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/genes_filtered_files_by_project/tcga_rnaseq_gene_info_TCGA-UCEC.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/TCGA-UCEC -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/TCGA-UCEC
-# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/TCGA-UCEC
-# output networks: /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/TCGA-UCEC
-
-# TCGA-KIRC
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA-KIRC -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/genes_filtered_files_by_project/tcga_rnaseq_gene_info_TCGA-KIRC.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/TCGA-KIRC -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/TCGA-KIRC
-# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/TCGA-KIRC
-# output networks: /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/TCGA-KIRC
-
-# TCGA-LGG
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA-LGG -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/genes_filtered_files_by_project/tcga_rnaseq_gene_info_TCGA-LGG.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/TCGA-LGG -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/TCGA-LGG
-# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/TCGA-LGG
-# output networks: /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/TCGA-LGG
-
-# TCGA-LUAD
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA-LUAD -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/genes_filtered_files_by_project/tcga_rnaseq_gene_info_TCGA-LUAD.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/TCGA-LUAD -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/TCGA-LUAD
-# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/TCGA-LUAD
-# output networks: /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/TCGA-LUAD
-
-# TCGA-THCA
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA-THCA -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/genes_filtered_files_by_project/tcga_rnaseq_gene_info_TCGA-THCA.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/TCGA-THCA -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/TCGA-THCA
-# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/TCGA-THCA
-# output networks: /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/TCGA-THCA
-
-# TCGA-LUSC
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA-LUSC -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/genes_filtered_files_by_project/tcga_rnaseq_gene_info_TCGA-LUSC.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/TCGA-LUSC -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/TCGA-LUSC
-# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/TCGA-LUSC
-# output networks: /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/TCGA-LUSC
-
-# TCGA-HNSC
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA-HNSC -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/genes_filtered_files_by_project/tcga_rnaseq_gene_info_TCGA-HNSC.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/TCGA-HNSC -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/TCGA-HNSC
-# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/TCGA-HNSC
-# output networks: /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/TCGA-HNSC
-
-# TCGA-PRAD
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA-PRAD -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/genes_filtered_files_by_project/tcga_rnaseq_gene_info_TCGA-PRAD.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/TCGA-PRAD -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/TCGA-PRAD
-# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/TCGA-PRAD
-# output networks: /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/TCGA-PRAD
-
-# TCGA-SKCM
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA-SKCM -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/genes_filtered_files_by_project/tcga_rnaseq_gene_info_TCGA-SKCM.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/TCGA-SKCM -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/TCGA-SKCM
-# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/TCGA-SKCM
-# output networks: /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/TCGA-SKCM
-
-# TCGA-COAD
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA-COAD -p /home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/genes_filtered_files_by_project/tcga_rnaseq_gene_info_TCGA-COAD.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/TCGA-COAD -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/TCGA-COAD
-# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/TCGA-COAD
-# output networks: /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/TCGA-COAD
-
-# Copy results
-scp -r discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots_N100 /Users/quim/Desktop
-
-###################################
-DIFFERENTIAL CO-EXPRESSION ANALYSIS
-###################################
-
-# TCGA-BRCA vs. GTEx: Breast.Mammary.Tissue
--d /work/ccnr/j.aguirreplans/Scipher/SampleSize/networks_tcga/tumor/TCGA-BRCA
--n /work/ccnr/j.aguirreplans/Scipher/SampleSize/networks_gtex/Breast.Mammary.Tissue
--o /work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/TCGA-BRCA_Breast.Mammary.Tissue
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differentially_coexpressed_genes_cluster.py -d /work/ccnr/j.aguirreplans/Scipher/SampleSize/networks_tcga/tumor/TCGA-BRCA -n /work/ccnr/j.aguirreplans/Scipher/SampleSize/networks_gtex/Breast.Mammary.Tissue -o /work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/TCGA-BRCA_Breast.Mammary.Tissue -p 0.05 -s -f
-
-# Scipher-RA vs. GTEx: Whole.Blood
--d /work/ccnr/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete.dataset
--n /work/ccnr/j.aguirreplans/Scipher/SampleSize/networks_gtex/Whole.Blood
--o /work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/complete.dataset_Whole.Blood
-module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differentially_coexpressed_genes_cluster.py -d /work/ccnr/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete.dataset -n /work/ccnr/j.aguirreplans/Scipher/SampleSize/networks_gtex_reads/Whole.Blood -o /work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/complete.dataset_Whole.Blood -p 0.05 -s -f
-
-
-############################
-ANALYSIS OF INDIVIDUAL EDGES
-############################
-
-sbatch /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/merge_networks.sh
-sbatch /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analysis_individual_edges.sh
-
-######################################
-ANALYSIS DISEASE GENES VS. SAMPLE SIZE
-######################################
-
-Download data from COVID-19 project: https://github.com/Barabasi-Lab/COVID-19/blob/main/data/Guney2016_GenesDisease.tsv
-Download data from Entrez to Gene symbol: https://ftp.ncbi.nih.gov/gene/DATA/GENE_INFO/Mammalia/
-Download data from MeSH (mtrees2021.bin): https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/meshtrees/ 
-
-Transfer data to the cluster:
-scp /Users/quim/Dropbox/References/Gysi_PNAS21_Supplementary/Guney2016_GenesDisease.tsv discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/data
-scp /Users/quim/Documents/DATA/BioGroup/Scipher/data/Homo_sapiens.gene_info discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/data
-scp /Users/quim/Documents/Databases/MeSH/mtrees2021.bin discovery:/home/j.aguirreplans/Databases/MeSH
-
-How to plot it?
----------------
-- Group diseases by disease type: for example, first branch of MeSH.
-- Make a plot for each group of diseases and check which diseases are more representative of each group.
-- Choose the most representative diseases of each group and make a plot of it.
-- Get the genes of all diseases of each group to make another plot.
-
-#########
-SHINY APP
-#########
-
-Run shiny app:
-
-module load R/4.0.3
-R
-setwd('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts')
-shiny::runApp(SampleSizeShiny)
-
-or
-shiny::runApp('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny')
-
-Deploy Shiny app:
------------------
-
-STEP 1 - INSTALL RSCONNECT
-install.packages('rsconnect')
-
-STEP 2 - AUTHORIZE ACCOUNT
-rsconnect::setAccountInfo(name='joaquimaguirreplans',
-			  token='4DC11654508D7B2460595CBBB4C28FA4',
-			  secret='1PW1nxzeiXCoWMwLDV7al1iT/QSwgdTMHTilLlII')
-
-STEP 3 - DEPLOY
-library(rsconnect)
-rsconnect::deployApp('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny')
-
-###################################
-ANALYSIS USING RA DATASET FROM ENZO
-###################################
-
-Download data from: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE97810
-
-- Non normalized data: GSE97810_non-normalized_baseline.txt.gz
-- Soft formatted family file: GSE97810_family.soft
-
-Transfer data to the cluster:
-scp -r /Users/quim/Documents/DATA/BioGroup/Scipher/data/RA discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/data
-
-Run script to import data:
-sbatch /home/j.aguirreplans/Projects/Scipher/SampleSize/data/RA/scripts/data_import_GSE97810.sh
-
 
 
 #############

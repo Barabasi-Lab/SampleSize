@@ -107,12 +107,17 @@ ggplot(som_df, aes(x=ss, y=score, col=group)) +
   theme_linedraw() +
   xlab("Number of samples") +
   ylab("Normalized correlation") +
-  theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.title=element_text(size=15, face="bold"), legend.position="bottom") +
-  guides(col=guide_legend(title="SOM group"))
+  theme(plot.title =  element_text(size = 17, face="bold"), 
+        axis.title = element_text(size = 16, face="bold"), 
+        axis.text = element_text(size = 15),
+        #legend.position="bottom",
+        legend.text = element_text(size = 14), 
+        legend.title=element_text(size=15, face="bold")) +
+guides(col=guide_legend(title="SOM group"))
 ggsave(
   som_plot_file,
   dpi = 1200,
-  width = 10000,
+  width = 9000,
   height = 6000,
   units = c("px")
 )
@@ -165,11 +170,16 @@ ggplot((networks_df %>% select(gp, sd) %>% unique()), aes(x=sd)) +
   theme_linedraw() +
   xlab("Standard deviation") +
   ylab("Number of edges") +
-  theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.title=element_text(size=15, face="bold"), legend.position="bottom")
+  theme(plot.title =  element_text(size = 17, face="bold"), 
+        axis.title = element_text(size = 16, face="bold"), 
+        axis.text = element_text(size = 15),
+        #legend.position="bottom",
+        legend.text = element_text(size = 14), 
+        legend.title=element_text(size=15, face="bold"))
 ggsave(
   hist_plot_file,
   dpi = 1200,
-  width = 10000,
+  width = 9000,
   height = 6000,
   units = c("px")
 )
@@ -186,11 +196,16 @@ ggplot((networks_df %>% select(gp, sdgr, ssgr) %>% unique()), aes(x=sdgr, fill=s
   xlab("Standard deviation") +
   ylab("Number of edges") +
   guides(col=guide_legend(title="Group of sizes")) +
-  theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.title=element_text(size=15, face="bold"), legend.position="bottom")
+  theme(plot.title =  element_text(size = 17, face="bold"), 
+        axis.title = element_text(size = 16, face="bold"), 
+        axis.text = element_text(size = 15),
+        #legend.position="bottom",
+        legend.text = element_text(size = 14), 
+        legend.title=element_text(size=15, face="bold"))
 ggsave(
   hist_gp_plot_file,
   dpi = 1200,
-  width = 10000,
+  width = 9000,
   height = 6000,
   units = c("px")
 )
@@ -215,7 +230,12 @@ hist_correlation_distribution = networks_df %>%
   ggtitle("Distribution of Pearson correlation") +
   labs(x="Pearson correlation", y = "Number of edges", color = "Number of samples") +
   theme_linedraw() + 
-  theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom")
+  theme(plot.title =  element_text(size = 17, face="bold"), 
+        axis.title = element_text(size = 16, face="bold"), 
+        axis.text = element_text(size = 15),
+        #legend.position="bottom",
+        legend.text = element_text(size = 14), 
+        legend.title=element_text(size=15, face="bold"))
 ggsave(
   filename=hist_correlation_distribution_file,
   plot=hist_correlation_distribution,

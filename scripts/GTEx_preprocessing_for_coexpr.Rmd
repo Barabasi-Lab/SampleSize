@@ -27,30 +27,27 @@ set.seed(1510)
 ## Define variables
 
 ```{r}
+# Define type of counts used
+type_counts = "tpm" # tpm, reads
+if(!(type_counts %in% c("tpm", "reads"))){
+  stop("Unknown type of data")
+}
+
 # Define working directories
 gtex_dir = '/work/ccnr/j.aguirreplans/Databases/GTEx/v8'
+output_dir = paste(gtex_dir, type_counts, sep='/')
 gene_annotations_dir = '/work/ccnr/j.aguirreplans/data/gene_annotations/data/out'
 gene_associations_dir = '/work/ccnr/j.aguirreplans/data/gene_associations/data/out'
 
 # Define input files
 samples_subjects_file = paste(gtex_dir, 'GTEx_Annotations_SamplesSubjectsMerged.txt', sep='/')
-tpm_file = paste(gtex_dir, 'GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_tpm.gct', sep='/')
-reads_file = paste(gtex_dir, 'GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_reads.gct', sep='/')
-
-# Define type of counts used
-type_counts = "reads" # tpm, reads
+rnaseq_file = paste(gtex_dir, paste('GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_', type_counts, ".gct", sep=""), sep="/")
 ```
 
 ## Read files
 
 ```{r}
-if(type_counts == "tpm"){
-  rnaseq = fread(tpm_file)
-} else if(type_counts == "reads"){
-  rnaseq = fread(reads_file)
-} else {
-  stop("Unknown type of data")
-}
+rnaseq = fread(rnaseq_file)
 ```
 
 The raw GTEx dataframe contains `r as.integer(ncol(rnaseq)-2)` sample IDs (as columns) and `r nrow(rnaseq)` genes (as rows) described in the first two columns as ***Name*** (Ensembl ID) and ***Description*** (HGNC symbol).
@@ -94,7 +91,7 @@ rnaseq[rnaseq$Description %in% repeated_genes[1:10],][1:10,1:5][order(Descriptio
 In total, there are `r length(repeated_genes)` repeated HGNC symbols. We merge these genes by calculating the median expression between them:
 
 ```{r}
-rnaseq_no_duplicates_file = paste(gtex_dir, paste('GTEx_RNASeq_gene_', type_counts, '_no_duplicates.gct', sep=""), sep='/')
+rnaseq_no_duplicates_file = paste(output_dir, paste('GTEx_RNASeq_gene_no_duplicates.gct', sep=""), sep='/')
 if (!(file.exists(rnaseq_no_duplicates_file))){
   rnaseq = subset(rnaseq, select=-Name)
   repeated_genes_aggregated = aggregate(.~Description, rnaseq[rnaseq$Description %in% repeated_genes,], median)
@@ -141,7 +138,7 @@ gtex_gene_category_df = gene_category_df %>% filter(HGNC_Symbol %in% genes_with_
 table(gtex_gene_category_df$HGNC_category)
 round(prop.table(table(gtex_gene_category_df$HGNC_category))*100,2)
 # Keep the information in a file
-genes_dataset_file = paste(gtex_dir, "gtex_rnaseq_gene_info.csv", sep='/')
+genes_dataset_file = paste(output_dir, "gtex_rnaseq_gene_info.csv", sep='/')
 fwrite(gtex_gene_category_df, genes_dataset_file)
 ```
 
@@ -162,17 +159,17 @@ In the case of reads:
 * Sum of the expression of all samples above 0.
 * Mean of the expression of all samples above 5.
 * Median of the expression of all samples above 5.
-* Standard deviation of all samples above 1.
+* Standard deviation of all samples above 0.
 * Less than half of the samples with empty counts (0s).
 
 ```{r}
-rnaseq_no_filt_dir = paste(gtex_dir, paste(type_counts, '_by_tissue', sep=''), sep='/')
-rnaseq_filt_dir = paste(gtex_dir, paste(type_counts, '_filtered_files_by_tissue', sep=''), sep='/')
-genes_filt_dir = paste(gtex_dir, 'genes_filtered_files_by_tissue', sep='/')
+rnaseq_no_filt_dir = paste(output_dir, 'rnaseq_no_filtered_files_by_tissue', sep='/')
+rnaseq_filt_dir = paste(output_dir, 'rnaseq_filtered_files_by_tissue', sep='/')
+genes_filt_dir = paste(output_dir, 'genes_from_rnaseq_filtered_files_by_tissue', sep='/')
 dir.create(rnaseq_no_filt_dir, showWarnings = FALSE)
 dir.create(rnaseq_filt_dir, showWarnings = FALSE)
 dir.create(genes_filt_dir, showWarnings = FALSE)
-cols = c("tissue", "sex", "n_genes_raw", "n_genes_processed", "sum",  "mean", "median", "sd", "zero_sum_counts")
+cols = c("tissue", "sex", "n_genes_raw", "n_genes_processed", "sum",  "mean", "median", "sd", "sum_zero_counts")
 statistics_low_counts_df <- setNames(data.frame(matrix(ncol = length(cols), nrow = 0)), cols)
 sex_to_id = data.frame(row.names=c("male","female", "") , val=c(1,2,""))
 for (tissue in unique(samples_df$SMTSD.no.sp.char)){
@@ -181,13 +178,13 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
     # Get the samples of the selected tissue/sex
     if (sex == ""){
       samples_tissue_sex = samples_df[samples_df$SMTSD.no.sp.char == tissue,]$SAMPID
-      rnaseq_tissue_sex_no_filt_file = paste(rnaseq_filt_dir, paste("gtex_rnaseq_", tissue, ".gct", sep=''), sep='/')
+      rnaseq_tissue_sex_no_filt_file = paste(rnaseq_no_filt_dir, paste("gtex_rnaseq_", tissue, ".gct", sep=''), sep='/')
       rnaseq_tissue_sex_filt_file = paste(rnaseq_filt_dir, paste("gtex_rnaseq_", tissue, ".gct", sep=''), sep='/')
       genes_dataset_filt_file = paste(genes_filt_dir, paste("gtex_rnaseq_gene_info_", tissue, ".csv", sep=''), sep='/')
     } else {
       sex_id = sex_to_id[sex,]
       samples_tissue_sex = samples_df[(samples_df$SMTSD.no.sp.char == tissue) & (samples_df$SEX == sex_id),]$SAMPID
-      rnaseq_tissue_sex_no_filt_file = paste(rnaseq_filt_dir, paste("gtex_rnaseq_", tissue, "_", sex, ".gct", sep=''), sep='/')
+      rnaseq_tissue_sex_no_filt_file = paste(rnaseq_no_filt_dir, paste("gtex_rnaseq_", tissue, "_", sex, ".gct", sep=''), sep='/')
       rnaseq_tissue_sex_filt_file = paste(rnaseq_filt_dir, paste("gtex_rnaseq_", tissue, "_", sex, ".gct", sep=''), sep='/')
       genes_dataset_filt_file = paste(genes_filt_dir, paste("gtex_rnaseq_gene_info_", tissue, "_", sex, ".csv", sep=''), sep='/')
     }
@@ -204,12 +201,12 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
       info_df$sd = apply(rnaseq_tissue_sex_df[,-1], 1, sd)
       info_df$mean = rowMeans(rnaseq_tissue_sex_df[,-1])
       info_df$median = apply(rnaseq_tissue_sex_df[,-1], 1, median)
-      info_df$zero_sum_counts = as.numeric(apply(rnaseq_tissue_sex_df[,-1], 1, function(i) sum(i == 0) )) # Number of times that the counts are equal to 0
+      info_df$sum_zero_counts = as.numeric(apply(rnaseq_tissue_sex_df[,-1], 1, function(i) sum(i == 0) )) # Number of times that the counts are equal to 0
       # Filter low expressed genes
       if(type_counts == "tpm"){
-        info_filt_df = info_df[(info_df$sum > 0) & (info_df$mean > 1) & (info_df$median > 1) & (info_df$sd > 0) & (info_df$zero_sum_counts < dim(rnaseq_tissue_sex_df[, -1])[2]/2) ,]
+        info_filt_df = info_df[(info_df$sum > 0) & (info_df$mean > 1) & (info_df$median > 1) & (info_df$sd > 0) & (info_df$sum_zero_counts < dim(rnaseq_tissue_sex_df[, -1])[2]/2) ,]
       } else if(type_counts == "reads"){
-        info_filt_df = info_df[(info_df$sum > 0) & (info_df$mean > 5) & (info_df$median > 5) & (info_df$sd > 1) & (info_df$zero_sum_counts < dim(rnaseq_tissue_sex_df[, -1])[2]/2) ,]
+        info_filt_df = info_df[(info_df$sum > 0) & (info_df$mean > 5) & (info_df$median > 5) & (info_df$sd > 0) & (info_df$sum_zero_counts < dim(rnaseq_tissue_sex_df[, -1])[2]/2) ,]
       } else {
         stop("Unknown type of data")
       }
@@ -217,9 +214,9 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
       fwrite(rnaseq_tissue_sex_filt_df, rnaseq_tissue_sex_filt_file)
       # Count statistics about the filter
       if(type_counts == "tpm"){
-        statistics_low_counts_df = rbind(statistics_low_counts_df, data.frame(tissue=tissue, sex=sex, n_genes_raw=length(rnaseq_tissue_sex_df$Gene), n_genes_processed=length(rnaseq_tissue_sex_filt_df$Gene), sum=length(info_df[(info_df$sum > 0),]$Gene), mean=length(info_df[(info_df$mean > 1),]$Gene), median=length(info_df[(info_df$median > 1),]$Gene), sd=length(info_df[(info_df$sd > 0),]$Gene), zero_sum_counts=length(info_df[(info_df$zero_sum_counts < dim(rnaseq_tissue_sex_df[, -1])[2]/2),]$Gene)))
+        statistics_low_counts_df = rbind(statistics_low_counts_df, data.frame(tissue=tissue, sex=sex, n_genes_raw=length(rnaseq_tissue_sex_df$Gene), n_genes_processed=length(rnaseq_tissue_sex_filt_df$Gene), sum=length(info_df[(info_df$sum > 0),]$Gene), mean=length(info_df[(info_df$mean > 1),]$Gene), median=length(info_df[(info_df$median > 1),]$Gene), sd=length(info_df[(info_df$sd > 0),]$Gene), sum_zero_counts=length(info_df[(info_df$sum_zero_counts < dim(rnaseq_tissue_sex_df[, -1])[2]/2),]$Gene)))
       } else if(type_counts == "reads"){
-        statistics_low_counts_df = rbind(statistics_low_counts_df, data.frame(tissue=tissue, sex=sex, n_genes_raw=length(rnaseq_tissue_sex_df$Gene), n_genes_processed=length(rnaseq_tissue_sex_filt_df$Gene), sum=length(info_df[(info_df$sum > 0),]$Gene), mean=length(info_df[(info_df$mean > 5),]$Gene), median=length(info_df[(info_df$median > 5),]$Gene), sd=length(info_df[(info_df$sd > 1),]$Gene), zero_sum_counts=length(info_df[(info_df$zero_sum_counts < dim(rnaseq_tissue_sex_df[, -1])[2]/2),]$Gene)))
+        statistics_low_counts_df = rbind(statistics_low_counts_df, data.frame(tissue=tissue, sex=sex, n_genes_raw=length(rnaseq_tissue_sex_df$Gene), n_genes_processed=length(rnaseq_tissue_sex_filt_df$Gene), sum=length(info_df[(info_df$sum > 0),]$Gene), mean=length(info_df[(info_df$mean > 5),]$Gene), median=length(info_df[(info_df$median > 5),]$Gene), sd=length(info_df[(info_df$sd > 0),]$Gene), sum_zero_counts=length(info_df[(info_df$sum_zero_counts < dim(rnaseq_tissue_sex_df[, -1])[2]/2),]$Gene)))
       }
       # Write gene info file
       genes_dataset_filt_df = data.frame(gtex_gene_category_df)
@@ -230,7 +227,7 @@ for (tissue in unique(samples_df$SMTSD.no.sp.char)){
   }
 }
 
-statistics_low_counts_file = paste(gtex_dir, "gtex_rnaseq_low_counts_statistics.csv", sep='/')
+statistics_low_counts_file = paste(output_dir, "gtex_rnaseq_low_counts_statistics.csv", sep='/')
 fwrite(statistics_low_counts_df, statistics_low_counts_file)
 ```
 

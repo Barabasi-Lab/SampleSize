@@ -465,7 +465,7 @@ RNA_metadata[1:5,1:5]</code></pre>
 <div id="filter-genes-without-classification" class="section level3">
 <h3>Filter genes without classification</h3>
 <p>We filter the genes in the matrix keeping only the ones that have been properly annotated and classified in the HGNC database:</p>
-<pre class="r"><code>gene_annotations_dir = '/home/j.aguirreplans/data/gene_annotations/data/out'
+<pre class="r"><code>gene_annotations_dir = '/work/ccnr/j.aguirreplans/data/gene_annotations/data/out'
 gene_category_file = paste(gene_annotations_dir, 'hgnc_category_set_2022-01-01.txt', sep='/')
 gene_category_df = fread(gene_category_file)
 gene_category_df$HGNC_Symbol = toupper(gene_category_df$HGNC_Symbol)
@@ -505,7 +505,7 @@ head(genes_dataset_df)</code></pre>
 <li>Sum of the expression of all samples above 0.</li>
 <li>Mean of the expression of all samples above 5.</li>
 <li>Median of the expression of all samples above 5.</li>
-<li>Standard deviation of all samples above 1.</li>
+<li>Standard deviation of all samples above 0.</li>
 <li>More than half of the genes with counts above 0.</li>
 </ul>
 <pre class="r"><code># Get only the gene expression
@@ -538,14 +538,14 @@ info_df$median = apply(RNA[,-1], 1, median)
 info_df$zero_sum_counts = as.numeric(apply(RNA[,-1], 1, function(i) sum(i == 0) )) # Number of times that the counts are equal to 0
 
 # We keep the genes following all criteria
-info_filt_df = info_df[(info_df$sum &gt; 0) &amp; (info_df$mean &gt; 5) &amp; (info_df$median &gt; 5) &amp; (info_df$sd &gt; 1) &amp; (info_df$zero_sum_counts &lt; dim(RNA[, -1])[2]/2) ,]</code></pre>
+info_filt_df = info_df[(info_df$sum &gt; 0) &amp; (info_df$mean &gt; 5) &amp; (info_df$median &gt; 5) &amp; (info_df$sd &gt; 0) &amp; (info_df$zero_sum_counts &lt; dim(RNA[, -1])[2]/2) ,]</code></pre>
 <p>There are 13822 genes accomplishing all the rules.</p>
 <p>We count the following number of genes accomplishing each rule:</p>
 <ul>
 <li>Sum of the expression of all samples above 0: 23494.</li>
 <li>Mean of the expression of all samples above 5: 14266.</li>
 <li>Median of the expression of all samples above 5: 13822.</li>
-<li>Standard deviation of all samples above 1: 18126.</li>
+<li>Standard deviation of all samples above 0: 23494.</li>
 <li>More than half of the genes with counts above 0: 16165.</li>
 </ul>
 <p>We count the following number of filtered genes for each category:</p>
@@ -633,7 +633,7 @@ head(metadata_response)</code></pre>
 <div id="prepare-disease-genes-information-dataset" class="section level2">
 <h2>Prepare disease genes information dataset</h2>
 <p>Read the disease-gene associations dataset:</p>
-<pre class="r"><code>gene_associations_dir = '/home/j.aguirreplans/data/gene_associations/data/out'
+<pre class="r"><code>gene_associations_dir = '/work/ccnr/j.aguirreplans/data/gene_associations/data/out'
 disease_genes_file = paste(gene_associations_dir, 'GDA_Filtered_04042022.csv', sep='/')
 GDA = fread(disease_genes_file) %&gt;% unique()
 GDA$HGNC_Symbol = toupper(GDA$HGNC_Symbol)
@@ -723,7 +723,7 @@ head(GDA)</code></pre>
 <h2>Prepare essential genes dataset</h2>
 <p>Prepare the essential genes of the Scipher dataset:</p>
 <pre class="r"><code># Read the essential genes file
-essential_genes_dir = '/home/j.aguirreplans/Databases/OGEE'
+essential_genes_dir = '/work/ccnr/j.aguirreplans/Databases/OGEE'
 essential_genes_original_file = paste(essential_genes_dir, 'OGEE_esential_genes_20190416.txt', sep='/')
 # Filter by human genes
 essential_genes_df = fread(essential_genes_original_file, header=TRUE) %&gt;% rename(&quot;taxID&quot;=&quot;#taxID&quot;)
@@ -743,7 +743,7 @@ head(essential_genes_df)</code></pre>
 ## 5: PMID: 18239125
 ## 6: PMID: 26472760</code></pre>
 <pre class="r"><code># Read the gene annotations dictionary
-gene_annotations_dir = '/home/j.aguirreplans/data/gene_annotations/data/out'
+gene_annotations_dir = '/work/ccnr/j.aguirreplans/data/gene_annotations/data/out'
 gene_dict_file = paste(gene_annotations_dir, 'multiple_hgnc_dict_set_2022-01-01.txt', sep='/')
 gene_dict_df = fread(gene_dict_file) %&gt;% unique()
 gene_dict_df = gene_dict_df[!((gene_dict_df$HGNC_Symbol==&quot;&quot;)|(gene_dict_df$alias==&quot;&quot;)),]
@@ -770,7 +770,7 @@ head(essential_genes_df)</code></pre>
 ## 4:  9606 Homo sapiens        GCLC            TRUE
 ## 5:  9606 Homo sapiens        NFYA            TRUE
 ## 6:  9606 Homo sapiens       LAS1L            TRUE</code></pre>
-<pre class="r"><code>essential_genes_scipher_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_esential_genes_scipher.csv'
+<pre class="r"><code>essential_genes_scipher_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_scipher.csv'
 essential_genes_df %&gt;% fwrite(essential_genes_scipher_file)</code></pre>
 <p>There are 7108 essential genes, 5726 in the Scipher dataset.</p>
 </div>

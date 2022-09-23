@@ -83,6 +83,34 @@ max(((results_selected_df %>% dplyr::select(method, type_dataset, size, rep) %>%
 
 ### Make plots
 
+#### Curve plot
+
+```{r}
+#datasets_selected = c("gtex:whole.blood", "gtex:artery.tibial", "tcga:tcga-coad", "tcga:tcga-brca")
+datasets_selected = c("gtex:whole.blood", "gtex:artery.tibial", "tcga:tcga-coad", "tcga:tcga-brca", "scipher:complete.dataset")
+results_selected_norm_df %>%
+  filter(type_dataset %in% datasets_selected) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:complete.dataset", "scipher")) %>%
+  ggplot(aes(x=size, y=unnorm, col=type_dataset)) +
+  geom_point(alpha=0.5, size=3) +
+  #scale_x_continuous(trans = scales::log10_trans()) +
+  scale_color_manual(values = c("#D55E00", "#E69F00", "#44AA99", "#0072B2", "#56B4E9")) +
+  theme_linedraw() +
+  xlab("N") +
+  #xlab("log(N)") +
+  ylab("S") +
+  guides(col=guide_legend(title="Dataset")) +
+  theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.title=element_text(size=15, face="bold"))
+plot_file = paste(plots_dir, "curve_pearson_pval_0.05.png", sep="/")
+ggsave(
+  plot_file,
+  dpi = 1200,
+  width = 9000,
+  height = 6000,
+  units = c("px")
+)
+```
+
 #### Regression plot
 
 ```{r}
@@ -117,8 +145,9 @@ ggsave(
 datasets_selected = c("gtex:whole.blood", "gtex:artery.tibial", "tcga:tcga-coad", "tcga:tcga-brca", "scipher:complete.dataset")
 #model_selected = "Stretched exponential (by optimization)"
 model_selected = "Stretched exponential (by linear fit)"
+analytical_model_summary_df$L_vs_total = abs((analytical_model_summary_df$unnorm_L - analytical_model_summary_df$total_num_edges)) / analytical_model_summary_df$total_num_edges
 analytical_model_summary_df %>% 
-  dplyr::select(type_dataset, model, a, b, L, adj.r.squared, relative.error.mean) %>% 
+  dplyr::select(type_dataset, model, a, b, L, L_vs_total, adj.r.squared, relative.error.mean) %>% 
   filter((type_dataset %in% datasets_selected) & (model == model_selected)) %>% unique()
 ```
 
@@ -270,3 +299,258 @@ ggsave(
   units = c("px")
 )
 ```
+
+#### Levels of correlations plot
+
+Define function to calculate critical sample size for correlation:
+
+```{r}
+calculate_sample_size_for_pearson_correlation_using_t_distribution_with_optimization = function(r, total_num_edges, alpha=0.05, N_guess=c(10000)){
+  optimize_N = function(par){
+    N = par[1]
+    t_guess = qt(alpha, df=N-2, lower.tail = F)
+    t = r * sqrt((N-2)) / sqrt((1-r**2))
+    return((abs(t-t_guess)))
+  }
+  res = optim(par=N_guess, fn=optimize_N, method="Brent", lower=3, upper=50000)
+  return(res$par)
+}
+
+calculate_predictions_using_stretched_exponential_model_optimized = function(x, L, a, b){
+  y = exp(log(L) - exp(b+a*log(x)))
+  return(y)
+}
+```
+
+Calculate sample size for different levels of correlation and different datasets:
+
+```{r}
+type_correlation_df = data.frame(type_correlation=c("weak", "moderate", "strong", "very strong"), lower_val=c(0.2,0.4,0.6,0.8), upper_val=c(0.4,0.6,0.8,NA))
+types_correlation = c("weak", "moderate", "strong", "very strong")
+
+cols = c("dataset", "type_correlation", "correlation", "sample_size_statistical", "sample_size_statistical_corrected")
+sample_size_correlation_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+for (dataset in numbers_df$dataset){
+  total_num_edges = (numbers_df %>% filter(dataset == !!dataset))$total_num_edges
+  for (type_correlation in types_correlation){
+    r = (type_correlation_df %>% filter(type_correlation == !!type_correlation))$lower_val
+    N = calculate_sample_size_for_pearson_correlation_using_t_distribution_with_optimization(r=r, total_num_edges=total_num_edges, alpha=0.05, N_guess=c(10000))
+    N_corrected = calculate_sample_size_for_pearson_correlation_using_t_distribution_with_optimization(r=r, total_num_edges=total_num_edges, alpha=0.05/total_num_edges, N_guess=c(10000))
+    sample_size_correlation_df <- rbind(sample_size_correlation_df, data.frame(dataset=dataset, type_correlation=type_correlation, correlation=r, sample_size_statistical=N, sample_size_statistical_corrected=N_corrected))
+  }
+}
+
+print(sample_size_correlation_df)
+```
+
+```{r}
+dataset_selected = "gtex:whole.blood"
+model_selected = "Stretched exponential (by linear fit)"
+results_analytical_gtex_wb = topology_results_selected_analytical_norm_df %>% 
+  filter((model == model_selected) & (type_dataset == dataset_selected)) %>%
+  select(model, type_dataset, a, b, L, max_value_in_dataset) %>% unique()
+sample_size_correlation_gtex_wb = sample_size_correlation_df %>%
+  filter((dataset == dataset_selected) & (!(type_correlation == "weak")))
+
+predictions_convergence_gtex_wb_norm = calculate_predictions_using_stretched_exponential_model_optimized(x=sample_size_correlation_gtex_wb$sample_size_statistical_corrected, L=results_analytical_gtex_wb$L, a=results_analytical_gtex_wb$a, b=results_analytical_gtex_wb$b)
+predictions_convergence_gtex_wb_df = data.frame(size=round(sample_size_correlation_gtex_wb$sample_size_statistical_corrected), num_edges=predictions_convergence_gtex_wb_norm * results_analytical_gtex_wb$max_value_in_dataset, num_edges_norm=predictions_convergence_gtex_wb_norm)
+predictions_convergence_gtex_wb_df$num_edges_norm = (predictions_convergence_gtex_wb_df$num_edges/results_analytical_gtex_wb$max_value_in_dataset)/results_analytical_gtex_wb$L
+predictions_convergence_gtex_wb_df
+
+predicted_results_wb_df = predicted_results_df %>% filter((model == model_selected) & (type_dataset == dataset_selected))
+predicted_results_wb_df$model_result_norm = (predicted_results_wb_df$model_result/results_analytical_gtex_wb$max_value_in_dataset)/results_analytical_gtex_wb$L
+```
+
+```{r}
+dataset_selected = "Whole.Blood"
+all_topology_results_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/analysis_topology.csv'
+threshold_selected = 0.05
+
+all_results_df = fread(all_topology_results_file)
+results_gtex_wb = all_results_df %>% 
+  filter((type_dataset == dataset_selected) & (threshold == threshold_selected) & (type_correlation %in% c("weak-moderate-strong-very strong", "moderate-strong-very strong", "strong-very strong", "very strong")))
+results_gtex_wb$num_edges_norm = (results_gtex_wb$num_edges/results_analytical_gtex_wb$max_value_in_dataset)/results_analytical_gtex_wb$L
+
+results_gtex_wb %>% 
+  mutate(type_correlation = replace(type_correlation, type_correlation == "weak-moderate-strong-very strong", "\u2265 0.2")) %>%
+  mutate(type_correlation = replace(type_correlation, type_correlation == "moderate-strong-very strong", "\u2265 0.4")) %>%
+  mutate(type_correlation = replace(type_correlation, type_correlation == "strong-very strong", "\u2265 0.6")) %>%
+  mutate(type_correlation = replace(type_correlation, type_correlation == "very strong", "\u2265 0.8")) %>%
+  ggplot(aes(x=size, y=num_edges_norm, col=type_correlation)) +
+  geom_point(alpha=0.5, size=3) +
+  geom_line(data=(predicted_results_wb_df %>% filter(size <= max((all_results_df %>% filter((type_dataset == dataset_selected) & (threshold == threshold_selected)))$size))), aes(x=size, y=model_result_norm), size=1, color='red') +
+  geom_point(data=predictions_convergence_gtex_wb_df, 
+           aes(x=size,y=num_edges_norm), 
+           color='red',
+           size=3) +
+  #scale_x_continuous(trans = scales::log10_trans()) +
+  #scale_color_manual(values = c("#D55E00", "#E69F00", "#44AA99", "#0072B2", "#56B4E9")) +
+  theme_linedraw() +
+  xlab("N") +
+  #xlab("log(N)") +
+  ylab("S / L") +
+  guides(col=guide_legend(title="Correlation level")) +
+  theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.title=element_text(size=15, face="bold"))
+
+plot_file = paste(plots_dir, "correlation_levels_pearson_pval_0.05_data_gtexwholeblood.png", sep="/")
+ggsave(
+  plot_file,
+  dpi = 1200,
+  width = 9000,
+  height = 6000,
+  units = c("px")
+)
+```
+
+
+#### Disease modules plot
+
+```{r}
+all_disease_genes_results_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/analysis_disease_genes.csv'
+threshold_selected = 0.05
+dataset_selected = "scipher:complete.dataset"
+
+all_disease_genes_results_df = fread(all_disease_genes_results_file)
+all_disease_genes_results_df$type_dataset = paste(all_disease_genes_results_df$dataset, all_disease_genes_results_df$type_dataset, sep=":") # Join dataset and type_dataset
+all_disease_genes_results_df$type_dataset = tolower(all_disease_genes_results_df$type_dataset)
+
+results_scipher_df = all_disease_genes_results_df %>%
+  filter((type_dataset == dataset_selected) & (threshold == threshold_selected))
+head(results_scipher_df)
+```
+
+```{r}
+cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+results_scipher_df %>%
+  filter(type_correlation == "moderate-strong-very strong") %>%
+  group_by(size, disease) %>%
+  summarize(mean_pval = mean(disease_lcc_pvalue)) %>%
+  ggplot(aes(x=size, y=abs(log10(mean_pval)), col=disease)) +
+  #geom_point(alpha=0.5, size=3) +
+  geom_line(size=1) +
+  geom_hline(yintercept=as.numeric(abs(log10(0.05))), linetype="dashed", color="red", size=0.5) +
+  #scale_x_continuous(trans = scales::log10_trans()) +
+  scale_color_manual(values = cbbPalette) +
+  theme_linedraw() +
+  xlab("N") +
+  #xlab("log(N)") +
+  ylab("Disease LCC log p-value (abs)") +
+  guides(col=guide_legend(title="Disease")) +
+  theme(plot.title =  element_text(size = 17, face="bold"), 
+        axis.title = element_text(size = 16, face="bold"), 
+        axis.text = element_text(size = 15), 
+        #legend.position = "bottom",
+        legend.text = element_text(size = 14), 
+        legend.title=element_text(size=15, face="bold"))
+plot_file = paste(plots_dir, "disease_module_significance_by_diseases_pearson_pval_0.05_data_sciphercomplete.png", sep="/")
+ggsave(
+  plot_file,
+  dpi = 1200,
+  width = 9700,
+  height = 6000,
+  units = c("px")
+)
+```
+
+```{r}
+results_scipher_df %>%
+  filter(disease == "arthritis rheumatoid") %>%
+  filter((type_dataset == dataset_selected) & (threshold == threshold_selected) & (type_correlation %in% c("weak-moderate-strong-very strong", "moderate-strong-very strong", "strong-very strong", "very strong"))) %>%
+  mutate(type_correlation = replace(type_correlation, type_correlation == "weak-moderate-strong-very strong", "\u2265 0.2")) %>%
+  mutate(type_correlation = replace(type_correlation, type_correlation == "moderate-strong-very strong", "\u2265 0.4")) %>%
+  mutate(type_correlation = replace(type_correlation, type_correlation == "strong-very strong", "\u2265 0.6")) %>%
+  mutate(type_correlation = replace(type_correlation, type_correlation == "very strong", "\u2265 0.8")) %>%
+  group_by(size, type_correlation) %>%
+  mutate(mean_pval = mean(disease_lcc_pvalue)) %>%
+  ungroup() %>%
+  ggplot() +
+  geom_point(aes(x=size, y=abs(log10(disease_lcc_pvalue)), col=type_correlation), alpha=0.4, size=3) +
+  geom_line(aes(x=size, y=abs(log10(mean_pval)), col=type_correlation), size=1) +
+  geom_hline(yintercept=as.numeric(abs(log10(0.05))), linetype="dashed", color="red", size=0.5) +
+  #scale_x_continuous(trans = scales::log10_trans()) +
+  #scale_color_manual(values = c("#D55E00", "#E69F00", "#44AA99", "#0072B2", "#56B4E9")) +
+  theme_linedraw() +
+  xlab("N") +
+  #xlab("log(N)") +
+  ylab("Disease LCC log p-value (abs)") +
+  guides(col=guide_legend(title="Correlation level")) +
+  theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.title=element_text(size=15, face="bold"))
+plot_file = paste(plots_dir, "disease_module_significance_by_correlations_pearson_pval_0.05_data_sciphercomplete.png", sep="/")
+ggsave(
+  plot_file,
+  dpi = 1200,
+  width = 9000,
+  height = 6000,
+  units = c("px")
+)
+```
+
+```{r}
+results_scipher_df %>%
+  filter(disease == "arthritis rheumatoid") %>%
+  filter((type_dataset == dataset_selected) & (threshold == threshold_selected) & (type_correlation %in% c("weak-moderate-strong-very strong", "moderate-strong-very strong", "strong-very strong", "very strong"))) %>%
+  mutate(type_correlation = replace(type_correlation, type_correlation == "weak-moderate-strong-very strong", "\u2265 0.2")) %>%
+  mutate(type_correlation = replace(type_correlation, type_correlation == "moderate-strong-very strong", "\u2265 0.4")) %>%
+  mutate(type_correlation = replace(type_correlation, type_correlation == "strong-very strong", "\u2265 0.6")) %>%
+  mutate(type_correlation = replace(type_correlation, type_correlation == "very strong", "\u2265 0.8")) %>%
+  group_by(size, type_correlation) %>%
+  mutate(mean_rlcc = mean(fraction_disease_lcc_nodes)) %>%
+  ungroup() %>%
+  ggplot() +
+  geom_point(aes(x=size, y=fraction_disease_lcc_nodes, col=type_correlation), alpha=0.4, size=3) +
+  geom_line(aes(x=size, y=mean_rlcc, col=type_correlation), size=1) +
+  #scale_x_continuous(trans = scales::log10_trans()) +
+  #scale_color_manual(values = c("#D55E00", "#E69F00", "#44AA99", "#0072B2", "#56B4E9")) +
+  theme_linedraw() +
+  xlab("N") +
+  #xlab("log(N)") +
+  ylab("Fraction of disease genes in the LCC") +
+  guides(col=guide_legend(title="Correlation level")) +
+  theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.title=element_text(size=15, face="bold"))
+plot_file = paste(plots_dir, "disease_module_rlcc_by_correlations_pearson_pval_0.05_data_sciphercomplete.png", sep="/")
+ggsave(
+  plot_file,
+  dpi = 1200,
+  width = 9300,
+  height = 6000,
+  units = c("px")
+)
+```
+
+```{r}
+datasets_selected = c("gtex:whole.blood", "gtex:artery.tibial", "tcga:tcga-coad", "tcga:tcga-brca", "scipher:complete.dataset")
+all_disease_genes_results_df %>%
+  filter((disease == "arthritis rheumatoid") & (type_dataset %in% datasets_selected) & (threshold == threshold_selected) & (type_correlation == "moderate-strong-very strong")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:complete.dataset", "scipher")) %>%
+  group_by(size, type_dataset) %>%
+  mutate(mean_pval = mean(disease_lcc_pvalue)) %>%
+  ungroup() %>%
+  ggplot() +
+  geom_point(aes(x=size, y=abs(log10(disease_lcc_pvalue)), col=type_dataset), alpha=0.5, size=3) +
+  #geom_line(aes(x=size, y=abs(log10(mean_pval)), col=type_dataset), size=1) +
+  geom_hline(yintercept=as.numeric(abs(log10(0.05))), linetype="dashed", color="red", size=0.5) +
+  #scale_x_continuous(trans = scales::log10_trans()) +
+  scale_color_manual(values = c("#D55E00", "#E69F00", "#44AA99", "#0072B2", "#56B4E9")) +
+  theme_linedraw() +
+  xlab("N") +
+  #xlab("log(N)") +
+  ylab("Disease LCC log p-value (abs)") +
+  guides(col=guide_legend(title="Dataset")) +
+  theme(plot.title =  element_text(size = 17, face="bold"), 
+        axis.title = element_text(size = 16, face="bold"), 
+        axis.text = element_text(size = 15), 
+        legend.text = element_text(size = 14), 
+        legend.title=element_text(size=15, face="bold"))
+
+plot_file = paste(plots_dir, "disease_module_significance_by_dataset_pearson_pval_0.05.png", sep="/")
+ggsave(
+  plot_file,
+  dpi = 1200,
+  width = 9200,
+  height = 6000,
+  units = c("px")
+)
+
+```
+
+

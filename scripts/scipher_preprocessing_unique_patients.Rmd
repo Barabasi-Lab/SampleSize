@@ -79,7 +79,7 @@ The new `RNA_metadata` dataframe contains `r ncol(RNA_metadata)` features (`r le
 We filter the genes in the matrix keeping only the ones that have been properly annotated and classified in the HGNC database:
 
 ```{r}
-gene_annotations_dir = '/home/j.aguirreplans/data/gene_annotations/data/out'
+gene_annotations_dir = '/work/ccnr/j.aguirreplans/data/gene_annotations/data/out'
 gene_category_file = paste(gene_annotations_dir, 'hgnc_category_set_2022-01-01.txt', sep='/')
 gene_category_df = fread(gene_category_file)
 gene_category_df$HGNC_Symbol = toupper(gene_category_df$HGNC_Symbol)
@@ -108,7 +108,7 @@ We filter the genes that have low expression in all samples, keeping the ones th
 * Sum of the expression of all samples above 0.
 * Mean of the expression of all samples above 5.
 * Median of the expression of all samples above 5.
-* Standard deviation of all samples above 1.
+* Standard deviation of all samples above 0.
 * More than half of the genes with counts above 0.
 
 ```{r}
@@ -133,7 +133,7 @@ info_df$median = apply(RNA[,-1], 1, median)
 info_df$zero_sum_counts = as.numeric(apply(RNA[,-1], 1, function(i) sum(i == 0) )) # Number of times that the counts are equal to 0
 
 # We keep the genes following all criteria
-info_filt_df = info_df[(info_df$sum > 0) & (info_df$mean > 5) & (info_df$median > 5) & (info_df$sd > 1) & (info_df$zero_sum_counts < dim(RNA[, -1])[2]/2) ,]
+info_filt_df = info_df[(info_df$sum > 0) & (info_df$mean > 5) & (info_df$median > 5) & (info_df$sd > 0) & (info_df$zero_sum_counts < dim(RNA[, -1])[2]/2) ,]
 ```
 
 There are `r length(info_filt_df$Gene)` genes accomplishing all the rules.
@@ -143,7 +143,7 @@ We count the following number of genes accomplishing each rule:
 * Sum of the expression of all samples above 0: `r length(info_df[info_df$sum > 0,]$Gene)`.
 * Mean of the expression of all samples above 5: `r length(info_df[info_df$mean > 5,]$Gene)`.
 * Median of the expression of all samples above 5: `r length(info_df[info_df$median > 5,]$Gene)`.
-* Standard deviation of all samples above 1: `r length(info_df[info_df$sd > 1,]$Gene)`.
+* Standard deviation of all samples above 1: `r length(info_df[info_df$sd > 0,]$Gene)`.
 * More than half of the genes with counts above 0: `r length(info_df[info_df$zero_sum_counts < dim(RNA[, -1])[2]/2,]$Gene)`.
 
 We count the following number of filtered genes for each category:
@@ -251,7 +251,7 @@ RNA_metadata_processed_0m %>%
 Read the disease-gene associations dataset:
 
 ```{r}
-gene_associations_dir = '/home/j.aguirreplans/data/gene_associations/data/out'
+gene_associations_dir = '/work/ccnr/j.aguirreplans/data/gene_associations/data/out'
 disease_genes_file = paste(gene_associations_dir, 'GDA_Filtered_04042022.csv', sep='/')
 GDA = fread(disease_genes_file) %>% unique()
 GDA$HGNC_Symbol = toupper(GDA$HGNC_Symbol)
@@ -302,7 +302,7 @@ Prepare the essential genes of the Scipher dataset:
 
 ```{r}
 # Read the essential genes file
-essential_genes_dir = '/home/j.aguirreplans/Databases/OGEE'
+essential_genes_dir = '/work/ccnr/j.aguirreplans/Databases/OGEE'
 essential_genes_original_file = paste(essential_genes_dir, 'OGEE_esential_genes_20190416.txt', sep='/')
 # Filter by human genes
 essential_genes_df = fread(essential_genes_original_file, header=TRUE) %>% rename("taxID"="#taxID")
@@ -311,7 +311,7 @@ head(essential_genes_df)
 
 ```{r}
 # Read the gene annotations dictionary
-gene_annotations_dir = '/home/j.aguirreplans/data/gene_annotations/data/out'
+gene_annotations_dir = '/work/ccnr/j.aguirreplans/data/gene_annotations/data/out'
 gene_dict_file = paste(gene_annotations_dir, 'multiple_hgnc_dict_set_2022-01-01.txt', sep='/')
 gene_dict_df = fread(gene_dict_file) %>% unique()
 gene_dict_df = gene_dict_df[!((gene_dict_df$HGNC_Symbol=="")|(gene_dict_df$alias=="")),]

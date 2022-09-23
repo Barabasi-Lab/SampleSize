@@ -377,15 +377,15 @@ dir.create(sampling_dir, showWarnings = FALSE)
 # Read metadata file
 metadata_file = paste(gdc_dir, 'raw/metadata/metadata.txt', sep='/')
 metadata_df = fread(metadata_file)
-metadata_df %&lt;&gt;% select(participant_sample, sample_type_simplified, project_id) %&gt;% unique()</code></pre>
+metadata_df %&lt;&gt;% select(participant_sample, sample_type_simplified, project_id, gender) %&gt;% unique()</code></pre>
 <pre class="r"><code>head(metadata_df)</code></pre>
-<pre><code>##    participant_sample sample_type_simplified project_id
-## 1:             A2I6-1                  tumor  TCGA-BLCA
-## 2:             A6TK-1                  tumor  TCGA-BLCA
-## 3:             A78L-1                  tumor  TCGA-BLCA
-## 4:             AA84-1                  tumor  TCGA-BLCA
-## 5:             A9SK-1                  tumor  TCGA-BLCA
-## 6:             AA3M-1                  tumor  TCGA-BLCA</code></pre>
+<pre><code>##    participant_sample sample_type_simplified project_id gender
+## 1:             A2I6-1                  tumor  TCGA-BLCA   male
+## 2:             A6TK-1                  tumor  TCGA-BLCA   male
+## 3:             A78L-1                  tumor  TCGA-BLCA   male
+## 4:             AA84-1                  tumor  TCGA-BLCA   male
+## 5:             A9SK-1                  tumor  TCGA-BLCA   male
+## 6:             AA3M-1                  tumor  TCGA-BLCA   male</code></pre>
 </div>
 <div id="subsampling" class="section level2">
 <h2>Subsampling</h2>
@@ -451,26 +451,36 @@ create_random_subsamples_with_replacement &lt;- function(samples_list, size_list
   subsamples_df %&gt;% write.table(compilation_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
 }</code></pre>
 <p>For each project, we select groups of samples from different sizes:</p>
-<pre class="r"><code>for(sample_type_selected in sample_types){
+<pre class="r"><code>sex_types = c(&quot;male&quot;,&quot;female&quot;, &quot;&quot;)
+for(sample_type_selected in sample_types){
   sample_type_dir = paste(sampling_dir, sample_type_selected, sep='/')
   for (project_id_selected in project_ids){
-    # Select samples of the project
-    project_samples = unique((metadata_df %&gt;% filter((sample_type_simplified == sample_type_selected) &amp; (project_id == project_id_selected)))$participant_sample)
-    project_sampling_dir = paste(sample_type_dir, project_id_selected, sep='/')
-    all_samples_output_file = paste(project_sampling_dir, paste('tcga_', project_id_selected, '_all_samples.txt', sep=''), sep='/')
-    output_file_name = paste(paste(paste('tcga', project_id_selected, sep=&quot;_&quot;)))
-    compilation_samples_output_file = paste(sample_type_dir, paste(paste('tcga', project_id_selected, sep=&quot;_&quot;), '.txt', sep=''), sep='/')
-    if (length(project_samples) &gt; 10){
-      # Define list of different sample sizes
-      size_list &lt;- seq(10, length(project_samples), 10)
-      dir.create(project_sampling_dir, showWarnings = FALSE)
-      # Create a file with a list of all samples
-      all_samples_df &lt;- data.frame(samples=project_samples)
-      all_samples_df %&gt;% write.table(all_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
-      # Create files with lists of subsamples
-      subsamples_df &lt;- create_random_subsamples_with_replacement(samples_list=project_samples, size_list=size_list, rep=10, output_dir=project_sampling_dir, output_file_name=output_file_name)
-      # Create a final file with a compilation of all selected samples for the same project
-      subsamples_df %&gt;% write.table(compilation_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
+    for (sex in sex_types){
+      if (sex == &quot;&quot;){
+        project_samples = unique((metadata_df %&gt;% filter((sample_type_simplified == sample_type_selected) &amp; (project_id == project_id_selected)))$participant_sample)
+        project_sampling_dir = paste(sample_type_dir, project_id_selected, sep='/')
+        all_samples_output_file = paste(project_sampling_dir, paste('tcga_', project_id_selected, '_all_samples.txt', sep=''), sep='/')
+        output_file_name = paste(paste(paste('tcga', project_id_selected, sep=&quot;_&quot;)))
+        compilation_samples_output_file = paste(sample_type_dir, paste(paste('tcga', project_id_selected, sep=&quot;_&quot;), '.txt', sep=''), sep='/')
+      } else {
+        project_samples = unique((metadata_df %&gt;% filter((sample_type_simplified == sample_type_selected) &amp; (project_id == project_id_selected) &amp; (gender == sex)))$participant_sample)
+        project_sampling_dir = paste(sample_type_dir, paste(project_id_selected, sex, sep=&quot;_&quot;), sep='/')
+        all_samples_output_file = paste(project_sampling_dir, paste('tcga_', project_id_selected, '_', sex, '_all_samples.txt', sep=''), sep='/')
+        output_file_name = paste(paste(paste('tcga', project_id_selected, sex, sep=&quot;_&quot;)))
+        compilation_samples_output_file = paste(sample_type_dir, paste(paste('tcga', project_id_selected, sex, sep=&quot;_&quot;), '.txt', sep=''), sep='/')
+      }
+      if (length(project_samples) &gt; 10){
+        # Define list of different sample sizes
+        size_list &lt;- seq(10, length(project_samples), 10)
+        dir.create(project_sampling_dir, showWarnings = FALSE)
+        # Create a file with a list of all samples
+        all_samples_df &lt;- data.frame(samples=project_samples)
+        all_samples_df %&gt;% write.table(all_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
+        # Create files with lists of subsamples
+        subsamples_df &lt;- create_random_subsamples_with_replacement(samples_list=project_samples, size_list=size_list, rep=10, output_dir=project_sampling_dir, output_file_name=output_file_name)
+        # Create a final file with a compilation of all selected samples for the same project
+        subsamples_df %&gt;% write.table(compilation_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
+      }
     }
   }
 }</code></pre>

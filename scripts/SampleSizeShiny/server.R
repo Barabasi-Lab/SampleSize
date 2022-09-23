@@ -102,7 +102,7 @@ calculate_predictions_using_stretched_exponential_model_without_L = function(x, 
 #'  @param results_dataframe Dataframe containing the data.
 #'  @param y_parameter Parameter of the Y axis.
 #'  @param x_parameter Parameter of the X axis.
-#'  @param L_guess Initial values for the parameters to be optimized over.
+#'  @param L Value of L.
 #'  
 calculate_stretched_exponential_model_by_linear_fit = function(results_dataframe, y_parameter, x_parameter, L){
   # Calculate mean of repetitions from same sample size

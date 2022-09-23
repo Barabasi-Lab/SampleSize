@@ -399,10 +399,10 @@ time_diff = end_time - start_time
 print(time_diff)
 
 # Output network filtered by p-value
-output_subgraph = paste(output_subgraphs_dir, "/subgraphs/", file_name, "_subgraph.txt", sep="")
-if(!(file.exists(output_subgraph))){
-  coexpression_df %>% fwrite(output_subgraph)
-}
+#output_subgraph = paste(output_subgraphs_dir, "/subgraphs/", file_name, "_subgraph.txt", sep="")
+#if(!(file.exists(output_subgraph))){
+#  coexpression_df %>% fwrite(output_subgraph)
+#}
 
 
 #---------------------#
@@ -447,7 +447,8 @@ if(!(file.exists(output_topology_file))){
     # Filter network by correlation
     if(type_correlation == "all"){
       coexpression_filt_df = data.frame(coexpression_df) # same data frame without filtering
-      output_main_core_subgraph_file = paste(output_subgraphs_dir, "/main_core/", file_name, "_main_core_subgraph.txt", sep="")
+      #output_main_core_subgraph_file = paste(output_subgraphs_dir, "/main_core/", file_name, "_main_core_subgraph.txt", sep="")
+      output_main_core_subgraph_file = NA # Not necessary
     } else {
       coexpression_filt_df = filter_network_by_correlation(network_df=coexpression_df, upper_threshold=type_correlation_df[row.names(type_correlation_df) == type_correlation,]$upper_val, lower_threshold=type_correlation_df[row.names(type_correlation_df) == type_correlation,]$lower_val)
       output_main_core_subgraph_file = NA # we do not plot the subgraph for filtered networks
@@ -488,8 +489,10 @@ if(!(file.exists(output_ppi_file))){
     # Filter network by correlation
     if(type_correlation == "all"){
       coexpression_filt_df = data.frame(coexpression_df) # same data frame without filtering
-      output_ppi_subgraph_file = paste(output_subgraphs_dir, "/ppi/", file_name, "_ppi_subgraph.txt", sep="")
-      output_ppi_main_core_subgraph_file = paste(output_subgraphs_dir, "/ppi_main_core/", file_name, "_ppi_main_core_subgraph.txt", sep="")
+      #output_ppi_subgraph_file = paste(output_subgraphs_dir, "/ppi/", file_name, "_ppi_subgraph.txt", sep="")
+      #output_ppi_main_core_subgraph_file = paste(output_subgraphs_dir, "/ppi_main_core/", file_name, "_ppi_main_core_subgraph.txt", sep="")
+      output_ppi_subgraph_file = NA # Not necessary
+      output_ppi_main_core_subgraph_file = NA # Not necessary
     } else {
       coexpression_filt_df = filter_network_by_correlation(network_df=coexpression_df, upper_threshold=type_correlation_df[row.names(type_correlation_df) == type_correlation,]$upper_val, lower_threshold=type_correlation_df[row.names(type_correlation_df) == type_correlation,]$lower_val)
       output_ppi_subgraph_file = NA # we do not plot the subgraphs for filtered networks
@@ -527,7 +530,8 @@ if(!(file.exists(output_disease_genes_file))){
     # Filter network by correlation
     if(type_correlation == "all"){
       coexpression_filt_df = data.frame(coexpression_df) # same data frame without filtering
-      output_disease_genes_subgraph_dir = paste(output_subgraphs_dir, "/disease_genes/", file_name, "_disease_genes_subgraphs", sep="")
+      #output_disease_genes_subgraph_dir = paste(output_subgraphs_dir, "/disease_genes/", file_name, "_disease_genes_subgraphs", sep="")
+      output_disease_genes_subgraph_dir = NA # Not necessary
     } else {
       coexpression_filt_df = filter_network_by_correlation(network_df=coexpression_df, upper_threshold=type_correlation_df[row.names(type_correlation_df) == type_correlation,]$upper_val, lower_threshold=type_correlation_df[row.names(type_correlation_df) == type_correlation,]$lower_val)
       output_disease_genes_subgraph_dir = NA # we do not plot subgraphs for filtered networks
@@ -568,7 +572,8 @@ if(!(file.exists(output_essential_genes_file))){
     # Filter network by correlation
     if(type_correlation == "all"){
       coexpression_filt_df = data.frame(coexpression_df) # same data frame without filtering
-      output_essential_genes_subgraph = paste(output_subgraphs_dir, "/essential_genes/", file_name, "_essential_genes_subgraph.txt", sep="")
+      #output_essential_genes_subgraph = paste(output_subgraphs_dir, "/essential_genes/", file_name, "_essential_genes_subgraph.txt", sep="")
+      output_essential_genes_subgraph = NA # Not necessary
     } else {
       coexpression_filt_df = filter_network_by_correlation(network_df=coexpression_df, upper_threshold=type_correlation_df[row.names(type_correlation_df) == type_correlation,]$upper_val, lower_threshold=type_correlation_df[row.names(type_correlation_df) == type_correlation,]$lower_val)
       output_essential_genes_subgraph = NA # we do not plot subgraphs for filtered networks

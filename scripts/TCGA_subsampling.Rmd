@@ -38,7 +38,7 @@ dir.create(sampling_dir, showWarnings = FALSE)
 # Read metadata file
 metadata_file = paste(gdc_dir, 'raw/metadata/metadata.txt', sep='/')
 metadata_df = fread(metadata_file)
-metadata_df %<>% select(participant_sample, sample_type_simplified, project_id) %>% unique()
+metadata_df %<>% select(participant_sample, sample_type_simplified, project_id, gender) %>% unique()
 ```
 
 ```{r}
@@ -126,28 +126,37 @@ for(sample_type_selected in sample_types){
 For each project, we select groups of samples from different sizes:
 
 ```{r}
+sex_types = c("male","female", "")
 for(sample_type_selected in sample_types){
   sample_type_dir = paste(sampling_dir, sample_type_selected, sep='/')
   for (project_id_selected in project_ids){
-    # Select samples of the project
-    project_samples = unique((metadata_df %>% filter((sample_type_simplified == sample_type_selected) & (project_id == project_id_selected)))$participant_sample)
-    project_sampling_dir = paste(sample_type_dir, project_id_selected, sep='/')
-    all_samples_output_file = paste(project_sampling_dir, paste('tcga_', project_id_selected, '_all_samples.txt', sep=''), sep='/')
-    output_file_name = paste(paste(paste('tcga', project_id_selected, sep="_")))
-    compilation_samples_output_file = paste(sample_type_dir, paste(paste('tcga', project_id_selected, sep="_"), '.txt', sep=''), sep='/')
-    if (length(project_samples) > 10){
-      # Define list of different sample sizes
-      size_list <- seq(10, length(project_samples), 10)
-      dir.create(project_sampling_dir, showWarnings = FALSE)
-      # Create a file with a list of all samples
-      all_samples_df <- data.frame(samples=project_samples)
-      all_samples_df %>% write.table(all_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
-      # Create files with lists of subsamples
-      subsamples_df <- create_random_subsamples_with_replacement(samples_list=project_samples, size_list=size_list, rep=10, output_dir=project_sampling_dir, output_file_name=output_file_name)
-      # Create a final file with a compilation of all selected samples for the same project
-      subsamples_df %>% write.table(compilation_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
+    for (sex in sex_types){
+      if (sex == ""){
+        project_samples = unique((metadata_df %>% filter((sample_type_simplified == sample_type_selected) & (project_id == project_id_selected)))$participant_sample)
+        project_sampling_dir = paste(sample_type_dir, project_id_selected, sep='/')
+        all_samples_output_file = paste(project_sampling_dir, paste('tcga_', project_id_selected, '_all_samples.txt', sep=''), sep='/')
+        output_file_name = paste(paste(paste('tcga', project_id_selected, sep="_")))
+        compilation_samples_output_file = paste(sample_type_dir, paste(paste('tcga', project_id_selected, sep="_"), '.txt', sep=''), sep='/')
+      } else {
+        project_samples = unique((metadata_df %>% filter((sample_type_simplified == sample_type_selected) & (project_id == project_id_selected) & (gender == sex)))$participant_sample)
+        project_sampling_dir = paste(sample_type_dir, paste(project_id_selected, sex, sep="_"), sep='/')
+        all_samples_output_file = paste(project_sampling_dir, paste('tcga_', project_id_selected, '_', sex, '_all_samples.txt', sep=''), sep='/')
+        output_file_name = paste(paste(paste('tcga', project_id_selected, sex, sep="_")))
+        compilation_samples_output_file = paste(sample_type_dir, paste(paste('tcga', project_id_selected, sex, sep="_"), '.txt', sep=''), sep='/')
+      }
+      if (length(project_samples) > 10){
+        # Define list of different sample sizes
+        size_list <- seq(10, length(project_samples), 10)
+        dir.create(project_sampling_dir, showWarnings = FALSE)
+        # Create a file with a list of all samples
+        all_samples_df <- data.frame(samples=project_samples)
+        all_samples_df %>% write.table(all_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
+        # Create files with lists of subsamples
+        subsamples_df <- create_random_subsamples_with_replacement(samples_list=project_samples, size_list=size_list, rep=10, output_dir=project_sampling_dir, output_file_name=output_file_name)
+        # Create a final file with a compilation of all selected samples for the same project
+        subsamples_df %>% write.table(compilation_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
+      }
     }
   }
 }
 ```
-
