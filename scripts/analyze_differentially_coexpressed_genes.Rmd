@@ -93,7 +93,7 @@ head(GDA_breast)
 Compile the files of the differential co-expression analysis from CODINA classifying the nodes:
 
 ```{r}
-input_dir = "/work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/TCGA-BRCA_Breast.Mammary.Tissue"
+input_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA_female___Breast.Mammary.Tissue_female"
 result_files = list.files(input_dir)
 
 cols = c("file_name", "size", "rep_D", "rep_N")
@@ -132,6 +132,7 @@ pval_correction_field = "pval_Phi_Tilde.adj.fdr"
 pval_threshold = 0.05
 cols = c("Node", "DiseaseName.no.sp.char", "Phi_tilde", "pval", "size", "rep_D", "rep_N")
 nodes_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+missing_files = c()
 sizes_list = sort(unique(file_info_df$size))
 
 for(x in seq(sizes_list)){
@@ -144,15 +145,19 @@ for(x in seq(sizes_list)){
     r_D = (same_size_files_df %>% filter(file_name == input_file))$rep_D
     r_N = (same_size_files_df %>% filter(file_name == input_file))$rep_N
     individual_df = fread(paste(input_dir, input_file, sep="/"))
-    node_results_filt_df = individual_df %>%
-      select(Node, Phi_tilde, !!as.symbol(pval_correction_field)) %>% 
-      unique() %>% 
-      rename("pval" = !!as.symbol(pval_correction_field)) %>% 
-      left_join(GDA_breast, by=c("Node"="HGNC_Symbol"))
-    if(nrow(nodes_df) == 0){
-      nodes_df = cbind((node_results_filt_df %>% select("Node", "DiseaseName.no.sp.char", "Phi_tilde", "pval")), data.frame(size=size, rep_D=r_D, rep_N=r_N))
+    if (nrow(individual_df) > 0){
+      node_results_filt_df = individual_df %>%
+        select(Node, Phi_tilde, !!as.symbol(pval_correction_field)) %>% 
+        unique() %>% 
+        rename("pval" = !!as.symbol(pval_correction_field)) %>% 
+        left_join(GDA_breast, by=c("Node"="HGNC_Symbol"))
+      if(nrow(nodes_df) == 0){
+        nodes_df = cbind((node_results_filt_df %>% select("Node", "DiseaseName.no.sp.char", "Phi_tilde", "pval")), data.frame(size=size, rep_D=r_D, rep_N=r_N))
+      } else {
+        nodes_df = nodes_df %>% full_join(cbind((node_results_filt_df %>% select("Node", "DiseaseName.no.sp.char", "Phi_tilde", "pval")), data.frame(size=size, rep_D=r_D, rep_N=r_N)), by=c("Node", "DiseaseName.no.sp.char", "Phi_tilde", "pval", "size", "rep_D", "rep_N"))
+      }
     } else {
-      nodes_df = nodes_df %>% full_join(cbind((node_results_filt_df %>% select("Node", "DiseaseName.no.sp.char", "Phi_tilde", "pval")), data.frame(size=size, rep_D=r_D, rep_N=r_N)), by=c("Node", "DiseaseName.no.sp.char", "Phi_tilde", "pval", "size", "rep_D", "rep_N"))
+      missing_files = c(missing_files, input_file)
     }
   }
 }
@@ -175,7 +180,7 @@ nodes_expanded_df = nodes_df %>% full_join(nodes_empty_df, by = c("Node", "Disea
 nodes_expanded_df = nodes_expanded_df %>%
   mutate(Phi_tilde = replace(Phi_tilde, is.na(Phi_tilde), "U")) %>%
   mutate(Phi_name = replace(Phi_name, is.na(Phi_name), "undefined"))
-nodes_expanded_file = paste(tables_dir, "codina_tcga_brca_gtex_breast_nodes.txt", sep="/")
+nodes_expanded_file = paste(tables_dir, "codina_tcga_brca_gtex_breast_female_nodes.txt", sep="/")
 nodes_expanded_df %>% fwrite(nodes_expanded_file)
 head(nodes_expanded_df)
 ```
@@ -190,12 +195,12 @@ nodes_counted_df = nodes_expanded_df %>%
   ungroup()  %>% 
   arrange(Node, size)
 
-nodes_counted_file = paste(tables_dir, "codina_tcga_brca_gtex_breast_nodes_counted.txt", sep="/")
+nodes_counted_file = paste(tables_dir, "codina_tcga_brca_gtex_breast_female_nodes_counted.txt", sep="/")
 nodes_counted_df %>% fwrite(nodes_counted_file)
 head(nodes_counted_df)
 ```
 
-We select the gene category that appears more for in the different repetitions of each sample size:
+We select the gene category that appears more in the different repetitions of each sample size:
 
 ```{r}
 # Select the for each gene and size the node type that occurs more times in the different repetitions
@@ -206,7 +211,7 @@ nodes_filtered_df = nodes_counted_df %>%
   sample_n(1) %>% # Choose randomly cases in which there is the same number of node types 
   ungroup()
  
-nodes_filtered_file = paste(tables_dir, "codina_tcga_brca_gtex_breast_nodes_filtered.txt", sep="/")
+nodes_filtered_file = paste(tables_dir, "codina_tcga_brca_gtex_breast_female_nodes_filtered.txt", sep="/")
 nodes_filtered_df %>% fwrite(nodes_filtered_file)
 head(nodes_filtered_df)
 ```
@@ -222,7 +227,7 @@ counts_categories_df = nodes_expanded_df %>%
   group_by(Phi_name, size, rep_D, rep_N) %>% count() %>% rename("n_disease"="n") %>% arrange(size)
 counts_categories_df = counts_categories_df %>% full_join(counts_categories_empty_df, by = c("Phi_name", "size", "rep_D", "rep_N")) %>% arrange(Phi_name, size, rep_D, rep_N)
 counts_categories_df$n_disease = ifelse(is.na(counts_categories_df$n_disease), 0, counts_categories_df$n_disease)
-counts_categories_file = paste(tables_dir, "codina_tcga_brca_gtex_breast_category_counts.txt", sep="/")
+counts_categories_file = paste(tables_dir, "codina_tcga_brca_gtex_breast_female_category_counts.txt", sep="/")
 counts_categories_df %>% fwrite(counts_categories_file)
 head(counts_categories_df)
 ```
@@ -251,7 +256,7 @@ counts_categories_df %>%
   guides(col=guide_legend(title="Gene category"), fill=guide_legend(title="Gene category")) +
   theme_linedraw() +
   theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 12), legend.text = element_text(size = 12), legend.title=element_text(size=14, face="bold"))
-plot_file = paste(plots_dir, "codina_tcga_brca_gtex_breast_counts_disease_genes.png", sep="/")
+plot_file = paste(plots_dir, "codina_tcga_brca_gtex_breast_female_counts_disease_genes.png", sep="/")
 ggsave(
   plot_file,
   dpi = 1200,
@@ -276,7 +281,7 @@ custom_palette = c(
                    "#808080", #undefined
                    "#C77CFF" #different
                    )
-plot_file = paste(plots_dir, "codina_tcga_brca_gtex_breast_change_disease_genes.png", sep="/")
+plot_file = paste(plots_dir, "codina_tcga_brca_gtex_breast_female_change_disease_genes.png", sep="/")
 nodes_filtered_df %>% 
   filter(size %in% c(20, 80, 140, 200, 260, 320, 380, 440)) %>%
   filter(!(is.na(DiseaseName.no.sp.char))) %>%
@@ -310,7 +315,7 @@ We check the behavior specific genes associated with breast neoplasms:
 ```{r}
 # Nodes of breast neoplasms: https://www.nationalbreastcancer.org/other-breast-cancer-genes
 # https://www.cancer.org/cancer/breast-cancer/risk-and-prevention/breast-cancer-risk-factors-you-cannot-change.html#:~:text=BRCA1%20and%20BRCA2%3A%20The%20most,which%20can%20lead%20to%20cancer.
-nodes_to_follow = c("BRCA1", "PALB2", "CHEK2", "CDH1", "PTEN", "STK11", "TP53") ### WE ARE MISSING BRCA2!!!!
+nodes_to_follow = c("BRCA1", "BRCA2", "PALB2", "CHEK2", "CDH1", "PTEN", "STK11", "TP53") ### WE ARE MISSING BRCA2!!!!
 for (important_node in nodes_to_follow){
   # Filter results by important node
   important_df = nodes_expanded_df %>% 
@@ -349,7 +354,7 @@ for (important_node in nodes_to_follow){
     guides(fill=guide_legend(title="Gene category")) +
     theme_linedraw() +
     theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 12), legend.text = element_text(size = 12), legend.title=element_text(size=14, face="bold"))
-  plot_file = paste(plots_dir, paste("codina_tcga_brca_gtex_breast_important_", important_node, ".png", sep=""), sep="/")
+  plot_file = paste(plots_dir, paste("codina_tcga_brca_gtex_breast_female_important_", important_node, ".png", sep=""), sep="/")
   ggsave(
     plot_file,
     plot=important_node_plot,

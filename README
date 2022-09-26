@@ -265,19 +265,27 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coex
 # SCIPHER #
 #---------#
 
-# SAMPLES INPUT DIRS: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/complete.dataset
-# RNASEQ INPUT DIRS: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_counts_processed.csv
-# OUTPUT DIRS: /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/reads/complete.dataset
+# SAMPLES INPUT DIRS: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/scipher.complete.dataset
+# RNASEQ INPUT DIRS: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/rnaseq_filtered_files_by_group/scipher_rnaseq_scipher.complete.dataset.csv
+# OUTPUT DIRS: /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/reads/scipher.complete.dataset
 
 #---- PEARSON ----#
 
-# complete.dataset - PEARSON - READS 
+# scipher.complete.dataset - PEARSON - READS 
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/complete.dataset -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/reads/complete.dataset -m pearson
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/scipher.complete.dataset -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/rnaseq_filtered_files_by_group/scipher_rnaseq_scipher.complete.dataset.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/reads/scipher.complete.dataset -m pearson
 
-# sample.per.patient.baseline - PEARSON - READS 
+# scipher.complete.nonresponder - PEARSON - READS 
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/sample.per.patient.baseline -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_unique_patients_rnaseq_counts_processed.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/reads/sample.per.patient.baseline -m pearson
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/scipher.complete.nonresponder -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/rnaseq_filtered_files_by_group/scipher_rnaseq_scipher.complete.nonresponder.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/reads/scipher.complete.nonresponder -m pearson
+
+# scipher.complete.responder - PEARSON - READS 
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/scipher.complete.responder -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/rnaseq_filtered_files_by_group/scipher_rnaseq_scipher.complete.responder.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/reads/scipher.complete.responder -m pearson
+
+# scipher.sample.per.patient.baseline - PEARSON - READS 
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/scipher.sample.per.patient.baseline -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/rnaseq_filtered_files_by_group/scipher_rnaseq_scipher.sample.per.patient.baseline.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/reads/scipher.sample.per.patient.baseline -m pearson
 
 
 
@@ -298,14 +306,14 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coex
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor/TCGA -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/tcga_rnaseq_TCGA.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA -m pearson
 
-# TCGA-BRCA - PEARSON - READS - FEMALE
+# TCGA-BRCA (Breast Cancer) - PEARSON - READS - FEMALE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor/TCGA-BRCA_female -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-BRCA_female.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-BRCA_female -m pearson
-# TCGA-BRCA - PEARSON - READS - BOTH SEX
+# TCGA-BRCA (Breast Cancer) - PEARSON - READS - BOTH SEX
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor/TCGA-BRCA -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-BRCA.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-BRCA -m pearson
 
-# TCGA-COAD - PEARSON - READS - BOTH SEX
+# TCGA-COAD (Colon Cancer) - PEARSON - READS - BOTH SEX
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor/TCGA-COAD -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-COAD.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-COAD -m pearson
 
@@ -496,19 +504,33 @@ scp -r discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots
 DIFFERENTIAL CO-EXPRESSION ANALYSIS
 ###################################
 
+# TCGA-BRCA_female vs. GTEx: Breast.Mammary.Tissue_female
+-d /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-BRCA_female
+-n /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Breast.Mammary.Tissue_female
+-o /scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA_female___Breast.Mammary.Tissue_female
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differentially_coexpressed_genes_cluster.py -d /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-BRCA_female -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Breast.Mammary.Tissue_female -o /scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA_female___Breast.Mammary.Tissue_female -p 0.05 -s -f
+
 # TCGA-BRCA vs. GTEx: Breast.Mammary.Tissue
 -d /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-BRCA
--n /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/tpm/Breast.Mammary.Tissue
--o /work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/TCGA-BRCA_Breast.Mammary.Tissue
+-n /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Breast.Mammary.Tissue
+-o /scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA___Breast.Mammary.Tissue
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differentially_coexpressed_genes_cluster.py -d /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-BRCA -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/tpm/Breast.Mammary.Tissue -o /work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/TCGA-BRCA_Breast.Mammary.Tissue -p 0.05 -s -f
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differentially_coexpressed_genes_cluster.py -d /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-BRCA -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Breast.Mammary.Tissue -o /scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA___Breast.Mammary.Tissue -p 0.05 -s -f
 
-# Scipher-RA vs. GTEx: Whole.Blood
--d /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete.dataset
+# Scipher: complete dataset vs. GTEx: Whole.Blood
+-d /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/reads/scipher.complete.dataset
 -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Whole.Blood
--o /work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/complete.dataset_Whole.Blood
+-o /scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/scipher.complete.dataset___Whole.Blood
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differentially_coexpressed_genes_cluster.py -d /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete.dataset -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Whole.Blood -o /work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/complete.dataset_Whole.Blood -p 0.05 -s -f
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differentially_coexpressed_genes_cluster.py -d /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/reads/scipher.complete.dataset -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Whole.Blood -o /scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/scipher.complete.dataset___Whole.Blood -p 0.05 -s -f
+
+# Scipher: complete non-responder vs. GTEx: Whole.Blood
+-d /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/reads/scipher.complete.nonresponder
+-n /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Whole.Blood
+-o /scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/scipher.complete.nonresponder___Whole.Blood
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differentially_coexpressed_genes_cluster.py -d /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/reads/scipher.complete.nonresponder -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Whole.Blood -o /scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/scipher.complete.nonresponder___Whole.Blood -p 0.05 -s -f
 
 
 ############################

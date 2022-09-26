@@ -119,18 +119,18 @@ def calculate_differentially_coexpressed_genes(options):
     all_combinations = []
     for size in shared_sizes:
         # Select any combinations between networks of same size
-        #networks_d_selected = networks_df[(networks_df['size']==size) & (networks_df['dataset_name']=='D')]['network'].tolist()
-        #networks_n_selected = networks_df[(networks_df['size']==size) & (networks_df['dataset_name']=='N')]['network'].tolist()
-        #unique_combinations = list(itertools.product(networks_d_selected, networks_n_selected))
-        #all_combinations = all_combinations + unique_combinations
+        networks_d_selected = networks_df[(networks_df['size']==size) & (networks_df['dataset_name']=='D')]['network'].tolist()
+        networks_n_selected = networks_df[(networks_df['size']==size) & (networks_df['dataset_name']=='N')]['network'].tolist()
+        unique_combinations = list(itertools.product(networks_d_selected, networks_n_selected))
+        all_combinations = all_combinations + unique_combinations
 
         # Select networks that have both same size and repetition number
-        for rep in shared_reps:
-            network_d_selected = networks_df[(networks_df['size']==size) & (networks_df['rep']==rep) & (networks_df['dataset_name']=='D')]['network'].tolist()
-            network_n_selected = networks_df[(networks_df['size']==size) & (networks_df['rep']==rep) & (networks_df['dataset_name']=='N')]['network'].tolist()
-            if (len(network_d_selected) == 1) & (len(network_n_selected) == 1):
-                #print([network_d_selected[0], network_n_selected[0]])
-                all_combinations = all_combinations + [[network_d_selected[0], network_n_selected[0]]]
+        #for rep in shared_reps:
+        #    network_d_selected = networks_df[(networks_df['size']==size) & (networks_df['rep']==rep) & (networks_df['dataset_name']=='D')]['network'].tolist()
+        #    network_n_selected = networks_df[(networks_df['size']==size) & (networks_df['rep']==rep) & (networks_df['dataset_name']=='N')]['network'].tolist()
+        #    if (len(network_d_selected) == 1) & (len(network_n_selected) == 1):
+        #        #print([network_d_selected[0], network_n_selected[0]])
+        #        all_combinations = all_combinations + [[network_d_selected[0], network_n_selected[0]]]
 
     for combination in all_combinations:
 
@@ -152,7 +152,7 @@ def calculate_differentially_coexpressed_genes(options):
             command = 'Rscript {} -d {} -n {} -l {} -v {} -t {} {} {}'.format(script_file, os.path.join(networks_dir_D, network_name_d), os.path.join(networks_dir_N, network_name_n), output_edges_file, output_nodes_file, pval_adj_cutoff, stretch_normalization, filter_by_common_nodes)
             print(command)
             print(l)
-            #submit_command_to_queue(command, max_jobs_in_queue=int(config.get("Cluster", "max_jobs_in_queue")), queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude, conda_environment=conda_environment)
+            submit_command_to_queue(command, max_jobs_in_queue=int(config.get("Cluster", "max_jobs_in_queue")), queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude, conda_environment=conda_environment)
 
             l += 1
 

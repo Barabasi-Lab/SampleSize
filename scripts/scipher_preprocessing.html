@@ -460,6 +460,155 @@ RNA_metadata[1:5,1:5]</code></pre>
 ## 5  Nk4001003.0m.seq_fac1  Nk4001003    0m seq_fac1  74</code></pre>
 <p>The new <code>RNA_metadata</code> dataframe contains 24272 features (24219 genes) and 584 samples.</p>
 </div>
+<div id="analyze-the-metadata" class="section level2">
+<h2>Analyze the metadata</h2>
+<p>We analyze the response of the patients at different time points:</p>
+<pre class="r"><code># Read file with metadata
+metadata_raw_file = paste(scipher_data_dir, '00_data/RA-netk042021-10-25.xlsx', sep='/')
+metadata = readxl::read_xlsx(metadata_raw_file)
+
+metadata = metadata %&gt;% 
+  rename(CRP_metadata = CRP)
+
+# Select type of response of patients
+metadata_response = 
+  metadata %&gt;%
+  select(Scipher_id, visit, 
+         eular_binary, acr50) %&gt;%
+  pivot_wider(names_from = visit, 
+              values_from = c(eular_binary, acr50))
+
+head(metadata_response)</code></pre>
+<pre><code>## # A tibble: 6 × 7
+##   Scipher_id eular_binary_0m eular_binary_3m eular_binary_6m acr50_0m acr50_3m  
+##   &lt;chr&gt;      &lt;chr&gt;           &lt;chr&gt;           &lt;chr&gt;           &lt;chr&gt;    &lt;chr&gt;     
+## 1 Nk4001001  &lt;NA&gt;            responder       &lt;NA&gt;            &lt;NA&gt;     responder 
+## 2 Nk4001002  &lt;NA&gt;            nonresponder    nonresponder    &lt;NA&gt;     nonrespon…
+## 3 Nk4001003  &lt;NA&gt;            nonresponder    responder       &lt;NA&gt;     nonrespon…
+## 4 Nk4001004  &lt;NA&gt;            nonresponder    nonresponder    &lt;NA&gt;     nonrespon…
+## 5 Nk4001005  &lt;NA&gt;            &lt;NA&gt;            &lt;NA&gt;            &lt;NA&gt;     &lt;NA&gt;      
+## 6 Nk4002001  &lt;NA&gt;            &lt;NA&gt;            &lt;NA&gt;            &lt;NA&gt;     &lt;NA&gt;      
+## # … with 1 more variable: acr50_6m &lt;chr&gt;</code></pre>
+<p>When combining the metadata with the RNAseq we have, in total, 584 samples from 261 individuals. Out of those, <strong>367</strong> samples from 260 individuals are at baseline.</p>
+<p>Let’s focus on the samples that we have in the baseline (visit = 0m).</p>
+<p>This is the response (in eular) of patients after 3 months:</p>
+</div>
+<div id="a-tibble-3-3" class="section level1">
+<h1>A tibble: 3 × 3</h1>
+<p>eular_binary_3m <code>#</code> <code>%</code> <chr> <int> <dbl> 1 nonresponder 153 51<br />
+2 responder 87 29<br />
+3 <NA> 127 42.3</p>
+<p>This is the response (in eular) of patients after 6 months:</p>
+</div>
+<div id="a-tibble-3-3-1" class="section level1">
+<h1>A tibble: 3 × 3</h1>
+<p>eular_binary_6m <code>#</code> <code>%</code> <chr> <int> <dbl> 1 nonresponder 135 45<br />
+2 responder 107 35.7 3 <NA> 125 41.7</p>
+<p>This is a summary of the response (in eular) after both 3 and 6 months:</p>
+</div>
+<div id="a-tibble-9-4" class="section level1">
+<h1>A tibble: 9 × 4</h1>
+<p>eular_binary_3m eular_binary_6m <code>#</code> <code>%</code> <chr> <chr> <int> <dbl> 1 nonresponder nonresponder 93 10.3 2 nonresponder responder 38 4.22 3 nonresponder <NA> 22 2.44 4 responder nonresponder 22 2.44 5 responder responder 58 6.44 6 responder <NA> 7 0.78 7 <NA> nonresponder 20 2.22 8 <NA> responder 11 1.22 9 <NA> <NA> 96 10.7</p>
+<div id="sample-processing" class="section level2">
+<h2>Sample processing</h2>
+<p>In this section, we will divide the samples in groups depending on the type of analysis that we want to perform.</p>
+<ul>
+<li><code>scipher.complete.dataset</code>: All samples, no matter the visit or batch.</li>
+<li><code>scipher.complete.responder</code>: All samples at any visit where the patient responds to the treatment.</li>
+<li><code>scipher.complete.nonresponder</code>: All samples at any visit where the patient does not respond to the treatment.</li>
+<li><code>scipher.sample.per.patient.all.visits</code>: One sample per patient at different visits.</li>
+<li><code>scipher.sample.per.patient.baseline</code>: One sample per patient at baseline.</li>
+<li><code>scipher.sample.per.responder.baseline</code>: One sample per responder patient at baseline.</li>
+<li><code>scipher.sample.per.nonresponder.baseline</code>: One sample per non-responder patient at baseline.</li>
+</ul>
+<p>First, we will merge samples repeated in the same patient so that we can create a dataset with a unique sample per patient and timepoint</p>
+<div id="combine-samples-from-same-patients-and-visit" class="section level3">
+<h3>Combine samples from same patients and visit</h3>
+<p>We combine the Scipher_id and visit, so that we can have a unique ID for each sample:</p>
+<pre class="r"><code>scipherid_visit = paste(RNA_metadata$Scipher_id, RNA_metadata$visit, sep=&quot;.&quot;)
+RNA_metadata_unique_patients = cbind(data.frame(Scipher_id.visit=scipherid_visit), (RNA_metadata %&gt;% select(-Scipher_id.visit.batch))) %&gt;% relocate(Scipher_id.visit, Scipher_id, visit, batch, .before = age)
+RNA_metadata_unique_patients[1:10,1:5]</code></pre>
+<pre><code>##    Scipher_id.visit Scipher_id visit    batch age
+## 1      Nk4001001.0m  Nk4001001    0m seq_fac1  82
+## 2      Nk4001001.3m  Nk4001001    3m seq_fac1  82
+## 3      Nk4001002.0m  Nk4001002    0m seq_fac1  56
+## 4      Nk4001002.3m  Nk4001002    3m seq_fac1  56
+## 5      Nk4001003.0m  Nk4001003    0m seq_fac1  74
+## 6      Nk4001003.0m  Nk4001003    0m seq_fac2  74
+## 7      Nk4001003.3m  Nk4001003    3m seq_fac2  74
+## 8      Nk4001004.0m  Nk4001004    0m seq_fac1  43
+## 9      Nk4001004.0m  Nk4001004    0m seq_fac2  43
+## 10     Nk4001004.3m  Nk4001004    3m seq_fac2  43</code></pre>
+<p>We calculate the median expression of samples from same patients and visits:</p>
+<pre class="r"><code>RNA_metadata_unique_patients = RNA_metadata_unique_patients %&gt;% select(-batch)
+RNA_metadata_unique_patients = RNA_metadata_unique_patients %&gt;% group_by_at(colnames(RNA_metadata_unique_patients)[1:52]) %&gt;% summarise_all(median) %&gt;% as.data.frame()
+RNA_metadata_unique_patients_file = paste(scipher_data_dir, &quot;00_data/RNA_metadata_unique_patients.csv&quot;, sep='/')
+fwrite(RNA_metadata_unique_patients, RNA_metadata_unique_patients_file)
+RNA_metadata_unique_patients[1:10,1:5]</code></pre>
+<pre><code>##    Scipher_id.visit Scipher_id visit age gender
+## 1      Nk4001001.0m  Nk4001001    0m  82   male
+## 2      Nk4001001.3m  Nk4001001    3m  82   male
+## 3      Nk4001002.0m  Nk4001002    0m  56   male
+## 4      Nk4001002.3m  Nk4001002    3m  56   male
+## 5      Nk4001003.0m  Nk4001003    0m  74   male
+## 6      Nk4001003.3m  Nk4001003    3m  74   male
+## 7      Nk4001004.0m  Nk4001004    0m  43 female
+## 8      Nk4001004.3m  Nk4001004    3m  43 female
+## 9      Nk4001004.6m  Nk4001004    6m  43 female
+## 10     Nk4001005.0m  Nk4001005    0m  72 female</code></pre>
+<p>The new <code>RNA_metadata_unique_patients</code> dataframe contains 24271 features (24219 genes) and 475 samples.</p>
+</div>
+<div id="make-groups-of-samples" class="section level3">
+<h3>Make groups of samples</h3>
+<p>Now, we will make different groups of samples depending on the analyses that we are planning to perform:</p>
+<pre class="r"><code># Select all samples
+scipher_complete_dataset = RNA_metadata$Scipher_id.visit.batch
+
+# Responders are selected when they respond in eular and do not have any non-response
+responder_euler_complete_dataset_df = metadata_response %&gt;% inner_join(RNA_metadata, by=&quot;Scipher_id&quot;) %&gt;% filter(( (eular_binary_3m == &quot;responder&quot;) &amp; (eular_binary_6m == &quot;responder&quot;)) | ((eular_binary_3m == &quot;responder&quot;) &amp; (eular_binary_6m == &quot;&quot;)) | ((eular_binary_3m == &quot;&quot;) &amp; (eular_binary_6m == &quot;responder&quot;)) ) # Response in eular and not any non-response
+scipher_complete_responder = responder_euler_complete_dataset_df$Scipher_id.visit.batch
+
+# Nonresponders are selected when they don't respond in eular and do not have any response
+nonresponder_euler_complete_dataset_df = metadata_response %&gt;% inner_join(RNA_metadata, by=&quot;Scipher_id&quot;) %&gt;% filter(( (eular_binary_3m == &quot;nonresponder&quot;) &amp; (eular_binary_6m == &quot;nonresponder&quot;)) | ((eular_binary_3m == &quot;nonresponder&quot;) &amp; (eular_binary_6m == &quot;&quot;)) | ((eular_binary_3m == &quot;&quot;) &amp; (eular_binary_6m == &quot;nonresponder&quot;)) )
+#nonresponder_df = sample_per_patient_baseline_df %&gt;% filter( (!(eular_binary_3m == &quot;responder&quot;)) &amp; (!(eular_binary_6m == &quot;responder&quot;)) &amp; (!(acr50_3m == &quot;responder&quot;)) &amp; (!(acr50_6m == &quot;responder&quot;)) &amp; ( (eular_binary_3m == &quot;nonresponder&quot;) | (eular_binary_6m == &quot;nonresponder&quot;) | (acr50_3m == &quot;nonresponder&quot;) | (acr50_6m == &quot;nonresponder&quot;) ) ) # Non-response in eular and not any response
+scipher_complete_nonresponder = nonresponder_euler_complete_dataset_df$Scipher_id.visit.batch
+
+# Select all samples of unique patients at different visits
+sample_per_patient_all_visits = RNA_metadata_unique_patients$Scipher_id.visit
+
+# Select all samples of unique patients at baseline
+sample_per_patient_baseline = (RNA_metadata_unique_patients %&gt;% filter(visit == &quot;0m&quot;))$Scipher_id.visit
+
+# Responders are selected when they respond in eular and do not have any non-response
+responder_euler_unique_patients_baseline_df = metadata_response %&gt;% inner_join((RNA_metadata_unique_patients %&gt;% filter(visit == &quot;0m&quot;)), by=&quot;Scipher_id&quot;) %&gt;% filter(( (eular_binary_3m == &quot;responder&quot;) &amp; (eular_binary_6m == &quot;responder&quot;)) | ((eular_binary_3m == &quot;responder&quot;) &amp; (eular_binary_6m == &quot;&quot;)) | ((eular_binary_3m == &quot;&quot;) &amp; (eular_binary_6m == &quot;responder&quot;)) ) # Response in eular and not any non-response
+sample_per_responder_baseline = responder_euler_unique_patients_baseline_df$Scipher_id.visit
+
+# Nonresponders are selected when they don't respond in eular and do not have any response
+nonresponder_euler_unique_patients_baseline_df = metadata_response %&gt;% inner_join((RNA_metadata_unique_patients %&gt;% filter(visit == &quot;0m&quot;)), by=&quot;Scipher_id&quot;) %&gt;% filter(( (eular_binary_3m == &quot;nonresponder&quot;) &amp; (eular_binary_6m == &quot;nonresponder&quot;)) | ((eular_binary_3m == &quot;nonresponder&quot;) &amp; (eular_binary_6m == &quot;&quot;)) | ((eular_binary_3m == &quot;&quot;) &amp; (eular_binary_6m == &quot;nonresponder&quot;)) )
+sample_per_nonresponder_baseline = nonresponder_euler_unique_patients_baseline_df$Scipher_id.visit
+
+# Output table with different groups of samples
+group_to_samples_df = data.frame(group=&quot;scipher.complete.dataset&quot;, sample_id=scipher_complete_dataset)
+group_to_samples_df = rbind(group_to_samples_df, data.frame(group=&quot;scipher.complete.responder&quot;, sample_id=scipher_complete_responder))
+group_to_samples_df = rbind(group_to_samples_df, data.frame(group=&quot;scipher.complete.nonresponder&quot;, sample_id=scipher_complete_nonresponder))
+group_to_samples_df = rbind(group_to_samples_df, data.frame(group=&quot;scipher.sample.per.patient.all.visits&quot;, sample_id=sample_per_patient_all_visits))
+group_to_samples_df = rbind(group_to_samples_df, data.frame(group=&quot;scipher.sample.per.patient.baseline&quot;, sample_id=sample_per_patient_baseline))
+group_to_samples_df = rbind(group_to_samples_df, data.frame(group=&quot;scipher.sample.per.responder.baseline&quot;, sample_id=sample_per_responder_baseline))
+group_to_samples_df = rbind(group_to_samples_df, data.frame(group=&quot;scipher.sample.per.nonresponder.baseline&quot;, sample_id=sample_per_nonresponder_baseline))
+group_to_samples_file = paste(scipher_data_dir, &quot;00_data/scipher_group_to_samples.csv&quot;, sep='/')
+fwrite(group_to_samples_df, group_to_samples_file)</code></pre>
+<p>Each group has the following number of samples:</p>
+<ul>
+<li><code>scipher.complete.dataset</code> (all samples, no matter the visit or batch): 584.</li>
+<li><code>scipher.complete.responder</code> (all samples at any visit where the patient responds to the treatment): 103.</li>
+<li><code>scipher.complete.nonresponder</code> (all samples at any visit where the patient does not respond to the treatment): 179.</li>
+<li><code>scipher.sample.per.patient.all.visits</code> (one sample per patient at different visits): 475.</li>
+<li><code>scipher.sample.per.patient.baseline</code> (one sample per patient at baseline): 260.</li>
+<li><code>scipher.sample.per.responder.baseline</code> (one sample per responder patient at baseline): 37.</li>
+<li><code>scipher.sample.per.nonresponder.baseline</code> (one sample per non-responder patient at baseline): 63.</li>
+</ul>
+</div>
+</div>
 <div id="gene-pre-processing" class="section level2">
 <h2>Gene pre-processing</h2>
 <div id="filter-genes-without-classification" class="section level3">
@@ -508,10 +657,13 @@ head(genes_dataset_df)</code></pre>
 <li>Standard deviation of all samples above 0.</li>
 <li>More than half of the genes with counts above 0.</li>
 </ul>
-<pre class="r"><code># Get only the gene expression
-RNA = RNA_metadata %&gt;% select(genes_dataset_df$HGNC_Symbol)
+<pre class="r"><code># Merge data from multiple batches with data from unique patients
+RNA_metadata_merged = rbind((RNA_metadata %&gt;% select(-batch)), (RNA_metadata_unique_patients %&gt;% rename(&quot;Scipher_id.visit.batch&quot; = &quot;Scipher_id.visit&quot;))) 
+
+# Get only the gene expression
+RNA = RNA_metadata_merged %&gt;% select(genes_dataset_df$HGNC_Symbol)
 genes = colnames(RNA)
-sample_ids = RNA_metadata$Scipher_id.visit.batch
+sample_ids = RNA_metadata_merged$Scipher_id.visit.batch
 
 # Transpose the matrix
 RNA = t(as.matrix(RNA)) %&gt;% as.data.frame()
@@ -530,106 +682,67 @@ RNA[1:5,1:5]</code></pre>
 ## A1CF                         0                     0
 ## A2M                          7                     1
 ## A2M-AS1                    288                   426</code></pre>
-<pre class="r"><code># Calculate sum, mean, median and standard deviation
-info_df = data.frame(Gene=RNA$Gene, sum=rowSums(RNA[,-1]))
-info_df$sd = apply(RNA[,-1], 1, sd)
-info_df$mean = rowMeans(RNA[,-1])
-info_df$median = apply(RNA[,-1], 1, median)
-info_df$zero_sum_counts = as.numeric(apply(RNA[,-1], 1, function(i) sum(i == 0) )) # Number of times that the counts are equal to 0
+<pre class="r"><code>rnaseq_filt_dir = paste(scipher_data_dir, '00_data/rnaseq_filtered_files_by_group', sep='/')
+genes_filt_dir = paste(scipher_data_dir, '00_data/genes_from_rnaseq_filtered_files_by_group', sep='/')
+dir.create(rnaseq_filt_dir, showWarnings = FALSE)
+dir.create(genes_filt_dir, showWarnings = FALSE)
 
-# We keep the genes following all criteria
-info_filt_df = info_df[(info_df$sum &gt; 0) &amp; (info_df$mean &gt; 5) &amp; (info_df$median &gt; 5) &amp; (info_df$sd &gt; 0) &amp; (info_df$zero_sum_counts &lt; dim(RNA[, -1])[2]/2) ,]</code></pre>
-<p>There are 13822 genes accomplishing all the rules.</p>
-<p>We count the following number of genes accomplishing each rule:</p>
-<ul>
-<li>Sum of the expression of all samples above 0: 23494.</li>
-<li>Mean of the expression of all samples above 5: 14266.</li>
-<li>Median of the expression of all samples above 5: 13822.</li>
-<li>Standard deviation of all samples above 0: 23494.</li>
-<li>More than half of the genes with counts above 0: 16165.</li>
-</ul>
-<p>We count the following number of filtered genes for each category:</p>
-<pre class="r"><code># Write the information about the selected genes of the dataset in a separate file
-genes_dataset_df$enough_counts = ifelse(genes_dataset_df$HGNC_Symbol %in% info_filt_df$Gene, TRUE, FALSE)
-genes_dataset_file = paste(scipher_data_dir, '00_data/scipher_rnaseq_gene_info.csv', sep='/')
-fwrite(genes_dataset_df, genes_dataset_file)
+cols = c(&quot;group&quot;, &quot;n_genes_raw&quot;, &quot;n_genes_processed&quot;, &quot;sum&quot;,  &quot;mean&quot;, &quot;median&quot;, &quot;sd&quot;, &quot;sum_zero_counts&quot;)
+statistics_low_counts_df &lt;- setNames(data.frame(matrix(ncol = length(cols), nrow = 0)), cols)
 
-# Check the percentage of genes in each category after filtering by counts
-genes_dataset_filtered_df = genes_dataset_df %&gt;% filter(HGNC_Symbol %in% info_filt_df$Gene) %&gt;% unique
-table(genes_dataset_filtered_df$HGNC_category)</code></pre>
-<pre><code>## 
-##      non-coding RNA               other protein-coding gene          pseudogene 
-##                 837                  59               12673                 253</code></pre>
-<pre class="r"><code>round(prop.table(table(genes_dataset_filtered_df$HGNC_category))*100,2)</code></pre>
-<pre><code>## 
-##      non-coding RNA               other protein-coding gene          pseudogene 
-##                6.06                0.43               91.69                1.83</code></pre>
-<pre class="r"><code>RNAseq_processed = RNA_metadata %&gt;% select(c(&quot;Scipher_id.visit.batch&quot;, &quot;Scipher_id&quot;, &quot;visit&quot;, &quot;batch&quot;, info_filt_df$Gene))
-RNAseq_processed_t = t(as.matrix(RNAseq_processed %&gt;% select(info_filt_df$Gene))) %&gt;% as.data.frame()
-colnames(RNAseq_processed_t) = RNA_metadata$Scipher_id.visit.batch
-RNAseq_processed_t = cbind(data.frame(Gene=rownames(RNAseq_processed_t)), RNAseq_processed_t)
-RNAseq_processed_file = paste(scipher_data_dir, '00_data/scipher_rnaseq_counts_processed.csv', sep='/')
-RNAseq_processed_t %&gt;% fwrite(RNAseq_processed_file)
-rm(RNA)</code></pre>
-<pre class="r"><code>RNA_metadata_processed = dplyr::inner_join((RNA_metadata %&gt;% dplyr::select(names(RNA_metadata)[1:53])), RNAseq_processed)</code></pre>
-<pre><code>## Joining, by = c(&quot;Scipher_id.visit.batch&quot;, &quot;Scipher_id&quot;, &quot;visit&quot;, &quot;batch&quot;)</code></pre>
-<pre class="r"><code>RNA_metadata_processed_file = paste(scipher_data_dir, '00_data/scipher_metadata_rnaseq_counts.csv', sep='/')
-RNA_metadata_processed %&gt;% fwrite(RNA_metadata_processed_file)</code></pre>
-<p>We end up having 13822 genes and 584 samples from 261 individuals.</p>
+for (group_selected in unique(group_to_samples_df$group)){
+  
+  # Filter RNA matrix by samples of the group
+  samples_group = (group_to_samples_df %&gt;% filter(group == group_selected))$sample_id
+  RNA_group = RNA %&gt;% select(c(&quot;Gene&quot;, all_of(samples_group)))
+
+  # Calculate sum, mean, median and standard deviation
+  info_df = data.frame(Gene=RNA_group$Gene, sum=rowSums(RNA_group[,-1]))
+  info_df$sd = apply(RNA_group[,-1], 1, sd)
+  info_df$mean = rowMeans(RNA_group[,-1])
+  info_df$median = apply(RNA_group[,-1], 1, median)
+  info_df$zero_sum_counts = as.numeric(apply(RNA_group[,-1], 1, function(i) sum(i == 0) )) # Number of times that the counts are equal to 0
+  
+  # We keep the genes following all criteria
+  info_filt_df = info_df[(info_df$sum &gt; 0) &amp; (info_df$mean &gt; 5) &amp; (info_df$median &gt; 5) &amp; (info_df$sd &gt; 0) &amp; (info_df$zero_sum_counts &lt; dim(RNA_group[, -1])[2]/2) ,]
+  
+  # Write rnaseq file
+  RNA_group_filt = RNA_group[RNA_group$Gene %in% info_filt_df$Gene,]
+  RNA_group_filt_file = paste(rnaseq_filt_dir, paste('scipher_rnaseq_', group_selected, &quot;.csv&quot;, sep=''), sep='/')
+  fwrite(RNA_group_filt, RNA_group_filt_file)
+
+  # Write gene info file
+  genes_dataset_filt_file = paste(genes_filt_dir, paste('scipher_rnaseq_gene_info_', group_selected, &quot;.csv&quot;, sep=''), sep='/')
+  genes_dataset_filt_df = data.frame(genes_dataset_df)
+  genes_dataset_filt_df$enough_counts = ifelse(genes_dataset_filt_df$HGNC_Symbol %in% info_filt_df$Gene, TRUE, FALSE)
+  fwrite(genes_dataset_filt_df, genes_dataset_filt_file)
+  
+  # Count statistics about the filter
+  statistics_low_counts_df = rbind(statistics_low_counts_df, data.frame(group=group_selected, n_genes_raw=length(RNA_group$Gene), n_genes_processed=length(RNA_group_filt$Gene), sum=length(info_df[(info_df$sum &gt; 0),]$Gene), mean=length(info_df[(info_df$mean &gt; 5),]$Gene), median=length(info_df[(info_df$median &gt; 5),]$Gene), sd=length(info_df[(info_df$sd &gt; 0),]$Gene), sum_zero_counts=length(info_df[(info_df$sum_zero_counts &lt; dim(RNA_group[, -1])[2]/2),]$Gene)))
+}
+
+statistics_low_counts_file = paste(scipher_data_dir, &quot;00_data/scipher_rnaseq_low_counts_statistics.csv&quot;, sep='/')
+fwrite(statistics_low_counts_df, statistics_low_counts_file)</code></pre>
+<p>These are the different number of genes after filtering by the criteria mentioned above:</p>
+<pre class="r"><code>statistics_low_counts_df</code></pre>
+<pre><code>##                                      group n_genes_raw n_genes_processed   sum
+## 1                 scipher.complete.dataset       24219             13822 23494
+## 2               scipher.complete.responder       24219             13844 22502
+## 3            scipher.complete.nonresponder       24219             13896 23084
+## 4    scipher.sample.per.patient.all.visits       24219             13879 23494
+## 5      scipher.sample.per.patient.baseline       24219             13757 23413
+## 6    scipher.sample.per.responder.baseline       24219             13787 22334
+## 7 scipher.sample.per.nonresponder.baseline       24219             13849 22862
+##    mean median    sd sum_zero_counts
+## 1 14266  13822 23494               0
+## 2 14293  13844 22502               0
+## 3 14355  13896 23084               0
+## 4 14282  13879 23494               0
+## 5 14162  13757 23413               0
+## 6 14141  13787 22334               0
+## 7 14236  13849 22862               0</code></pre>
 </div>
 </div>
-<div id="analyze-the-metadata" class="section level2">
-<h2>Analyze the metadata</h2>
-<p>We analyze the response of the patients at different time points:</p>
-<pre class="r"><code># Read file with metadata
-metadata_raw_file = paste(scipher_data_dir, '00_data/RA-netk042021-10-25.xlsx', sep='/')
-metadata = readxl::read_xlsx(metadata_raw_file)
-
-metadata = metadata %&gt;% 
-  rename(CRP_metadata = CRP)
-
-# Select type of response of patients
-metadata_response = 
-  metadata %&gt;%
-  select(Scipher_id, visit, 
-         eular_binary, acr50) %&gt;%
-  pivot_wider(names_from = visit, 
-              values_from = c(eular_binary, acr50))
-
-head(metadata_response)</code></pre>
-<pre><code>## # A tibble: 6 × 7
-##   Scipher_id eular_binary_0m eular_binary_3m eular_binary_6m acr50_0m acr50_3m  
-##   &lt;chr&gt;      &lt;chr&gt;           &lt;chr&gt;           &lt;chr&gt;           &lt;chr&gt;    &lt;chr&gt;     
-## 1 Nk4001001  &lt;NA&gt;            responder       &lt;NA&gt;            &lt;NA&gt;     responder 
-## 2 Nk4001002  &lt;NA&gt;            nonresponder    nonresponder    &lt;NA&gt;     nonrespon…
-## 3 Nk4001003  &lt;NA&gt;            nonresponder    responder       &lt;NA&gt;     nonrespon…
-## 4 Nk4001004  &lt;NA&gt;            nonresponder    nonresponder    &lt;NA&gt;     nonrespon…
-## 5 Nk4001005  &lt;NA&gt;            &lt;NA&gt;            &lt;NA&gt;            &lt;NA&gt;     &lt;NA&gt;      
-## 6 Nk4002001  &lt;NA&gt;            &lt;NA&gt;            &lt;NA&gt;            &lt;NA&gt;     &lt;NA&gt;      
-## # … with 1 more variable: acr50_6m &lt;chr&gt;</code></pre>
-<p>When combining the metadata with the RNAseq we have, in total, 584 samples from 261 individuals. Out of those, <strong>367</strong> samples from 260 individuals are at baseline.</p>
-<blockquote>
-<p>Important to note: The key to both data sets is the combination of <code>Scipher_id</code> and <code>visit</code>. Do not join using <code>CRP</code>.</p>
-</blockquote>
-<p>We focus here on the gene expression data that we have in the baseline (visit = 0m).</p>
-<p>This is the response (in eular) of patients after 3 months:</p>
-</div>
-<div id="a-tibble-3-3" class="section level1">
-<h1>A tibble: 3 × 3</h1>
-<p>eular_binary_3m <code>#</code> <code>%</code> <chr> <int> <dbl> 1 nonresponder 153 51<br />
-2 responder 87 29<br />
-3 <NA> 127 42.3</p>
-<p>This is the response (in eular) of patients after 6 months:</p>
-</div>
-<div id="a-tibble-3-3-1" class="section level1">
-<h1>A tibble: 3 × 3</h1>
-<p>eular_binary_6m <code>#</code> <code>%</code> <chr> <int> <dbl> 1 nonresponder 135 45<br />
-2 responder 107 35.7 3 <NA> 125 41.7</p>
-<p>This is a summary of the response (in eular) after both 3 and 6 months:</p>
-</div>
-<div id="a-tibble-9-4" class="section level1">
-<h1>A tibble: 9 × 4</h1>
-<p>eular_binary_3m eular_binary_6m <code>#</code> <code>%</code> <chr> <chr> <int> <dbl> 1 nonresponder nonresponder 93 10.3 2 nonresponder responder 38 4.22 3 nonresponder <NA> 22 2.44 4 responder nonresponder 22 2.44 5 responder responder 58 6.44 6 responder <NA> 7 0.78 7 <NA> nonresponder 20 2.22 8 <NA> responder 11 1.22 9 <NA> <NA> 96 10.7</p>
 <div id="prepare-disease-genes-information-dataset" class="section level2">
 <h2>Prepare disease genes information dataset</h2>
 <p>Read the disease-gene associations dataset:</p>
@@ -679,7 +792,7 @@ GDA %&lt;&gt;%
   filter(!(MESHID_remove)) %&gt;%
   select(DiseaseName, HGNC_Symbol, DescriptorName) %&gt;% 
   unique() %&gt;% 
-  mutate(gene_in_dataset = ifelse(HGNC_Symbol %in% RNAseq_processed_t$Gene, TRUE, FALSE))
+  mutate(gene_in_dataset = ifelse(HGNC_Symbol %in% RNA$Gene, TRUE, FALSE))
 
 # Make columns without special characters  
 GDA$DiseaseName.no.sp.char &lt;- gsub(' ', '.', gsub(', ', '.', gsub('-', '.', gsub('[\\(\\)]', '', GDA$DiseaseName))))
@@ -717,7 +830,7 @@ head(GDA)</code></pre>
 ## 4:                                             digestive.system.diseases|neoplasms
 ## 5:                                        mental.disorders|nervous.system.diseases
 ## 6:                                             digestive.system.diseases|neoplasms</code></pre>
-<p>There are 65425 disease-gene associations (870 diseases, 14833 genes), and 34499 disease-gene associations in the Scipher dataset (869 diseases, 8113 genes).</p>
+<p>There are 65425 disease-gene associations (870 diseases, 14833 genes), and 60363 disease-gene associations in the Scipher dataset (870 diseases, 12854 genes).</p>
 </div>
 <div id="prepare-essential-genes-dataset" class="section level2">
 <h2>Prepare essential genes dataset</h2>
@@ -761,7 +874,7 @@ head(gene_dict_df)</code></pre>
 <pre class="r"><code># Map ENSEMBL IDs to HGNC symbols
 essential_genes_df = essential_genes_df %&gt;% filter((taxID == 9606) &amp; (essential==&quot;E&quot;))
 essential_genes_df = essential_genes_df %&gt;% inner_join(gene_dict_df, by=c(&quot;locus&quot;=&quot;alias&quot;)) %&gt;% select(taxID, sciName, HGNC_Symbol) %&gt;% unique()
-essential_genes_df$gene_in_dataset = ifelse(essential_genes_df$HGNC_Symbol %in% RNAseq_processed_t$Gene, TRUE, FALSE)
+essential_genes_df$gene_in_dataset = ifelse(essential_genes_df$HGNC_Symbol %in% RNA$Gene, TRUE, FALSE)
 head(essential_genes_df)</code></pre>
 <pre><code>##    taxID      sciName HGNC_Symbol gene_in_dataset
 ## 1:  9606 Homo sapiens        DPM1            TRUE
@@ -772,7 +885,7 @@ head(essential_genes_df)</code></pre>
 ## 6:  9606 Homo sapiens       LAS1L            TRUE</code></pre>
 <pre class="r"><code>essential_genes_scipher_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_scipher.csv'
 essential_genes_df %&gt;% fwrite(essential_genes_scipher_file)</code></pre>
-<p>There are 7108 essential genes, 5726 in the Scipher dataset.</p>
+<p>There are 7108 essential genes, 7051 in the Scipher dataset.</p>
 </div>
 </div>
 

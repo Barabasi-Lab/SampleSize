@@ -62,6 +62,161 @@ RNA_metadata[1:5,1:5]
 The new `RNA_metadata` dataframe contains `r ncol(RNA_metadata)` features (`r length(genes_dataset)` genes) and `r nrow(RNA_metadata)` samples.
 
 
+## Analyze the metadata
+
+We analyze the response of the patients at different time points:
+
+```{r}
+# Read file with metadata
+metadata_raw_file = paste(scipher_data_dir, '00_data/RA-netk042021-10-25.xlsx', sep='/')
+metadata = readxl::read_xlsx(metadata_raw_file)
+
+metadata = metadata %>% 
+  rename(CRP_metadata = CRP)
+
+# Select type of response of patients
+metadata_response = 
+  metadata %>%
+  select(Scipher_id, visit, 
+         eular_binary, acr50) %>%
+  pivot_wider(names_from = visit, 
+              values_from = c(eular_binary, acr50))
+
+head(metadata_response)
+```
+
+When combining the metadata with the RNAseq we have, in total, `r nrow(RNA_metadata)` samples from `r length(unique(RNA_metadata$Scipher_id))` individuals. Out of those, **`r nrow(RNA_metadata[RNA_metadata$visit == "0m", ])`** samples from `r length(unique(RNA_metadata[RNA_metadata$visit == "0m", ]$Scipher_id))` individuals are at baseline.
+
+Let's focus on the samples that we have in the baseline (visit = 0m). 
+
+```{r, echo=FALSE, results='hide', warning=FALSE, message=FALSE}
+# We filter gene expression by visit = 0m (at baseline)
+RNA_metadata_0m = RNA_metadata %>% filter(visit == "0m")
+RNA_metadata_0m = dplyr::inner_join(metadata_response, RNA_metadata_0m)
+```
+
+This is the response (in eular) of patients after 3 months:
+
+```{r, echo=FALSE, results='asis'}
+RNA_metadata_0m %>% 
+  group_by(eular_binary_3m) %>% 
+  summarise(`#` = n()) %>%
+  ungroup() %>%
+  mutate(`%` = round((`#`/n()), 2))
+```
+
+This is the response (in eular) of patients after 6 months:
+
+```{r, echo=FALSE, results='asis'}
+RNA_metadata_0m %>% 
+  group_by(eular_binary_6m) %>% 
+  summarise(`#` = n()) %>%
+  ungroup() %>%
+  mutate(`%` = round((`#`/n()), 2))
+```
+
+This is a summary of the response (in eular) after both 3 and 6 months:
+
+```{r, echo=FALSE, results='asis', warning=FALSE, message=FALSE}
+RNA_metadata_0m %>% 
+  group_by(eular_binary_3m, eular_binary_6m) %>%
+  summarise(`#` = n()) %>%
+  ungroup() %>%
+  mutate(`%` = round((`#`/n()), 2))
+```
+
+
+## Sample processing
+
+In this section, we will divide the samples in groups depending on the type of analysis that we want to perform.
+
+* `scipher.complete.dataset`: All samples, no matter the visit or batch.
+* `scipher.complete.responder`: All samples at any visit where the patient responds to the treatment.
+* `scipher.complete.nonresponder`: All samples at any visit where the patient does not respond to the treatment.
+* `scipher.sample.per.patient.all.visits`: One sample per patient at different visits.
+* `scipher.sample.per.patient.baseline`: One sample per patient at baseline.
+* `scipher.sample.per.responder.baseline`: One sample per responder patient at baseline.
+* `scipher.sample.per.nonresponder.baseline`: One sample per non-responder patient at baseline.
+
+First, we will merge samples repeated in the same patient so that we can create a dataset with a unique sample per patient and timepoint
+
+### Combine samples from same patients and visit
+
+We combine the Scipher_id and visit, so that we can have a unique ID for each sample:
+
+```{r}
+scipherid_visit = paste(RNA_metadata$Scipher_id, RNA_metadata$visit, sep=".")
+RNA_metadata_unique_patients = cbind(data.frame(Scipher_id.visit=scipherid_visit), (RNA_metadata %>% select(-Scipher_id.visit.batch))) %>% relocate(Scipher_id.visit, Scipher_id, visit, batch, .before = age)
+RNA_metadata_unique_patients[1:10,1:5]
+```
+
+We calculate the median expression of samples from same patients and visits:
+
+```{r}
+RNA_metadata_unique_patients = RNA_metadata_unique_patients %>% select(-batch)
+RNA_metadata_unique_patients = RNA_metadata_unique_patients %>% group_by_at(colnames(RNA_metadata_unique_patients)[1:52]) %>% summarise_all(median) %>% as.data.frame()
+RNA_metadata_unique_patients_file = paste(scipher_data_dir, "00_data/RNA_metadata_unique_patients.csv", sep='/')
+fwrite(RNA_metadata_unique_patients, RNA_metadata_unique_patients_file)
+RNA_metadata_unique_patients[1:10,1:5]
+```
+
+The new `RNA_metadata_unique_patients` dataframe contains `r ncol(RNA_metadata_unique_patients)` features (`r length(genes_dataset)` genes) and `r nrow(RNA_metadata_unique_patients)` samples.
+
+
+### Make groups of samples
+
+Now, we will make different groups of samples depending on the analyses that we are planning to perform:
+
+```{r}
+# Select all samples
+scipher_complete_dataset = RNA_metadata$Scipher_id.visit.batch
+
+# Responders are selected when they respond in eular and do not have any non-response
+responder_euler_complete_dataset_df = metadata_response %>% inner_join(RNA_metadata, by="Scipher_id") %>% filter(( (eular_binary_3m == "responder") & (eular_binary_6m == "responder")) | ((eular_binary_3m == "responder") & (eular_binary_6m == "")) | ((eular_binary_3m == "") & (eular_binary_6m == "responder")) ) # Response in eular and not any non-response
+scipher_complete_responder = responder_euler_complete_dataset_df$Scipher_id.visit.batch
+
+# Nonresponders are selected when they don't respond in eular and do not have any response
+nonresponder_euler_complete_dataset_df = metadata_response %>% inner_join(RNA_metadata, by="Scipher_id") %>% filter(( (eular_binary_3m == "nonresponder") & (eular_binary_6m == "nonresponder")) | ((eular_binary_3m == "nonresponder") & (eular_binary_6m == "")) | ((eular_binary_3m == "") & (eular_binary_6m == "nonresponder")) )
+#nonresponder_df = sample_per_patient_baseline_df %>% filter( (!(eular_binary_3m == "responder")) & (!(eular_binary_6m == "responder")) & (!(acr50_3m == "responder")) & (!(acr50_6m == "responder")) & ( (eular_binary_3m == "nonresponder") | (eular_binary_6m == "nonresponder") | (acr50_3m == "nonresponder") | (acr50_6m == "nonresponder") ) ) # Non-response in eular and not any response
+scipher_complete_nonresponder = nonresponder_euler_complete_dataset_df$Scipher_id.visit.batch
+
+# Select all samples of unique patients at different visits
+sample_per_patient_all_visits = RNA_metadata_unique_patients$Scipher_id.visit
+
+# Select all samples of unique patients at baseline
+sample_per_patient_baseline = (RNA_metadata_unique_patients %>% filter(visit == "0m"))$Scipher_id.visit
+
+# Responders are selected when they respond in eular and do not have any non-response
+responder_euler_unique_patients_baseline_df = metadata_response %>% inner_join((RNA_metadata_unique_patients %>% filter(visit == "0m")), by="Scipher_id") %>% filter(( (eular_binary_3m == "responder") & (eular_binary_6m == "responder")) | ((eular_binary_3m == "responder") & (eular_binary_6m == "")) | ((eular_binary_3m == "") & (eular_binary_6m == "responder")) ) # Response in eular and not any non-response
+sample_per_responder_baseline = responder_euler_unique_patients_baseline_df$Scipher_id.visit
+
+# Nonresponders are selected when they don't respond in eular and do not have any response
+nonresponder_euler_unique_patients_baseline_df = metadata_response %>% inner_join((RNA_metadata_unique_patients %>% filter(visit == "0m")), by="Scipher_id") %>% filter(( (eular_binary_3m == "nonresponder") & (eular_binary_6m == "nonresponder")) | ((eular_binary_3m == "nonresponder") & (eular_binary_6m == "")) | ((eular_binary_3m == "") & (eular_binary_6m == "nonresponder")) )
+sample_per_nonresponder_baseline = nonresponder_euler_unique_patients_baseline_df$Scipher_id.visit
+
+# Output table with different groups of samples
+group_to_samples_df = data.frame(group="scipher.complete.dataset", sample_id=scipher_complete_dataset)
+group_to_samples_df = rbind(group_to_samples_df, data.frame(group="scipher.complete.responder", sample_id=scipher_complete_responder))
+group_to_samples_df = rbind(group_to_samples_df, data.frame(group="scipher.complete.nonresponder", sample_id=scipher_complete_nonresponder))
+group_to_samples_df = rbind(group_to_samples_df, data.frame(group="scipher.sample.per.patient.all.visits", sample_id=sample_per_patient_all_visits))
+group_to_samples_df = rbind(group_to_samples_df, data.frame(group="scipher.sample.per.patient.baseline", sample_id=sample_per_patient_baseline))
+group_to_samples_df = rbind(group_to_samples_df, data.frame(group="scipher.sample.per.responder.baseline", sample_id=sample_per_responder_baseline))
+group_to_samples_df = rbind(group_to_samples_df, data.frame(group="scipher.sample.per.nonresponder.baseline", sample_id=sample_per_nonresponder_baseline))
+group_to_samples_file = paste(scipher_data_dir, "00_data/scipher_group_to_samples.csv", sep='/')
+fwrite(group_to_samples_df, group_to_samples_file)
+```
+
+Each group has the following number of samples:
+
+* `scipher.complete.dataset` (all samples, no matter the visit or batch): `r length(scipher_complete_dataset)`.
+* `scipher.complete.responder` (all samples at any visit where the patient responds to the treatment): `r length(scipher_complete_responder)`.
+* `scipher.complete.nonresponder` (all samples at any visit where the patient does not respond to the treatment): `r length(scipher_complete_nonresponder)`.
+* `scipher.sample.per.patient.all.visits` (one sample per patient at different visits): `r length(sample_per_patient_all_visits)`.
+* `scipher.sample.per.patient.baseline` (one sample per patient at baseline): `r length(sample_per_patient_baseline)`.
+* `scipher.sample.per.responder.baseline` (one sample per responder patient at baseline): `r length(sample_per_responder_baseline)`.
+* `scipher.sample.per.nonresponder.baseline` (one sample per non-responder patient at baseline): `r length(sample_per_nonresponder_baseline)`.
+
+
 ## Gene pre-processing
 
 ### Filter genes without classification
@@ -102,10 +257,13 @@ We filter the genes that have low expression in all samples, keeping the ones th
 * More than half of the genes with counts above 0.
 
 ```{r}
+# Merge data from multiple batches with data from unique patients
+RNA_metadata_merged = rbind((RNA_metadata %>% select(-batch)), (RNA_metadata_unique_patients %>% rename("Scipher_id.visit.batch" = "Scipher_id.visit"))) 
+
 # Get only the gene expression
-RNA = RNA_metadata %>% select(genes_dataset_df$HGNC_Symbol)
+RNA = RNA_metadata_merged %>% select(genes_dataset_df$HGNC_Symbol)
 genes = colnames(RNA)
-sample_ids = RNA_metadata$Scipher_id.visit.batch
+sample_ids = RNA_metadata_merged$Scipher_id.visit.batch
 
 # Transpose the matrix
 RNA = t(as.matrix(RNA)) %>% as.data.frame()
@@ -115,124 +273,53 @@ RNA[1:5,1:5]
 ```
 
 ```{r}
-# Calculate sum, mean, median and standard deviation
-info_df = data.frame(Gene=RNA$Gene, sum=rowSums(RNA[,-1]))
-info_df$sd = apply(RNA[,-1], 1, sd)
-info_df$mean = rowMeans(RNA[,-1])
-info_df$median = apply(RNA[,-1], 1, median)
-info_df$zero_sum_counts = as.numeric(apply(RNA[,-1], 1, function(i) sum(i == 0) )) # Number of times that the counts are equal to 0
+rnaseq_filt_dir = paste(scipher_data_dir, '00_data/rnaseq_filtered_files_by_group', sep='/')
+genes_filt_dir = paste(scipher_data_dir, '00_data/genes_from_rnaseq_filtered_files_by_group', sep='/')
+dir.create(rnaseq_filt_dir, showWarnings = FALSE)
+dir.create(genes_filt_dir, showWarnings = FALSE)
 
-# We keep the genes following all criteria
-info_filt_df = info_df[(info_df$sum > 0) & (info_df$mean > 5) & (info_df$median > 5) & (info_df$sd > 0) & (info_df$zero_sum_counts < dim(RNA[, -1])[2]/2) ,]
+cols = c("group", "n_genes_raw", "n_genes_processed", "sum",  "mean", "median", "sd", "sum_zero_counts")
+statistics_low_counts_df <- setNames(data.frame(matrix(ncol = length(cols), nrow = 0)), cols)
+
+for (group_selected in unique(group_to_samples_df$group)){
+  
+  # Filter RNA matrix by samples of the group
+  samples_group = (group_to_samples_df %>% filter(group == group_selected))$sample_id
+  RNA_group = RNA %>% select(c("Gene", all_of(samples_group)))
+
+  # Calculate sum, mean, median and standard deviation
+  info_df = data.frame(Gene=RNA_group$Gene, sum=rowSums(RNA_group[,-1]))
+  info_df$sd = apply(RNA_group[,-1], 1, sd)
+  info_df$mean = rowMeans(RNA_group[,-1])
+  info_df$median = apply(RNA_group[,-1], 1, median)
+  info_df$zero_sum_counts = as.numeric(apply(RNA_group[,-1], 1, function(i) sum(i == 0) )) # Number of times that the counts are equal to 0
+  
+  # We keep the genes following all criteria
+  info_filt_df = info_df[(info_df$sum > 0) & (info_df$mean > 5) & (info_df$median > 5) & (info_df$sd > 0) & (info_df$zero_sum_counts < dim(RNA_group[, -1])[2]/2) ,]
+  
+  # Write rnaseq file
+  RNA_group_filt = RNA_group[RNA_group$Gene %in% info_filt_df$Gene,]
+  RNA_group_filt_file = paste(rnaseq_filt_dir, paste('scipher_rnaseq_', group_selected, ".csv", sep=''), sep='/')
+  fwrite(RNA_group_filt, RNA_group_filt_file)
+
+  # Write gene info file
+  genes_dataset_filt_file = paste(genes_filt_dir, paste('scipher_rnaseq_gene_info_', group_selected, ".csv", sep=''), sep='/')
+  genes_dataset_filt_df = data.frame(genes_dataset_df)
+  genes_dataset_filt_df$enough_counts = ifelse(genes_dataset_filt_df$HGNC_Symbol %in% info_filt_df$Gene, TRUE, FALSE)
+  fwrite(genes_dataset_filt_df, genes_dataset_filt_file)
+  
+  # Count statistics about the filter
+  statistics_low_counts_df = rbind(statistics_low_counts_df, data.frame(group=group_selected, n_genes_raw=length(RNA_group$Gene), n_genes_processed=length(RNA_group_filt$Gene), sum=length(info_df[(info_df$sum > 0),]$Gene), mean=length(info_df[(info_df$mean > 5),]$Gene), median=length(info_df[(info_df$median > 5),]$Gene), sd=length(info_df[(info_df$sd > 0),]$Gene), sum_zero_counts=length(info_df[(info_df$sum_zero_counts < dim(RNA_group[, -1])[2]/2),]$Gene)))
+}
+
+statistics_low_counts_file = paste(scipher_data_dir, "00_data/scipher_rnaseq_low_counts_statistics.csv", sep='/')
+fwrite(statistics_low_counts_df, statistics_low_counts_file)
 ```
 
-There are `r length(info_filt_df$Gene)` genes accomplishing all the rules.
-
-We count the following number of genes accomplishing each rule:
-
-* Sum of the expression of all samples above 0: `r length(info_df[info_df$sum > 0,]$Gene)`.
-* Mean of the expression of all samples above 5: `r length(info_df[info_df$mean > 5,]$Gene)`.
-* Median of the expression of all samples above 5: `r length(info_df[info_df$median > 5,]$Gene)`.
-* Standard deviation of all samples above 0: `r length(info_df[info_df$sd > 0,]$Gene)`.
-* More than half of the genes with counts above 0: `r length(info_df[info_df$zero_sum_counts < dim(RNA[, -1])[2]/2,]$Gene)`.
-
-We count the following number of filtered genes for each category:
+These are the different number of genes after filtering by the criteria mentioned above:
 
 ```{r}
-# Write the information about the selected genes of the dataset in a separate file
-genes_dataset_df$enough_counts = ifelse(genes_dataset_df$HGNC_Symbol %in% info_filt_df$Gene, TRUE, FALSE)
-genes_dataset_file = paste(scipher_data_dir, '00_data/scipher_rnaseq_gene_info.csv', sep='/')
-fwrite(genes_dataset_df, genes_dataset_file)
-
-# Check the percentage of genes in each category after filtering by counts
-genes_dataset_filtered_df = genes_dataset_df %>% filter(HGNC_Symbol %in% info_filt_df$Gene) %>% unique
-table(genes_dataset_filtered_df$HGNC_category)
-round(prop.table(table(genes_dataset_filtered_df$HGNC_category))*100,2)
-```
-
-```{r}
-RNAseq_processed = RNA_metadata %>% select(c("Scipher_id.visit.batch", "Scipher_id", "visit", "batch", info_filt_df$Gene))
-RNAseq_processed_t = t(as.matrix(RNAseq_processed %>% select(info_filt_df$Gene))) %>% as.data.frame()
-colnames(RNAseq_processed_t) = RNA_metadata$Scipher_id.visit.batch
-RNAseq_processed_t = cbind(data.frame(Gene=rownames(RNAseq_processed_t)), RNAseq_processed_t)
-RNAseq_processed_file = paste(scipher_data_dir, '00_data/scipher_rnaseq_counts_processed.csv', sep='/')
-RNAseq_processed_t %>% fwrite(RNAseq_processed_file)
-rm(RNA)
-```
-
-```{r}
-RNA_metadata_processed = dplyr::inner_join((RNA_metadata %>% dplyr::select(names(RNA_metadata)[1:53])), RNAseq_processed)
-RNA_metadata_processed_file = paste(scipher_data_dir, '00_data/scipher_metadata_rnaseq_counts.csv', sep='/')
-RNA_metadata_processed %>% fwrite(RNA_metadata_processed_file)
-```
-
-We end up having `r length(RNAseq_processed_t$Gene)` genes and `r length(unique(RNAseq_processed$Scipher_id.visit.batch))` samples from `r length(unique(RNAseq_processed$Scipher_id))` individuals.
-
-## Analyze the metadata
-
-We analyze the response of the patients at different time points:
-
-```{r}
-# Read file with metadata
-metadata_raw_file = paste(scipher_data_dir, '00_data/RA-netk042021-10-25.xlsx', sep='/')
-metadata = readxl::read_xlsx(metadata_raw_file)
-
-metadata = metadata %>% 
-  rename(CRP_metadata = CRP)
-
-# Select type of response of patients
-metadata_response = 
-  metadata %>%
-  select(Scipher_id, visit, 
-         eular_binary, acr50) %>%
-  pivot_wider(names_from = visit, 
-              values_from = c(eular_binary, acr50))
-
-head(metadata_response)
-```
-
-When combining the metadata with the RNAseq we have, in total, `r nrow(RNA_metadata_processed)` samples from `r length(unique(RNA_metadata_processed$Scipher_id))` individuals. Out of those, **`r nrow(RNA_metadata_processed[RNA_metadata_processed$visit == "0m", ])`** samples from `r length(unique(RNA_metadata_processed[RNA_metadata_processed$visit == "0m", ]$Scipher_id))` individuals are at baseline.
-
-> Important to note: The key to both data sets is the combination of `Scipher_id` and `visit`. Do not join using `CRP`.
-
-We focus here on the gene expression data that we have in the baseline (visit = 0m). 
-
-```{r, echo=FALSE, results='hide', warning=FALSE, message=FALSE}
-# We filter gene expression by visit = 0m (at baseline)
-RNAseq_processed_0m = RNAseq_processed %>% filter(visit == "0m")
-RNA_metadata_processed_0m = dplyr::inner_join(metadata_response, RNAseq_processed_0m)
-RNA_metadata_processed_0m_file = paste(scipher_data_dir, '00_data/scipher_metadata_rnaseq_counts_0m.csv', sep='/')
-fwrite(RNA_metadata_processed_0m, RNA_metadata_processed_0m_file)
-```
-
-This is the response (in eular) of patients after 3 months:
-
-```{r, echo=FALSE, results='asis'}
-RNA_metadata_processed_0m %>% 
-  group_by(eular_binary_3m) %>% 
-  summarise(`#` = n()) %>%
-  ungroup() %>%
-  mutate(`%` = round((`#`/n()), 2))
-```
-
-This is the response (in eular) of patients after 6 months:
-
-```{r, echo=FALSE, results='asis'}
-RNA_metadata_processed_0m %>% 
-  group_by(eular_binary_6m) %>% 
-  summarise(`#` = n()) %>%
-  ungroup() %>%
-  mutate(`%` = round((`#`/n()), 2))
-```
-
-This is a summary of the response (in eular) after both 3 and 6 months:
-
-```{r, echo=FALSE, results='asis', warning=FALSE, message=FALSE}
-RNA_metadata_processed_0m %>% 
-  group_by(eular_binary_3m, eular_binary_6m) %>%
-  summarise(`#` = n()) %>%
-  ungroup() %>%
-  mutate(`%` = round((`#`/n()), 2))
+statistics_low_counts_df
 ```
 
 
@@ -271,7 +358,7 @@ GDA %<>%
   filter(!(MESHID_remove)) %>%
   select(DiseaseName, HGNC_Symbol, DescriptorName) %>% 
   unique() %>% 
-  mutate(gene_in_dataset = ifelse(HGNC_Symbol %in% RNAseq_processed_t$Gene, TRUE, FALSE))
+  mutate(gene_in_dataset = ifelse(HGNC_Symbol %in% RNA$Gene, TRUE, FALSE))
 
 # Make columns without special characters  
 GDA$DiseaseName.no.sp.char <- gsub(' ', '.', gsub(', ', '.', gsub('-', '.', gsub('[\\(\\)]', '', GDA$DiseaseName))))
@@ -315,7 +402,7 @@ head(gene_dict_df)
 # Map ENSEMBL IDs to HGNC symbols
 essential_genes_df = essential_genes_df %>% filter((taxID == 9606) & (essential=="E"))
 essential_genes_df = essential_genes_df %>% inner_join(gene_dict_df, by=c("locus"="alias")) %>% select(taxID, sciName, HGNC_Symbol) %>% unique()
-essential_genes_df$gene_in_dataset = ifelse(essential_genes_df$HGNC_Symbol %in% RNAseq_processed_t$Gene, TRUE, FALSE)
+essential_genes_df$gene_in_dataset = ifelse(essential_genes_df$HGNC_Symbol %in% RNA$Gene, TRUE, FALSE)
 head(essential_genes_df)
 essential_genes_scipher_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_scipher.csv'
 essential_genes_df %>% fwrite(essential_genes_scipher_file)
