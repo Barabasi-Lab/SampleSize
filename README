@@ -705,6 +705,47 @@ source activate ScipherSampleSizeEnv
 pip install --upgrade decorator==4.3
 
 
+#######
+VS CODE
+#######
+
+What to do if I cannot get access to Discovery using VS CODE?
+
+I have to remove the folder /home/j.aguirreplans/.vscode-server
+The problem is that sometimes I get messages such as the following:
+
+$ rm -r *
+rm: cannot remove ‘74b1f979648cc44d385a2286793c226e611f59e7/.nfs000000091aa2050100000d75’: Device or resource busy
+rm: cannot remove ‘74b1f979648cc44d385a2286793c226e611f59e7/node_modules/spdlog/build/Release/.nfs0000000919d4d39a00001595’: Device or resource busy
+rm: cannot remove ‘74b1f979648cc44d385a2286793c226e611f59e7/node_modules/vsda/build/Release/.nfs000000091a2df78400001596’: Device or resource busy
+rm: cannot remove ‘74b1f979648cc44d385a2286793c226e611f59e7/bin/.nfs000000091a7f35ca00001597’: Device or resource busy
+
+This means that there are still jobs in the cluster using the files in the folder .vscode-server.
+So, I have to identify these jobs and kill them.
+To identify the jobs, I can run the following command:
+
+$ lsof +D .vs-code-server/
+COMMAND    PID           USER   FD   TYPE DEVICE SIZE/OFF        NODE NAME
+sh       45729 j.aguirreplans   98w   REG   0,40        0 39096268426 ./784b0177c56c607789f9638da7b6bf3230d47a8c/.nfs000000091a51b68a00000956
+sh       45729 j.aguirreplans   99w   REG   0,40        0 39088069321 ./e7f30e38c5a4efafeec8ad52861eb772a9ee4dfb/.nfs0000000919d49ac90000099c
+sh       45729 j.aguirreplans  255r   REG   0,40      249 39088976497 ./e7f30e38c5a4efafeec8ad52861eb772a9ee4dfb/bin/.nfs0000000919e272710000158e
+node     45745 j.aguirreplans  txt    REG   0,40 80316256 39082497796 ./e7f30e38c5a4efafeec8ad52861eb772a9ee4dfb/.nfs00000009197f97040000158f
+node     45745 j.aguirreplans  mem    REG   0,40    38336 39088976556 ./e7f30e38c5a4efafeec8ad52861eb772a9ee4dfb/node_modules/vsda/build/Release/.nfs0000000919e272ac0000158d
+node     45745 j.aguirreplans  mem    REG   0,40   571088 39057542056 ./e7f30e38c5a4efafeec8ad52861eb772a9ee4dfb/node_modules/spdlog/build/Release/.nfs000000091802cba80000158c
+node     45745 j.aguirreplans   98w   REG   0,40        0 39096268426 ./784b0177c56c607789f9638da7b6bf3230d47a8c/.nfs000000091a51b68a00000956
+node     45745 j.aguirreplans   99w   REG   0,40        0 39088069321 ./e7f30e38c5a4efafeec8ad52861eb772a9ee4dfb/.nfs0000000919d49ac90000099c
+node     45850 j.aguirreplans  txt    REG   0,40 80316256 39082497796 ./e7f30e38c5a4efafeec8ad52861eb772a9ee4dfb/.nfs00000009197f97040000158f
+node     45850 j.aguirreplans  mem    REG   0,40   571088 39057542056 ./e7f30e38c5a4efafeec8ad52861eb772a9ee4dfb/node_modules/spdlog/build/Release/.nfs000000091802cba80000158c
+node     45850 j.aguirreplans   98w   REG   0,40        0 39096268426 ./784b0177c56c607789f9638da7b6bf3230d47a8c/.nfs000000091a51b68a00000956
+
+Then, kill the jobs using their PID:
+$ kill -9 45745
+
+Finally, I can remove the folder:
+
+$ rm -r .vscode-server/
+
+
 #############
 UPDATE GITHUB
 #############
