@@ -28,14 +28,33 @@ disease_genes_info_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data
 # pval_threshold = 0.05
 # nodes_to_follow = c("BRCA1", "BRCA2", "PALB2", "CHEK2", "CDH1", "PTEN", "STK11", "TP53")
 
-# For Breast Cancer (both sex)
-input_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA___Breast.Mammary.Tissue"
+# # For Breast Cancer (both sex)
+# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA___Breast.Mammary.Tissue"
+# name_D = "tcga.brca"
+# name_N = "gtex.breast"
+# disease_name = "breast.neoplasms"
+# pval_correction_field = "pval_Phi_Tilde.adj.fdr"
+# pval_threshold = 0.05
+# nodes_to_follow = c("BRCA1", "BRCA2", "PALB2", "CHEK2", "CDH1", "PTEN", "STK11", "TP53")
+
+# # For Breast Cancer - NORMAL TISSUE vs. GTEx Breast (both sex)
+# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA-normal___Breast.Mammary.Tissue"
+# name_D = "tcga.brca.normal"
+# name_N = "gtex.breast"
+# disease_name = "breast.neoplasms"
+# pval_correction_field = "pval_Phi_Tilde.adj.fdr"
+# pval_threshold = 0.05
+# nodes_to_follow = c("BRCA1", "BRCA2", "PALB2", "CHEK2", "CDH1", "PTEN", "STK11", "TP53")
+
+# For Breast Cancer vs. Breast Cancer - NORMAL TISSUE (both sex)
+input_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA___TCGA-BRCA-normal"
 name_D = "tcga.brca"
-name_N = "gtex.breast"
+name_N = "tcga.brca.normal"
 disease_name = "breast.neoplasms"
 pval_correction_field = "pval_Phi_Tilde.adj.fdr"
 pval_threshold = 0.05
 nodes_to_follow = c("BRCA1", "BRCA2", "PALB2", "CHEK2", "CDH1", "PTEN", "STK11", "TP53")
+
 
 # # For RA (complete.dataset)
 # input_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/scipher.complete.dataset___Whole.Blood"
@@ -45,7 +64,7 @@ nodes_to_follow = c("BRCA1", "BRCA2", "PALB2", "CHEK2", "CDH1", "PTEN", "STK11",
 # pval_correction_field = "pval_Phi_Tilde.adj.fdr"
 # pval_threshold = 0.05
 # nodes_to_follow = c("TNF", "IL6ST", "IL6R", "PTPN22", "HOTAIR", "MALAT1")
-# 
+
 # # For RA (complete.nonresponder)
 # input_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/scipher.complete.nonresponder___Whole.Blood"
 # name_D = "scipher.complete.nonresponder"
@@ -293,6 +312,11 @@ ggsave(
 #---- Plot change of category of relevant genes ----#
 
 for (important_node in nodes_to_follow){
+  
+  # Skip if node not in analysis
+  if (!(important_node %in% unique(nodes_expanded_df$Node))){
+    next
+  }
   
   # Filter results by important node
   important_df = nodes_expanded_df %>% 

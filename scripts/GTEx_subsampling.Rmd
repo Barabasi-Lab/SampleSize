@@ -26,7 +26,7 @@ set.seed(1510)
 output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data'
 
 # Define input file
-samples_subjects_file = '/home/j.aguirreplans/Databases/GTEx/v8/GTEx_Annotations_SamplesSubjectsMerged.txt'
+samples_subjects_file = '/work/ccnr/j.aguirreplans/Databases/GTEx/v8/GTEx_Annotations_SamplesSubjectsMerged.txt'
 
 ```
 

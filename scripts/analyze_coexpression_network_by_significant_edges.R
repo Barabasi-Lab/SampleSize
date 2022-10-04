@@ -57,18 +57,16 @@ disease_genes_file = opt$disease_genes_file
 essential_genes_file = opt$essential_genes_file
 genes_dataset_file = opt$genes_dataset_file
 
-#coexpression_network_file = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA/pearson_RNAseq_samples_TCGA_size_100_rep_1.net"
-#output_results_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_scipher/all_samples"
-#output_subgraphs_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_scipher/all_samples"
-#file_name = "spearman_scipher_all_samples_size_100_rep_1_pvalue_0.05"
-#output_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/networks_scipher/all_samples/analysis_by_top_scoring_edges_wgcna_scipher_all_samples_size_100_rep_1.txt"
-#ppi_file = "/home/j.aguirreplans/data/PPI/interactome_2019_merged_symbols.csv"
+#coexpression_network_file = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Whole.Blood/pearson_gtex_Whole.Blood_size_100_rep_1.net"
+#output_results_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/reads/Whole.Blood"
+#output_subgraphs_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_gtex/reads/Whole.Blood"
+#file_name = "pearson_gtex_Whole.Blood_size_100_rep_1_pvalue_0.05"
+#ppi_file = "/work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv"
 #disease_genes_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_scipher.csv"
 #disease_genes_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv"
 #disease_genes_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_gtex.csv"
-#essential_genes_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_scipher.csv"
-#genes_dataset_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_gene_info.csv"
-#genes_dataset_file = "/home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/tcga_rnaseq_gene_info.csv"
+#essential_genes_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_gtex.csv"
+#genes_dataset_file = "/work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/genes_from_rnaseq_filtered_files_by_tissue/gtex_rnaseq_gene_info_Whole.Blood.csv"
 
 
 #-------------------------#
@@ -224,16 +222,17 @@ calculate_topology_parameters <- function(network_graph, output_main_core_subgra
 ##############################
 #'  @param network_df Co-expression network in dataframe format
 #'  @param ppi_df Protein-protein interactions network in dataframe format
+#'  @param ppi_main_core Protein-protein interactions main core
 #'  @param output_ppi_subgraph_file Path to the output file of the co-expression - PPI subgraph. If NA, no file is written.
 #'  @param output_ppi_main_core_subgraph_file Path to the output file of the co-expression - PPI main core subgraph. If NA, no file is written.
 
-calculate_ppi_parameters <- function(network_df, ppi_df, output_ppi_subgraph_file=NA, output_ppi_main_core_subgraph_file=NA){
+calculate_ppi_parameters <- function(network_df, ppi_df, ppi_main_core, output_ppi_subgraph_file=NA, output_ppi_main_core_subgraph_file=NA){
   
   start_time_ppi <- Sys.time()
   print("Calculating PPI")
   
   # Select PPIs in co-expression network
-  coexpression_ppi_df = inner_join(network_df, ppi_df, by=c("Node.1"="proteinA_symbol", "Node.2"="proteinB_symbol"))
+  coexpression_ppi_df = inner_join(network_df, ppi_df, by=c("Node.1"="HGNC_Symbol.1", "Node.2"="HGNC_Symbol.2"))
   coexpression_ppi_net = graph_from_data_frame(coexpression_ppi_df, directed=F) %>% simplify()
   # Select main core PPIs in co-expression network
   coexpression_ppi_main_core_df = coexpression_ppi_df %>% filter((Node.1 %in% V(ppi_main_core)$name) & (Node.2 %in% V(ppi_main_core)$name))
@@ -267,9 +266,10 @@ calculate_ppi_parameters <- function(network_df, ppi_df, output_ppi_subgraph_fil
 #'  @param network_df Co-expression network in dataframe format
 #'  @param network_graph Co-expression network in igraph format
 #'  @param disease_genes_df Disease-gene associations dataframe
+#'  @param selected_diseases Diseases selected to perform the analysis
 #'  @param output_disease_genes_subgraph_dir Path to the output directory of the co-expression - disease genes subgraphs. If NA, no file is written.
 
-calculate_disease_gene_parameters <- function(network_df, network_graph, disease_genes_df, output_disease_genes_subgraph_dir=NA){
+calculate_disease_gene_parameters <- function(network_df, network_graph, disease_genes_df, selected_diseases, output_disease_genes_subgraph_dir=NA){
   
   start_time_disease <- Sys.time()
   print("Calculating disease genes")
@@ -282,8 +282,6 @@ calculate_disease_gene_parameters <- function(network_df, network_graph, disease
   # Calculate analysis for a list of selected diseases
   cols = c("disease", "disease_class", "num_disease_genes", "num_disease_edges", "fraction_disease_genes", "num_disease_components", "num_disease_lcc_nodes", "num_disease_lcc_edges", "fraction_disease_lcc_nodes", "disease_lcc_z", "disease_lcc_pvalue")
   disease_gene_results_df <- setNames(data.frame(matrix(ncol = length(cols), nrow = 0)), cols)
-  selected_diseases = c("alzheimer disease", "arthritis rheumatoid", "cardiomyopathies", "diabetes mellitus type 2")
-  #for (disease in sort(unique(disease_genes_df$DiseaseName))){
   for (disease in selected_diseases){
     # Select genes associated with the disease
     disease_genes_selected_df = disease_genes_df %>% filter(DiseaseName == !!disease)
@@ -415,12 +413,16 @@ disease_genes_df = fread(disease_genes_file) %>% filter(HGNC_Symbol %in% genes_d
   mutate(TotalDiseaseGenesDataset = n()) %>%
   filter(TotalDiseaseGenesDataset > 19) %>%
   ungroup()
+#selected_diseases = sort(unique(disease_genes_df$DiseaseName))
+#selected_diseases = c("alzheimer disease", "arthritis rheumatoid", "cardiomyopathies", "diabetes mellitus type 2")
+selected_diseases = c("alzheimer disease", "heart failure", "diabetes mellitus type 2", "asthma", "arthritis rheumatoid", "breast neoplasms", "colonic neoplasms", "uterine neoplasms", "kidney neoplasms", "lung neoplasms", "carcinoma non small cell lung", "thyroid neoplasms", "prostatic neoplasms", "melanoma", "glioma")
+selected_diseases = selected_diseases[selected_diseases %in% disease_genes_df$DiseaseName]
 
 # Read essential genes file
 essential_genes = unique((fread(essential_genes_file) %>% filter(HGNC_Symbol %in% genes_dataset))$HGNC_Symbol)
 
 # Read PPI
-ppi_df = fread(ppi_file) %>% dplyr::select(proteinA_symbol, proteinB_symbol) %>% filter((proteinA_symbol %in% genes_dataset) & (proteinB_symbol %in% genes_dataset))
+ppi_df = fread(ppi_file) %>% dplyr::select(HGNC_Symbol.1, HGNC_Symbol.2) %>% filter((HGNC_Symbol.1 %in% genes_dataset) & (HGNC_Symbol.2 %in% genes_dataset))
 ppi_net = graph_from_data_frame(ppi_df, directed=F) %>% simplify()
 # Calculate k-core
 k_core = coreness(ppi_net)
@@ -500,7 +502,7 @@ if(!(file.exists(output_ppi_file))){
     }
     
     # Calculate parameters
-    ppi_correlation_results_df = calculate_ppi_parameters(network_df=coexpression_filt_df, ppi_df=ppi_df, output_ppi_subgraph_file=output_ppi_subgraph_file, output_ppi_main_core_subgraph_file=output_ppi_main_core_subgraph_file)
+    ppi_correlation_results_df = calculate_ppi_parameters(network_df=coexpression_filt_df, ppi_df=ppi_df, ppi_main_core=ppi_main_core, output_ppi_subgraph_file=output_ppi_subgraph_file, output_ppi_main_core_subgraph_file=output_ppi_main_core_subgraph_file)
     ppi_results_df = rbind(ppi_results_df, cbind(data.frame(type_correlation=rep(type_correlation, nrow(ppi_correlation_results_df)), threshold=rep(threshold, nrow(ppi_correlation_results_df))), ppi_correlation_results_df))
     rm(coexpression_filt_df)
 
@@ -541,7 +543,7 @@ if(!(file.exists(output_disease_genes_file))){
     coexpression_filt_net = graph_from_data_frame((coexpression_filt_df %>% rename("weight"="score")), directed=F) %>% simplify()
     
     # Calculate parameters
-    disease_gene_correlation_results_df = calculate_disease_gene_parameters(network_df=coexpression_filt_df, network_graph=coexpression_filt_net, disease_genes_df=disease_genes_df, output_disease_genes_subgraph_dir=output_disease_genes_subgraph_dir)
+    disease_gene_correlation_results_df = calculate_disease_gene_parameters(network_df=coexpression_filt_df, network_graph=coexpression_filt_net, disease_genes_df=disease_genes_df, selected_diseases=selected_diseases, output_disease_genes_subgraph_dir=output_disease_genes_subgraph_dir)
     disease_gene_results_df = rbind(disease_gene_results_df, cbind(data.frame(type_correlation=rep(type_correlation, nrow(disease_gene_correlation_results_df)), threshold=rep(threshold, nrow(disease_gene_correlation_results_df))), disease_gene_correlation_results_df))
     rm(coexpression_filt_df)
     rm(coexpression_filt_net)

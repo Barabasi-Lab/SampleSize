@@ -119,9 +119,13 @@ calculate_stretched_exponential_model_by_linear_fit = function(results_dataframe
   s_rec = log(L) - log(s)
   # Calculate linear regression between ln(L)-ln(s) and ln(N)
   lm_summary = summary(lm(log(s_rec)~log(N)))
+  # Calculate alpha and b
+  a = 1-coef(lm_summary)[2]
+  b = exp((coef(lm_summary)[1] + log(a-1)))
   # This is the data used to obtain the final model
   used_data = data.frame(y=log(s_rec), x=log(N))
-  return(list(lm_summary=lm_summary, used_data=used_data, a=coef(lm_summary)[2], b=coef(lm_summary)[1], L=L, adj.r.squared=lm_summary$adj.r.squared))
+  #return(list(lm_summary=lm_summary, used_data=used_data, a=coef(lm_summary)[2], b=coef(lm_summary)[1], L=L, adj.r.squared=lm_summary$adj.r.squared))
+  return(list(lm_summary=lm_summary, used_data=used_data, a=a, b=b, L=L, adj.r.squared=lm_summary$adj.r.squared))
 }
 
 #'  calculate_stretched_exponential_model_by_optimization
@@ -159,9 +163,13 @@ calculate_stretched_exponential_model_by_optimization = function(results_datafra
   s_rec=log(L)-log(s)
   # This is the linear fit containing L
   lm_summary = summary(lm(log(s_rec)~log(N)))
+  # Calculate alpha and b
+  a = 1-coef(lm_summary)[2]
+  b = exp((coef(lm_summary)[1] + log(a-1)))
   # This is the data used to obtain the final model
   used_data = data.frame(y=log(s_rec), x=log(N))
-  return(list(lm_summary=lm_summary, used_data=used_data, a=coef(lm_summary)[2], b=coef(lm_summary)[1], L=L, adj.r.squared=lm_summary$adj.r.squared))
+  return(list(lm_summary=lm_summary, used_data=used_data, a=a, b=b, L=L, adj.r.squared=lm_summary$adj.r.squared))
+  #return(list(lm_summary=lm_summary, used_data=used_data, a=coef(lm_summary)[2], b=coef(lm_summary)[1], L=L, adj.r.squared=lm_summary$adj.r.squared))
 }
 
 #'  calculate_predictions_using_stretched_exponential_model_optimized
@@ -172,7 +180,8 @@ calculate_stretched_exponential_model_by_optimization = function(results_datafra
 #'  @param b Intercept coefficient.
 #'  
 calculate_predictions_using_stretched_exponential_model_optimized = function(x, L, a, b){
-  y = exp(log(L) - exp(b+a*log(x)))
+  y = L * exp((b*x**(-a+1))/(-a+1))
+  #y = exp(log(L) - exp(b+a*log(x)))
   return(y)
 }
 
@@ -576,7 +585,7 @@ server <- function(input, output, session) {
       }
       combination_metric = paste(combination_metric, "norm", sep="_")
     }
-    
+
     # if (isTruthy(input$topology_analytical)){
     #   if (is.null(selected_fill_parameter)){
     #     # Calculate logarithmic fit for the whole selected data

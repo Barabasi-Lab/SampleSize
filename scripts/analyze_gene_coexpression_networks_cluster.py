@@ -27,7 +27,7 @@ def parse_options():
     parser.add_option("-p", action="store", type="string", dest="ppi_file", help="File with the PPI network", metavar="PPI_FILE")
     parser.add_option("-d", action="store", type="string", dest="disease_genes_file", help="File with the disease-gene associations", metavar="DISEASE_GENES_FILE")
     parser.add_option("-e", action="store", type="string", dest="essential_genes_file", help="File with the essential genes", metavar="ESSENTIAL_GENES_FILE")
-    parser.add_option("-g", action="store", type="string", dest="genes_dataset_file", help="File with the essential genes", metavar="GENES_DATASET_FILE")
+    parser.add_option("-g", action="store", type="string", dest="genes_dataset_file", help="File with the genes in the expression dataset", metavar="GENES_DATASET_FILE")
     parser.add_option("-o", action="store", type="string", dest="output_analysis_dir", help="Directory for the output analysis", metavar="OUTPUT_ANALYSIS_DIR")
     parser.add_option("-n", action="store", type="string", dest="output_networks_dir", help="Directory for the output networks", metavar="OUTPUT_NETWORKS_DIR")
 
@@ -87,7 +87,8 @@ def create_gene_coexpression_networks(options):
     max_time_per_queue = {
         'debug'   : '0:20:00',
         'express' : '0:60:00',
-        'short'   : '24:00:00',
+        #'short'   : '24:00:00',
+        'short'   : '5:00:00',
         'long'    : '5-0',
         'large'   : '6:00:00'
     }

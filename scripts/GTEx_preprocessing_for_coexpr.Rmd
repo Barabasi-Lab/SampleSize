@@ -28,7 +28,7 @@ set.seed(1510)
 
 ```{r}
 # Define type of counts used
-type_counts = "tpm" # tpm, reads
+type_counts = "reads" # tpm, reads
 if(!(type_counts %in% c("tpm", "reads"))){
   stop("Unknown type of data")
 }

@@ -24,51 +24,64 @@ set.seed(1510)
 ```{r parse_results, echo=FALSE, results='hide'}
 # Input data
 input_dir <- '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out'
+type_counts = "reads"
 
 # Define result dataframes
-cols_topology = c("method", "dataset", "type_dataset", "size", "rep", "threshold", "num_nodes", "num_edges", "av_degree", "av_path_length", "av_clustering_coef", "num_components", "num_lcc_nodes", "num_lcc_edges", "lcc_z", "lcc_pvalue", "max_k", "num_main_core_nodes", "num_main_core_edges")
+cols_topology = c("method", "dataset", "type_dataset", "type_tcga_tissue", "size", "rep", "threshold", "num_nodes", "num_edges", "av_degree", "av_path_length", "av_clustering_coef", "num_components", "num_lcc_nodes", "num_lcc_edges", "lcc_z", "lcc_pvalue", "max_k", "num_main_core_nodes", "num_main_core_edges")
 topology_df = data.frame(matrix(ncol=length(cols_topology),nrow=0, dimnames=list(NULL, cols_topology)))
-cols_ppi = c("method", "dataset", "type_dataset", "size", "rep", "threshold", "num_ppi_nodes", "num_ppi_edges", "fraction_ppi_nodes", "fraction_ppi_edges", "num_ppi_main_core_nodes", "num_ppi_main_core_edges", "fraction_ppi_main_core_nodes", "fraction_ppi_main_core_edges")
+cols_ppi = c("method", "dataset", "type_dataset", "type_tcga_tissue", "size", "rep", "threshold", "num_ppi_nodes", "num_ppi_edges", "fraction_ppi_nodes", "fraction_ppi_edges", "num_ppi_main_core_nodes", "num_ppi_main_core_edges", "fraction_ppi_main_core_nodes", "fraction_ppi_main_core_edges")
 ppi_results_df = data.frame(matrix(ncol=length(cols_ppi),nrow=0, dimnames=list(NULL, cols_ppi)))
-cols_essential = c("method", "dataset", "type_dataset", "size", "rep", "threshold", "num_essential_genes", "fraction_essential_genes", "num_components", "num_lcc_nodes", "fraction_essential_lcc_nodes", "num_lcc_edges", "lcc_z", "lcc_pvalue")
+cols_essential = c("method", "dataset", "type_dataset", "type_tcga_tissue", "size", "rep", "threshold", "num_essential_genes", "fraction_essential_genes", "num_components", "num_lcc_nodes", "fraction_essential_lcc_nodes", "num_lcc_edges", "lcc_z", "lcc_pvalue")
 essential_gene_results_df = data.frame(matrix(ncol=length(cols_essential),nrow=0, dimnames=list(NULL, cols_essential)))
-cols_disease = c("method", "dataset", "type_dataset", "size", "rep", 'threshold', 'disease', 'disease_class', 'num_disease_genes', 'fraction_disease_genes', 'num_disease_components', 'num_disease_lcc_nodes', 'fraction_disease_lcc_nodes', 'num_disease_lcc_edges', "disease_lcc_z", "disease_lcc_pvalue")
+cols_disease = c("method", "dataset", "type_dataset", "type_tcga_tissue", "size", "rep", 'threshold', 'disease', 'disease_class', 'num_disease_genes', 'fraction_disease_genes', 'num_disease_components', 'num_disease_lcc_nodes', 'fraction_disease_lcc_nodes', 'num_disease_lcc_edges', "disease_lcc_z", "disease_lcc_pvalue")
 disease_gene_results_df <- setNames(data.frame(matrix(ncol = length(cols_disease), nrow = 0)), cols_disease)
 
 for(dataset in c('scipher', 'gtex', 'tcga')){
-  types_dataset = list.files(paste(input_dir, paste("analysis_", dataset, sep=""), sep="/"))
-  for(type_dataset in types_dataset){
-    result_files = list.files(paste(input_dir, paste("analysis_", dataset, sep=""), type_dataset, sep="/"))
-    for(result_file in result_files){
-      input_file = paste(input_dir, paste("analysis_", dataset, sep=""), type_dataset, result_file, sep="/")
-      info_file = gsub("_analysis_topology.txt|_analysis_essential_genes.txt|_analysis_disease_genes.txt|_analysis_ppi.txt","",result_file)
-      file_split = strsplit(info_file, split="_")[[1]]
-      if (("threshold" %in% file_split) | ("edges" %in% file_split)){
-        method = file_split[1]
-        threshold = as.numeric(file_split[(length(file_split))])
-        size = file_split[(length(file_split)-4)]
-        r = file_split[(length(file_split))-2]
-      } else {
-        method = file_split[1]
-        size = file_split[(length(file_split)-2)]
-        r = file_split[(length(file_split))]
-      }
-      if(r=="samples"){
-        size = "all"
-        r = NA
-      } else {
-        size = as.numeric(size)
-        r = as.numeric(r)
-      }
-      individual_df <- fread(input_file)
-      if(grepl("analysis_topology", result_file, fixed = TRUE)){
-        topology_df <- rbind(topology_df, cbind(data.frame(method=rep(method, nrow(individual_df)), dataset=rep(dataset, nrow(individual_df)), type_dataset=rep(type_dataset, nrow(individual_df)), size=rep(size, nrow(individual_df)), rep=rep(r, nrow(individual_df))), individual_df))
-      } else if(grepl("analysis_ppi", result_file, fixed = TRUE)){
-        ppi_results_df <- rbind(ppi_results_df, cbind(data.frame(method=rep(method, nrow(individual_df)), dataset=rep(dataset, nrow(individual_df)), type_dataset=rep(type_dataset, nrow(individual_df)), size=rep(size, nrow(individual_df)), rep=rep(r, nrow(individual_df))), individual_df))
-      } else if(grepl("analysis_essential_genes", result_file, fixed = TRUE)){
-        essential_gene_results_df <- rbind(essential_gene_results_df, cbind(data.frame(method=rep(method, nrow(individual_df)), dataset=rep(dataset, nrow(individual_df)), type_dataset=rep(type_dataset, nrow(individual_df)), size=rep(size, nrow(individual_df)), rep=rep(r, nrow(individual_df))), individual_df))
-      } else if(grepl("analysis_disease_genes", result_file, fixed = TRUE)){
-        disease_gene_results_df <- rbind(disease_gene_results_df, cbind(data.frame(method=rep(method, nrow(individual_df)), dataset=rep(dataset, nrow(individual_df)), type_dataset=rep(type_dataset, nrow(individual_df)), size=rep(size, nrow(individual_df)), rep=rep(r, nrow(individual_df))), individual_df))
+  if (dataset == 'tcga'){
+    types_tcga_tissue = c('tumor', 'normal')
+  } else {
+    types_tcga_tissue = c(NA)
+  }
+  for (type_tcga_tissue in types_tcga_tissue){
+    if (is.na(type_tcga_tissue)){
+      subdatasets_dir = paste(input_dir, paste("analysis_", dataset, sep=""), type_counts, sep="/")
+    } else {
+      subdatasets_dir = paste(input_dir, paste("analysis_", dataset, sep=""), type_counts, type_tcga_tissue, sep="/")
+    }
+    types_dataset = list.files(subdatasets_dir)
+    for(type_dataset in types_dataset){
+      result_files = list.files(paste(subdatasets_dir, type_dataset, sep="/"))
+      for(result_file in result_files){
+        input_file = paste(subdatasets_dir, type_dataset, result_file, sep="/")
+        info_file = gsub("_analysis_topology.txt|_analysis_essential_genes.txt|_analysis_disease_genes.txt|_analysis_ppi.txt","",result_file)
+        file_split = strsplit(info_file, split="_")[[1]]
+        if (("threshold" %in% file_split) | ("edges" %in% file_split)){
+          method = file_split[1]
+          threshold = as.numeric(file_split[(length(file_split))])
+          size = file_split[(length(file_split)-4)]
+          r = file_split[(length(file_split))-2]
+        } else {
+          method = file_split[1]
+          size = file_split[(length(file_split)-2)]
+          r = file_split[(length(file_split))]
+        }
+        if(r=="samples"){
+          size = "all"
+          r = NA
+        } else {
+          size = as.numeric(size)
+          r = as.numeric(r)
+        }
+        individual_df <- fread(input_file)
+        if(grepl("analysis_topology", result_file, fixed = TRUE)){
+          topology_df <- rbind(topology_df, cbind(data.frame(method=rep(method, nrow(individual_df)), dataset=rep(dataset, nrow(individual_df)), type_dataset=rep(type_dataset, nrow(individual_df)), type_tcga_tissue=rep(type_tcga_tissue, nrow(individual_df)), size=rep(size, nrow(individual_df)), rep=rep(r, nrow(individual_df))), individual_df))
+        } else if(grepl("analysis_ppi", result_file, fixed = TRUE)){
+          ppi_results_df <- rbind(ppi_results_df, cbind(data.frame(method=rep(method, nrow(individual_df)), dataset=rep(dataset, nrow(individual_df)), type_dataset=rep(type_dataset, nrow(individual_df)), type_tcga_tissue=rep(type_tcga_tissue, nrow(individual_df)), size=rep(size, nrow(individual_df)), rep=rep(r, nrow(individual_df))), individual_df))
+        } else if(grepl("analysis_essential_genes", result_file, fixed = TRUE)){
+          essential_gene_results_df <- rbind(essential_gene_results_df, cbind(data.frame(method=rep(method, nrow(individual_df)), dataset=rep(dataset, nrow(individual_df)), type_dataset=rep(type_dataset, nrow(individual_df)), type_tcga_tissue=rep(type_tcga_tissue, nrow(individual_df)), size=rep(size, nrow(individual_df)), rep=rep(r, nrow(individual_df))), individual_df))
+        } else if(grepl("analysis_disease_genes", result_file, fixed = TRUE)){
+          disease_gene_results_df <- rbind(disease_gene_results_df, cbind(data.frame(method=rep(method, nrow(individual_df)), dataset=rep(dataset, nrow(individual_df)), type_dataset=rep(type_dataset, nrow(individual_df)), type_tcga_tissue=rep(type_tcga_tissue, nrow(individual_df)), size=rep(size, nrow(individual_df)), rep=rep(r, nrow(individual_df))), individual_df))
+        }
       }
     }
   }
@@ -114,30 +127,42 @@ numbers_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, col
 
 # For scipher
 scipher_data_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021'
-genes_dataset_file = paste(scipher_data_dir, '00_data/scipher_rnaseq_gene_info.csv', sep='/')
-genes_dataset_df = fread(genes_dataset_file)
-num_genes = length(unique((genes_dataset_df %>% filter(enough_counts == TRUE) %>% unique())$HGNC_Symbol)) # Total number of genes
-num_edges = num_genes*(num_genes-1)/2 # Total number of edges
-numbers_df <- rbind(numbers_df, data.frame(dataset="scipher:complete.dataset", total_num_nodes=num_genes, total_num_edges=num_edges))
-
-# For tcga
-gdc_dir = '/home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA'
-output_dir = paste(gdc_dir, 'out', sep='/')
-genes_filt_dir = paste(output_dir, 'genes_filtered_files_by_project', sep='/')
-#genes_project_files = list.files(genes_filt_dir)
-projects = unique((topology_df %>% filter(dataset == "tcga"))$type_dataset)
-#projects = c("TCGA", "TCGA-BRCA", "TCGA-UCEC")
-for (project_id in projects){
-  genes_project_file = paste(genes_filt_dir, paste("tcga_rnaseq_gene_info_", project_id, ".csv", sep=''), sep='/')
-  genes_dataset_df = fread(genes_project_file)
+genes_filt_dir = paste(scipher_data_dir, '00_data/genes_from_rnaseq_filtered_files_by_group', sep='/')
+groups = unique((topology_df %>% filter(dataset == "scipher"))$type_dataset)
+for (group in groups){
+  genes_dataset_file = paste(genes_filt_dir, paste("scipher_rnaseq_gene_info_", group, ".csv", sep=''), sep='/')
+  genes_dataset_df = fread(genes_dataset_file)
   num_genes = length(unique((genes_dataset_df %>% filter(enough_counts == TRUE) %>% unique())$HGNC_Symbol)) # Total number of genes
   num_edges = num_genes*(num_genes-1)/2 # Total number of edges
-  numbers_df <- rbind(numbers_df, data.frame(dataset=paste("tcga", project_id, sep=":"), total_num_nodes=num_genes, total_num_edges=num_edges))
+  numbers_df <- rbind(numbers_df, data.frame(dataset=paste("scipher", group, sep=":"), total_num_nodes=num_genes, total_num_edges=num_edges))
+}
+
+# For tcga
+gdc_dir = '/work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA'
+output_dir = paste(gdc_dir, 'out', sep='/')
+projects = unique((topology_df %>% filter(dataset == "tcga"))$type_dataset)
+types_tcga_tissue = unique((topology_df %>% filter(dataset == "tcga"))$type_tcga_tissue)
+#projects = c("TCGA", "TCGA-BRCA", "TCGA-UCEC")
+for (project_id in projects){
+  for (type_tcga_tissue in types_tcga_tissue){
+    genes_filt_dir = paste(output_dir, type_counts, type_tcga_tissue, 'filter_genes_low_counts/genes_filtered_files_by_project', sep='/')
+    genes_project_file = paste(genes_filt_dir, paste("rnaseq_gene_info_", project_id, ".csv", sep=''), sep='/')
+    if(file.exists(genes_project_file)){
+      genes_dataset_df = fread(genes_project_file)
+      num_genes = length(unique((genes_dataset_df %>% filter(enough_counts == TRUE) %>% unique())$HGNC_Symbol)) # Total number of genes
+      num_edges = num_genes*(num_genes-1)/2 # Total number of edges
+      dataset = paste("tcga", project_id, sep=":")
+      if(type_tcga_tissue=="normal"){
+        dataset = paste("tcga:", project_id, "-normal", sep="")
+      }
+      numbers_df <- rbind(numbers_df, data.frame(dataset=dataset, total_num_nodes=num_genes, total_num_edges=num_edges))
+    }
+  }
 }
 
 # For gtex
-gtex_dir = '/home/j.aguirreplans/Databases/GTEx/v8'
-genes_filt_dir = paste(gtex_dir, 'genes_filtered_files_by_tissue', sep='/')
+gtex_dir = '/work/ccnr/j.aguirreplans/Databases/GTEx/v8'
+genes_filt_dir = paste(gtex_dir, type_counts, 'genes_from_rnaseq_filtered_files_by_tissue', sep='/')
 #genes_dataset_files = list.files(genes_filt_dir)
 tissues = unique((topology_df %>% filter(dataset == "gtex"))$type_dataset)
 #tissues = c("Whole.Blood")
