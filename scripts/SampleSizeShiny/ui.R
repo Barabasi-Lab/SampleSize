@@ -25,8 +25,8 @@ ui <- fluidPage(
                           conditionalPanel(
                             condition = "input.topology_dataset.includes('scipher')",
                             selectInput("topology_type_dataset_scipher", label = "Type of Scipher dataset:", 
-                                        choices = list("complete dataset" = "complete.dataset", "sample per patient at different times" = "sample.per.patient.all.visits", "sample per patient at baseline" = "sample.per.patient.baseline", "responders at baseline" = "responder.baseline", "non-responders at baseline" = "nonresponder.baseline"),
-                                        selected = "complete.dataset"
+                                        choices = list("complete dataset" = "scipher.complete.dataset", "responder samples" = "scipher.complete.responder", "non-responder samples" = "scipher.complete.nonresponder", "sample per patient at baseline" = "scipher.sample.per.patient.baseline", "responders at baseline" = "scipher.sample.per.patient.responder", "non-responders at baseline" = "scipher.sample.per.patient.nonresponder"),
+                                        selected = "scipher.complete.dataset"
                             ),
                           ),
                           conditionalPanel(
@@ -41,7 +41,19 @@ ui <- fluidPage(
                                 size = 10,
                                 `selected-text-format` = "count > 1"
                               ),
-                              selected = 'tcga',
+                              selected = 'tcga-brca',
+                              multiple = TRUE),
+                            verbatimTextOutput(outputId = "topology_type_tcga_tissue"),
+                            shinyWidgets::pickerInput(
+                              inputId = "topology_type_tcga_tissue",
+                              label = "TCGA tissue type:",
+                              choices = c("tumor", "normal"),
+                              options = list(
+                                `actions-box` = TRUE,
+                                size = 10,
+                                `selected-text-format` = "count > 1"
+                              ),
+                              selected = 'tumor',
                               multiple = TRUE),
                           ),
                           conditionalPanel(
@@ -50,7 +62,7 @@ ui <- fluidPage(
                             shinyWidgets::pickerInput(
                               inputId = "topology_gtex_tissues",
                               label = "GTEx tissue:",
-                              choices = c("whole blood", "muscle - skeletal", "skin - sun exposed (lower leg)", "thyroid", "artery - tibial", "adipose - subcutaneous", "nerve - tibial", "skin - not sun exposed (suprapubic)", "lung"),
+                              choices = c("whole blood", "breast - mammary tissue", "muscle - skeletal", "skin - sun exposed (lower leg)", "thyroid", "artery - tibial", "adipose - subcutaneous", "nerve - tibial", "skin - not sun exposed (suprapubic)", "lung"),
                               options = list(
                                 `actions-box` = TRUE,
                                 size = 10,
@@ -142,7 +154,7 @@ ui <- fluidPage(
                           conditionalPanel(
                             condition = "input.topology_normalize_y == true",
                             selectInput("topology_type_normalization", label = "Type of y axis normalization:", 
-                                        choices = list("Divide by max. value" = "divide.max.value", "Divide by max. possible value" = "divide.max.possible.value"),
+                                        choices = list("Divide by max. value" = "divide.max.value", "Divide by max. num. links" = "divide.max.num.links"),
                                         selected = "divide.max.value"
                             ),
                           ),
@@ -153,7 +165,7 @@ ui <- fluidPage(
                             shinyWidgets::pickerInput(
                               inputId = "topology_type_analytical_model",
                               label = "Type of analytical model:",
-                              choices = list("Stretched exponential (by optimization)" = "Stretched exponential (by optimization)", "Stretched exponential (by linear fit)" = "Stretched exponential (by linear fit)", "Stretched exponential (without L)" = "Stretched exponential (without L)", "Logarithmic" = "Logarithmic"),
+                              choices = list("Stretched exponential (by optimization)" = "Stretched exponential (by optimization)", "Stretched exponential (by linear fit)" = "Stretched exponential (by linear fit)", "Stretched exponential (without L)" = "Stretched exponential (without L)", "Logarithmic" = "Logarithmic", "Exponential" = "Exponential", "Linear" = "Linear", "Square root" = "Square root"),
                               options = list(
                                 `actions-box` = TRUE,
                                 size = 10,

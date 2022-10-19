@@ -1,6 +1,7 @@
 # Cluster related scripts and logs
 cluster_scripts/
 logs/
+inputs/
 
 # Work related folders
 Documents/

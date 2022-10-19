@@ -74,7 +74,7 @@ def calculate_differentially_coexpressed_genes(options):
     # Define queue parameters
     max_mem = config.get("Cluster", "max_mem")
     queue = config.get("Cluster", "cluster_queue") # debug, express, short, long, large
-    constraint = True
+    constraint = False
     exclude = []
     #exclude = ['d0012', 'd0123']
     modules = ['python/3.8.1', 'anaconda3', 'R/4.0.3']
@@ -177,8 +177,12 @@ def get_info_from_network_files(network_files_list, dataset_name="D"):
     for network in network_files_list:
         network_name = '.'.join(network.split('.')[:-1])
         elem = network_name.split('_')
-        size = elem[-3]
-        rep = elem[-1]
+        if (elem[-1] == "consensus"):
+            size = elem[-2]
+            rep = "consensus"
+        else:
+            size = elem[-3]
+            rep = elem[-1]
         # Add the information to the main data frame
         networks_df = networks_df.append(pd.DataFrame([[network, dataset_name, size, rep]], columns=["network", "dataset_name", "size", "rep"], index=[network_name]))
     return networks_df

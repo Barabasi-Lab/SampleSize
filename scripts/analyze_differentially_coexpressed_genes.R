@@ -29,13 +29,13 @@ disease_genes_info_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data
 # nodes_to_follow = c("BRCA1", "BRCA2", "PALB2", "CHEK2", "CDH1", "PTEN", "STK11", "TP53")
 
 # # For Breast Cancer (both sex)
-# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA___Breast.Mammary.Tissue"
-# name_D = "tcga.brca"
-# name_N = "gtex.breast"
-# disease_name = "breast.neoplasms"
-# pval_correction_field = "pval_Phi_Tilde.adj.fdr"
-# pval_threshold = 0.05
-# nodes_to_follow = c("BRCA1", "BRCA2", "PALB2", "CHEK2", "CDH1", "PTEN", "STK11", "TP53")
+input_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA___Breast.Mammary.Tissue"
+name_D = "tcga.brca"
+name_N = "gtex.breast"
+disease_name = "breast.neoplasms"
+pval_correction_field = "pval_Phi_Tilde.adj.fdr"
+pval_threshold = 0.05
+nodes_to_follow = c("BRCA1", "BRCA2", "PALB2", "CHEK2", "CDH1", "PTEN", "STK11", "TP53")
 
 # # For Breast Cancer - NORMAL TISSUE vs. GTEx Breast (both sex)
 # input_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA-normal___Breast.Mammary.Tissue"
@@ -46,14 +46,14 @@ disease_genes_info_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data
 # pval_threshold = 0.05
 # nodes_to_follow = c("BRCA1", "BRCA2", "PALB2", "CHEK2", "CDH1", "PTEN", "STK11", "TP53")
 
-# For Breast Cancer vs. Breast Cancer - NORMAL TISSUE (both sex)
-input_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA___TCGA-BRCA-normal"
-name_D = "tcga.brca"
-name_N = "tcga.brca.normal"
-disease_name = "breast.neoplasms"
-pval_correction_field = "pval_Phi_Tilde.adj.fdr"
-pval_threshold = 0.05
-nodes_to_follow = c("BRCA1", "BRCA2", "PALB2", "CHEK2", "CDH1", "PTEN", "STK11", "TP53")
+# # For Breast Cancer vs. Breast Cancer - NORMAL TISSUE (both sex)
+# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA___TCGA-BRCA-normal"
+# name_D = "tcga.brca"
+# name_N = "tcga.brca.normal"
+# disease_name = "breast.neoplasms"
+# pval_correction_field = "pval_Phi_Tilde.adj.fdr"
+# pval_threshold = 0.05
+# nodes_to_follow = c("BRCA1", "BRCA2", "PALB2", "CHEK2", "CDH1", "PTEN", "STK11", "TP53")
 
 
 # # For RA (complete.dataset)
@@ -84,7 +84,7 @@ GDA_disease = GDA %>% select("DiseaseName.no.sp.char", "HGNC_Symbol") %>% filter
 #---- Compile files ----#
 
 result_files = list.files(input_dir)
-cols = c("file_name", "size", "rep_D", "rep_N")
+cols = c("file_name", "type_analysis", "size", "rep_D", "rep_N")
 file_info_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
 
 for(file_name in result_files){
@@ -92,21 +92,19 @@ for(file_name in result_files){
   file_split1 = strsplit(info_file, split="_")[[1]]
   if(file_split1[1] == "diffanalysis"){
     type_analysis = file_split1[2]
-    if(type_analysis == "nodes"){
-      pval = tail(file_split1, n=1)
-      info_file = gsub(paste("diffanalysis_", type_analysis, "_", sep=""),"",info_file)
-      info_file = gsub(paste("_pval_", pval, sep=""),"",info_file)
-      file_split2 = strsplit(info_file, split="___")[[1]]
-      file_D_split = strsplit(gsub(".net","",file_split2[1]), split="_")[[1]]
-      file_N_split = strsplit(gsub(".net","",file_split2[2]), split="_")[[1]]
-      method = file_D_split[1]
-      size = as.numeric(file_D_split[(length(file_D_split)-2)])
-      r_D = as.numeric(file_D_split[(length(file_D_split))])
-      r_N = as.numeric(file_N_split[(length(file_N_split))])
-      dataset_D = file_D_split[(length(file_D_split)-4)]
-      dataset_N = file_N_split[(length(file_N_split)-4)]
-      file_info_df <- rbind(file_info_df, data.frame(file_name=file_name, size=size, rep_D=r_D, rep_N=r_N))
-    }
+    pval = tail(file_split1, n=1)
+    info_file = gsub(paste("diffanalysis_", type_analysis, "_", sep=""),"",info_file)
+    info_file = gsub(paste("_pval_", pval, sep=""),"",info_file)
+    file_split2 = strsplit(info_file, split="___")[[1]]
+    file_D_split = strsplit(gsub(".net","",file_split2[1]), split="_")[[1]]
+    file_N_split = strsplit(gsub(".net","",file_split2[2]), split="_")[[1]]
+    method = file_D_split[1]
+    size = as.numeric(file_D_split[(length(file_D_split)-2)])
+    r_D = as.numeric(file_D_split[(length(file_D_split))])
+    r_N = as.numeric(file_N_split[(length(file_N_split))])
+    dataset_D = file_D_split[(length(file_D_split)-4)]
+    dataset_N = file_N_split[(length(file_N_split)-4)]
+    file_info_df <- rbind(file_info_df, data.frame(file_name=file_name, type_analysis=type_analysis, size=size, rep_D=r_D, rep_N=r_N))
   }
 }
 
@@ -121,7 +119,7 @@ sizes_list = sort(unique(file_info_df$size))
 for(x in seq(sizes_list)){
   size = sizes_list[x]
   #print(size)
-  same_size_files_df = file_info_df %>% filter(size==!!size) %>% arrange(rep_D, rep_N)
+  same_size_files_df = file_info_df %>% filter((size==!!size) & (type_analysis=="nodes")) %>% arrange(rep_D, rep_N)
   input_files = same_size_files_df$file_name
   # same_size_info_df = data.frame()
   for(input_file in input_files){
@@ -463,4 +461,39 @@ ggsave(
   height = 6000,
   units = c("px")
 )
+
+
+#---- Read edge files ----#
+
+cols = c("Node.1", "Node.2", "DiseaseName.no.sp.char.1", "DiseaseName.no.sp.char.2", "Phi_tilde", "Score_Phi_tilde", "Score_ratio", "size", "rep_D", "rep_N")
+edges_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+missing_edge_files = c()
+sizes_list = sort(unique(file_info_df$size))
+
+for(x in seq(sizes_list)){
+  size = sizes_list[x]
+  print(size)
+  same_size_files_df = file_info_df %>% filter((size==!!size) & (type_analysis=="edges")) %>% arrange(rep_D, rep_N)
+  input_files = same_size_files_df$file_name
+  # same_size_info_df = data.frame()
+  for(input_file in input_files){
+    r_D = (same_size_files_df %>% filter(file_name == input_file))$rep_D
+    r_N = (same_size_files_df %>% filter(file_name == input_file))$rep_N
+    individual_df = fread(paste(input_dir, input_file, sep="/"))
+    if (nrow(individual_df) > 0){
+      edge_results_filt_df = individual_df %>%
+        select(Node.1, Node.2, Phi_tilde, Score_Phi_tilde, Score_ratio) %>% 
+        unique() %>% 
+        left_join(GDA_disease, by=c("Node.1"="HGNC_Symbol")) %>% rename("DiseaseName.no.sp.char.1" = "DiseaseName.no.sp.char") %>%
+        left_join(GDA_disease, by=c("Node.2"="HGNC_Symbol")) %>% rename("DiseaseName.no.sp.char.2" = "DiseaseName.no.sp.char")
+      if(nrow(edges_df) == 0){
+        edges_df = cbind((edge_results_filt_df %>% select("Node.1", "Node.2", "DiseaseName.no.sp.char.1", "DiseaseName.no.sp.char.2", "Phi_tilde", "Score_Phi_tilde", "Score_ratio")), data.frame(size=size, rep_D=r_D, rep_N=r_N))
+      } else {
+        edges_df = edges_df %>% full_join(cbind((edge_results_filt_df %>% select("Node.1", "Node.2", "DiseaseName.no.sp.char.1", "DiseaseName.no.sp.char.2", "Phi_tilde", "Score_Phi_tilde", "Score_ratio")), data.frame(size=size, rep_D=r_D, rep_N=r_N)), by=c("Node.1", "Node.2", "DiseaseName.no.sp.char.1", "DiseaseName.no.sp.char.2", "Phi_tilde", "Score_Phi_tilde", "Score_ratio", "size", "rep_D", "rep_N"))
+      }
+    } else {
+      missing_edge_files = c(missing_edge_files, input_file)
+    }
+  }
+}
 

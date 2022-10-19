@@ -1,0 +1,457 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Description
+
+Create figures for the manuscript, extended abstract and poster.
+
+```{r}
+library(data.table)
+library(dplyr)
+library(ggplot2)
+require(ggrepel)
+require(magrittr)
+library(patchwork)
+library(tidyr)
+set.seed(1510)
+options(bitmapType='cairo')
+`%ni%` <- Negate(`%in%`)
+```
+
+### Parse RNAseq data and calculate mean, SD, CV
+
+Define input directories and files:
+
+```{r}
+topology_results_file ='/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/analysis_topology.csv'
+results_df = fread(topology_results_file)
+gtex_rnaseq_dir = "/work/ccnr/j.aguirreplans/Databases/GTEx/v8/tpm/rnaseq_filtered_files_by_tissue"
+tcga_rnaseq_dir = "/work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/tpm/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project"
+scipher_rnaseq_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/rnaseq_filtered_files_by_group"
+data_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data'
+plots_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots'
+```
+
+Read RNA-seq files for each database and calculate SD of expression samples for each gene.
+
+#### Parse GTEx
+
+```{r}
+dataset_selected = "gtex"
+gtex_sd_genes_df = data.frame()
+gtex_sd_samples_df = data.frame()
+gtex_meta_df = data.frame()
+for (subset_selected in unique((results_df %>% filter(dataset==dataset_selected))$type_dataset)){
+  rnaseq_file = paste(dataset_selected, "_rnaseq_", subset_selected, ".gct", sep="")
+  rnaseq_file_path = paste(gtex_rnaseq_dir, rnaseq_file, sep="/")
+  rnaseq = fread(rnaseq_file_path) %>% as.data.frame()
+  if (nrow(gtex_sd_genes_df) == 0){
+    gtex_sd_genes_df = data.frame(gene=rnaseq$Gene, sd=apply(rnaseq[,-1], 1, sd), mean=apply(rnaseq[,-1], 1, mean), dataset=dataset_selected, type_dataset=subset_selected)
+    gtex_sd_samples_df = data.frame(sample=colnames(rnaseq[,-1]), sd=apply(rnaseq[,-1], 2, sd), mean=apply(rnaseq[,-1], 2, mean), dataset=dataset_selected, type_dataset=subset_selected)
+    gtex_meta_df = data.frame(dataset="gtex", type_dataset=subset_selected, num_samples=ncol(rnaseq[,-1]), num_genes=nrow(rnaseq[,-1]))
+  } else {
+    gtex_sd_genes_df = rbind(gtex_sd_genes_df, data.frame(gene=rnaseq$Gene, sd=apply(rnaseq[,-1], 1, sd), mean=apply(rnaseq[,-1], 1, mean), dataset=dataset_selected, type_dataset=subset_selected))
+    gtex_sd_samples_df = rbind(gtex_sd_samples_df, data.frame(sample=colnames(rnaseq[,-1]), sd=apply(rnaseq[,-1], 2, sd), mean=apply(rnaseq[,-1], 2, mean), dataset=dataset_selected, type_dataset=subset_selected))
+    gtex_meta_df = rbind(gtex_meta_df, data.frame(dataset=dataset_selected, type_dataset=subset_selected, num_samples=ncol(rnaseq[,-1]), num_genes=nrow(rnaseq[,-1])))
+  }
+}
+gtex_sd_genes_df$cv = (gtex_sd_genes_df$sd/gtex_sd_genes_df$mean)*100
+gtex_sd_samples_df$cv = (gtex_sd_samples_df$sd/gtex_sd_samples_df$mean)*100
+```
+
+```{r}
+head(gtex_sd_genes_df)
+head(gtex_sd_samples_df)
+head(gtex_meta_df)
+```
+
+#### Parase TCGA
+
+```{r}
+dataset_selected = "tcga"
+tcga_sd_genes_df = data.frame()
+tcga_sd_samples_df = data.frame()
+tcga_meta_df = data.frame()
+for (subset_selected in unique((results_df %>% filter(dataset==dataset_selected))$type_dataset)){
+  rnaseq_file = paste(dataset_selected, "_rnaseq_", subset_selected, ".csv", sep="")
+  rnaseq_file_path = paste(tcga_rnaseq_dir, rnaseq_file, sep="/")
+  rnaseq = fread(rnaseq_file_path) %>% as.data.frame()
+  rnaseq_sd = apply(rnaseq[,-1], 1, sd)
+  if (nrow(tcga_sd_genes_df) == 0){
+    tcga_sd_genes_df = data.frame(gene=rnaseq$Gene, sd=apply(rnaseq[,-1], 1, sd), mean=apply(rnaseq[,-1], 1, mean), dataset=dataset_selected, type_dataset=subset_selected)
+    tcga_sd_samples_df = data.frame(sample=colnames(rnaseq[,-1]), sd=apply(rnaseq[,-1], 2, sd), mean=apply(rnaseq[,-1], 2, mean), dataset=dataset_selected, type_dataset=subset_selected)
+    tcga_meta_df = data.frame(dataset=dataset_selected, type_dataset=subset_selected, num_samples=ncol(rnaseq[,-1]), num_genes=nrow(rnaseq[,-1]))
+  } else {
+    tcga_sd_genes_df = rbind(tcga_sd_genes_df, data.frame(gene=rnaseq$Gene, sd=apply(rnaseq[,-1], 1, sd), mean=apply(rnaseq[,-1], 1, mean), dataset=dataset_selected, type_dataset=subset_selected))
+    tcga_sd_samples_df = rbind(tcga_sd_samples_df, data.frame(sample=colnames(rnaseq[,-1]), sd=apply(rnaseq[,-1], 2, sd), mean=apply(rnaseq[,-1], 2, mean), dataset=dataset_selected, type_dataset=subset_selected))
+    tcga_meta_df = rbind(tcga_meta_df, data.frame(dataset=dataset_selected, type_dataset=subset_selected, num_samples=ncol(rnaseq[,-1]), num_genes=nrow(rnaseq[,-1])))
+  }
+}
+tcga_sd_genes_df$cv = (tcga_sd_genes_df$sd/tcga_sd_genes_df$mean)*100
+tcga_sd_samples_df$cv = (tcga_sd_samples_df$sd/tcga_sd_samples_df$mean)*100
+```
+
+```{r}
+head(tcga_sd_genes_df)
+head(tcga_sd_samples_df)
+head(tcga_meta_df)
+```
+
+#### Parse Scipher
+
+```{r}
+dataset_selected = "scipher"
+scipher_sd_genes_df = data.frame()
+scipher_sd_samples_df = data.frame()
+scipher_meta_df = data.frame()
+for (subset_selected in unique((results_df %>% filter(dataset==dataset_selected))$type_dataset)){
+  rnaseq_file = paste(dataset_selected, "_rnaseq_", subset_selected, ".csv", sep="")
+  rnaseq_file_path = paste(scipher_rnaseq_dir, rnaseq_file, sep="/")
+  rnaseq = fread(rnaseq_file_path) %>% as.data.frame()
+  rnaseq_sd = apply(rnaseq[,-1], 1, sd)
+  if (nrow(scipher_sd_genes_df) == 0){
+    scipher_sd_genes_df = data.frame(gene=rnaseq$Gene, sd=apply(rnaseq[,-1], 1, sd), mean=apply(rnaseq[,-1], 1, mean), dataset=dataset_selected, type_dataset=subset_selected)
+    scipher_sd_samples_df = data.frame(sample=colnames(rnaseq[,-1]), sd=apply(rnaseq[,-1], 2, sd), mean=apply(rnaseq[,-1], 2, mean), dataset=dataset_selected, type_dataset=subset_selected)
+    scipher_meta_df = data.frame(dataset=dataset_selected, type_dataset=subset_selected, num_samples=ncol(rnaseq[,-1]), num_genes=nrow(rnaseq[,-1]))
+  } else {
+    scipher_sd_genes_df = rbind(scipher_sd_genes_df, data.frame(gene=rnaseq$Gene, sd=apply(rnaseq[,-1], 1, sd), mean=apply(rnaseq[,-1], 1, mean), dataset=dataset_selected, type_dataset=subset_selected))
+    scipher_sd_samples_df = rbind(scipher_sd_samples_df, data.frame(sample=colnames(rnaseq[,-1]), sd=apply(rnaseq[,-1], 2, sd), mean=apply(rnaseq[,-1], 2, mean), dataset=dataset_selected, type_dataset=subset_selected))
+    scipher_meta_df = rbind(scipher_meta_df, data.frame(dataset=dataset_selected, type_dataset=subset_selected, num_samples=ncol(rnaseq[,-1]), num_genes=nrow(rnaseq[,-1])))
+  }
+}
+scipher_sd_genes_df$cv = (scipher_sd_genes_df$sd/scipher_sd_genes_df$mean)*100
+scipher_sd_samples_df$cv = (scipher_sd_samples_df$sd/scipher_sd_samples_df$mean)*100
+```
+
+```{r}
+head(scipher_sd_genes_df)
+head(scipher_sd_samples_df)
+head(scipher_meta_df)
+```
+
+#### Merge datasets
+
+```{r}
+sd_genes_df = rbind(gtex_sd_genes_df, tcga_sd_genes_df, scipher_sd_genes_df)
+sd_genes_df$dataset_name = paste(sd_genes_df$dataset, sd_genes_df$type_dataset, sep=":")
+sd_genes_df$dataset_name = tolower(sd_genes_df$dataset_name)
+sd_genes_file = paste(data_dir, "variation_by_gene.txt", sep="/")
+sd_genes_df %>% fwrite(sd_genes_file)
+head(sd_genes_df)
+
+sd_samples_df = rbind(gtex_sd_samples_df, tcga_sd_samples_df, scipher_sd_samples_df)
+sd_samples_df$dataset_name = paste(sd_samples_df$dataset, sd_samples_df$type_dataset, sep=":")
+sd_samples_df$dataset_name = tolower(sd_samples_df$dataset_name)
+sd_samples_file = paste(data_dir, "variation_by_sample.txt", sep="/")
+sd_samples_df %>% fwrite(sd_samples_file)
+head(sd_samples_df)
+```
+
+### Analyze results
+
+#### Genes variation
+
+```{r}
+#datasets_selected = c("Artery.Tibial", "Whole.Blood", "TCGA-BRCA", "TCGA-COAD", "scipher.complete.dataset")
+#datasets_selected = c("Breast.Mammary.Tissue", "Thyroid", "TCGA-BRCA", "TCGA-THCA", "scipher.complete.dataset")
+datasets_selected = c("Breast.Mammary.Tissue", "Thyroid", "Whole.Blood", "TCGA-BRCA", "TCGA-THCA", "scipher.complete.dataset")
+parameters = c("sd", "mean", "cv")
+parameter2label <- list("sd"="SD", "mean"="mean", "cv"="CV")
+distribution_plots = list()
+for (x in 1:length(parameters)){
+  parameter = parameters[x]
+  distribution_plot = sd_genes_df %>%
+    #filter(sd < 500000) %>%
+    #filter(sd < 5000) %>%
+    filter(type_dataset %in% datasets_selected) %>%
+    mutate(type_dataset = replace(type_dataset, type_dataset == "scipher.complete.dataset", "R. arthritis")) %>%
+    mutate(type_dataset = replace(type_dataset, type_dataset == "Thyroid", "GTEx: Thyroid")) %>%
+    mutate(type_dataset = replace(type_dataset, type_dataset == "Breast.Mammary.Tissue", "GTEx: Breast")) %>%
+    mutate(type_dataset = replace(type_dataset, type_dataset == "Whole.Blood", "GTEx: Whole blood")) %>%
+    mutate(type_dataset = replace(type_dataset, type_dataset == "TCGA-THCA", "TCGA: Thyroid cancer")) %>%
+    mutate(type_dataset = replace(type_dataset, type_dataset == "TCGA-BRCA", "TCGA: Breast cancer")) %>%
+    ggplot(aes(.data[[parameter]], color=type_dataset)) +
+    geom_freqpoly(size=1.5) +
+    #geom_histogram(alpha=0.2) +
+    #scale_color_manual(values = c("#D55E00", "#E69F00", "#44AA99", "#0072B2", "#56B4E9")) +
+    scale_color_manual(values = c("#D55E00", "#E69F00", "#44AA99", "#65F3BF", "#0072B2", "#56B4E9")) +
+    scale_x_log10() + 
+    scale_y_log10() + 
+    labs(x=paste("Gene expression ", parameter2label[[parameter]], " (Log)", sep=""), y = "Number of genes (Log)") +
+    theme_linedraw() + 
+    guides(col=guide_legend(title="Dataset")) +
+    theme(aspect.ratio=1, plot.title =  element_text(size = 15, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 13), legend.text = element_text(size = 13), legend.title=element_text(size=14, face="bold"))
+  
+  # Save distribution plot without changes in the theme, because we will tune it afterwards with patchwork
+  distribution_plots[[x]] = distribution_plot
+  
+  plot_file = paste(plots_dir, "/distribution_", parameter, "_genes.png", sep="")
+  ggsave(
+    plot_file,
+    plot=distribution_plot,
+    dpi = 1200,
+    #width = 10000,
+    #height = 6000,
+    units = c("px")
+  )
+  print(distribution_plot)
+}
+```
+
+
+```{r}
+input_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables'
+a_vs_fraction_corr_file = paste(input_dir, 'a_vs_fraction_sig_correlations_pearson_pval_0.05.txt', sep='/')
+a_vs_fraction_corr_df = fread(a_vs_fraction_corr_file) %>% rename("dataset_name"="type_dataset")
+head(a_vs_fraction_corr_df)
+```
+
+```{r}
+sd_cut=10
+mean_cut=10
+cv_cut=50
+sd_genes_df %>% group_by(dataset, type_dataset) %>% summarize(mean_sd=mean(sd), median_sd=median(sd), mean_mean=mean(mean), median_mean=median(mean), mean_cv=mean(cv), median_cv=median(cv))
+sd_genes_vs_a_df = sd_genes_df %>% group_by(dataset, type_dataset, dataset_name) %>% summarize(num_genes_above_sd_cut=length(sd[sd >= sd_cut]), num_genes_above_mean_cut=length(mean[mean >= mean_cut]), num_genes_above_cv_cut=length(cv[cv >= cv_cut]), num_genes=n()) %>% ungroup() %>% mutate(fraction_genes_above_sd_cut = num_genes_above_sd_cut / num_genes, fraction_genes_above_mean_cut = num_genes_above_mean_cut / num_genes, fraction_genes_above_cv_cut = num_genes_above_cv_cut / num_genes) %>% inner_join(a_vs_fraction_corr_df, by=c("dataset_name"="dataset_name")) %>% select(!c("type_correlation", "correlation", "sample_size_statistical", "sample_size_statistical_corrected", "num_edges_from_statistical_corrected", "num_edges_from_statistical_corrected_norm")) %>% unique()
+
+head(sd_genes_vs_a_df)
+```
+
+```{r}
+parameters = c("sd", "mean", "cv")
+parameter2label <- list("sd"="SD", "mean"="mean", "cv"="CV")
+scatter_plots = list()
+for (x in 1:length(parameters)){
+  parameter = parameters[x]
+  if (parameter == "cv"){
+    cut = cv_cut
+  } else if (parameter == "sd"){
+    cut = sd_cut
+  } else if (parameter == "mean"){
+    cut = mean_cut
+  }
+  param_vs_a_plot = sd_genes_vs_a_df %>%
+    mutate(dataset_name = replace(dataset_name, dataset_name == "scipher:scipher.complete.dataset", "R. arthritis")) %>%
+    mutate(dataset_name = replace(dataset_name, dataset_name == "gtex:thyroid", "GTEx: Thyroid")) %>%
+    mutate(dataset_name = replace(dataset_name, dataset_name == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
+    mutate(dataset_name = replace(dataset_name, dataset_name == "tcga:tcga-thca", "TCGA: Thyroid cancer")) %>%
+    mutate(dataset_name = replace(dataset_name, dataset_name == "tcga:tcga-brca", "TCGA: Breast cancer")) %>%
+    ggplot(aes(x=a, y=.data[[paste("fraction_genes_above_", parameter, "_cut", sep="")]])) + 
+    geom_point() +
+    geom_point(data = . %>% filter(dataset_name == "TCGA: Thyroid cancer"), color = "#56B4E9") +
+    geom_point(data = . %>% filter(dataset_name == "TCGA: Breast cancer"), color = "#0072B2") +
+    geom_point(data = . %>% filter(dataset_name == "R. arthritis"), color = "#44AA99") +
+    geom_point(data = . %>% filter(dataset_name == "GTEx: Thyroid"), color = "#E69F00") +
+    geom_point(data = . %>% filter(dataset_name == "GTEx: Breast"), color = "#D55E00") +
+    xlab(expression(alpha)) +
+    ylab(paste("Fraction of genes with ", parameter2label[[parameter]], " above ", cut, sep="")) +
+    theme_linedraw() +
+    theme(aspect.ratio=1, plot.title =  element_text(size = 15, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 13), legend.text = element_text(size = 13), legend.title=element_text(size=14, face="bold")) +
+    geom_text_repel(
+      data = subset((sd_genes_vs_a_df %>% mutate(dataset_name = replace(dataset_name, dataset_name == "gtex:thyroid", "GTEx: Thyroid"))), dataset_name == "GTEx: Thyroid"),
+      aes(label = dataset_name), col = "#E69F00",
+      size = 4,
+      box.padding = unit(0.5, "lines"),
+      point.padding = unit(0.3, "lines")
+    ) +
+    geom_text_repel(
+      data = subset((sd_genes_vs_a_df %>% mutate(dataset_name = replace(dataset_name, dataset_name == "gtex:breast.mammary.tissue", "GTEx: Breast"))), dataset_name == "GTEx: Breast"),
+      aes(label = dataset_name), col = "#D55E00",
+      size = 4,
+      box.padding = unit(0.5, "lines"),
+      point.padding = unit(0.3, "lines")
+    ) +
+    geom_text_repel(
+      data = subset((sd_genes_vs_a_df %>% mutate(dataset_name = replace(dataset_name, dataset_name == "scipher:scipher.complete.dataset", "R. arthritis"))), dataset_name == "R. arthritis"),
+      aes(label = dataset_name), col = "#44AA99",
+      size = 4,
+      box.padding = unit(0.5, "lines"),
+      point.padding = unit(0.3, "lines")
+    ) +
+    geom_text_repel(
+      data = subset((sd_genes_vs_a_df %>% mutate(dataset_name = replace(dataset_name, dataset_name == "tcga:tcga-brca", "TCGA: Breast cancer"))), dataset_name == "TCGA: Breast cancer"),
+      aes(label = dataset_name), col = "#0072B2",
+      size = 4,
+      box.padding = unit(0.5, "lines"),
+      point.padding = unit(0.3, "lines")
+    ) +
+    geom_text_repel(
+      data = subset((sd_genes_vs_a_df %>% mutate(dataset_name = replace(dataset_name, dataset_name == "tcga:tcga-thca", "TCGA: Thyroid cancer"))), dataset_name == "TCGA: Thyroid cancer"),
+      aes(label = dataset_name), col = "#56B4E9",
+      size = 4,
+      box.padding = unit(0.5, "lines"),
+      point.padding = unit(0.3, "lines")
+    )
+  plot_file = paste(plots_dir, "/a_vs_fraction_genes_above_", parameter, "_cut.png", sep="")
+  ggsave(
+    plot_file,
+    dpi = 1200,
+    width = 6000,
+    #height = 6000,
+    units = c("px")
+  )
+  print(param_vs_a_plot)
+  scatter_plots[[x]] = param_vs_a_plot
+}
+```
+
+Create a panel with the CV results:
+
+```{r}
+# Use patchwork to concatenate plots
+distribution_plots[[3]] / scatter_plots[[3]] + 
+  plot_layout(guides = 'collect') + # Center legend
+  plot_annotation(tag_levels = 'A') & # Include letters 
+    theme(plot.tag = element_text(face = 'bold')) # that are bold
+
+plot_file = paste(plots_dir, "/cv_results.png", sep="")
+ggsave(
+  plot_file,
+  dpi = 1200,
+  #width = 9000,
+  height = 10000,
+  units = c("px")
+)
+
+```
+
+#### Samples variation
+
+```{r}
+datasets_selected = c("Breast.Mammary.Tissue", "Thyroid", "TCGA-BRCA", "TCGA-THCA", "scipher.complete.dataset")
+for (parameter in c("sd", "mean", "cv")){
+  distribution_plot = sd_samples_df %>%
+    #filter(sd < 500000) %>%
+    #filter(sd < 5000) %>%
+    filter(type_dataset %in% datasets_selected) %>%
+    mutate(type_dataset = replace(type_dataset, type_dataset == "scipher.complete.dataset", "R. arthritis")) %>%
+    mutate(type_dataset = replace(type_dataset, type_dataset == "Thyroid", "GTEx: Thyroid")) %>%
+    mutate(type_dataset = replace(type_dataset, type_dataset == "Breast.Mammary.Tissue", "GTEx: Breast")) %>%
+    mutate(type_dataset = replace(type_dataset, type_dataset == "TCGA-THCA", "TCGA: Thyroid cancer")) %>%
+    mutate(type_dataset = replace(type_dataset, type_dataset == "TCGA-BRCA", "TCGA: Breast cancer")) %>%
+    ggplot(aes(.data[[parameter]], color=type_dataset)) +
+    geom_freqpoly(size=1.5) +
+    #geom_histogram(alpha=0.2) +
+    scale_color_manual(values = c("#D55E00", "#E69F00", "#44AA99", "#0072B2", "#56B4E9")) +
+    scale_x_log10() + 
+    scale_y_log10() + 
+    labs(x=paste("Gene expression ", parameter, " (Log)", sep=""), y = "Number of samples (Log)") +
+    theme_linedraw() + 
+    guides(col=guide_legend(title="Dataset")) +
+    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.title=element_text(size=15, face="bold"))
+  plot_file = paste(plots_dir, "/distribution_", parameter, "_samples.png", sep="")
+  ggsave(
+    plot_file,
+    plot=distribution_plot,
+    dpi = 1200,
+    width = 10000,
+    height = 6000,
+    units = c("px")
+  )
+  print(distribution_plot)
+}
+```
+
+```{r}
+sd_cut=1000
+mean_cut=1000
+cv_cut=1000
+sd_samples_df %>% group_by(dataset, type_dataset) %>% summarize(mean_sd=mean(sd), median_sd=median(sd), mean_mean=mean(mean), median_mean=median(mean), mean_cv=mean(cv), median_cv=median(cv))
+sd_samples_vs_a_df = sd_samples_df %>% group_by(dataset, type_dataset, dataset_name) %>% summarize(num_samples_above_sd_cut=length(sd[sd >= sd_cut]), num_samples_above_mean_cut=length(mean[mean >= mean_cut]), num_samples_above_cv_cut=length(cv[cv >= cv_cut]), num_samples=n()) %>% ungroup() %>% mutate(fraction_samples_above_sd_cut = num_samples_above_sd_cut / num_samples, fraction_samples_above_mean_cut = num_samples_above_mean_cut / num_samples, fraction_samples_above_cv_cut = num_samples_above_cv_cut / num_samples) %>% inner_join(a_vs_fraction_corr_df, by=c("dataset_name"="dataset_name")) %>% select(!c("type_correlation", "correlation", "sample_size_statistical", "sample_size_statistical_corrected", "num_edges_from_statistical_corrected", "num_edges_from_statistical_corrected_norm")) %>% unique()
+
+sd_samples_vs_a_df
+```
+
+```{r}
+for (parameter in c("sd", "mean", "cv")){
+  if (parameter == "cv"){
+    cut = cv_cut
+  } else if (parameter == "sd"){
+    cut = sd_cut
+  } else if (parameter == "mean"){
+    cut = mean_cut
+  }
+  param_vs_a_plot = sd_samples_vs_a_df %>%
+    mutate(dataset_name = replace(dataset_name, dataset_name == "scipher:scipher.complete.dataset", "R. arthritis")) %>%
+    mutate(dataset_name = replace(dataset_name, dataset_name == "gtex:thyroid", "GTEx: Thyroid")) %>%
+    mutate(dataset_name = replace(dataset_name, dataset_name == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
+    mutate(dataset_name = replace(dataset_name, dataset_name == "tcga:tcga-thca", "TCGA: Thyroid cancer")) %>%
+    mutate(dataset_name = replace(dataset_name, dataset_name == "tcga:tcga-brca", "TCGA: Breast cancer")) %>%
+    ggplot(aes(x=a, y=.data[[paste("fraction_samples_above_", parameter, "_cut", sep="")]])) + 
+    geom_point() +
+    geom_point(data = . %>% filter(dataset_name == "TCGA: Thyroid cancer"), color = "#56B4E9") +
+    geom_point(data = . %>% filter(dataset_name == "TCGA: Breast cancer"), color = "#0072B2") +
+    geom_point(data = . %>% filter(dataset_name == "R. arthritis"), color = "#44AA99") +
+    geom_point(data = . %>% filter(dataset_name == "GTEx: Thyroid"), color = "#E69F00") +
+    geom_point(data = . %>% filter(dataset_name == "GTEx: Breast"), color = "#D55E00") +
+    xlab(expression(alpha)) +
+    ylab(paste("Fraction of samples with ", parameter, " above ", cut, sep="")) +
+    theme_linedraw() +
+    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.title=element_text(size=15, face="bold")) +
+    geom_text_repel(
+      data = subset((sd_samples_vs_a_df %>% mutate(dataset_name = replace(dataset_name, dataset_name == "gtex:thyroid", "GTEx: Thyroid"))), dataset_name == "GTEx: Thyroid"),
+      aes(label = dataset_name), col = "#E69F00",
+      size = 5,
+      box.padding = unit(0.5, "lines"),
+      point.padding = unit(0.3, "lines")
+    ) +
+    geom_text_repel(
+      data = subset((sd_samples_vs_a_df %>% mutate(dataset_name = replace(dataset_name, dataset_name == "gtex:breast.mammary.tissue", "GTEx: Breast"))), dataset_name == "GTEx: Breast"),
+      aes(label = dataset_name), col = "#D55E00",
+      size = 5,
+      box.padding = unit(0.35, "lines"),
+      point.padding = unit(0.3, "lines")
+    ) +
+    geom_text_repel(
+      data = subset((sd_samples_vs_a_df %>% mutate(dataset_name = replace(dataset_name, dataset_name == "scipher:scipher.complete.dataset", "R. arthritis"))), dataset_name == "R. arthritis"),
+      aes(label = dataset_name), col = "#44AA99",
+      size = 5,
+      box.padding = unit(0.5, "lines"),
+      point.padding = unit(0.3, "lines")
+    ) +
+    geom_text_repel(
+      data = subset((sd_samples_vs_a_df %>% mutate(dataset_name = replace(dataset_name, dataset_name == "tcga:tcga-brca", "TCGA: Breast cancer"))), dataset_name == "TCGA: Breast cancer"),
+      aes(label = dataset_name), col = "#0072B2",
+      size = 5,
+      box.padding = unit(0.35, "lines"),
+      point.padding = unit(0.3, "lines")
+    ) +
+    geom_text_repel(
+      data = subset((sd_samples_vs_a_df %>% mutate(dataset_name = replace(dataset_name, dataset_name == "tcga:tcga-thca", "TCGA: Thyroid cancer"))), dataset_name == "TCGA: Thyroid cancer"),
+      aes(label = dataset_name), col = "#56B4E9",
+      size = 5,
+      box.padding = unit(0.5, "lines"),
+      point.padding = unit(0.3, "lines")
+    )
+  plot_file = paste(plots_dir, "/a_vs_fraction_samples_above_", parameter, "_cut.png", sep="")
+  ggsave(
+    plot_file,
+    dpi = 1200,
+    width = 6400,
+    height = 6000,
+    units = c("px")
+  )
+  print(param_vs_a_plot)
+}
+```
+
+#### Wilcoxon test between distribution of SDs
+
+```{r}
+#pairs = t(combn(c("Artery.Tibial", "Whole.Blood", "TCGA-BRCA", "TCGA-COAD", "scipher.complete.dataset"),2))
+pairs = t(combn(c("Breast.Mammary.Tissue", "Thyroid", "TCGA-BRCA", "TCGA-THCA", "scipher.complete.dataset"),2))
+cols = c("dataset1", "dataset2", "wilcox", "pval")
+wilcox_result_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+for (x in 1:nrow(pairs)){
+  pair=pairs[x,]
+  comp_df = inner_join((sd_df %>% filter(type_dataset == pair[1])), (sd_df %>% filter(type_dataset == pair[2])), by="gene")
+  wilcox_res = wilcox.test(comp_df$sd.x, comp_df$sd.y, paired = TRUE, alternative = "two.sided")
+  wilcox_result_df = rbind(wilcox_result_df, data.frame(dataset1=pair[1], dataset2=pair[2], wilcox=wilcox_res$statistic, pval=wilcox_res$p.value))
+}
+wilcox_result_df
+```

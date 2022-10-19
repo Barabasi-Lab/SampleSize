@@ -48,9 +48,81 @@ parameter2label <- list("nodes"="Nodes", "edges"="Edges", "av_degree"="Av. degre
 #'  @param x_parameter Parameter of the X axis.
 #'  
 get_logarithmic_tendency = function(results_dataframe, y_parameter, x_parameter){
+  # Calculate mean of repetitions from same sample size
+  results_dataframe = results_dataframe %>% 
+    arrange(get(x_parameter), rep) %>%
+    group_by(get(x_parameter)) %>%
+    summarise_at(vars(all_of(y_parameter)), list(mean=mean, median=median, sd=sd)) %>%
+    rename(!!x_parameter := "get(x_parameter)") %>%
+    rename(!!y_parameter := "mean") %>%
+    ungroup()
+  # Calculate linear fit
   lm_summary = summary(lm(get(y_parameter)~log(get(x_parameter)), data=results_dataframe))
   used_data=data.frame(y=results_dataframe[[y_parameter]], x=log(results_dataframe[[x_parameter]]))
-  return(list(lm_summary=lm_summary, used_data=used_data, a=coef(lm_summary)[2], b=coef(lm_summary)[1], L=NaN, adj.r.squared=lm_summary$adj.r.squared))
+  return(list(lm_summary=lm_summary, used_data=used_data, slope=coef(lm_summary)[2], intercept=coef(lm_summary)[1], a=coef(lm_summary)[2], b=coef(lm_summary)[1], L=NaN, adj.r.squared=lm_summary$adj.r.squared))
+}
+
+#'  get_exponential_tendency
+#'  Method to obtain a logarithmic fit from the data.
+#'  @param results_dataframe Dataframe containing the data.
+#'  @param y_parameter Parameter of the Y axis.
+#'  @param x_parameter Parameter of the X axis.
+#'  
+get_exponential_tendency = function(results_dataframe, y_parameter, x_parameter){
+  # Calculate mean of repetitions from same sample size
+  results_dataframe = results_dataframe %>% 
+    arrange(get(x_parameter), rep) %>%
+    group_by(get(x_parameter)) %>%
+    summarise_at(vars(all_of(y_parameter)), list(mean=mean, median=median, sd=sd)) %>%
+    rename(!!x_parameter := "get(x_parameter)") %>%
+    rename(!!y_parameter := "mean") %>%
+    ungroup()
+  # Calculate linear fit
+  lm_summary = summary(lm(log(get(y_parameter))~get(x_parameter), data=results_dataframe))
+  used_data=data.frame(y=log(results_dataframe[[y_parameter]]), x=results_dataframe[[x_parameter]])
+  return(list(lm_summary=lm_summary, used_data=used_data, slope=coef(lm_summary)[2], intercept=coef(lm_summary)[1], a=coef(lm_summary)[2], b=coef(lm_summary)[1], L=NaN, adj.r.squared=lm_summary$adj.r.squared))
+}
+
+#'  get_linear_tendency
+#'  Method to obtain a logarithmic fit from the data.
+#'  @param results_dataframe Dataframe containing the data.
+#'  @param y_parameter Parameter of the Y axis.
+#'  @param x_parameter Parameter of the X axis.
+#'  
+get_linear_tendency = function(results_dataframe, y_parameter, x_parameter){
+  # Calculate mean of repetitions from same sample size
+  results_dataframe = results_dataframe %>% 
+    arrange(get(x_parameter), rep) %>%
+    group_by(get(x_parameter)) %>%
+    summarise_at(vars(all_of(y_parameter)), list(mean=mean, median=median, sd=sd)) %>%
+    rename(!!x_parameter := "get(x_parameter)") %>%
+    rename(!!y_parameter := "mean") %>%
+    ungroup()
+  # Calculate linear fit
+  lm_summary = summary(lm(get(y_parameter)~get(x_parameter), data=results_dataframe))
+  used_data=data.frame(y=results_dataframe[[y_parameter]], x=results_dataframe[[x_parameter]])
+  return(list(lm_summary=lm_summary, used_data=used_data, slope=coef(lm_summary)[2], intercept=coef(lm_summary)[1], a=coef(lm_summary)[2], b=coef(lm_summary)[1], L=NaN, adj.r.squared=lm_summary$adj.r.squared))
+}
+
+#'  get_square_root_tendency
+#'  Method to obtain a logarithmic fit from the data.
+#'  @param results_dataframe Dataframe containing the data.
+#'  @param y_parameter Parameter of the Y axis.
+#'  @param x_parameter Parameter of the X axis.
+#'  
+get_square_root_tendency = function(results_dataframe, y_parameter, x_parameter){
+  # Calculate mean of repetitions from same sample size
+  results_dataframe = results_dataframe %>% 
+    arrange(get(x_parameter), rep) %>%
+    group_by(get(x_parameter)) %>%
+    summarise_at(vars(all_of(y_parameter)), list(mean=mean, median=median, sd=sd)) %>%
+    rename(!!x_parameter := "get(x_parameter)") %>%
+    rename(!!y_parameter := "mean") %>%
+    ungroup()
+  # Calculate linear fit
+  lm_summary = summary(lm(log(get(y_parameter))~log(get(x_parameter)), data=results_dataframe))
+  used_data=data.frame(y=log(results_dataframe[[y_parameter]]), x=log(results_dataframe[[x_parameter]]))
+  return(list(lm_summary=lm_summary, used_data=used_data, slope=coef(lm_summary)[2], intercept=coef(lm_summary)[1], a=coef(lm_summary)[2], b=coef(lm_summary)[1], L=NaN, adj.r.squared=lm_summary$adj.r.squared))
 }
 
 #'  calculate_stretched_exponential_model_without_L
@@ -81,15 +153,15 @@ calculate_stretched_exponential_model_without_L = function(results_dataframe, y_
   # Calculate polynomial equation = logarithm of the gradient vs. logarithm of sample size (starting from 2nd position) (removing negatives)
   lm_summary = summary(lm(log(frac_grad[boo])~log(results_dataframe_mean[[x_parameter]][2:length(results_dataframe_mean[[x_parameter]])][boo])))
   used_data = data.frame(y=log(frac_grad[boo]), x=log(results_dataframe_mean[[x_parameter]][2:length(results_dataframe_mean[[x_parameter]])][boo]))
-  return(list(lm_summary=lm_summary, used_data=used_data, a=coef(lm_summary)[2], b=coef(lm_summary)[1], L=NaN, adj.r.squared=lm_summary$adj.r.squared))
+  return(list(lm_summary=lm_summary, used_data=used_data, slope=coef(lm_summary)[2], intercept=coef(lm_summary)[1], a=coef(lm_summary)[2], b=coef(lm_summary)[1], L=NaN, adj.r.squared=lm_summary$adj.r.squared))
 }
 
 #'  calculate_predictions_using_stretched_exponential_model_without_L
 #'  Formula to calculate stretched exponential of significant interactions from a list of sample sizes without using L.
 #'  This formula does not require the use of L
 #'  @param x List of sample sizes.
-#'  @param a Slope coefficient.
-#'  @param b Intercept coefficient.
+#'  @param a
+#'  @param b
 #'  
 calculate_predictions_using_stretched_exponential_model_without_L = function(x, a, b){
   y = (exp( (exp(b) * x**(1 + a) ) / (1 + a) ))
@@ -125,7 +197,7 @@ calculate_stretched_exponential_model_by_linear_fit = function(results_dataframe
   # This is the data used to obtain the final model
   used_data = data.frame(y=log(s_rec), x=log(N))
   #return(list(lm_summary=lm_summary, used_data=used_data, a=coef(lm_summary)[2], b=coef(lm_summary)[1], L=L, adj.r.squared=lm_summary$adj.r.squared))
-  return(list(lm_summary=lm_summary, used_data=used_data, a=a, b=b, L=L, adj.r.squared=lm_summary$adj.r.squared))
+  return(list(lm_summary=lm_summary, used_data=used_data, slope=coef(lm_summary)[2], intercept=coef(lm_summary)[1], a=a, b=b, L=L, adj.r.squared=lm_summary$adj.r.squared))
 }
 
 #'  calculate_stretched_exponential_model_by_optimization
@@ -168,8 +240,8 @@ calculate_stretched_exponential_model_by_optimization = function(results_datafra
   b = exp((coef(lm_summary)[1] + log(a-1)))
   # This is the data used to obtain the final model
   used_data = data.frame(y=log(s_rec), x=log(N))
-  return(list(lm_summary=lm_summary, used_data=used_data, a=a, b=b, L=L, adj.r.squared=lm_summary$adj.r.squared))
   #return(list(lm_summary=lm_summary, used_data=used_data, a=coef(lm_summary)[2], b=coef(lm_summary)[1], L=L, adj.r.squared=lm_summary$adj.r.squared))
+  return(list(lm_summary=lm_summary, used_data=used_data, slope=coef(lm_summary)[2], intercept=coef(lm_summary)[1], a=a, b=b, L=L, adj.r.squared=lm_summary$adj.r.squared))
 }
 
 #'  calculate_predictions_using_stretched_exponential_model_optimized
@@ -196,6 +268,15 @@ calculate_analytical_model = function(results_dataframe, y_parameter, x_paramete
   if(model == "Logarithmic"){
     model_output = get_logarithmic_tendency(results_dataframe=results_dataframe, y_parameter=y_parameter, x_parameter=x_parameter)
     model_result = (log(sort(unique(results_dataframe[[x_parameter]])))*model_output$a + model_output$b)
+  } else if(model == "Linear"){
+    model_output = get_linear_tendency(results_dataframe=results_dataframe, y_parameter=y_parameter, x_parameter=x_parameter)
+    model_result = (sort(unique(results_dataframe[[x_parameter]]))*model_output$a + model_output$b)
+  } else if(model == "Exponential"){
+    model_output = get_exponential_tendency(results_dataframe=results_dataframe, y_parameter=y_parameter, x_parameter=x_parameter)
+    model_result = (exp(sort(unique(results_dataframe[[x_parameter]]))*model_output$a + model_output$b))
+  } else if(model == "Square root"){
+    model_output = get_square_root_tendency(results_dataframe=results_dataframe, y_parameter=y_parameter, x_parameter=x_parameter)
+    model_result = (exp((log(sort(unique(results_dataframe[[x_parameter]])))*model_output$a + model_output$b)))
   } else if(model == "Stretched exponential (by optimization)"){
     model_output = calculate_stretched_exponential_model_by_optimization(results_dataframe=results_dataframe, y_parameter=y_parameter, x_parameter=x_parameter, L_guess=c(L))
     model_result = calculate_predictions_using_stretched_exponential_model_optimized(x=sort(unique(results_dataframe[[x_parameter]])), L=model_output$L, a=model_output$a, b=model_output$b)
@@ -220,6 +301,12 @@ calculate_analytical_model = function(results_dataframe, y_parameter, x_paramete
 calculate_prediction_from_analytical_model = function(model, x_list, a, b, L){
   if(model == "Logarithmic"){
     prediction_result = (log(x_list)*a + b)
+  } else if(model == "Linear"){
+    prediction_result = (x_list*a + b)
+  } else if(model == "Exponential"){
+    prediction_result = (exp((x_list*a + b)))
+  } else if(model == "Square root"){
+    prediction_result = (exp((log(x_list)*a + b)))
   } else if((model == "Stretched exponential (by optimization)") | (model == "Stretched exponential (by linear fit)")){
     prediction_result = calculate_predictions_using_stretched_exponential_model_optimized(x=x_list, L=L, a=a, b=b)
   } else if(model == "Stretched exponential (without L)"){
@@ -238,6 +325,12 @@ calculate_prediction_from_analytical_model = function(model, x_list, a, b, L){
 get_formula = function(model, a, b, L){
   if(model == "Logarithmic"){
     formula_name = paste("F(x) = (", formatC(round(a, 2), format = "e", digits = 2), ")*ln(x) + (", formatC(round(b, 2), format = "e", digits = 2), ")", sep="")
+  } else if(model == "Linear"){
+    formula_name = paste("F(x) = ", formatC(round(a, 2), format = "e", digits = 2), " * x + ", formatC(round(b, 2), format = "e", digits = 2), sep="")
+  } else if(model == "Exponential"){
+    formula_name = paste("F(x) = exp(", formatC(round(a, 2), format = "e", digits = 2), " * x + ", formatC(round(b, 2), format = "e", digits = 2), ")", sep="")
+  } else if(model == "Square root"){
+    formula_name = paste("F(x) = exp(", formatC(round(a, 2), format = "e", digits = 2), " * ln(x) + ", formatC(round(b, 2), format = "e", digits = 2), ")", sep="")
   } else if((model == "Stretched exponential (by optimization)") | (model == "Stretched exponential (by linear fit)")){
     formula_name = paste("F(x) = ", round(L, 2), " * exp[(", round(b, 2), " * x**((", round(a, 2), ") + 1)) / ((", round(a, 2), ") + 1) ]", sep="")
   } else if(model == "Stretched exponential (without L)"){
@@ -255,9 +348,10 @@ topology_results_df = fread(topology_results_file)
 ppi_results_df = fread(ppi_results_file)
 disease_genes_results_df = fread(disease_genes_results_file)
 essential_genes_results_df = fread(essential_genes_results_file) %>% rename("num_essential_components" = "num_components", "num_essential_lcc_nodes" = "num_lcc_nodes", "num_essential_lcc_edges" = "num_lcc_edges", "essential_lcc_z" = "lcc_z", "essential_lcc_pvalue" = "lcc_pvalue")
-results_df = inner_join(topology_results_df, ppi_results_df, by = c("method", "dataset", "type_dataset", "size", "rep", "type_correlation", "threshold")) %>% inner_join(disease_genes_results_df, by = c("method", "dataset", "type_dataset", "size", "rep", "type_correlation", "threshold")) %>% inner_join(essential_genes_results_df, by = c("method", "dataset", "type_dataset", "size", "rep", "type_correlation", "threshold"))
+results_df = inner_join(topology_results_df, ppi_results_df, by = c("method", "dataset", "type_dataset", "type_tcga_tissue", "size", "rep", "type_correlation", "threshold")) %>% inner_join(disease_genes_results_df, by = c("method", "dataset", "type_dataset", "type_tcga_tissue", "size", "rep", "type_correlation", "threshold")) %>% inner_join(essential_genes_results_df, by = c("method", "dataset", "type_dataset", "type_tcga_tissue", "size", "rep", "type_correlation", "threshold"))
 results_df$type_dataset = paste(results_df$dataset, results_df$type_dataset, sep=":") # Join dataset and type_dataset
 results_df$type_dataset = tolower(results_df$type_dataset)
+results_df$type_dataset = ifelse(results_df$type_tcga_tissue == "normal", paste(results_df$type_dataset, "normal", sep="-"), results_df$type_dataset)
 results_df$threshold = as.character(results_df$threshold) # Consider threshold as a discrete variable
 results_df$log_disease_lcc_pvalue = abs(log10(results_df$disease_lcc_pvalue))
 results_df$log_disease_lcc_pvalue = replace(results_df$log_disease_lcc_pvalue, is.infinite(results_df$log_disease_lcc_pvalue),abs(log(0.000001))) # Replace infinite values by very high values
@@ -347,13 +441,13 @@ server <- function(input, output, session) {
       updateSelectInput(session = session, 
                         inputId = "topology_type_normalization", 
                         label = "Type of y axis normalization:", 
-                        choices = c("Divide by max. value" = "divide.max.value", "Divide by max. possible value" = "divide.max.possible.value", "Divide by value of convergence" = "divide.L"),
+                        choices = c("Divide by max. value" = "divide.max.value", "Divide by max. num. links" = "divide.max.num.links", "Divide by value of convergence (L)" = "divide.L"),
                         selected = "divide.max.value")
     } else {
       updateSelectInput(session = session, 
                         inputId = "topology_type_normalization", 
                         label = "Type of y axis normalization:", 
-                        choices = c("Divide by max. value" = "divide.max.value", "Divide by max. possible value" = "divide.max.possible.value"),
+                        choices = c("Divide by max. value" = "divide.max.value", "Divide by max. num. links" = "divide.max.num.links"),
                         selected = "divide.max.value")
     }
   })
@@ -385,6 +479,13 @@ server <- function(input, output, session) {
     if ("tcga" %in% c(input$topology_dataset)){
       type_datasets_tcga=c(input$topology_tcga_project)
       type_datasets_tcga = paste("tcga", type_datasets_tcga, sep=":")
+      types_tcga_tissue=c(input$topology_type_tcga_tissue)
+      if ((length(types_tcga_tissue) == 2) & ("normal" %in% types_tcga_tissue)){
+        type_datasets_tcga = c(type_datasets_tcga, paste(type_datasets_tcga, "normal", sep="-"))
+      }
+      if ((length(types_tcga_tissue) == 1) & ("normal" %in% types_tcga_tissue)){
+        type_datasets_tcga = paste(type_datasets_tcga, "normal", sep="-")
+      }
     }
     type_datasets = c(type_datasets_gtex, type_datasets_scipher, type_datasets_tcga)
       
@@ -443,7 +544,7 @@ server <- function(input, output, session) {
     #----------------------------#
     
     # Check if user wants to plot analytical model
-    cols = c("model", "model_result", "size", "a", "b", "L", "adj.r.squared", "max_value_in_dataset", "formula", "type_dataset", "fill_parameter")
+    cols = c("model", "model_result", "size", "slope", "intercept", "a", "b", "L", "adj.r.squared", "max_value_in_dataset", "formula", "type_dataset", "fill_parameter")
     topology_results_selected_analytical_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
     cols = c("model", "y", "x", "regression", "type_dataset", "fill_parameter")
     stretched_exponential_regression_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
@@ -452,9 +553,10 @@ server <- function(input, output, session) {
     analytical_model_summary_df = data.frame()
     N_vals = seq(10, 50000, 10)
     
-    types_analytical_model = c("Stretched exponential (by optimization)", "Stretched exponential (by linear fit)", "Stretched exponential (without L)", "Logarithmic")
+    types_analytical_model = c("Stretched exponential (by optimization)", "Stretched exponential (by linear fit)", "Stretched exponential (without L)", "Logarithmic", "Exponential", "Linear", "Square root")
     if (isTruthy(input$topology_analytical)){
       for(model in types_analytical_model){
+        print(model)
         if (is.null(selected_fill_parameter)){
           # Calculate the analytical model
           output_variable = calculate_analytical_model(results_dataframe=results_selected_df, y_parameter=input$boxplot_parameter, x_parameter="size", model=model, L=unique(results_selected_df$total_num_edges_norm))
@@ -466,12 +568,12 @@ server <- function(input, output, session) {
             output_variable$model_result = output_variable$model_result * max_value_in_dataset
             prediction_result = prediction_result * max_value_in_dataset
             # Save data used to create the model
-            stretched_exponential_regression_df = rbind(stretched_exponential_regression_df, cbind(data.frame(model=model), output_variable$model_output$used_data, data.frame(regression_line=(output_variable$model_output$a * output_variable$model_output$used_data$x + output_variable$model_output$b), type_dataset=unique(results_selected_df$type_dataset)[1])))
+            stretched_exponential_regression_df = rbind(stretched_exponential_regression_df, cbind(data.frame(model=model), output_variable$model_output$used_data, data.frame(regression_line=(output_variable$model_output$slope * output_variable$model_output$used_data$x + output_variable$model_output$intercept), type_dataset=unique(results_selected_df$type_dataset)[1])))
           }
           # Calculate formula
           formula = get_formula(model=model, a=output_variable$model_output$a, b=output_variable$model_output$b, L=output_variable$model_output$L)
           # Add results
-          topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model=model, model_result=output_variable$model_result, size=sort(unique(results_selected_df$size)), a=output_variable$model_output$a, b=output_variable$model_output$b, L=output_variable$model_output$L, adj.r.squared=output_variable$model_output$lm_summary$adj.r.squared, max_value_in_dataset=max_value_in_dataset, formula=formula, type_dataset=unique(results_selected_df$type_dataset)[1]))
+          topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model=model, model_result=output_variable$model_result, size=sort(unique(results_selected_df$size)), slope=output_variable$model_output$slope, intercept=output_variable$model_output$intercept, a=output_variable$model_output$a, b=output_variable$model_output$b, L=output_variable$model_output$L, adj.r.squared=output_variable$model_output$lm_summary$adj.r.squared, max_value_in_dataset=max_value_in_dataset, formula=formula, type_dataset=unique(results_selected_df$type_dataset)[1]))
           predicted_results_df = rbind(predicted_results_df, data.frame(model=model, model_result=prediction_result, size=N_vals, max_value_in_dataset=max_value_in_dataset, type_dataset=unique(results_selected_df$type_dataset)[1]))
         } else{
           for(selected_parameter in unique(results_selected_df[[selected_fill_parameter]])){
@@ -487,12 +589,12 @@ server <- function(input, output, session) {
               output_variable$model_result = output_variable$model_result * max_value_in_dataset
               prediction_result = prediction_result * max_value_in_dataset
               # Save data used to create the model
-              stretched_exponential_regression_df = rbind(stretched_exponential_regression_df, cbind(data.frame(model=model), output_variable$model_output$used_data, data.frame(regression_line=(output_variable$model_output$a * output_variable$model_output$used_data$x + output_variable$model_output$b), type_dataset=unique(results_selected_by_parameter_df$type_dataset)[1], fill_parameter=selected_parameter)))
+              stretched_exponential_regression_df = rbind(stretched_exponential_regression_df, cbind(data.frame(model=model), output_variable$model_output$used_data, data.frame(regression_line=(output_variable$model_output$slope * output_variable$model_output$used_data$x + output_variable$model_output$intercept), type_dataset=unique(results_selected_by_parameter_df$type_dataset)[1], fill_parameter=selected_parameter)))
             }
             # Calculate formula
             formula = get_formula(model=model, a=output_variable$model_output$a, b=output_variable$model_output$b, L=output_variable$model_output$L)
             # Add results
-            topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model=model, model_result=output_variable$model_result, size=sort(unique(results_selected_by_parameter_df$size)), a=output_variable$model_output$a, b=output_variable$model_output$b, L=output_variable$model_output$L, adj.r.squared=output_variable$model_output$lm_summary$adj.r.squared, max_value_in_dataset=max_value_in_dataset, formula=formula, type_dataset=unique(results_selected_by_parameter_df$type_dataset), fill_parameter=selected_parameter))
+            topology_results_selected_analytical_df = rbind(topology_results_selected_analytical_df, data.frame(model=model, model_result=output_variable$model_result, size=sort(unique(results_selected_by_parameter_df$size)), slope=output_variable$model_output$slope, intercept=output_variable$model_output$intercept, a=output_variable$model_output$a, b=output_variable$model_output$b, L=output_variable$model_output$L, adj.r.squared=output_variable$model_output$lm_summary$adj.r.squared, max_value_in_dataset=max_value_in_dataset, formula=formula, type_dataset=unique(results_selected_by_parameter_df$type_dataset), fill_parameter=selected_parameter))
             predicted_results_df = rbind(predicted_results_df, data.frame(model=model, model_result=prediction_result, size=N_vals, max_value_in_dataset=max_value_in_dataset, type_dataset=unique(results_selected_by_parameter_df$type_dataset), fill_parameter=selected_parameter))
           }
         }
@@ -566,11 +668,13 @@ server <- function(input, output, session) {
           predicted_results_df = predicted_results_df %>% inner_join((topology_results_selected_analytical_df %>% filter(model %in% input$topology_type_analytical_model) %>% select("L", !!selected_fill_parameter) %>% unique()), by=selected_fill_parameter) %>% group_by_at(selected_fill_parameter) %>% mutate(model_result = (model_result / max_value_in_dataset)/L)
           topology_results_selected_analytical_df = topology_results_selected_analytical_df %>% group_by_at(selected_fill_parameter) %>% mutate(norm = (model_result/max_value_in_dataset)/L) %>% rename(unnorm = model_result) %>% rename(model_result = norm)
         }
-      } else if(input$topology_type_normalization == "divide.max.possible.value"){
+      } else if(input$topology_type_normalization == "divide.max.num.links"){
         results_selected_df = results_selected_df %>% 
           #inner_join(numbers_complete_graph_df, by = "type_dataset") %>% 
           group_by_at(selected_fill_parameter) %>% mutate(norm = get(input$boxplot_parameter)/total_num_edges) %>% rename(unnorm = input$boxplot_parameter) %>% rename(!!input$boxplot_parameter := norm)
-        topology_results_selected_by_size_df = topology_results_selected_by_size_df %>% inner_join(numbers_complete_graph_df, by = "type_dataset") %>% group_by_at(selected_fill_parameter) %>% mutate(mean_norm=mean/total_num_edges)
+        topology_results_selected_by_size_df = topology_results_selected_by_size_df %>% 
+          #inner_join(numbers_complete_graph_df, by = "type_dataset") %>% 
+          group_by_at(selected_fill_parameter) %>% mutate(mean_norm=mean/total_num_edges)
         if (isTruthy(input$topology_analytical)){
           topology_results_selected_analytical_df = topology_results_selected_analytical_df %>% inner_join(numbers_complete_graph_df, by = "type_dataset") %>% group_by_at(selected_fill_parameter) %>% mutate(norm = model_result/total_num_edges) %>% rename(unnorm = model_result) %>% rename(model_result = norm)
           predicted_results_df = predicted_results_df %>% inner_join(numbers_complete_graph_df, by = "type_dataset") %>% group_by_at(selected_fill_parameter) %>% mutate(norm = model_result/total_num_edges) %>% rename(unnorm = model_result) %>% rename(model_result = norm)
@@ -615,7 +719,7 @@ server <- function(input, output, session) {
     #       predicted_results_df$model_result = ifelse(predicted_results_df$model %in% c("Stretched exponential (without L)", "Stretched exponential (by optimization)"), predicted_results_df$model_result * max(results_selected_df[[input$boxplot_parameter]]), predicted_results_df$model_result)
     #     }
     #     # Un-normalize and re-normalize by total num of edges in complete graph
-    #     if((isTRUE(input$topology_normalize_y)) & (input$topology_type_normalization == "divide.max.possible.value")){
+    #     if((isTRUE(input$topology_normalize_y)) & (input$topology_type_normalization == "divide.max.num.links")){
     #       topology_results_selected_analytical_df$model_result = ifelse(topology_results_selected_analytical_df$model %in% c("Stretched exponential (without L)", "Stretched exponential (by optimization)"), topology_results_selected_analytical_df$model_result * max(results_selected_df$unnorm) / unique(results_selected_df$total_num_edges), topology_results_selected_analytical_df$model_result)
     #       predicted_results_df = predicted_results_df %>% inner_join((results_selected_df %>% select("type_dataset", "total_num_edges") %>% unique()), by=c("type_dataset")) %>% mutate(norm = model_result * max(results_selected_df$unnorm)/total_num_edges) %>% select(!c("model_result", "total_num_edges")) %>% rename(model_result = norm)
     #     }
@@ -656,7 +760,7 @@ server <- function(input, output, session) {
     #         predicted_results_df$model_result = ifelse((predicted_results_df$fill_parameter == selected_parameter & predicted_results_df$model %in% c("Stretched exponential (without L)", "Stretched exponential (by optimization)")), predicted_results_df$model_result * max(results_selected_by_parameter_df[[input$boxplot_parameter]]), predicted_results_df$model_result)
     #       }
     #       # Un-normalize and re-normalize by total num of edges in complete graph
-    #       if((isTRUE(input$topology_normalize_y)) & (input$topology_type_normalization == "divide.max.possible.value")){
+    #       if((isTRUE(input$topology_normalize_y)) & (input$topology_type_normalization == "divide.max.num.links")){
     #         topology_results_selected_analytical_df$model_result = ifelse((topology_results_selected_analytical_df[[selected_fill_parameter]] == selected_parameter & topology_results_selected_analytical_df$model %in% c("Stretched exponential (without L)", "Stretched exponential (by optimization)")), topology_results_selected_analytical_df$model_result * max(results_selected_by_parameter_df$unnorm) / unique(results_selected_by_parameter_df$total_num_edges), topology_results_selected_analytical_df$model_result)
     #         # Join predicted results with total number of edges
     #         predicted_results_df = predicted_results_df %>% inner_join((results_selected_df %>% select("type_dataset", "total_num_edges") %>% unique()), by=c("type_dataset"))
@@ -796,7 +900,7 @@ server <- function(input, output, session) {
       if(isTRUE(input$topology_normalize_y)){
         if(input$topology_type_normalization == "divide.max.value"){
           label_y= paste(label_y, " (Norm.)", sep="")
-        } else if (input$topology_type_normalization == "divide.max.possible.value"){
+        } else if (input$topology_type_normalization == "divide.max.num.links"){
           label_y= paste(label_y, " / Max. num. edges", sep="")
           #label_y= paste(label_y, " / (V*(V-1)/2)", sep="")
         } else if(input$topology_type_normalization == "divide.L") {
@@ -860,7 +964,7 @@ server <- function(input, output, session) {
         if(isTRUE(input$topology_normalize_y)){
           if(input$topology_type_normalization == "divide.max.value"){
             label_y= paste(label_y, " (Norm.)", sep="")
-          } else if (input$topology_type_normalization == "divide.max.possible.value"){
+          } else if (input$topology_type_normalization == "divide.max.num.links"){
             label_y= paste(label_y, " / Max. num. edges", sep="")
             #label_y= paste(label_y, " / (V*(V-1)/2)", sep="")
           } else if(input$topology_type_normalization == "divide.L") {

@@ -111,6 +111,7 @@ topology_results_file = paste(input_dir, 'analysis_topology.csv', sep='/')
 topology_results_df = fread(topology_results_file)
 topology_results_df$dataset = paste(topology_results_df$dataset, topology_results_df$type_dataset, sep=":") # Join dataset and type_dataset
 topology_results_df$dataset = tolower(topology_results_df$dataset)
+topology_results_df$dataset = ifelse(topology_results_df$type_tcga_tissue == "normal", paste(topology_results_df$dataset, "normal", sep="-"), topology_results_df$dataset)
 head(topology_results_df)
 ```
 
@@ -124,7 +125,7 @@ threshold = 0.05
 
 cols = c("dataset", "type_correlation", "correlation", "sample_size_from_graphic", "num_edges_from_graphic", "sample_size_max_value")
 size_convergence_correlation_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
-for (dataset in numbers_df$dataset){
+for (dataset in (numbers_df %>% filter(dataset %in% unique(topology_results_df$dataset)))$dataset){
   # Calculate mean for all correlations
   topology_results_all_corr_df = topology_results_df %>% filter((method == !!method) & (dataset == !!dataset) & (type_correlation == "all") & (threshold == !!threshold)) %>% select(size, rep, num_edges)
 topology_results_all_corr_by_size_df = topology_results_all_corr_df %>%
@@ -168,7 +169,7 @@ print(size_convergence_correlation_df)
 ```
 
 ```{r}
-topology_results_selected_df = topology_results_df %>% filter((method == "pearson") & (dataset == "tcga:tcga") & (threshold == 0.05) & (type_correlation %in% c("all", "very strong", "strong-very strong", "moderate-strong-very strong", "weak-moderate-strong-very strong"))) %>% select(size, rep, num_edges, type_correlation)
+topology_results_selected_df = topology_results_df %>% filter((method == "pearson") & (dataset == "tcga:tcga-brca") & (threshold == 0.05) & (type_correlation %in% c("all", "very strong", "strong-very strong", "moderate-strong-very strong", "weak-moderate-strong-very strong"))) %>% select(size, rep, num_edges, type_correlation)
 topology_results_selected_by_size_df = topology_results_selected_df %>%
   group_by(size, type_correlation) %>%
   summarise(mean=mean(num_edges), sd=sd(num_edges)) %>%

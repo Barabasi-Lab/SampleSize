@@ -81,7 +81,7 @@ def create_gene_coexpression_networks(options):
     # Define queue parameters
     max_mem = config.get("Cluster", "max_mem")
     queue = config.get("Cluster", "cluster_queue") # debug, express, short, long, large
-    constraint = True
+    constraint = False
     exclude = []
     #exclude = ['d0012', 'd0123']
     modules = ['python/3.8.1', 'anaconda3', 'R/4.0.3']

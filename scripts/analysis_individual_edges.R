@@ -193,9 +193,10 @@ print("Plot histogram of standard deviation 2")
 ggplot((networks_df %>% select(gp, sdgr, ssgr) %>% unique()), aes(x=sdgr, fill=ssgr)) + 
   geom_histogram(alpha = 0.5, position = "identity", binwidth = 0.01) +
   theme_linedraw() +
+  scale_fill_brewer(palette = "YlOrRd") +
   xlab("Standard deviation") +
   ylab("Number of edges") +
-  guides(col=guide_legend(title="Group of sizes")) +
+  guides(fill=guide_legend(title="Sample size group")) +
   theme(plot.title =  element_text(size = 17, face="bold"), 
         axis.title = element_text(size = 16, face="bold"), 
         axis.text = element_text(size = 15),

@@ -17,6 +17,7 @@ Parse the results of the analysis of co-expression networks.
 library(data.table)
 library(dplyr)
 set.seed(1510)
+options(bitmapType='cairo')
 ```
 
 ## Parse results
@@ -105,7 +106,7 @@ disease_gene_results_df %>% fwrite(disease_genes_file)
 ```
 
 
-```{r output_dataset, echo=FALSE, results='hide'}
+```{r output_num_edges, echo=FALSE, results='hide'}
 # Write the clean dataset of number of significant edges to analyze
 # Filter by results of the Scipher dataset obtained by Pearson correlation and threshold 0.05
 edges_pearson_df = topology_df %>% filter(((method == "pearson") & (type_correlation == "all") & (threshold == 0.05)))
@@ -120,7 +121,7 @@ edges_file = paste(output_dir, 'example_pearson_pval_0.05', 'pearson_pval_0.05_n
 edges_pearson_df %>% fwrite(edges_file)
 ```
 
-```{r output_dataset, echo=FALSE, results='hide'}
+```{r output_numbers_datasets, echo=FALSE, results='hide'}
 # Check number of nodes and edges in complete graph for each dataset
 cols = c("dataset", "total_num_nodes", "total_num_edges")
 numbers_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))

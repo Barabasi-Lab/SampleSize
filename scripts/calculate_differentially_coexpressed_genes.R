@@ -54,8 +54,10 @@ threshold = as.double(opt$threshold)
 stretch_normalization = opt$stretch_normalization
 filter_by_common_nodes = opt$filter_by_common_nodes
 
-#coexpression_network_file_D = "/work/ccnr/j.aguirreplans/Scipher/SampleSize/networks_tcga/tumor/TCGA-BRCA/pearson_tcga_TCGA-BRCA_size_200_rep_1.net"
-#coexpression_network_file_N = "/work/ccnr/j.aguirreplans/Scipher/SampleSize/networks_gtex/Breast.Mammary.Tissue/pearson_RNAseq_samples_Breast.Mammary.Tissue_size_200_rep_1.net"
+#coexpression_network_file_D = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-BRCA/pearson_tcga_TCGA-BRCA_size_200_rep_1.net"
+#coexpression_network_file_N = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Breast.Mammary.Tissue/pearson_RNAseq_samples_Breast.Mammary.Tissue_size_200_rep_1.net"
+#coexpression_network_file_D = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-BRCA/consensus/pearson_tcga_TCGA-BRCA_size_200_consensus.net"
+#coexpression_network_file_N = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Breast.Mammary.Tissue/consensus/pearson_RNAseq_samples_Breast.Mammary.Tissue_size_200_consensus.net"
 #threshold=0.05
 #stretch_normalization=TRUE
 #filter_by_common_nodes=TRUE
@@ -86,6 +88,9 @@ read_coexpression_network <- function(coexpression_network_file, method, thresho
     if(method == "aracne"){
       threshold = 0
     }
+    if("CN" %in% colnames(coexpression_df)){
+      coexpression_df = coexpression_df %>% rename("score"="CN", "pval.adj"="pval.fisher")
+    }
     # Filter network by score
     if(set_unsignificant_scores_to_zero == TRUE){
       # If set_unsignificant_scores_to_zero is TRUE, set scores below threshold to 0
@@ -97,6 +102,9 @@ read_coexpression_network <- function(coexpression_network_file, method, thresho
   } else {
     if(method == "wto"){
       coexpression_df = coexpression_df %>% rename("score"= "wTO")
+    }
+    if("CN" %in% colnames(coexpression_df)){
+      coexpression_df = coexpression_df %>% rename("score"="CN", "pval.adj"="pval.fisher")
     }
     # Filter network by p-value
     if(set_unsignificant_scores_to_zero == TRUE){
