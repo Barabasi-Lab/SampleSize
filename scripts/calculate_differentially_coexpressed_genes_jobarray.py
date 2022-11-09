@@ -2,6 +2,7 @@ import sys, os
 import configparser 
 import hashlib
 import itertools
+import math
 import optparse
 import pandas as pd
 import pwd
@@ -93,6 +94,7 @@ def calculate_differentially_coexpressed_genes(options):
 
     # Limit of jobs
     limit = int(config.get("Cluster", "max_jobs_in_queue"))
+    array_limit = 100
     l = 1
 
     # Define additional parameters
@@ -134,6 +136,15 @@ def calculate_differentially_coexpressed_genes(options):
         #        #print([network_d_selected[0], network_n_selected[0]])
         #        all_combinations = all_combinations + [[network_d_selected[0], network_n_selected[0]]]
 
+    # Create an input list for each array
+    num_arrays = math.ceil(len(all_combinations)/array_limit)
+    for a in range(num_arrays):
+        combination = all_combinations[a]
+        network_name_d = combination[0]
+        network_name_n = combination[1]
+        output_edges_file = os.path.join(output_dir, 'diffanalysis_edges_{}___{}_pval_{}.txt'.format(network_name_d, network_name_n, pval_adj_cutoff))
+        output_nodes_file = os.path.join(output_dir, 'diffanalysis_nodes_{}___{}_pval_{}.txt'.format(network_name_d, network_name_n, pval_adj_cutoff))
+
     for combination in all_combinations:
 
         if limit: # Break the loop if a limit of jobs is introduced
@@ -154,7 +165,7 @@ def calculate_differentially_coexpressed_genes(options):
             command = 'Rscript {} -d {} -n {} -l {} -v {} -t {} {} {}'.format(script_file, os.path.join(networks_dir_D, network_name_d), os.path.join(networks_dir_N, network_name_n), output_edges_file, output_nodes_file, pval_adj_cutoff, stretch_normalization, filter_by_common_nodes)
             print(command)
             print(l)
-            submit_command_to_queue(command, max_jobs_in_queue=int(config.get("Cluster", "max_jobs_in_queue")), queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude, conda_environment=conda_environment, rstudio_environment=rstudio_environment)
+            #submit_command_to_queue(command, max_jobs_in_queue=int(config.get("Cluster", "max_jobs_in_queue")), queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude, conda_environment=conda_environment, rstudio_environment=rstudio_environment)
 
             l += 1
 

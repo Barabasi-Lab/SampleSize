@@ -21,7 +21,7 @@ CREATE RENV ENVIRONMENT IN THE CLUSTER
 # Install
 srun --partition=short --nodes=1 --cpus-per-task=1 --time=24:00:00 --pty /bin/bash
 module load python/3.8.1
-module load R/4.0.3
+module load R/4.2.0
 module load anaconda3/3.7
 conda create -n SampleSizeR r-essentials r-base
 source activate SampleSizeR
@@ -36,6 +36,7 @@ BiocManager::install("minet")
 install.packages('optparse')
 install.packages('dplyr')
 install.packages('RcppEigen')
+install.packages("CoDiNA")
 
 # Solve problem of Error in if (nzchar(SHLIB_LIBADD)): https://stackoverflow.com/questions/53813323/installing-r-packages-in-macos-mojave-error-in-if-nzcharshlib-libadd 
 
@@ -53,7 +54,7 @@ cp /home/j.aguirreplans/.conda/pkgs/r-base-3.6.1-haffb61f_2/lib/R/etc/Makeconf /
 # Load
 srun --partition=short --nodes=1 --cpus-per-task=1 --time=24:00:00 --pty /bin/bash
 module load python/3.8.1
-module load R/4.0.3
+module load R/4.2.0
 module load anaconda3/3.7
 source activate SampleSizeR
 
@@ -63,16 +64,50 @@ conda deactivate
 
 ##### PACKRAT #####
 
-# Initialize the project
-srun --partition=short --nodes=1 --cpus-per-task=1 --time=24:00:00 --pty /bin/bash
-module load R/4.0.3
+#---- CREATE AN ENVIRONMENT FOR RSTUDIO ----#
+
+# 1. Open the RStudio (rocker container) OOD application and select the "Geospatial" flavor.
+# 2. Initialize a new Packrat environment to ensure there's no mixup with your old (and perhaps broken) R environment:
+# For this, you can first create a new folder in your /home or /work directories. For example, type this in the Discovery Linux Shell:
+mkdir /home/j.aguirreplans/r-test # To test an example
+mkdir /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR # For the real packrat
+# Then in the RStudio session type:
+packrat::init("/home/j.aguirreplans/r-test") # To test an example
+packrat::init("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR") # For the real packrat
+# 3. Install the package: 
+install.packages("RcppZiggurat")
+# 4. I've tested the package works using this command is (based on: https://github.com/eddelbuettel/rcppziggurat):
+demo(package="RcppZiggurat")
+# 5. Alternatively, the following command also worked:
+library(RcppZiggurat)
+# Save changes
+packrat::snapshot()
+
+
+#---- CREATE AN ENVIRONMENT FOR DISCOVERY ----#
+
+# Go to a specific node
+srun --partition=short --nodes=1 --cpus-per-task=1 --time=6:00:00 --pty /bin/bash
+# Create the directory
 cd /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts
-mkdir SampleSizeR
+mkdir SampleSizeRCluster
+# Load the most recent R version
+module load R/4.2.0
+# Enter to R and initiate a new packrat environment
 R
 install.packages("packrat")
-packrat::init("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR")
+packrat::init("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeRCluster")
+# Install the package: 
+install.packages("RcppZiggurat")
+# I've tested the package works using this command is (based on: https://github.com/eddelbuettel/rcppziggurat):
+demo(package="RcppZiggurat")
+# Alternatively, the following command also worked:
+library(RcppZiggurat)
+# Save changes
+packrat::snapshot()
 
-# Install packages
+#---- INSTALL THE REST OF THE PACKAGES ----#
+
 if (!require("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 BiocManager::install("BiRewire")
@@ -86,21 +121,16 @@ BiocManager::install("WGCNA")
 BiocManager::install("minet")
 install.packages(c("patchwork", "plotly"))
 install.packages("Hmisc")
-
-# Install wto from github
-library(devtools)
-install_github("deisygysi/wTO") 
-
+install.packages("CoDiNA")
+devtools::install_github("deisygysi/wTO") 
 # Save changes
 packrat::snapshot()
-
-# Close project
 
 
 ##### RENV #####
 
 srun --partition=short --nodes=1 --cpus-per-task=1 --time=24:00:00 --pty /bin/bash
-module load R/4.0.3
+module load R/4.2.0
 R
 install.packages("renv")
 renv::init("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR")
@@ -111,8 +141,6 @@ renv::install("optparse")
 renv::install("RcppEigen")
 renv::install("tidyr")
 renv::install("bioc::WGCNA")
-
-
 install.packages('devtools')
 if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
@@ -146,7 +174,7 @@ mkdir ~/Rlibs
 
 2. LOAD R MODULE
 
-module load R/4.0.3
+module load R/4.2.0
 
 3. EXPORT R ENVIRONMENT
 
@@ -154,7 +182,7 @@ export R_LIBS=~/Rlibs
 
 4. INSTALL PACKAGES
 
-module load R/4.0.3
+module load R/4.2.0
 R
 install.packages('devtools')
 if (!requireNamespace("BiocManager", quietly = TRUE))
@@ -322,7 +350,7 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coex
 # scipher.sample.per.patient.baseline - PEARSON - READS 
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/scipher.sample.per.patient.baseline -r /home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/rnaseq_filtered_files_by_group/scipher_rnaseq_scipher.sample.per.patient.baseline.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/reads/scipher.sample.per.patient.baseline -m pearson
-# consensus: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/reads/scipher.sample.per.patient.baseline -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/reads/scipher.sample.per.patient.baseline -t 0.05 -m pearson
 
 
 
@@ -360,31 +388,52 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coex
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor/TCGA-COAD -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-COAD.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-COAD -m pearson
 # consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-COAD -t 0.05 -m pearson
+# TCGA-COAD-NORMAL!!!! (Breast Invasive Carcinoma) - PEARSON - READS - BOTH SEX / DONE
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/normal/TCGA-COAD -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/normal/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-COAD.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/normal/TCGA-COAD -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/normal/TCGA-COAD -t 0.05 -m pearson
 
 # TCGA-UCEC (Uterine Corpus Endometrial Carcinoma) - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor/TCGA-UCEC -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-UCEC.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-UCEC -m pearson
 # consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-UCEC -t 0.05 -m pearson
+# TCGA-UCEC-NORMAL!!!! (Breast Invasive Carcinoma) - PEARSON - READS - BOTH SEX / DONE
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/normal/TCGA-UCEC -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/normal/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-UCEC.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/normal/TCGA-UCEC -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/normal/TCGA-UCEC -t 0.05 -m pearson
 
 # TCGA-LUAD (Lung Adenocarcinoma) - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor/TCGA-LUAD -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-LUAD.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-LUAD -m pearson
 # consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-LUAD -t 0.05 -m pearson
+# TCGA-LUAD-NORMAL!!!! (Breast Invasive Carcinoma) - PEARSON - READS - BOTH SEX / DONE
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/normal/TCGA-LUAD -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/normal/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-LUAD.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/normal/TCGA-LUAD -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/normal/TCGA-LUAD -t 0.05 -m pearson
 
 # TCGA-LGG (Brain Lower Grade Glioma) - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor/TCGA-LGG -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-LGG.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-LGG -m pearson
 # consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-LGG -t 0.05 -m pearson
+# TCGA-LGG HAS NO NORMAL
 
 # TCGA-THCA (Thyroid Carcinoma) - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor/TCGA-THCA -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-THCA.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-THCA -m pearson
 # consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-THCA -t 0.05 -m pearson
+# TCGA-THCA-NORMAL!!!! (Breast Invasive Carcinoma) - PEARSON - READS - BOTH SEX / DONE
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/normal/TCGA-THCA -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/normal/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-THCA.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/normal/TCGA-THCA -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/normal/TCGA-THCA -t 0.05 -m pearson
 
 # TCGA-LUSC (Lung Squamous Cell Carcinoma) - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor/TCGA-LUSC -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-LUSC.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-LUSC -m pearson
 # consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-LUSC -t 0.05 -m pearson
+# TCGA-LUSC-NORMAL!!!! (Breast Invasive Carcinoma) - PEARSON - READS - BOTH SEX / DONE
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/normal/TCGA-LUSC -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/normal/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-LUSC.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/normal/TCGA-LUSC -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/normal/TCGA-LUSC -t 0.05 -m pearson
 
 # TCGA-SKCM (Skin Cutaneous Melanoma) - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
@@ -420,6 +469,10 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coex
 # TCGA-KIRC (Kidney Renal Clear Cell Carcinoma) - PEARSON - READS - BOTH SEX
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor/TCGA-KIRC -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-KIRC.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-KIRC -m pearson
+# TCGA-KIRC-NORMAL!!!! (Breast Invasive Carcinoma) - PEARSON - READS - BOTH SEX / DONE
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/normal/TCGA-KIRC -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/normal/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-KIRC.csv -o /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/normal/TCGA-KIRC -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/normal/TCGA-KIRC -t 0.05 -m pearson
 
 
 
@@ -610,15 +663,30 @@ module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-COAD -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/genes_filtered_files_by_project/rnaseq_gene_info_TCGA-COAD.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/tumor/TCGA-COAD -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/reads/tumor/TCGA-COAD
 # output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/tumor/TCGA-COAD
 
+# TCGA-COAD-NORMAL!!!! (Breast Invasive Carcinoma) - READS - BOTH SEX / DONE
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/normal/TCGA-COAD -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/normal/filter_genes_low_counts/genes_filtered_files_by_project/rnaseq_gene_info_TCGA-COAD.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/normal/TCGA-COAD -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/reads/normal/TCGA-COAD
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/normal/TCGA-COAD
+
 # TCGA-UCEC (Uterine Corpus Endometrial Carcinoma) - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-UCEC -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/genes_filtered_files_by_project/rnaseq_gene_info_TCGA-UCEC.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/tumor/TCGA-UCEC -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/reads/tumor/TCGA-UCEC
 # output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/tumor/TCGA-UCEC
 
+# TCGA-UCEC-NORMAL!!!! (Breast Invasive Carcinoma) - READS - BOTH SEX / DONE
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/normal/TCGA-UCEC -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/normal/filter_genes_low_counts/genes_filtered_files_by_project/rnaseq_gene_info_TCGA-UCEC.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/normal/TCGA-UCEC -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/reads/normal/TCGA-UCEC
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/normal/TCGA-UCEC
+
 # TCGA-LUAD (Lung Adenocarcinoma) - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-LUAD -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/genes_filtered_files_by_project/rnaseq_gene_info_TCGA-LUAD.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/tumor/TCGA-LUAD -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/reads/tumor/TCGA-LUAD
 # output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/tumor/TCGA-LUAD
+
+# TCGA-LUAD-NORMAL!!!! (Breast Invasive Carcinoma) - READS - BOTH SEX / DONE
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/normal/TCGA-LUAD -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/normal/filter_genes_low_counts/genes_filtered_files_by_project/rnaseq_gene_info_TCGA-LUAD.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/normal/TCGA-LUAD -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/reads/normal/TCGA-LUAD
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/normal/TCGA-LUAD
 
 # TCGA-LGG (Brain Lower Grade Glioma) - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
@@ -630,10 +698,20 @@ module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-THCA -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/genes_filtered_files_by_project/rnaseq_gene_info_TCGA-THCA.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/tumor/TCGA-THCA -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/reads/tumor/TCGA-THCA
 # output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/tumor/TCGA-THCA
 
+# TCGA-THCA-NORMAL!!!! (Breast Invasive Carcinoma) - READS - BOTH SEX / DONE
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/normal/TCGA-THCA -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/normal/filter_genes_low_counts/genes_filtered_files_by_project/rnaseq_gene_info_TCGA-THCA.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/normal/TCGA-THCA -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/reads/normal/TCGA-THCA
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/normal/TCGA-THCA
+
 # TCGA-LUSC (Lung Squamous Cell Carcinoma) - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-LUSC -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/genes_filtered_files_by_project/rnaseq_gene_info_TCGA-LUSC.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/tumor/TCGA-LUSC -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/reads/tumor/TCGA-LUSC
 # output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/tumor/TCGA-LUSC
+
+# TCGA-LUSC-NORMAL!!!! (Breast Invasive Carcinoma) - READS - BOTH SEX / DONE
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/normal/TCGA-LUSC -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/normal/filter_genes_low_counts/genes_filtered_files_by_project/rnaseq_gene_info_TCGA-LUSC.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/normal/TCGA-LUSC -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/reads/normal/TCGA-LUSC
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/normal/TCGA-LUSC
 
 # TCGA-PRAD (Prostate Adenocarcinoma) - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
@@ -667,6 +745,11 @@ module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-KIRC -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/genes_filtered_files_by_project/rnaseq_gene_info_TCGA-KIRC.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/tumor/TCGA-KIRC -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/reads/tumor/TCGA-KIRC
 # output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/tumor/TCGA-KIRC
 
+# TCGA-KIRC-NORMAL!!!! (Breast Invasive Carcinoma) - READS - BOTH SEX / DONE
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/normal/TCGA-KIRC -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/normal/filter_genes_low_counts/genes_filtered_files_by_project/rnaseq_gene_info_TCGA-KIRC.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/normal/TCGA-KIRC -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/reads/normal/TCGA-KIRC
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/normal/TCGA-KIRC
+
 # TCGA-HNSC (Head and Neck Squamous Cell Carcinoma) - PEARSON - READS - BOTH SEX / NOT TO DO
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-HNSC -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/genes_filtered_files_by_project/rnaseq_gene_info_TCGA-HNSC.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/tumor/TCGA-HNSC -n /scratch/j.aguirreplans/Scipher/SampleSize/subgraphs_tcga/reads/tumor/TCGA-HNSC
@@ -684,6 +767,10 @@ DIFFERENTIAL CO-EXPRESSION ANALYSIS
 ###################################
 
 # MEMORY: 100000-120000 MB (150000 for a couple of them)
+
+#-----------------------#
+# TCGA/SCIPHER vs. GTEX #
+#-----------------------#
 
 # TCGA-BRCA_female vs. GTEx: Breast.Mammary.Tissue_female
 -d /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-BRCA_female
@@ -704,16 +791,6 @@ module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differentially_coexpressed_genes_cluster.py -d /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-BRCA -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Breast.Mammary.Tissue -o /scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA___Breast.Mammary.Tissue -p 0.05 -s -f
 # Consensus DONE
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differentially_coexpressed_genes_cluster.py -d /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-BRCA/consensus -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Breast.Mammary.Tissue/consensus -o /scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA___Breast.Mammary.Tissue/consensus -p 0.05 -s -f
-
-# TCGA-BRCA vs. TCGA-BRCA-NORMAL!!!!
--d /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-BRCA
--n /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/normal/TCGA-BRCA
--o /scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA___TCGA-BRCA-normal
-module load python/3.8.1
-# All replicates
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differentially_coexpressed_genes_cluster.py -d /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-BRCA -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/normal/TCGA-BRCA -o /scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA___TCGA-BRCA-normal -p 0.05 -s -f
-# Consensus DONE
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differentially_coexpressed_genes_cluster.py -d /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-BRCA/consensus -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/normal/TCGA-BRCA/consensus -o /scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA___TCGA-BRCA-normal/consensus -p 0.05 -s -f
 
 # TCGA-BRCA-NORMAL!!!! vs. GTEx: Breast.Mammary.Tissue
 -d /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/normal/TCGA-BRCA
@@ -866,6 +943,51 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differ
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differentially_coexpressed_genes_cluster.py -d /scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/reads/scipher.complete.responder/consensus -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Whole.Blood/consensus -o /scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/scipher.complete.responder___Whole.Blood/consensus -p 0.05 -s -f
 
 
+#---------------#
+# TCGA vs. TCGA #
+#---------------#
+
+# TCGA-BRCA vs. TCGA-BRCA-NORMAL!!!!
+-d /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-BRCA
+-n /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/normal/TCGA-BRCA
+-o /scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA___TCGA-BRCA-normal
+module load python/3.8.1
+# All replicates
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differentially_coexpressed_genes_cluster.py -d /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-BRCA -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/normal/TCGA-BRCA -o /scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA___TCGA-BRCA-normal -p 0.05 -s -f
+# Consensus DONE
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differentially_coexpressed_genes_cluster.py -d /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-BRCA/consensus -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/normal/TCGA-BRCA/consensus -o /scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA___TCGA-BRCA-normal/consensus -p 0.05 -s -f
+
+# TCGA-BRCA vs. TCGA-UCEC
+-d /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-BRCA
+-n /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-UCEC
+-o /scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA___TCGA-UCEC
+module load python/3.8.1
+# All replicates
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differentially_coexpressed_genes_cluster.py -d /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-BRCA -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-UCEC -o /scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA___TCGA-UCEC -p 0.05 -s -f
+# Consensus DONE
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differentially_coexpressed_genes_cluster.py -d /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-BRCA/consensus -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-UCEC/consensus -o /scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA___TCGA-UCEC/consensus -p 0.05 -s -f
+
+# TCGA-LUAD vs. TCGA-LUSC
+-d /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-LUAD
+-n /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-LUSC
+-o /scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-LUAD___TCGA-LUSC
+module load python/3.8.1
+# All replicates
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differentially_coexpressed_genes_cluster.py -d /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-LUAD -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-LUSC -o /scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-LUAD___TCGA-LUSC -p 0.05 -s -f
+# Consensus DONE
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differentially_coexpressed_genes_cluster.py -d /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-LUAD/consensus -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-LUSC/consensus -o /scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-LUAD___TCGA-LUSC/consensus -p 0.05 -s -f
+
+# TCGA-OV vs. TCGA-UCEC
+-d /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-OV
+-n /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-UCEC
+-o /scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-OV___TCGA-UCEC
+module load python/3.8.1
+# All replicates
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differentially_coexpressed_genes_cluster.py -d /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-OV -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-UCEC -o /scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-OV___TCGA-UCEC -p 0.05 -s -f
+# Consensus DONE
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differentially_coexpressed_genes_cluster.py -d /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-OV/consensus -n /scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/reads/tumor/TCGA-UCEC/consensus -o /scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-OV___TCGA-UCEC/consensus -p 0.05 -s -f
+
+
 ############################
 ANALYSIS OF INDIVIDUAL EDGES
 ############################
@@ -909,7 +1031,7 @@ SHINY APP
 
 Run shiny app:
 
-module load R/4.0.3
+module load R/4.2.0
 R
 setwd('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts')
 shiny::runApp(SampleSizeShiny)

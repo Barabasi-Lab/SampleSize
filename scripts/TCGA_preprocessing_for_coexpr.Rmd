@@ -28,7 +28,7 @@ set.seed(1510)
 
 ```{r define_files}
 # Define type of counts used
-type_counts = "tpm" # tpm, reads
+type_counts = "reads" # tpm, reads
 if(!(type_counts %in% c("tpm", "reads"))){
   stop("Unknown type of data")
 }
@@ -56,7 +56,9 @@ head(RNAseq[1:10,1:5])
 
 ```{r}
 metadata_df = fread(metadata_file)
+metadata_df %>% select(participant_sample_type, participant, sample_type_simplified, project_id, project_disease_type) %>% unique() %>% group_by(project_id, project_disease_type, sample_type_simplified) %>% summarize(n_samples=n_distinct(participant_sample_type), n_subjects=n_distinct(participant))
 ```
+
 
 ## Filter genes without classification
 
@@ -100,7 +102,7 @@ for(sample_type_selected in unique(metadata_df$sample_type_simplified)){
   filter_zeros_dir = paste(sample_type_dir, 'filter_genes_with_zeros', sep='/')
   dir.create(sample_type_dir, showWarnings = FALSE)
   dir.create(filter_zeros_dir, showWarnings = FALSE)
-  samples_selected_by_type = unique((metadata_df %>% filter(sample_type_simplified == sample_type_selected))$participant_sample)
+  samples_selected_by_type = unique((metadata_df %>% filter(sample_type_simplified == sample_type_selected))$participant_sample_type)
   RNAseq_by_type = RNAseq %>% select(c("Gene", all_of(samples_selected_by_type)))
   # We calculate the number of times that a gene has 0 counts
   info_df = data.frame(Gene=RNAseq_by_type$Gene, sum=rowSums(RNAseq_by_type[,-1]))
@@ -157,7 +159,7 @@ for(sample_type_selected in unique(metadata_df$sample_type_simplified)){
   filter_low_counts_dir = paste(sample_type_dir, 'filter_genes_low_counts', sep='/')
   dir.create(sample_type_dir, showWarnings = FALSE)
   dir.create(filter_low_counts_dir, showWarnings = FALSE)
-  samples_selected_by_type = unique((metadata_df %>% filter(sample_type_simplified == sample_type_selected))$participant_sample)
+  samples_selected_by_type = unique((metadata_df %>% filter(sample_type_simplified == sample_type_selected))$participant_sample_type)
   RNAseq_by_type = RNAseq %>% select(c("Gene", all_of(samples_selected_by_type)))
   # We calculate the number of times that a gene has 0 counts
   info_df = data.frame(Gene=RNAseq_by_type$Gene, sum=rowSums(RNAseq_by_type[,-1]))
@@ -221,11 +223,11 @@ for(sample_type_selected in unique(metadata_df$sample_type_simplified)){
       
       # Get the samples of the selected tissue/sex
       if (sex == ""){
-        samples_project = unique((metadata_df %>% filter((sample_type_simplified == sample_type_selected) & (project_id == project_id_selected)))$participant_sample)
+        samples_project = unique((metadata_df %>% filter((sample_type_simplified == sample_type_selected) & (project_id == project_id_selected)))$participant_sample_type)
         rnaseq_project_file = paste(rnaseq_filt_dir, paste("tcga_rnaseq_", project_id_selected, ".csv", sep=''), sep='/')
         genes_project_file = paste(genes_filt_dir, paste("rnaseq_gene_info_", project_id_selected, ".csv", sep=''), sep='/')
       } else {
-        samples_project = unique((metadata_df %>% filter((sample_type_simplified == sample_type_selected) & (project_id == project_id_selected) & (gender == sex)))$participant_sample)
+        samples_project = unique((metadata_df %>% filter((sample_type_simplified == sample_type_selected) & (project_id == project_id_selected) & (gender == sex)))$participant_sample_type)
         rnaseq_project_file = paste(rnaseq_filt_dir, paste("tcga_rnaseq_", project_id_selected, "_", sex, ".csv", sep=''), sep='/')
         genes_project_file = paste(genes_filt_dir, paste("rnaseq_gene_info_", project_id_selected, "_", sex, ".csv", sep=''), sep='/')
       }

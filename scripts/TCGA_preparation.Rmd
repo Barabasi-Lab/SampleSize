@@ -30,7 +30,7 @@ set.seed(1510)
 
 ```{r}
 # Define type of counts used
-type_counts = "tpm" # tpm, reads
+type_counts = "reads" # tpm, reads
 
 # Define working directories
 gdc_dir = '/work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA'
@@ -69,21 +69,27 @@ table(metadata_with_distinct_counts$num_samples_per_participant, metadata_with_d
 head(metadata_df %>% group_by(participant) %>% filter(n()>1) %>% ungroup() %>% select(file_id, entity_submitter_id, participant, sample_code, portion_code, sample_type, project_id))
 ```
 
-However, there is still a small number of samples that might belong to the same participant and also come from the same type of tissue. In these cases, the sample information might come from different vials, portions or plates.
+However, there is still a small number of samples that might belong to the same participant and also come from the same type of tissue. In these cases, the sample information might come from different samples, vials, portions or plates.
 See this website for more information: https://docs.gdc.cancer.gov/Encyclopedia/pages/TCGA_Barcode/  
 
 ```{r}
-head(metadata_df %>% select(file_id, entity_submitter_id, participant, sample_code, portion_code, plate, center, sample_type, project_id) %>% unique() %>% group_by(participant) %>% filter(n()>1) %>% mutate(num_sample_types_per_participant=n_distinct(sample_type)) %>% mutate(num_samples_per_participant=n_distinct(file_id)) %>% filter((num_sample_types_per_participant == 1 & num_samples_per_participant > 1)) %>% ungroup(), 12)
+head(metadata_df %>% select(file_id, entity_submitter_id, participant, sample, sample_code, portion_code, plate, center, sample_type, project_id) %>% unique() %>% group_by(participant) %>% filter(n()>1) %>% mutate(num_sample_types_per_participant=n_distinct(sample_type)) %>% mutate(num_samples_per_participant=n_distinct(file_id)) %>% filter((num_sample_types_per_participant == 1 & num_samples_per_participant > 1)) %>% ungroup(), 12)
 ```
 
-This means that later, we will have to merge the expression of the samples that are from same participant and come from the same tissue type, but are from different vials, portions or plates. We will do it by using the participant_sample code:
+This means that later, we will have to merge the expression of the samples that are from same participant and come from the same tissue type, but are from different vials, portions or plates. We will do it by using the participant_sample_type code:
 
 ```{r}
-if(!("participant_sample" %in% colnames(metadata_df))){
-  metadata_df$participant_sample = paste(metadata_df$participant, metadata_df$sample, sep="-")
+if(!("participant_sample_type" %in% colnames(metadata_df))){
+  metadata_df$participant_sample_type = paste(metadata_df$participant, metadata_df$sample_type_simplified, sep="-")
   metadata_df %>% fwrite(metadata_file)
   metadata_df = fread(metadata_file, header=TRUE)
 }
+```
+
+We check that we have the same number of samples and participants for each type of sample:
+
+```{r}
+metadata_df %>% select(participant, participant_sample_type, sample_type_simplified) %>% unique() %>% group_by(sample_type_simplified) %>% summarize(n_participant=n_distinct(participant), n_participant_sample_type=n_distinct(participant_sample_type))
 ```
 
 TCGA contains `r length(unique(metadata_df$project_id))` project IDs. Each project is focused on a different type of cancer. Each project contains the following number of participants, depending on the sample type (tumor or normal):
@@ -243,39 +249,39 @@ fwrite(tcga_df, tcga_processed_file, sep='\t')
 
 ### Sample pre-processing
 
-There are participant_sample IDs that are mapped to multiple files. We will merge the participant_sample IDs that have multiple file IDs, and substitute the file IDs with participant_sample IDs in the data file.
+There are participant_sample_type IDs that are mapped to multiple files. We will merge the participant_sample_type IDs that have multiple file IDs, and substitute the file IDs with participant_sample_type IDs in the data file.
 
-We identify the participant_sample IDs with multiple file IDs:
+We identify the participant_sample_type IDs with multiple file IDs:
 
 ```{r}
-mappings_tcga_df = metadata_df %>% filter(file_name %in% colnames(tcga_df)[-1]) %>% select(file_name, participant_sample) %>% unique()
-mappings_tcga_duplicated_df = mappings_tcga_df %>% filter(participant_sample %in% subset(mappings_tcga_df,duplicated(participant_sample))$participant_sample)
+mappings_tcga_df = metadata_df %>% filter(file_name %in% colnames(tcga_df)[-1]) %>% select(file_name, participant_sample_type) %>% unique()
+mappings_tcga_duplicated_df = mappings_tcga_df %>% filter(participant_sample_type %in% subset(mappings_tcga_df,duplicated(participant_sample_type))$participant_sample_type)
 head(mappings_tcga_duplicated_df)
 ```
 
-There are `r length(unique(mappings_tcga_duplicated_df$participant_sample))` participant_sample IDs with multiple file IDs. We calculate the median between the expression of these file IDs.
+There are `r length(unique(mappings_tcga_duplicated_df$participant_sample_type))` participant_sample_type IDs with multiple file IDs. We calculate the median between the expression of these file IDs.
 
-```{r aggregate_participant_sample_ids}
+```{r aggregate_participant_sample_type_ids}
 genes_tcga_df = tcga_df$HGNC_Symbol
 tcga_df %<>% select(-HGNC_Symbol) %>% t() %>% as.data.frame()
 colnames(tcga_df) = genes_tcga_df
 tcga_df = cbind(data.frame(file_name=row.names(tcga_df)), tcga_df)
 tcga_df %<>% inner_join(mappings_tcga_df, by=c("file_name"="file_name"))
-tcga_df %<>% relocate(file_name, participant_sample)
+tcga_df %<>% relocate(file_name, participant_sample_type)
 tcga_df = subset(tcga_df, select=-file_name)
-tcga_participant_ids_duplicated = tcga_df[tcga_df$participant_sample %in% unique(mappings_tcga_duplicated_df$participant_sample),]
-#participant_ids_aggregated = aggregate(.~participant_sample, tcga_participant_ids_duplicated, median)
-participant_ids_aggregated = tcga_participant_ids_duplicated %>% group_by(participant_sample) %>% summarise(across(everything(), median, na.rm = TRUE)) %>% ungroup() %>% as.data.frame()
-tcga_df = rbind(tcga_df[!(tcga_df$participant_sample %in% unique(mappings_tcga_duplicated_df$participant_sample)),], participant_ids_aggregated)
+tcga_participant_ids_duplicated = tcga_df[tcga_df$participant_sample_type %in% unique(mappings_tcga_duplicated_df$participant_sample_type),]
+#participant_ids_aggregated = aggregate(.~participant_sample_type, tcga_participant_ids_duplicated, median)
+participant_ids_aggregated = tcga_participant_ids_duplicated %>% group_by(participant_sample_type) %>% summarise(across(everything(), median, na.rm = TRUE)) %>% ungroup() %>% as.data.frame()
+tcga_df = rbind(tcga_df[!(tcga_df$participant_sample_type %in% unique(mappings_tcga_duplicated_df$participant_sample_type)),], participant_ids_aggregated)
 dim(tcga_df)
 ```
 
 ```{r transpose_processed_matrix}
 # We transpose the matrix
-genes = colnames((tcga_df %>% select(-participant_sample)))
-participant_sample_ids = tcga_df$participant_sample
-tcga_df = t(as.matrix((tcga_df %>% select(-participant_sample)))) %>% as.data.frame()
-colnames(tcga_df) = participant_sample_ids
+genes = colnames((tcga_df %>% select(-participant_sample_type)))
+participant_sample_type_ids = tcga_df$participant_sample_type
+tcga_df = t(as.matrix((tcga_df %>% select(-participant_sample_type)))) %>% as.data.frame()
+colnames(tcga_df) = participant_sample_type_ids
 tcga_df = cbind(data.frame(Gene=genes), tcga_df)
 ```
 
@@ -284,7 +290,7 @@ tcga_processed_file = paste(output_dir, "TCGA_genes_and_samples_processed.csv", 
 fwrite(tcga_df, tcga_processed_file, sep='\t')
 ```
 
-The processed `tcga_df` dataframe contains `r as.integer(ncol(tcga_df)-1)` columns (participant_sample IDs) and `r nrow(tcga_df)` rows (genes).
+The processed `tcga_df` dataframe contains `r as.integer(ncol(tcga_df)-1)` columns (participant_sample_type IDs) and `r nrow(tcga_df)` rows (genes).
 
 ```{r}
 head(tcga_df[1:10,1:5])

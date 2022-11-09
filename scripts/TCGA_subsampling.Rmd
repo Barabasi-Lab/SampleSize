@@ -38,7 +38,7 @@ dir.create(sampling_dir, showWarnings = FALSE)
 # Read metadata file
 metadata_file = paste(gdc_dir, 'raw/metadata/metadata.txt', sep='/')
 metadata_df = fread(metadata_file)
-metadata_df %<>% select(participant_sample, sample_type_simplified, project_id, gender) %>% unique()
+metadata_df %<>% select(participant_sample_type, sample_type_simplified, project_id, gender) %>% unique()
 ```
 
 ```{r}
@@ -107,7 +107,7 @@ for(sample_type_selected in sample_types){
   tcga_sampling_dir = paste(sample_type_dir, "TCGA", sep='/')
   dir.create(tcga_sampling_dir, showWarnings = FALSE)
   # Define available samples
-  project_samples = unique((metadata_df %>% filter(sample_type_simplified == sample_type_selected))$participant_sample)
+  project_samples = unique((metadata_df %>% filter(sample_type_simplified == sample_type_selected))$participant_sample_type)
   # Define sizes
   size_list <- seq(10, length(project_samples), 10)
   # Create a file with a list of all samples
@@ -132,13 +132,13 @@ for(sample_type_selected in sample_types){
   for (project_id_selected in project_ids){
     for (sex in sex_types){
       if (sex == ""){
-        project_samples = unique((metadata_df %>% filter((sample_type_simplified == sample_type_selected) & (project_id == project_id_selected)))$participant_sample)
+        project_samples = unique((metadata_df %>% filter((sample_type_simplified == sample_type_selected) & (project_id == project_id_selected)))$participant_sample_type)
         project_sampling_dir = paste(sample_type_dir, project_id_selected, sep='/')
         all_samples_output_file = paste(project_sampling_dir, paste('tcga_', project_id_selected, '_all_samples.txt', sep=''), sep='/')
         output_file_name = paste(paste(paste('tcga', project_id_selected, sep="_")))
         compilation_samples_output_file = paste(sample_type_dir, paste(paste('tcga', project_id_selected, sep="_"), '.txt', sep=''), sep='/')
       } else {
-        project_samples = unique((metadata_df %>% filter((sample_type_simplified == sample_type_selected) & (project_id == project_id_selected) & (gender == sex)))$participant_sample)
+        project_samples = unique((metadata_df %>% filter((sample_type_simplified == sample_type_selected) & (project_id == project_id_selected) & (gender == sex)))$participant_sample_type)
         project_sampling_dir = paste(sample_type_dir, paste(project_id_selected, sex, sep="_"), sep='/')
         all_samples_output_file = paste(project_sampling_dir, paste('tcga_', project_id_selected, '_', sex, '_all_samples.txt', sep=''), sep='/')
         output_file_name = paste(paste(paste('tcga', project_id_selected, sex, sep="_")))

@@ -73,14 +73,17 @@ def create_consensus_gene_coexpression_networks_cluster(options):
     method = options.method
 
     # Define queue parameters
-    max_mem = config.get("Cluster", "max_mem")
+    #max_mem = config.get("Cluster", "max_mem")
+    max_mem = 120000
     queue = config.get("Cluster", "cluster_queue") # debug, express, short, long, large
     constraint = False
     exclude = []
     #exclude = ['d0012', 'd0123']
-    modules = ['python/3.8.1', 'anaconda3', 'R/4.0.3']
+    #modules = ['R/4.2.0']
+    modules = ['singularity/3.5.3']
     #conda_environment = 'SampleSizeR'
     conda_environment = None
+    rstudio_environment = "/shared/container_repository/rstudio/rocker-geospatial-4.2.1.sif"
     max_time_per_queue = {
         'debug'   : '0:20:00',
         'express' : '0:60:00',
@@ -141,7 +144,7 @@ def create_consensus_gene_coexpression_networks_cluster(options):
                 print(command)
                 print(size)
                 print(l)
-                submit_command_to_queue(command, max_jobs_in_queue=int(config.get("Cluster", "max_jobs_in_queue")), queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude, conda_environment=conda_environment)
+                submit_command_to_queue(command, max_jobs_in_queue=int(config.get("Cluster", "max_jobs_in_queue")), queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude, conda_environment=conda_environment, rstudio_environment=rstudio_environment)
 
                 l += 1
 
@@ -178,7 +181,7 @@ def create_directory(directory):
 # Cluster     #
 #-------------#
 
-def submit_command_to_queue(command, queue=None, max_jobs_in_queue=None, queue_file=None, queue_parameters={'max_mem':5000, 'queue':'short', 'max_time':'24:00:00', 'logs_dir':'/tmp', 'modules':['Python/3.6.2']}, dummy_dir="/tmp", script_name=None, constraint=False, exclude=[], conda_environment=None):
+def submit_command_to_queue(command, queue=None, max_jobs_in_queue=None, queue_file=None, queue_parameters={'max_mem':5000, 'queue':'short', 'max_time':'24:00:00', 'logs_dir':'/tmp', 'modules':['Python/3.6.2']}, dummy_dir="/tmp", script_name=None, constraint=False, exclude=[], conda_environment=None, rstudio_environment=None):
     """
     This function submits any {command} to a cluster {queue}.
 
@@ -228,6 +231,9 @@ def submit_command_to_queue(command, queue=None, max_jobs_in_queue=None, queue_f
                     fd.write('module load {}\n'.format(module)) # modules to load
                 if conda_environment:
                     fd.write('source activate {}\n'.format(conda_environment))
+                if rstudio_environment:
+                    fd.write('RSTUDIO_IMAGE="{}"\n'.format(rstudio_environment))
+                    command = 'singularity run -B "/scratch:/scratch,/work:/work" $RSTUDIO_IMAGE ' + command
                 fd.write('{}\n'.format(command)) # command
             os.system("sbatch {}".format(script)) # execute bash file
         else:
