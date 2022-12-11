@@ -11,10 +11,10 @@ import subprocess
 def main():
     """
     module load python/3.8.1
-    python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differentially_coexpressed_genes_cluster.py -d /work/ccnr/j.aguirreplans/Scipher/SampleSize/networks_tcga/tumor/TCGA-BRCA -n /work/ccnr/j.aguirreplans/Scipher/SampleSize/networks_gtex/Breast.Mammary.Tissue -o /work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/TCGA-BRCA_Breast.Mammary.Tissue -p 0.05
+    python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_differentially_coexpressed_genes_cluster.py -d /work/ccnr/j.aguirreplans/Scipher/SampleSize/networks_tcga/tumor/TCGA-BRCA -n /work/ccnr/j.aguirreplans/Scipher/SampleSize/networks_gtex/Breast.Mammary.Tissue -o /work/ccnr/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/TCGA-BRCA_Breast.Mammary.Tissue -p 0.05
     """
     options = parse_options()
-    calculate_differentially_coexpressed_genes(options)
+    analyze_differentially_coexpressed_genes(options)
 
 
 def parse_options():
@@ -22,20 +22,22 @@ def parse_options():
     This function parses the command line arguments and returns an optparse object.
     '''
 
-    parser = optparse.OptionParser("calculate_differentially_coexpressed_genes_cluster.py  -s SIZE")
+    parser = optparse.OptionParser("analyze_differentially_coexpressed_genes_cluster.py  -s SIZE")
 
     # Directory arguments
-    parser.add_option("-d", action="store", type="string", dest="networks_dir_D", help="Directory with the input networks of condition 1 (e.g., disease)", metavar="NETWORKS_DIR_D")
-    parser.add_option("-n", action="store", type="string", dest="networks_dir_N", help="Directory with the input networks of condition 2 (e.g., normal)", metavar="NETWORKS_DIR_N")
-    parser.add_option("-o", action="store", type="string", dest="output_dir", help="Directory for the output files", metavar="OUTPUT_DIR")
-    parser.add_option("-p", action="store", type="float", dest="pval_adj_cutoff", default=0.05, help="Cut-off of the adjusted p-value to consider an edge significant", metavar="PVAL_ADJ_CUTOFF")
-    parser.add_option("-s", action="store_true", dest="stretch_normalization", help="If included, uses stretch parameter to normalize networks before running CODINA")
-    parser.add_option("-f", action="store_true", dest="filter_by_common_nodes", help="If included, filters networks by keeping nodes that are common in both networks")
+    parser.add_option("-a", action="store", type="string", dest="input_dir", help="Directory for the input files", metavar="INPUT_DIR")
+    parser.add_option("-b", action="store", type="string", dest="name_disease", help="Name of condition 1 (e.g., disease)", metavar="NAME_DISEASE")
+    parser.add_option("-c", action="store", type="string", dest="name_normal", help="Name of condition 2 (e.g., normal)", metavar="NAME_NORMAL")
+    parser.add_option("-d", action="store", type="string", dest="disease_gene_associations_file", help="File with the disease-gene associations", metavar="DISEASE_GENE_ASSOCIATIONS_FILE")
+    parser.add_option("-e", action="store", type="string", dest="disease_name_in_associations_file", help="Disease name in the disease-gene associations file", metavar="DISEASE_NAME_IN_ASSOCIATIONS_FILE")
+    parser.add_option("-f", action="store", type="string", dest="ppi_file", help="File with the PPI network", metavar="PPI_FILE")
+    parser.add_option("-g", action="store", type="string", dest="plots_dir", help="Directory to output the plots", metavar="PLOTS_DIR")
+    parser.add_option("-h", action="store", type="string", dest="tables_dir", help="Directory to output the tables", metavar="TABLES_DIR")
+    parser.add_option("-i", action="store", type="float", dest="pval_adj_cutoff", default=0.01, help="Cut-off of the adjusted p-value to consider an edge significant", metavar="PVAL_ADJ_CUTOFF")
+    parser.add_option("-j", action="store", type="float", dest="pval_correction_field", default="pval_Phi_Tilde.adj.fdr", help="Type of correction for the p-value", metavar="PVAL_CORRECTION_FIELD")
+    parser.add_option("-k", action="store", type="float", dest="nodes_to_follow_file", help="File containing the nodes to follow", metavar="NODES_TO_FOLLOW_FILE")
 
     (options, args) = parser.parse_args()
-
-    if options.networks_dir_D is None or options.networks_dir_N is None or options.output_dir is None:
-        parser.error("missing arguments: type option \"-h\" for help")
 
     return options
 
@@ -46,9 +48,9 @@ def parse_options():
 #################
 #################
 
-def calculate_differentially_coexpressed_genes(options):
+def analyze_differentially_coexpressed_genes(options):
     """
-    Sends jobs that calculate differentially co-expressed genes between pairs of networks
+    Sends jobs that analyze differentially co-expressed genes between pairs of networks
     """
 
     # Add "." to sys.path #
@@ -61,8 +63,9 @@ def calculate_differentially_coexpressed_genes(options):
     config.read(config_file)
 
     # Define directories and files
-    networks_dir_D = options.networks_dir_D
-    networks_dir_N = options.networks_dir_N
+    input_dir = options.input_dir
+    name_disease = options.name_disease
+    name_normal = options.name_normal
     output_dir = options.output_dir
     create_directory(output_dir)
     logs_dir = os.path.join(src_path, '../logs')
@@ -73,7 +76,7 @@ def calculate_differentially_coexpressed_genes(options):
 
     # Define queue parameters
     #max_mem = config.get("Cluster", "max_mem")
-    max_mem = 120000
+    max_mem = 60000
     queue = config.get("Cluster", "cluster_queue") # debug, express, short, long, large
     constraint = False
     exclude = []
@@ -96,19 +99,9 @@ def calculate_differentially_coexpressed_genes(options):
     limit = int(config.get("Cluster", "max_jobs_in_queue"))
     l = 1
 
-    # Define additional parameters
-    if options.stretch_normalization:
-        stretch_normalization = '-s'
-    else:
-        stretch_normalization = ''
-    
-    if options.filter_by_common_nodes:
-        filter_by_common_nodes = '-f'
-    else:
-        filter_by_common_nodes = ''
-
     # Get all possible files in both directories
     pval_adj_cutoff = float(options.pval_adj_cutoff)
+    
     networks_D = [f for f in os.listdir(networks_dir_D) if fileExist(os.path.join(networks_dir_D, f))]
     networks_N = [f for f in os.listdir(networks_dir_N) if fileExist(os.path.join(networks_dir_N, f))]
     networks_df = pd.concat([get_info_from_network_files(networks_D, dataset_name="D"), get_info_from_network_files(networks_N, dataset_name="N")])

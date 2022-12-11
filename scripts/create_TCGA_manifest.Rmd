@@ -23,6 +23,7 @@ library(data.table)
 library(dplyr)
 library(ggplot2)
 require(magrittr)
+library(TCGAbiolinks)
 library(tidyr)
 set.seed(1510)
 `%ni%` <- Negate(`%in%`)
@@ -62,6 +63,10 @@ grep('disease', GenomicDataCommons::available_fields('files'),value=TRUE)
 ```
 
 ```{r}
+grep('tissue', GenomicDataCommons::available_fields('files'),value=TRUE)
+```
+
+```{r}
 grep('treatments', GenomicDataCommons::available_fields('files'),value=TRUE)
 ```
 
@@ -83,11 +88,11 @@ res$cases.project.program.name$key %>% .[order(.)]
 Here we start a query at GDC using the function `files()` and specifying the fields that we want information from. Then, we use the function `filter` to specify which type of gene expressio data we want to retrieve. The `pquery` object is stored in the variable `qfiles`:
 
 ```{r}
-desired_fields <-c("cases.project.project_id", "cases.project.program.name", default_fields('files'), grep_fields('files', "associated_entities"), grep_fields('files', "demographic"), "analysis.analysis_type", "analysis.workflow_type", "analysis.workflow_version", "cases.samples.sample_id", "cases.samples.sample_type", "cases.disease_type", "cases.project.disease_type")
+desired_fields <-c("cases.project.project_id", "cases.project.program.name", default_fields('files'), grep_fields('files', "associated_entities"), grep_fields('files', "demographic"), "analysis.analysis_type", "analysis.workflow_type", "analysis.workflow_version", "cases.diagnoses.tissue_or_organ_of_origin", "cases.diagnoses.submitter_id", "cases.samples.sample_id", "cases.samples.sample_type", "cases.disease_type", "cases.project.disease_type")
 length(desired_fields)
 
 # Non informative fields that I have checked:
-# "cases.diagnoses.classification_of_tumor", "cases.diagnoses.tumor_grade", "cases.diagnoses.tumor_stage", "cases.diagnoses.treatments.treatment_outcome", "cases.diagnoses.treatments.therapeutic_agents", "cases.diagnoses.treatments.initial_disease_status", "cases.diagnoses.treatments.treatment_type" (it returns "Radiation Therapy, NOS" or "Pharmaceutical Therapy, NOS"), "cases.diagnoses.primary_disease", "cases.follow_ups.disease_response"
+# "cases.diagnoses.classification_of_tumor", "cases.diagnoses.tumor_grade", "cases.diagnoses.tumor_stage", "cases.diagnoses.treatments.treatment_outcome", "cases.diagnoses.treatments.therapeutic_agents", "cases.diagnoses.treatments.initial_disease_status", "cases.diagnoses.treatments.treatment_type" (it returns "Radiation Therapy, NOS" or "Pharmaceutical Therapy, NOS"), "cases.diagnoses.primary_disease", "cases.follow_ups.disease_response", "cases.samples.tissue_collection_type" (it returns nothing), "cases.samples.tissue_type" (it returns all samples as Not Reported except one as Tumor)
 
 
 qfiles <- GenomicDataCommons::files(fields=desired_fields) %>%
@@ -154,7 +159,8 @@ ID.map = bind_rows(res.expn[ !grepl("list|data.frame", sapply(res.expn, class)) 
 # Convert list of dataframes from res.expn$cases into a unique table
 cases_df = bind_rows(res.expn$cases, .id = "id")
 cases_samples_info_df = bind_rows(cases_df$samples)
-cases_df = cbind(cases_df$id, cases_df$disease_type, cases_df$project$project_id, cases_df$project$disease_type, cases_samples_info_df$sample_id, cases_samples_info_df$sample_type, cases_df$demographic$gender, cases_df$demographic$race, cases_df$demographic$ethnicity, cases_df$demographic$vital_status, cases_df$demographic$age_at_index) %>% as.data.frame() %>% rename("id"="V1", "disease_type"="V2", "project_id"="V3", "project_disease_type"="V4", "sample_id"="V5", "sample_type"="V6", "gender"="V7", "race"="V8", "ethnicity"="V9", "vital_status"="V10", "age_at_index"="V11")
+cases_diagnoses_info_df = bind_rows(cases_df$diagnoses) %>% separate(submitter_id, into=c("tcga_submitter_id", NA), sep="_")
+cases_df = cbind(cases_df$id, cases_df$disease_type, cases_df$project$project_id, cases_df$project$disease_type, cases_samples_info_df$sample_id, cases_samples_info_df$sample_type, gsub("_demographic", "", cases_df$demographic$submitter_id), cases_df$demographic$gender, cases_df$demographic$race, cases_df$demographic$ethnicity, cases_df$demographic$vital_status, cases_df$demographic$age_at_index) %>% as.data.frame() %>% rename("id"="V1", "disease_type"="V2", "project_id"="V3", "project_disease_type"="V4", "sample_id"="V5", "sample_type"="V6", "tcga_submitter_id"="V7", "gender"="V8", "race"="V9", "ethnicity"="V10", "vital_status"="V11", "age_at_index"="V12") %>% left_join(cases_diagnoses_info_df, by="tcga_submitter_id") %>% unique()
 
 # Convert list of dataframes from res.expn$associated_entities into a unique table
 associated_entities_df = bind_rows(res.expn$associated_entities, .id = "id")
@@ -249,6 +255,8 @@ Let's check different types of samples in different cancer types:
 table(ID.map$project_id, ID.map$sample_type)
 ```
 
+Let's create a simplified sample type (tumor / normal):
+
 ```{r}
 ID.map$sample_type_simplified = ifelse(as.integer(ID.map$sample) %in% seq(1,9,1), "tumor", "normal")
 table(ID.map$sample_type_simplified)
@@ -259,7 +267,52 @@ counts_sample_type_simplified_by_project = ID.map %>% select(id, project_id, sam
 cbind(counts_sample_type_simplified_by_project %>% select(-freq, -percent) %>% pivot_wider(names_from = sample_type_simplified, values_from = n) %>% rename(n_tumor=tumor, n_normal=normal), counts_sample_type_simplified_by_project %>% select(-freq, -n) %>% pivot_wider(names_from = sample_type_simplified, values_from = percent) %>% rename(p_tumor=tumor, p_normal=normal) %>% select(-project_id))
 ```
 
-And we save the final table:
+We include into the metadata different cancer subtypes using [TCGAbiolinks package](https://bioconductor.org/packages/release/bioc/vignettes/TCGAbiolinks/inst/doc/subtypes.html):
+
+```{r}
+subtypes <- data.frame(PanCancerAtlas_subtypes())
+dim(subtypes)
+head(subtypes)
+```
+```{r}
+subtypes_processed = subtypes %>% 
+  separate(pan.samplesID, into=c("project", "tss", "participant", "sample_code", "portion_code", "plate", "center"), sep="-", remove=FALSE) %>% 
+  separate(sample_code, into=c("sample", "vial"), sep=2, remove=FALSE) %>%
+  separate(portion_code, into=c("portion", "analyte"), sep=2, remove=FALSE) %>%
+  unite(tcga_submitter_id, c("project", "tss", "participant"), sep="-", remove=F)
+head(subtypes_processed)
+tail(subtypes_processed)
+```
+
+```{r}
+ID.map_subtypes_by_ids1 = ID.map %>% inner_join((subtypes_processed %>% select(pan.samplesID, Subtype_Selected)), by=c("entity_submitter_id"="pan.samplesID")) %>% rename("cancer_subtype"="Subtype_Selected")
+#dim(ID.map_subtypes_by_ids1 %>% filter(!(is.na(cancer_subtype))))
+dim(ID.map_subtypes_by_ids1)
+
+ID.map_subtypes_by_ids2 = ID.map %>% inner_join((subtypes_processed %>% select(pan.samplesID, participant, sample_code, sample, vial, Subtype_Selected) %>% filter(!(pan.samplesID %in% ID.map_subtypes_by_ids1$entity_submitter_id))), by=c("participant", "sample_code", "sample", "vial")) %>% rename("cancer_subtype"="Subtype_Selected")
+dim(ID.map_subtypes_by_ids2)
+
+ID.map_subtypes_by_ids3 = ID.map %>% inner_join((subtypes_processed %>% select(pan.samplesID, participant, sample, Subtype_Selected) %>% filter(!(pan.samplesID %in% c(ID.map_subtypes_by_ids1$entity_submitter_id, ID.map_subtypes_by_ids2$pan.samplesID)))), by=c("participant", "sample")) %>% rename("cancer_subtype"="Subtype_Selected")
+dim(ID.map_subtypes_by_ids3)
+
+ID.map_subtypes_by_tcga_submitter_id = ID.map %>% inner_join((subtypes_processed %>% filter(!(pan.samplesID %in% c(ID.map_subtypes_by_ids1$entity_submitter_id, ID.map_subtypes_by_ids2$pan.samplesID, ID.map_subtypes_by_ids3$pan.samplesID))) %>% select(tcga_submitter_id, Subtype_Selected)), by=c("tcga_submitter_id"="tcga_submitter_id")) %>% rename("cancer_subtype"="Subtype_Selected")
+dim(ID.map_subtypes_by_tcga_submitter_id)
+
+ID.map_subtypes = ID.map_subtypes_by_ids1 %>% full_join(ID.map_subtypes_by_ids2) %>% full_join(ID.map_subtypes_by_ids3) %>% full_join(ID.map_subtypes_by_tcga_submitter_id)
+dim(ID.map_subtypes)
+
+ID.map_subtypes = ID.map_subtypes %>% full_join(ID.map %>% filter(!(id %in% ID.map_subtypes$id)))
+dim(ID.map_subtypes)
+head(ID.map_subtypes)
+```
+```{r}
+# Check if there are repeated values
+#ID.map_subtypes %>% filter(!(is.na(cancer_subtype))) %>% group_by(id) %>% mutate(n_cancer_subtype=n()) %>% filter(n_cancer_subtype > 1) %>% select(id, tcga_submitter_id, entity_submitter_id, cancer_subtype, n_cancer_subtype)
+```
+
+We end up having `r nrow(ID.map_subtypes %>% filter(!(is.na(cancer_subtype))))` samples mapped to cancer subtypes.
+
+We save the final table:
 
 ```{r}
 # Create directories of the database
@@ -273,9 +326,12 @@ dir.create(paste(output_dir, "TCGA/raw/metadata", sep="/"), showWarnings = FALSE
 dir.create(paste(output_dir, "TCGA/raw/additional", sep="/"), showWarnings = FALSE)
 
 # Write ID map file
-manifest_name = paste('gdc_manifest.', Sys.Date(), sep="")
 manifest_idmap_file = paste(output_dir, "TCGA/raw/metadata/metadata.txt", sep="/")
-ID.map %>% fwrite(manifest_idmap_file)
+ID.map_subtypes %>% fwrite(manifest_idmap_file)
+
+# Write subtypes file
+subtypes_file = paste(output_dir, "TCGA/raw/metadata/subtypes.txt", sep="/")
+subtypes_processed %>% fwrite(subtypes_file)
 ```
 
 Finally, we create the manifest file that we will use to obtain the files:

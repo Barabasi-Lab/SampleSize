@@ -35,10 +35,11 @@ Un-normalized data:
 ```{r}
 input_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data'
 plots_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots'
+tables_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables'
 numbers_file = paste(input_dir, 'dataset_numbers_complete_graph.txt', sep='/')
 numbers_df = fread(numbers_file)
 numbers_df$dataset = tolower(numbers_df$dataset)
-sd_genes_file = paste(input_dir, "variation_by_gene.txt", sep="/")
+sd_genes_file = paste(input_dir, "variation_by_gene.txt", sep="/") # from => calculate_rnaseq_datasets_variation.Rmd
 sd_genes_df = fread(sd_genes_file)
 
 input_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/example_pearson_pval_0.05'
@@ -54,7 +55,7 @@ analytical_summary_file = paste(input_dir, 'analytical_model_summary_pearson_pva
 analytical_model_summary_df = fread(analytical_summary_file)
 analytical_regression_results_file = paste(input_dir, 'analytical_model_regression_results_pearson_pval_0.05.txt', sep='/')
 stretched_exponential_regression_df = fread(analytical_regression_results_file)
-theoretical_sample_size_file = paste(input_dir, 'theoretical_sample_size_for_correlations_of_datasets.txt', sep='/')
+theoretical_sample_size_file = paste(input_dir, 'theoretical_sample_size_for_correlations_of_datasets.txt', sep='/') # from => calculate_convergence_correlation_types.Rmd
 sample_size_correlation_df = fread(theoretical_sample_size_file)
 ```
 
@@ -95,15 +96,16 @@ max(((results_selected_df %>% dplyr::select(method, type_dataset, size, rep) %>%
 #datasets_selected = c("gtex:whole.blood", "gtex:artery.tibial", "tcga:tcga-coad", "tcga:tcga-brca")
 #datasets_selected = c("gtex:whole.blood", "gtex:artery.tibial", "tcga:tcga-coad", "tcga:tcga-brca", "scipher:scipher.complete.dataset")
 #datasets_selected = c("gtex:breast.mammary.tissue", "gtex:thyroid", "tcga:tcga-brca", "tcga:tcga-thca", "scipher:scipher.complete.dataset")
-datasets_selected = c("gtex:breast.mammary.tissue", "gtex:thyroid", "gtex:whole.blood", "tcga:tcga-brca", "tcga:tcga-thca", "scipher:scipher.complete.dataset")
+#datasets_selected = c("gtex:breast.mammary.tissue", "gtex:thyroid", "gtex:whole.blood", "tcga:tcga-brca", "tcga:tcga-thca", "scipher:scipher.complete.dataset")
+datasets_selected = c("gtex:breast.mammary.tissue", "gtex:lung", "gtex:whole.blood", "tcga:tcga-brca_female", "tcga:tcga-luad", "scipher:scipher.sample.per.patient.baseline")
 curve_plot = results_selected_norm_df %>%
   filter(type_dataset %in% datasets_selected) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.complete.dataset", "R. arthritis")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.sample.per.patient.baseline", "R. arthritis")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:whole.blood", "GTEx: Whole blood")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:thyroid", "GTEx: Thyroid")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:lung", "GTEx: Lung")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-thca", "TCGA: Thyroid cancer")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca", "TCGA: Breast cancer")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-luad", "TCGA: Lung cancer")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca_female", "TCGA: Breast cancer")) %>%
   ggplot(aes(x=size, y=unnorm, col=type_dataset)) +
   geom_point(alpha=0.5, size=3) +
   #scale_x_continuous(trans = scales::log10_trans()) +
@@ -133,28 +135,95 @@ ggsave(
 )
 ```
 
+#### Scaling relation plot
+
+Calculate scaling relation plot:
+
+```{r}
+datasets_selected = c("gtex:breast.mammary.tissue", "gtex:lung", "gtex:whole.blood", "tcga:tcga-brca_female", "tcga:tcga-luad", "scipher:scipher.sample.per.patient.baseline")
+cols = c("size", "S", "type_dataset", "S_lag1", "Fn", "slope", "intercept", "adj.r.squared")
+scaling_relation_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+for (dataset_selected in datasets_selected){
+  scaling_relation_filt = topology_results_selected_by_size_df %>% 
+    filter(type_dataset == dataset_selected) %>%
+    select(size, mean, type_dataset) %>%
+    unique() %>%
+    rename("S"="mean") %>%
+    arrange(size) %>%
+    mutate(S_lag1 = if_else(size == min(size), 0, lag(S))) %>%
+    mutate(Fn = ((S - S_lag1)/S_lag1)) %>%
+    filter((!(is.infinite(Fn))) & (Fn > 0))
+  lm_summary = summary(lm(log(scaling_relation_filt$Fn)~log(scaling_relation_filt$size)))
+  slope = coef(lm_summary)[2]
+  intercept = coef(lm_summary)[1]
+  adj.r.squared = lm_summary$adj.r.squared
+  scaling_relation_df = rbind(scaling_relation_df, cbind(scaling_relation_filt, data.frame(slope=slope, intercept=intercept, adj.r.squared=adj.r.squared)))
+}
+
+scaling_relation_plot = scaling_relation_df %>%
+  filter(Fn > 0) %>%
+  mutate_at(c('adj.r.squared'), ~sprintf("%.2f",.)) %>%
+  mutate_at(c('adj.r.squared'), as.character) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.sample.per.patient.baseline", "R. arthritis")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:whole.blood", "GTEx: Whole blood")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:lung", "GTEx: Lung")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-luad", "TCGA: Lung cancer")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca_female", "TCGA: Breast cancer")) %>%
+  ggplot(aes(x=log(size), y=log(Fn), col=adj.r.squared)) +
+  geom_point(alpha=0.5, size=3) +
+  geom_abline(aes(intercept=intercept, slope=slope, col=adj.r.squared), size=1) +
+  theme_linedraw() +
+  xlab("log(n)") +
+  ylab(bquote(bold(log((S[n]-S[n-1])/S[n-1])))) +
+  #scale_color_manual(values = c("#D55E00", "#E69F00", "#44AA99", "#0072B2", "#56B4E9")) +
+  #scale_color_manual(values = c("#D55E00", "#E69F00", "#44AA99", "#65F3BF", "#0072B2", "#56B4E9")) +
+  scale_color_manual(values = c("#56B4E9", "#E69F00", "#44AA99", "#65F3BF", "#0072B2", "#D55E00")) +
+  guides(col=guide_legend(title=bquote(bold(R^2)))) +
+  theme(aspect.ratio=1, 
+        plot.title =  element_text(size = 15, face="bold"), 
+        axis.title = element_text(size = 14, face="bold"), 
+        axis.text = element_text(size = 13), 
+        legend.position = c(0.895, 0.77),
+        legend.text = element_text(size = 11), 
+        legend.title=element_text(size=13, face="bold"),
+        legend.title.align=0.5,
+        legend.background = element_rect(size=0.2, linetype="solid", colour ="black"))
+plot_file = paste(plots_dir, "scaling_relation_pearson_pval_0.05.png", sep="/")
+ggsave(
+  plot_file,
+  plot=scaling_relation_plot,
+  dpi = 1200,
+  #width = 9500,
+  #height = 6000,
+  units = c("px")
+)
+print(scaling_relation_plot)
+```
+
 #### Regression plot
 
 ```{r}
 #datasets_selected = c("gtex:whole.blood", "gtex:artery.tibial", "tcga:tcga-coad", "tcga:tcga-brca")
 #datasets_selected = c("gtex:whole.blood", "gtex:artery.tibial", "tcga:tcga-coad", "tcga:tcga-brca", "scipher:scipher.complete.dataset")
 #datasets_selected = c("gtex:breast.mammary.tissue", "gtex:thyroid", "tcga:tcga-brca", "tcga:tcga-thca", "scipher:scipher.complete.dataset")
-datasets_selected = c("gtex:breast.mammary.tissue", "gtex:thyroid", "gtex:whole.blood", "tcga:tcga-brca", "tcga:tcga-thca", "scipher:scipher.complete.dataset")
+#datasets_selected = c("gtex:breast.mammary.tissue", "gtex:thyroid", "gtex:whole.blood", "tcga:tcga-brca", "tcga:tcga-thca", "scipher:scipher.complete.dataset")
+datasets_selected = c("gtex:breast.mammary.tissue", "gtex:lung", "gtex:whole.blood", "tcga:tcga-brca_female", "tcga:tcga-luad", "scipher:scipher.sample.per.patient.baseline")
 #model_selected = "Stretched exponential (by optimization)"
 model_selected = "Stretched exponential (by linear fit)"
 regression_plot = stretched_exponential_regression_df %>% inner_join((topology_results_selected_analytical_df %>% dplyr::select(type_dataset, model, slope, intercept, a, b) %>% unique()), by=c("type_dataset", "model")) %>%
   filter((type_dataset %in% datasets_selected) & (model == model_selected)) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.complete.dataset", "R. arthritis")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.sample.per.patient.baseline", "R. arthritis")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:whole.blood", "GTEx: Whole blood")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:thyroid", "GTEx: Thyroid")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:lung", "GTEx: Lung")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-thca", "TCGA: Thyroid cancer")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca", "TCGA: Breast cancer")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-luad", "TCGA: Lung cancer")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca_female", "TCGA: Breast cancer")) %>%
   ggplot(aes(x=x, y=y, col=type_dataset)) +
   geom_point(alpha=0.5, size=3) +
   geom_abline(aes(intercept=intercept, slope=slope, col=type_dataset), size=1) +
   theme_linedraw() +
-  xlab("log(N)") +
+  xlab("log(n)") +
   ylab("log[ log(L) - log(S) ]") +
   #scale_color_manual(values = c("#D55E00", "#E69F00", "#44AA99", "#0072B2", "#56B4E9")) +
   #scale_color_manual(values = c("#D55E00", "#E69F00", "#44AA99", "#65F3BF", "#0072B2", "#56B4E9")) +
@@ -167,7 +236,6 @@ regression_plot = stretched_exponential_regression_df %>% inner_join((topology_r
         legend.text = element_text(size = 13), 
         legend.title=element_text(size=14, face="bold"))
 plot_file = paste(plots_dir, "regression_pearson_pval_0.05.png", sep="/")
-print(regression_plot)
 ggsave(
   plot_file,
   plot=regression_plot,
@@ -176,6 +244,7 @@ ggsave(
   #height = 6000,
   units = c("px")
 )
+print(regression_plot)
 ```
 
 Create a table with the results for the figure:
@@ -184,9 +253,24 @@ Create a table with the results for the figure:
 #datasets_selected = c("gtex:whole.blood", "gtex:artery.tibial", "tcga:tcga-coad", "tcga:tcga-brca")
 #datasets_selected = c("gtex:whole.blood", "gtex:artery.tibial", "tcga:tcga-coad", "tcga:tcga-brca", "scipher:scipher.complete.dataset")
 #datasets_selected = c("gtex:breast.mammary.tissue", "gtex:thyroid", "tcga:tcga-brca", "tcga:tcga-thca", "scipher:scipher.complete.dataset")
-datasets_selected = c("scipher:scipher.complete.dataset", "gtex:whole.blood", "gtex:thyroid", "tcga:tcga-thca", "gtex:breast.mammary.tissue", "tcga:tcga-brca")
+datasets_selected = c("gtex:breast.mammary.tissue", "gtex:lung", "gtex:whole.blood", "tcga:tcga-brca_female", "tcga:tcga-luad", "scipher:scipher.sample.per.patient.baseline")
 #model_selected = "Stretched exponential (by optimization)"
 model_selected = "Stretched exponential (by linear fit)"
+
+# Show information for scaling relation
+scaling_relation_summary_df = scaling_relation_df %>% 
+  dplyr::select(type_dataset, adj.r.squared) %>% 
+  unique() %>% 
+  arrange(factor(type_dataset, levels = datasets_selected)) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.sample.per.patient.baseline", "R. arthritis")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:whole.blood", "GTEx: Whole blood")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:lung", "GTEx: Lung")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-luad", "TCGA: Lung cancer")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca_female", "TCGA: Breast cancer")) %>%
+  rename("R**2" = "adj.r.squared") %>%
+  mutate_if(is.numeric, ~sprintf("%.2f",.))
+print(scaling_relation_summary_df)
 
 # Show all information for model selected
 analytical_model_summary_df$L_vs_total = abs((analytical_model_summary_df$unnorm_L - analytical_model_summary_df$total_num_edges)) / analytical_model_summary_df$total_num_edges
@@ -211,19 +295,20 @@ power_law_summary_df = analytical_model_summary_df %>%
   filter((type_dataset %in% datasets_selected) & (model == model_selected)) %>%
   dplyr::select(-model) %>%
   arrange(factor(type_dataset, levels = datasets_selected)) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.complete.dataset", "R. arthritis")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.sample.per.patient.baseline", "R. arthritis")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:whole.blood", "GTEx: Whole blood")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:thyroid", "GTEx: Thyroid")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:lung", "GTEx: Lung")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-thca", "TCGA: Thyroid cancer")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca", "TCGA: Breast cancer")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-luad", "TCGA: Lung cancer")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca_female", "TCGA: Breast cancer")) %>%
   rename("alpha"="a", "R**2" = "adj.r.squared", "epsilon" = "relative.error.mean") %>%
   unique() %>% 
   mutate_if(is.numeric, ~sprintf("%.2f",.))
 print(power_law_summary_df)
 
 # Bind power law with logarithm results
-figure_summary_table = cbind(power_law_summary_df, (log_model_summary_df %>% select(-type_dataset)))
+#figure_summary_table = cbind(power_law_summary_df, (log_model_summary_df %>% select(-type_dataset)))
+figure_summary_table = cbind(scaling_relation_summary_df, (power_law_summary_df %>% select(-type_dataset)), (log_model_summary_df %>% select(-type_dataset)))
 
 # Assign first row as row names
 rownames(figure_summary_table) <- figure_summary_table$type_dataset
@@ -238,17 +323,21 @@ core_figure = gridExtra::tableGrob(figure_summary_table, theme=ttheme_minimal(
   rowhead=list(bg_params = list(fill = NA, col=NA), 
                fg_params=list(col=colors_original_figure, fontface="plain")), 
   core=list(bg_params=list(fill=colors_light_figure, col="black", lwd=1))))
-header <- gridExtra::tableGrob(figure_summary_table[1, 1:2], rows=NULL, cols=c("Power law", "Logarithm"), theme=ttheme_minimal(
+#header <- gridExtra::tableGrob(figure_summary_table[1, 1:2], rows=NULL, cols=c("Power law", "Logarithm"), theme=ttheme_minimal(
+header <- gridExtra::tableGrob(figure_summary_table[1, 1:3], rows=NULL, cols=c("Power law", "Analytical model", "Logarithm"), theme=ttheme_minimal(
   colhead=list(bg_params = list(fill = NA, col="black", lwd=1), 
                fg_params = list(parse=TRUE, fontface="plain"))))
 figure_summary_table_plot <- gtable_combine(header[1,], core_figure, along=2)
-figure_summary_table_plot$widths[2:length(figure_summary_table_plot$widths)] <- rep(max(figure_summary_table_plot$widths[2:length(figure_summary_table_plot$widths)]), length(figure_summary_table_plot$widths[2:length(figure_summary_table_plot$widths)])) # make column widths equal
+#figure_summary_table_plot$widths[2:length(figure_summary_table_plot$widths)] <- rep(max(figure_summary_table_plot$widths[2:length(figure_summary_table_plot$widths)]), length(figure_summary_table_plot$widths[2:length(figure_summary_table_plot$widths)])) # make column widths equal
+figure_summary_table_plot$widths[3:length(figure_summary_table_plot$widths)] <- rep(max(figure_summary_table_plot$widths[3:length(figure_summary_table_plot$widths)]), length(figure_summary_table_plot$widths[3:length(figure_summary_table_plot$widths)])) # make columns 3 to end widths equal
+figure_summary_table_plot$widths[2] <- rep(max(figure_summary_table_plot$widths[2])*0.7, length(figure_summary_table_plot$widths[2])) # make column 2 smaller
 #grid.newpage()
 #grid.draw(figure_summary_table_plot) # see what it looks like before altering gtable
 # change the relevant rows of gtable
 grid.newpage()
 #figure_summary_table_plot$layout[1:4 , c("l", "r")] <- list(c(2, 7), c(6, 8)) # For 8 columns (including b and L)
-figure_summary_table_plot$layout[1:4 , c("l", "r")] <- list(c(2, 5), c(4, 6))
+#figure_summary_table_plot$layout[1:4 , c("l", "r")] <- list(c(2, 5), c(4, 6))
+figure_summary_table_plot$layout[1:6 , c("l", "r")] <- list(c(2, 3, 6), c(2, 5, 7))
 grid.draw(figure_summary_table_plot)
 
 ```
@@ -259,19 +348,20 @@ grid.draw(figure_summary_table_plot)
 #datasets_selected = c("gtex:whole.blood", "gtex:artery.tibial", "tcga:tcga-coad", "tcga:tcga-brca")
 #datasets_selected = c("gtex:whole.blood", "gtex:artery.tibial", "tcga:tcga-coad", "tcga:tcga-brca", "scipher:scipher.complete.dataset")
 #datasets_selected = c("gtex:breast.mammary.tissue", "gtex:thyroid", "tcga:tcga-brca", "tcga:tcga-thca", "scipher:scipher.complete.dataset")
-datasets_selected = c("gtex:breast.mammary.tissue", "gtex:thyroid", "gtex:whole.blood", "tcga:tcga-brca", "tcga:tcga-thca", "scipher:scipher.complete.dataset")
+#datasets_selected = c("gtex:breast.mammary.tissue", "gtex:thyroid", "gtex:whole.blood", "tcga:tcga-brca", "tcga:tcga-thca", "scipher:scipher.complete.dataset")
+datasets_selected = c("gtex:breast.mammary.tissue", "gtex:lung", "gtex:whole.blood", "tcga:tcga-brca_female", "tcga:tcga-luad", "scipher:scipher.sample.per.patient.baseline")
 #model_selected = "Stretched exponential (by optimization)"
 model_selected = "Stretched exponential (by linear fit)"
 prediction_plot = results_selected_norm_df %>% right_join((predicted_results_norm_df %>% dplyr::select(type_dataset, model, model_result, size) %>% mutate_at(c('model_result'), as.numeric) %>% unique()), by=c("type_dataset", "size")) %>%
   filter((type_dataset %in% datasets_selected) & (model == model_selected)) %>%
 #results_selected_norm_df %>%
 #  filter(type_dataset %in% datasets_selected) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.complete.dataset", "R. arthritis")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.sample.per.patient.baseline", "R. arthritis")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:whole.blood", "GTEx: Whole blood")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:thyroid", "GTEx: Thyroid")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:lung", "GTEx: Lung")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-thca", "TCGA: Thyroid cancer")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca", "TCGA: Breast cancer")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-luad", "TCGA: Lung cancer")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca_female", "TCGA: Breast cancer")) %>%
   ggplot(aes(x=size, y=num_edges, col=type_dataset)) +
   geom_point(alpha=0.5, size=3) +
   #geom_line(data=(predicted_results_norm_df %>% filter((type_dataset %in% datasets_selected) & (model == model_selected)) %>% unique()), aes(x=size, y=model_result, col=type_dataset), size=1) +
@@ -305,7 +395,7 @@ ggsave(
 Number of samples for a given % of significant edges:
 
 ```{r}
-datasets_selected = c("gtex:breast.mammary.tissue", "gtex:thyroid", "gtex:whole.blood", "tcga:tcga-brca", "tcga:tcga-thca", "scipher:scipher.complete.dataset")
+datasets_selected = c("gtex:breast.mammary.tissue", "gtex:lung", "gtex:whole.blood", "tcga:tcga-brca_female", "tcga:tcga-luad", "scipher:scipher.sample.per.patient.baseline")
 model_selected = "Stretched exponential (by linear fit)"
 predicted_results_norm_df %>% dplyr::select(type_dataset, model, model_result, size) %>%
   mutate_at(c('model_result'), as.numeric) %>%
@@ -378,7 +468,7 @@ Large example:
 ```{r}
 models_selected = c("Stretched exponential (by linear fit)", "Logarithmic", "Mean")
 #dataset_selected = "gtex:whole.blood"
-dataset_selected = "tcga:tcga-brca"
+dataset_selected = "tcga:tcga-brca_female"
 
 if(dataset_selected == "gtex:whole.blood"){
   palette =  c("#44AA99", "#e3f705", "#cc68f7")
@@ -389,9 +479,9 @@ if(dataset_selected == "gtex:whole.blood"){
 # Join predicted results with mean
 predicted_results_norm_and_mean_df = rbind((topology_results_selected_by_size_norm_df %>% dplyr::select(type_dataset, size, mean_norm) %>% unique() %>% rename("model_result" = "mean_norm") %>% mutate(model="Mean")), (predicted_results_norm_df %>% dplyr::select(type_dataset, size, model_result, model) %>% unique() %>% mutate_at(c('model_result'), as.numeric))) %>% 
   filter(model %in% models_selected) %>%
-  mutate(model = replace(model, model == "Stretched exponential (by linear fit)", "Power law")) %>%
+  mutate(model = replace(model, model == "Stretched exponential (by linear fit)", "Analytical model")) %>%
   mutate(model = replace(model, model == "Logarithmic", "Logarithm"))
-predicted_results_norm_and_mean_df$model <- factor(predicted_results_norm_and_mean_df$model, levels = c("Mean", "Power law", "Logarithm"))
+predicted_results_norm_and_mean_df$model <- factor(predicted_results_norm_and_mean_df$model, levels = c("Mean", "Analytical model", "Logarithm"))
 
 # Process and plot
 comparison_plot = results_selected_norm_df %>% 
@@ -499,7 +589,8 @@ calculate_prediction_from_analytical_model = function(model, x_list, a, b, L){
 #datasets_selected = c("gtex:whole.blood", "gtex:artery.tibial", "tcga:tcga-coad", "tcga:tcga-brca")
 #datasets_selected = c("gtex:whole.blood", "gtex:artery.tibial", "tcga:tcga-coad", "tcga:tcga-brca", "scipher:scipher.complete.dataset")
 #datasets_selected = c("gtex:breast.mammary.tissue", "gtex:thyroid", "tcga:tcga-brca", "tcga:tcga-thca", "scipher:scipher.complete.dataset")
-datasets_selected = c("gtex:breast.mammary.tissue", "gtex:thyroid", "gtex:whole.blood", "tcga:tcga-brca", "tcga:tcga-thca", "scipher:scipher.complete.dataset")
+#datasets_selected = c("gtex:breast.mammary.tissue", "gtex:thyroid", "gtex:whole.blood", "tcga:tcga-brca", "tcga:tcga-thca", "scipher:scipher.complete.dataset")
+datasets_selected = c("gtex:breast.mammary.tissue", "gtex:lung", "gtex:whole.blood", "tcga:tcga-brca_female", "tcga:tcga-luad", "scipher:scipher.sample.per.patient.baseline")
 #model_selected = "Stretched exponential (by optimization)"
 model_selected = "Stretched exponential (by linear fit)"
 sample_size_vs_a_df = analytical_model_summary_df %>% inner_join(sample_size_correlation_df, by=c("type_dataset"="dataset")) %>% 
@@ -518,8 +609,7 @@ sample_size_vs_a_df %>%
   filter(type_correlation == type_correlation_selected) %>%
   arrange(desc(a))
 
-output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables'
-output_file = paste(output_dir, 'a_vs_fraction_sig_correlations_pearson_pval_0.05.txt', sep='/')
+output_file = paste(tables_dir, 'a_vs_fraction_sig_correlations_pearson_pval_0.05.txt', sep='/')
 sample_size_vs_a_df %>% arrange(desc(a)) %>% fwrite(output_file)
 ```
 
@@ -530,24 +620,28 @@ type_correlation_selected = "weak"
 a_vs_fraction_sig_correlations_plot = sample_size_vs_a_df %>% 
   filter(type_correlation == type_correlation_selected) %>% 
   filter(!(type_dataset == "tcga:tcga")) %>% 
-  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.complete.dataset", "R. arthritis")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.sample.per.patient.baseline", "R. arthritis")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:whole.blood", "GTEx: Whole blood")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:thyroid", "GTEx: Thyroid")) %>%
+  #mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:thyroid", "GTEx: Thyroid")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:lung", "GTEx: Lung")) %>%
   #mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:artery.tibial", "GTEx: Artery tibial")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
   #mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-coad", "TCGA: Colon cancer")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-thca", "TCGA: Thyroid cancer")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca", "TCGA: Breast cancer")) %>%
+  #mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-thca", "TCGA: Thyroid cancer")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-luad", "TCGA: Lung cancer")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca_female", "TCGA: Breast cancer")) %>%
   ggplot(aes(x=a, y=num_edges_from_statistical_corrected_norm)) + 
   geom_point() +
   #geom_point(data = . %>% filter(type_dataset == "TCGA: Colon cancer"), color = "#56B4E9") +
   #geom_point(data = . %>% filter(type_dataset == "TCGA: Thyroid cancer"), color = "#56B4E9") +
-  geom_point(data = . %>% filter(type_dataset == "TCGA: Thyroid cancer"), color = "#D55E00") +
+  #geom_point(data = . %>% filter(type_dataset == "TCGA: Thyroid cancer"), color = "#D55E00") +
+  geom_point(data = . %>% filter(type_dataset == "TCGA: Lung cancer"), color = "#D55E00") +
   geom_point(data = . %>% filter(type_dataset == "TCGA: Breast cancer"), color = "#0072B2") +
   geom_point(data = . %>% filter(type_dataset == "R. arthritis"), color = "#65F3BF") +
   geom_point(data = . %>% filter(type_dataset == "GTEx: Whole blood"), color = "#44AA99") +
   #geom_point(data = . %>% filter(type_dataset == "GTEx: Artery tibial"), color = "#D55E00") +
-  geom_point(data = . %>% filter(type_dataset == "GTEx: Thyroid"), color = "#E69F00") +
+  #geom_point(data = . %>% filter(type_dataset == "GTEx: Thyroid"), color = "#E69F00") +
+  geom_point(data = . %>% filter(type_dataset == "GTEx: Lung"), color = "#E69F00") +
   #geom_point(data = . %>% filter(type_dataset == "GTEx: Breast"), color = "#D55E00") +
   geom_point(data = . %>% filter(type_dataset == "GTEx: Breast"), color = "#56B4E9") +
   xlab(expression(alpha)) +
@@ -557,7 +651,8 @@ a_vs_fraction_sig_correlations_plot = sample_size_vs_a_df %>%
   theme(aspect.ratio=1, plot.title =  element_text(size = 15, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 13), legend.text = element_text(size = 13), legend.title=element_text(size=14, face="bold")) +
   geom_text_repel(
     #data = subset((sample_size_vs_a_df %>% filter(type_correlation == type_correlation_selected)), type_dataset == "gtex:whole.blood"),
-    data = subset((sample_size_vs_a_df %>% filter(type_correlation == type_correlation_selected) %>% mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:thyroid", "GTEx: Thyroid"))), type_dataset == "GTEx: Thyroid"),
+    #data = subset((sample_size_vs_a_df %>% filter(type_correlation == type_correlation_selected) %>% mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:thyroid", "GTEx: Thyroid"))), type_dataset == "GTEx: Thyroid"),
+    data = subset((sample_size_vs_a_df %>% filter(type_correlation == type_correlation_selected) %>% mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:lung", "GTEx: Lung"))), type_dataset == "GTEx: Lung"),
     aes(label = type_dataset), col = "#E69F00",
     size = 4,
     box.padding = unit(0.3, "lines"),
@@ -579,14 +674,14 @@ a_vs_fraction_sig_correlations_plot = sample_size_vs_a_df %>%
     point.padding = unit(0.3, "lines")
   ) +
   geom_text_repel(
-    data = subset((sample_size_vs_a_df %>% filter(type_correlation == type_correlation_selected) %>% mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.complete.dataset", "R. arthritis"))), type_dataset == "R. arthritis"),
+    data = subset((sample_size_vs_a_df %>% filter(type_correlation == type_correlation_selected) %>% mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.sample.per.patient.baseline", "R. arthritis"))), type_dataset == "R. arthritis"),
     aes(label = type_dataset), col = "#65F3BF",
     size = 4,
     box.padding = unit(0.5, "lines"),
     point.padding = unit(0.3, "lines")
   ) +
   geom_text_repel(
-    data = subset((sample_size_vs_a_df %>% filter(type_correlation == type_correlation_selected) %>% mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca", "TCGA: Breast cancer"))), type_dataset == "TCGA: Breast cancer"),
+    data = subset((sample_size_vs_a_df %>% filter(type_correlation == type_correlation_selected) %>% mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca_female", "TCGA: Breast cancer"))), type_dataset == "TCGA: Breast cancer"),
     aes(label = type_dataset), col = "#0072B2",
     size = 4,
     box.padding = unit(0.35, "lines"),
@@ -594,7 +689,8 @@ a_vs_fraction_sig_correlations_plot = sample_size_vs_a_df %>%
   ) +
   geom_text_repel(
     #data = subset((sample_size_vs_a_df %>% filter(type_correlation == type_correlation_selected)), type_dataset == "tcga:tcga-coad"),
-    data = subset((sample_size_vs_a_df %>% filter(type_correlation == type_correlation_selected) %>% mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-thca", "TCGA: Thyroid cancer"))), type_dataset == "TCGA: Thyroid cancer"),
+    #data = subset((sample_size_vs_a_df %>% filter(type_correlation == type_correlation_selected) %>% mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-thca", "TCGA: Thyroid cancer"))), type_dataset == "TCGA: Thyroid cancer"),
+    data = subset((sample_size_vs_a_df %>% filter(type_correlation == type_correlation_selected) %>% mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-luad", "TCGA: Lung cancer"))), type_dataset == "TCGA: Lung cancer"),
     aes(label = type_dataset), col = "#D55E00",
     size = 4,
     box.padding = unit(0.5, "lines"),
@@ -620,24 +716,28 @@ type_correlation_selected = "weak"
 a_vs_fraction_sig_correlations_empty_plot = sample_size_vs_a_df %>% 
   filter(type_correlation == type_correlation_selected) %>% 
   filter(!(type_dataset == "tcga:tcga")) %>% 
-  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.complete.dataset", "R. arthritis")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.sample.per.patient.baseline", "R. arthritis")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:whole.blood", "GTEx: Whole blood")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:thyroid", "GTEx: Thyroid")) %>%
+  #mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:thyroid", "GTEx: Thyroid")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:lung", "GTEx: Lung")) %>%
   #mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:artery.tibial", "GTEx: Artery tibial")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
   #mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-coad", "TCGA: Colon cancer")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-thca", "TCGA: Thyroid cancer")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca", "TCGA: Breast cancer")) %>%
+  #mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-thca", "TCGA: Thyroid cancer")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-luad", "TCGA: Lung cancer")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca_female", "TCGA: Breast cancer")) %>%
   ggplot(aes(x=a, y=num_edges_from_statistical_corrected_norm)) + 
   geom_point() +
   #geom_point(data = . %>% filter(type_dataset == "TCGA: Colon cancer"), color = "#56B4E9") +
   #geom_point(data = . %>% filter(type_dataset == "TCGA: Thyroid cancer"), color = "#56B4E9") +
-  geom_point(data = . %>% filter(type_dataset == "TCGA: Thyroid cancer"), color = "#D55E00") +
+  #geom_point(data = . %>% filter(type_dataset == "TCGA: Thyroid cancer"), color = "#D55E00") +
+  geom_point(data = . %>% filter(type_dataset == "TCGA: Lung cancer"), color = "#D55E00") +
   geom_point(data = . %>% filter(type_dataset == "TCGA: Breast cancer"), color = "#0072B2") +
   geom_point(data = . %>% filter(type_dataset == "R. arthritis"), color = "#65F3BF") +
   geom_point(data = . %>% filter(type_dataset == "GTEx: Whole blood"), color = "#44AA99") +
   #geom_point(data = . %>% filter(type_dataset == "GTEx: Artery tibial"), color = "#D55E00") +
-  geom_point(data = . %>% filter(type_dataset == "GTEx: Thyroid"), color = "#E69F00") +
+  #geom_point(data = . %>% filter(type_dataset == "GTEx: Thyroid"), color = "#E69F00") +
+  geom_point(data = . %>% filter(type_dataset == "GTEx: Lung"), color = "#E69F00") +
   #geom_point(data = . %>% filter(type_dataset == "GTEx: Breast"), color = "#D55E00") +
   geom_point(data = . %>% filter(type_dataset == "GTEx: Breast"), color = "#56B4E9") +
   xlab(expression(alpha)) +
@@ -666,7 +766,8 @@ Create plots showing the variation of each gene across samples:
 ```{r}
 #datasets_selected = c("Artery.Tibial", "Whole.Blood", "TCGA-BRCA", "TCGA-COAD", "scipher.complete.dataset")
 #datasets_selected = c("Breast.Mammary.Tissue", "Thyroid", "TCGA-BRCA", "TCGA-THCA", "scipher.complete.dataset")
-datasets_selected = c("Breast.Mammary.Tissue", "Thyroid", "Whole.Blood", "TCGA-BRCA", "TCGA-THCA", "scipher.complete.dataset")
+#datasets_selected = c("Breast.Mammary.Tissue", "Thyroid", "Whole.Blood", "TCGA-BRCA", "TCGA-THCA", "scipher.complete.dataset")
+datasets_selected = c("Breast.Mammary.Tissue", "Lung", "Whole.Blood", "TCGA-BRCA_female", "TCGA-LUAD", "scipher.sample.per.patient.baseline")
 parameters = c("sd", "mean", "cv")
 parameter2label <- list("sd"="SD", "mean"="mean", "cv"="CV")
 distribution_plots = list()
@@ -676,12 +777,12 @@ for (x in 1:length(parameters)){
     #filter(sd < 500000) %>%
     #filter(sd < 5000) %>%
     filter(type_dataset %in% datasets_selected) %>%
-    mutate(type_dataset = replace(type_dataset, type_dataset == "scipher.complete.dataset", "R. arthritis")) %>%
-    mutate(type_dataset = replace(type_dataset, type_dataset == "Thyroid", "GTEx: Thyroid")) %>%
-    mutate(type_dataset = replace(type_dataset, type_dataset == "Breast.Mammary.Tissue", "GTEx: Breast")) %>%
+    mutate(type_dataset = replace(type_dataset, type_dataset == "scipher.sample.per.patient.baseline", "R. arthritis")) %>%
     mutate(type_dataset = replace(type_dataset, type_dataset == "Whole.Blood", "GTEx: Whole blood")) %>%
-    mutate(type_dataset = replace(type_dataset, type_dataset == "TCGA-THCA", "TCGA: Thyroid cancer")) %>%
-    mutate(type_dataset = replace(type_dataset, type_dataset == "TCGA-BRCA", "TCGA: Breast cancer")) %>%
+    mutate(type_dataset = replace(type_dataset, type_dataset == "Lung", "GTEx: Lung")) %>%
+    mutate(type_dataset = replace(type_dataset, type_dataset == "Breast.Mammary.Tissue", "GTEx: Breast")) %>%
+    mutate(type_dataset = replace(type_dataset, type_dataset == "TCGA-LUAD", "TCGA: Lung cancer")) %>%
+    mutate(type_dataset = replace(type_dataset, type_dataset == "TCGA-BRCA_female", "TCGA: Breast cancer")) %>%
     ggplot(aes(.data[[parameter]], color=type_dataset)) +
     geom_freqpoly(size=1.5) +
     #geom_histogram(alpha=0.2) +
@@ -711,8 +812,7 @@ for (x in 1:length(parameters)){
 ```
 
 ```{r}
-output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables'
-a_vs_fraction_corr_file = paste(output_dir, 'a_vs_fraction_sig_correlations_pearson_pval_0.05.txt', sep='/')
+a_vs_fraction_corr_file = paste(tables_dir, 'a_vs_fraction_sig_correlations_pearson_pval_0.05.txt', sep='/')
 a_vs_fraction_corr_df = fread(a_vs_fraction_corr_file) %>% rename("dataset_name"="type_dataset")
 head(a_vs_fraction_corr_df)
 ```
@@ -741,26 +841,26 @@ for (x in 1:length(parameters)){
     cut = mean_cut
   }
   param_vs_a_plot = sd_genes_vs_a_df %>%
-    mutate(dataset_name = replace(dataset_name, dataset_name == "scipher:scipher.complete.dataset", "R. arthritis")) %>%
-    mutate(dataset_name = replace(dataset_name, dataset_name == "gtex:thyroid", "GTEx: Thyroid")) %>%
-    mutate(dataset_name = replace(dataset_name, dataset_name == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
+    mutate(dataset_name = replace(dataset_name, dataset_name == "scipher:scipher.sample.per.patient.baseline", "R. arthritis")) %>%
     mutate(dataset_name = replace(dataset_name, dataset_name == "gtex:whole.blood", "GTEx: Whole blood")) %>%
-    mutate(dataset_name = replace(dataset_name, dataset_name == "tcga:tcga-thca", "TCGA: Thyroid cancer")) %>%
-    mutate(dataset_name = replace(dataset_name, dataset_name == "tcga:tcga-brca", "TCGA: Breast cancer")) %>%
+    mutate(dataset_name = replace(dataset_name, dataset_name == "gtex:lung", "GTEx: Lung")) %>%
+    mutate(dataset_name = replace(dataset_name, dataset_name == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
+    mutate(dataset_name = replace(dataset_name, dataset_name == "tcga:tcga-luad", "TCGA: Lung cancer")) %>%
+    mutate(dataset_name = replace(dataset_name, dataset_name == "tcga:tcga-brca_female", "TCGA: Breast cancer")) %>%
     ggplot(aes(x=a, y=.data[[paste("fraction_genes_above_", parameter, "_cut", sep="")]])) + 
     geom_point() +
-    geom_point(data = . %>% filter(dataset_name == "TCGA: Thyroid cancer"), color = "#56B4E9") +
+    geom_point(data = . %>% filter(dataset_name == "TCGA: Lung cancer"), color = "#56B4E9") +
     geom_point(data = . %>% filter(dataset_name == "TCGA: Breast cancer"), color = "#0072B2") +
     geom_point(data = . %>% filter(dataset_name == "R. arthritis"), color = "#65F3BF") +
     geom_point(data = . %>% filter(dataset_name == "GTEx: Whole blood"), color = "#44AA99") +
-    geom_point(data = . %>% filter(dataset_name == "GTEx: Thyroid"), color = "#E69F00") +
+    geom_point(data = . %>% filter(dataset_name == "GTEx: Lung"), color = "#E69F00") +
     geom_point(data = . %>% filter(dataset_name == "GTEx: Breast"), color = "#D55E00") +
     xlab(expression(alpha)) +
     ylab(paste("Fraction of genes with ", parameter2label[[parameter]], " above ", cut, sep="")) +
     theme_linedraw() +
     theme(aspect.ratio=1, plot.title =  element_text(size = 15, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 13), legend.text = element_text(size = 13), legend.title=element_text(size=14, face="bold")) +
     geom_text_repel(
-      data = subset((sd_genes_vs_a_df %>% mutate(dataset_name = replace(dataset_name, dataset_name == "gtex:thyroid", "GTEx: Thyroid"))), dataset_name == "GTEx: Thyroid"),
+      data = subset((sd_genes_vs_a_df %>% mutate(dataset_name = replace(dataset_name, dataset_name == "gtex:lung", "GTEx: Lung"))), dataset_name == "GTEx: Lung"),
       aes(label = dataset_name), col = "#E69F00",
       size = 4,
       box.padding = unit(0.5, "lines"),
@@ -781,21 +881,21 @@ for (x in 1:length(parameters)){
       point.padding = unit(0.3, "lines")
     ) +
     geom_text_repel(
-      data = subset((sd_genes_vs_a_df %>% mutate(dataset_name = replace(dataset_name, dataset_name == "scipher:scipher.complete.dataset", "R. arthritis"))), dataset_name == "R. arthritis"),
+      data = subset((sd_genes_vs_a_df %>% mutate(dataset_name = replace(dataset_name, dataset_name == "scipher:scipher.sample.per.patient.baseline", "R. arthritis"))), dataset_name == "R. arthritis"),
       aes(label = dataset_name), col = "#65F3BF",
       size = 4,
       box.padding = unit(0.5, "lines"),
       point.padding = unit(0.3, "lines")
     ) +
     geom_text_repel(
-      data = subset((sd_genes_vs_a_df %>% mutate(dataset_name = replace(dataset_name, dataset_name == "tcga:tcga-brca", "TCGA: Breast cancer"))), dataset_name == "TCGA: Breast cancer"),
+      data = subset((sd_genes_vs_a_df %>% mutate(dataset_name = replace(dataset_name, dataset_name == "tcga:tcga-brca_female", "TCGA: Breast cancer"))), dataset_name == "TCGA: Breast cancer"),
       aes(label = dataset_name), col = "#0072B2",
       size = 4,
       box.padding = unit(0.5, "lines"),
       point.padding = unit(0.3, "lines")
     ) +
     geom_text_repel(
-      data = subset((sd_genes_vs_a_df %>% mutate(dataset_name = replace(dataset_name, dataset_name == "tcga:tcga-thca", "TCGA: Thyroid cancer"))), dataset_name == "TCGA: Thyroid cancer"),
+      data = subset((sd_genes_vs_a_df %>% mutate(dataset_name = replace(dataset_name, dataset_name == "tcga:tcga-luad", "TCGA: Lung cancer"))), dataset_name == "TCGA: Lung cancer"),
       aes(label = dataset_name), col = "#56B4E9",
       size = 4,
       box.padding = unit(0.5, "lines"),
@@ -852,7 +952,7 @@ Create a panel with all the results:
     (a_vs_fraction_sig_correlations_plot +
      labs(tag = 'F') +
      theme(legend.position="none"))) /
-  ((regression_plot +
+  ((scaling_relation_plot +
       labs(tag = 'B') +
       theme(legend.position="none")) | 
     (prediction_plot +
@@ -889,7 +989,7 @@ type_correlation_selected = "weak"
 sample_size_vs_a_df %>% 
   filter(type_correlation == type_correlation_selected) %>% 
   filter(!(type_dataset == "tcga:tcga")) %>% 
-  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.complete.dataset", "R. arthritis")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.sample.per.patient.baseline", "R. arthritis")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:whole.blood", "GTEx: Whole blood")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:artery.tibial", "GTEx: Artery tibial")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-coad", "TCGA: Colon cancer")) %>%
@@ -921,7 +1021,7 @@ sample_size_vs_a_df %>%
     point.padding = unit(0.3, "lines")
   ) +
   geom_text_repel(
-    data = subset((sample_size_vs_a_df %>% filter(type_correlation == type_correlation_selected) %>% mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.complete.dataset", "R. arthritis"))), type_dataset == "R. arthritis"),
+    data = subset((sample_size_vs_a_df %>% filter(type_correlation == type_correlation_selected) %>% mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.sample.per.patient.baseline", "R. arthritis"))), type_dataset == "R. arthritis"),
     aes(label = type_dataset), col = "#44AA99",
     size = 5,
     box.padding = unit(0.5, "lines"),
@@ -959,7 +1059,7 @@ type_correlation_selected = "weak"
 sample_size_vs_a_df %>% 
   filter(type_correlation == type_correlation_selected) %>% 
   filter(!(type_dataset == "tcga:tcga")) %>% 
-  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.complete.dataset", "R. arthritis")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.sample.per.patient.baseline", "R. arthritis")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:whole.blood", "GTEx: Whole blood")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:artery.tibial", "GTEx: Artery tibial")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-coad", "TCGA: Colon cancer")) %>%
@@ -991,7 +1091,7 @@ sample_size_vs_a_df %>%
     point.padding = unit(0.3, "lines")
   ) +
   geom_text_repel(
-    data = subset((sample_size_vs_a_df %>% filter(type_correlation == type_correlation_selected) %>% mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.complete.dataset", "R. arthritis"))), type_dataset == "R. arthritis"),
+    data = subset((sample_size_vs_a_df %>% filter(type_correlation == type_correlation_selected) %>% mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.sample.per.patient.baseline", "R. arthritis"))), type_dataset == "R. arthritis"),
     aes(label = type_dataset), col = "#44AA99",
     size = 5,
     box.padding = unit(0.5, "lines"),
@@ -1029,7 +1129,7 @@ type_correlation_selected = "weak"
 sample_size_vs_a_df %>% 
   filter(type_correlation == type_correlation_selected) %>% 
   filter(!(type_dataset == "tcga:tcga")) %>% 
-  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.complete.dataset", "R. arthritis")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.sample.per.patient.baseline", "R. arthritis")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:whole.blood", "GTEx: Whole blood")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:artery.tibial", "GTEx: Artery tibial")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-coad", "TCGA: Colon cancer")) %>%
@@ -1061,7 +1161,7 @@ sample_size_vs_a_df %>%
     point.padding = unit(0.3, "lines")
   ) +
   geom_text_repel(
-    data = subset((sample_size_vs_a_df %>% filter(type_correlation == type_correlation_selected) %>% mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.complete.dataset", "R. arthritis"))), type_dataset == "R. arthritis"),
+    data = subset((sample_size_vs_a_df %>% filter(type_correlation == type_correlation_selected) %>% mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.sample.per.patient.baseline", "R. arthritis"))), type_dataset == "R. arthritis"),
     aes(label = type_dataset), col = "#44AA99",
     size = 5,
     box.padding = unit(0.5, "lines"),
@@ -1244,7 +1344,7 @@ all_disease_genes_results_df = fread(all_disease_genes_results_file)
 all_disease_genes_results_df$type_dataset = paste(all_disease_genes_results_df$dataset, all_disease_genes_results_df$type_dataset, sep=":") # Join dataset and type_dataset
 all_disease_genes_results_df$type_dataset = tolower(all_disease_genes_results_df$type_dataset)
 
-dataset_selected = "scipher:scipher.complete.dataset"
+dataset_selected = "scipher:scipher.sample.per.patient.baseline"
 results_scipher_df = all_disease_genes_results_df %>%
   filter((type_dataset == dataset_selected) & (threshold == threshold_selected))
 head(results_scipher_df)
@@ -1270,7 +1370,7 @@ Compare correlation strength for the rLCC of a specific disease module in a spec
 
 ```{r}
 #datasets_selected = c("gtex:breast.mammary.tissue", "gtex:thyroid", "gtex:whole.blood", "tcga:tcga-brca", "tcga:tcga-thca", "scipher:scipher.complete.dataset")
-datasets_selected = c("scipher:scipher.complete.dataset")
+datasets_selected = c("scipher:scipher.sample.per.patient.baseline")
 #diseases_selected = c("arthritis rheumatoid", "breast neoplasms", "thyroid neoplasms")
 diseases_selected = c("arthritis rheumatoid")
 module_rlcc_by_correlation_plots = list()
@@ -1325,7 +1425,7 @@ Compare correlation strength for the LCC significance of a specific disease modu
 
 ```{r}
 #datasets_selected = c("gtex:breast.mammary.tissue", "gtex:thyroid", "gtex:whole.blood", "tcga:tcga-brca", "tcga:tcga-thca", "scipher:scipher.complete.dataset")
-datasets_selected = c("scipher:scipher.complete.dataset")
+datasets_selected = c("scipher:scipher.sample.per.patient.baseline")
 #diseases_selected = c("arthritis rheumatoid", "breast neoplasms", "thyroid neoplasms")
 diseases_selected = c("arthritis rheumatoid")
 module_signif_by_correlation_plots = list()
@@ -1384,7 +1484,7 @@ Compare disease module significance of different disease-gene associations for s
 ```{r}
 name2color <- c("arthritis rheumatoid"="#65F3BF", "asthma"="#d9f365", "breast neoplasms"="#0072B2", "thyroid neoplasms"="#56B4E9")
 #datasets_selected = c("gtex:breast.mammary.tissue", "gtex:thyroid", "gtex:whole.blood", "tcga:tcga-brca", "tcga:tcga-thca", "scipher:scipher.complete.dataset")
-datasets_selected = c("scipher:scipher.complete.dataset")
+datasets_selected = c("scipher:scipher.sample.per.patient.baseline")
 #types_correlation = c("all", "weak-moderate-strong-very strong", "moderate-strong-very strong", "strong-very strong", "very strong")
 types_correlation = c("all")
 #diseases_selected = c("arthritis rheumatoid", "asthma", "breast neoplasms", "heart failure")
@@ -1443,7 +1543,8 @@ Compare datasets for the LCC significance of a specific disease module and type 
 diseases_selected = c("arthritis rheumatoid")
 #types_correlation = c("all", "weak-moderate-strong-very strong", "moderate-strong-very strong", "strong-very strong", "very strong")
 types_correlation = c("all")
-datasets_selected = c("gtex:breast.mammary.tissue", "gtex:thyroid", "gtex:whole.blood", "tcga:tcga-brca", "tcga:tcga-thca", "scipher:scipher.complete.dataset")
+#datasets_selected = c("gtex:breast.mammary.tissue", "gtex:thyroid", "gtex:whole.blood", "tcga:tcga-brca", "tcga:tcga-thca", "scipher:scipher.complete.dataset")
+datasets_selected = c("gtex:breast.mammary.tissue", "gtex:lung", "gtex:whole.blood", "tcga:tcga-brca_female", "tcga:tcga-luad", "scipher:scipher.sample.per.patient.baseline")
 
 module_signif_by_dataset_plots = list()
 for (x in 1:length(diseases_selected)){
@@ -1452,7 +1553,7 @@ for (x in 1:length(diseases_selected)){
     type_correlation_selected = types_correlation[y]
     module_signif_by_dataset_plot = all_disease_genes_results_df %>%
       filter((disease == disease_selected) & (type_dataset %in% datasets_selected) & (threshold == threshold_selected) & (type_correlation == type_correlation_selected)) %>%
-      mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.complete.dataset", "R. arthritis")) %>%
+      mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.sample.per.patient.baseline", "R. arthritis")) %>%
       mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:whole.blood", "GTEx: W. blood")) %>%
       mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:thyroid", "GTEx: Thyroid")) %>%
       mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
@@ -1523,4 +1624,192 @@ ggsave(
   units = c("px")
 )
 
+```
+
+#### Protein-protein interaction plots
+
+Load PPI + co-expression dataframe:
+
+```{r}
+dataset = "gtex"
+type_dataset = "Whole.Blood"
+sample_group_type = "tumor" # if dataset = "tcga"
+type_counts = "reads" # tpm, reads
+sizes_selected = c(20, 100, 200, 300)
+threshold_selected = 0.05
+coexpression_pairs_file = sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/ppi_analysis_pairs_pval_%s_%s_%s.txt", as.character(threshold_selected), dataset, type_dataset)
+coexpression_pairs_filt = fread(coexpression_pairs_file)
+perf_file = sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/ppi_coexpression_analysis_ppi_vs_random_far_pairs_performance_pval_%s_%s_%s.txt", as.character(threshold_selected), dataset, type_dataset)
+perf_df = fread(perf_file)
+
+colors_defined = c("PPI" = "#DBA9CA",
+                   "PPI & iNCI" = "#FAF69E",
+                   "Random" = "#B8BECC",
+                   "Random pairs in PPI" = "#B8BECC",
+                   "Random (distance > 4)" = "#543F4D",
+                   "Distance > 4" = "#543F4D",
+                   "Random pairs in PPI (dist. > 4)" = "#543F4D",
+                   "Random pairs in PPI & iNCI (dist. > 4)" = "#545334",
+                   "1" = "#DBA9CA",
+                   "2" = "#a8829b",
+                   "3" = "#87677c",
+                   "4" = "#5e4857",
+                   "5" = "#40303b",
+                   "6" = "#1c151a")
+```
+
+Violin plot of PPI distances across sample size:
+
+```{r}
+violinplot_ppi_coexpression_by_distances_file = sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/ppi_coexpression_violinplot_by_ppi_distance_pval_%s_%s_%s.png", as.character(threshold_selected), dataset, type_dataset)
+colors_defined_filt = colors_defined[names(colors_defined) %in% c("1", "2", "3", "4", "5", "6")]
+violinplot_ppi_coexpression_by_distances = coexpression_pairs_filt %>%
+  select(-ppi, -nci, -distances_nci, -random_not_ppi, -random_far_not_ppi, -random_far_not_nci) %>%
+  filter(!(is.na(distances_ppi))) %>%
+  pivot_longer(as.character(sizes_selected), names_to = "size", values_to = "correlation", names_transform = list(size = as.character), values_transform = list(correlation = as.numeric)) %>%
+  filter(!(is.na(correlation))) %>%
+  filter(abs(correlation) > 0 ) %>% 
+  mutate(across(c(distances_ppi), as.character)) %>%
+  ggplot() +
+  aes(x = reorder(size, as.numeric(size)),
+      y = abs(correlation),
+      fill = distances_ppi,
+      colour = distances_ppi) +
+  geom_violin(alpha = 0.8, 
+              scale = "width", 
+              adjust = 0.5) +
+  scale_fill_manual(values = colors_defined_filt) +
+  scale_color_manual(values = colors_defined_filt) +
+  theme_linedraw() +
+  theme(aspect.ratio=1, 
+        plot.title =  element_text(size = 15, face="bold"), 
+        axis.title = element_text(size = 14, face="bold"), 
+        axis.text = element_text(size = 13), 
+        legend.text = element_text(size = 13), 
+        legend.title=element_text(size=14, face="bold")) +
+  labs (x = "Number of samples",
+        y = "Absolute co-expression weight",
+        color = "PPI distance",
+        fill = "PPI distance")
+ggsave(
+  violinplot_ppi_coexpression_by_distances_file,
+  plot = violinplot_ppi_coexpression_by_distances,
+  dpi = 1200,
+  #width = 9300,
+  #height = 6000,
+  units = c("px")
+)
+violinplot_ppi_coexpression_by_distances
+```
+
+Violin plot of PPI vs. pairs > 4 distance across sample size:
+
+```{r}
+violinplot_ppi_coexpression_by_types_file =  sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/ppi_coexpression_violinplot_by_pair_type_pval_%s_%s_%s.png", as.character(threshold_selected), dataset, type_dataset)
+colors_defined_filt = colors_defined[names(colors_defined) %in% c("PPI", "Distance > 4")]
+violinplot_ppi_coexpression_by_types = coexpression_pairs_filt %>%
+  select(-distances_ppi, -distances_nci, -nci, -random_not_ppi, -random_far_not_nci) %>%
+  pivot_longer(c("ppi", "random_far_not_ppi"), names_to = "category", values_to = "category_bool") %>%
+  filter(category_bool == TRUE) %>%
+  select(-category_bool) %>%
+  pivot_longer(as.character(sizes_selected), names_to = "size", values_to = "correlation", names_transform = list(size = as.character), values_transform = list(correlation = as.numeric)) %>%
+  filter(!(is.na(correlation))) %>%
+  filter(abs(correlation) > 0 ) %>% 
+  mutate(category = replace(category, category == "ppi", "PPI")) %>%
+  mutate(category = replace(category, category == "random_far_not_ppi", "Distance > 4")) %>%
+  mutate(category = factor(category, levels = c("PPI", "Distance > 4"))) %>%
+  ggplot() +
+  aes(x = reorder(size, as.numeric(size)),
+      y = abs(correlation),
+      fill = category,
+      colour = category) +
+  geom_violin(alpha = 0.8, 
+              scale = "width", 
+              adjust = 0.5) +
+  scale_fill_manual(values = colors_defined_filt) +
+  scale_color_manual(values = colors_defined_filt) +
+  theme_linedraw() +
+  theme(aspect.ratio=1, 
+        plot.title =  element_text(size = 15, face="bold"), 
+        axis.title = element_text(size = 14, face="bold"), 
+        axis.text = element_text(size = 13), 
+        legend.text = element_text(size = 13), 
+        legend.title=element_text(size=14, face="bold")) +
+  labs (x = "Number of samples",
+        y = "Absolute co-expression weight",
+        color = "",
+        fill = ""); violinplot_ppi_coexpression_by_types
+ggsave(
+  violinplot_ppi_coexpression_by_types_file,
+  plot = violinplot_ppi_coexpression_by_types,
+  dpi = 1200,
+  #width = 9300,
+  #height = 6000,
+  units = c("px")
+)
+```
+
+AUC of PPI prediction:
+
+```{r}
+perf_auc = perf_df %>%
+  select(size, AUC) %>%
+  unique()
+print(perf_auc)
+
+auc_plot = perf_auc %>% 
+  mutate(size = factor(size, 
+                       levels = sizes_selected, 
+                       labels = sizes_selected)) %>% 
+  ggplot() +
+  aes(x = size, 
+      #fill = base, 
+      #colour = base, 
+      weight = AUC) +
+  geom_bar(col="#DBA9CA",
+         fill="#DBA9CA") +
+  #scale_fill_manual(values = colors_defined) +
+  #scale_color_manual(values = colors_defined) +
+  theme_linedraw() +
+  #facet_grid(vars(name))+ 
+  theme(aspect.ratio=1,
+        plot.title =  element_text(size = 15, face="bold"), 
+        axis.title = element_text(size = 14, face="bold"), 
+        axis.text = element_text(size = 13), 
+        legend.text = element_text(size = 13), 
+        legend.title=element_text(size=14, face="bold")) +
+  labs(y = "AUROC",
+       x = "Number of samples"
+       )
+
+auc_plot_file =  sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/ppi_coexpression_perf_AUC_pval_%s_%s_%s.png", as.character(threshold_selected), dataset, type_dataset)
+ggsave(
+  auc_plot_file,
+  plot = auc_plot,
+  dpi = 1200,
+  #width = 9300,
+  #height = 6000,
+  units = c("px")
+)
+ auc_plot
+```
+
+Patchwork:
+
+```{r}
+# Use patchwork to concatenate plots
+(violinplot_ppi_coexpression_by_distances /
+  violinplot_ppi_coexpression_by_types /
+  auc_plot) + 
+  plot_annotation(tag_levels = 'A') & # Include letters 
+    theme(plot.tag = element_text(face = 'bold')) # that are bold
+
+plot_file = paste(plots_dir, "/ppi_coexpression_results.png", sep="")
+ggsave(
+  plot_file,
+  dpi = 1200,
+  width = 10000,
+  height = 13500,
+  units = c("px")
+)
 ```

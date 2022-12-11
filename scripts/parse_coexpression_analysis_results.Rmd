@@ -127,7 +127,7 @@ cols = c("dataset", "total_num_nodes", "total_num_edges")
 numbers_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
 
 # For scipher
-scipher_data_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021'
+scipher_data_dir = '/work/ccnr/j.aguirreplans/data/Scipher/Dec2021'
 genes_filt_dir = paste(scipher_data_dir, '00_data/genes_from_rnaseq_filtered_files_by_group', sep='/')
 groups = unique((topology_df %>% filter(dataset == "scipher"))$type_dataset)
 for (group in groups){

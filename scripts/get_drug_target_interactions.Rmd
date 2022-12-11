@@ -1,0 +1,70 @@
+---
+title: "Get targets of a drug indicated for a disease"
+author: "Joaquim Aguirre-Plans"
+date: '2022-12-10'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Description
+
+Create the drug-target interactions file of drugs indicated for a specific disease
+
+```{r}
+library(data.table)
+library(dplyr)
+require(magrittr)
+library(tidyr)
+set.seed(1510)
+options(bitmapType='cairo')
+`%ni%` <- Negate(`%in%`)
+```
+
+### Read files
+
+Read drug indications file (ChEMBL):
+
+```{r}
+chembl_indications_file = "/work/ccnr/j.aguirreplans/Databases/ChEMBL/data/raw/chembl_indications.csv"
+chembl_indications_df = fread(chembl_indications_file) %>% 
+  rename("chembl_id" = "Parent Molecule ChEMBL ID", "chembl_name" = "Parent Molecule Name", "molecule_type" = "Parent Molecule Type", "max_phase_indication" = "Max Phase for Indication", "first_approval" = "First Approval", "mesh_id" = "MESH ID", "mesh_heading" = "MESH Heading", "efo_id" = "EFO IDs", "efo_term" = "EFO Terms") %>% 
+  select(chembl_id, chembl_name, molecule_type, max_phase_indication, first_approval, mesh_id, mesh_heading, efo_id, efo_term) %>%
+  mutate(chembl_id=toupper(chembl_id), chembl_name=tolower(chembl_name), molecule_type=tolower(molecule_type), mesh_id=toupper(mesh_id), mesh_heading=tolower(mesh_heading), efo_term=tolower(efo_term))
+glimpse(chembl_indications_df)
+```
+
+Read drug targets file (DrugBank):
+
+```{r}
+drugbank_drug_dictionary_file = "/work/ccnr/j.aguirreplans/Databases/DrugBank/data/out/DB_Drug_Dictionary_v5.1.9.csv"
+drugbank_drug_targets_file = "/work/ccnr/j.aguirreplans/Databases/DrugBank/data/out/DB_Drug_Targets_v5.1.9.csv"
+drugbank_drug_targets_df = fread(drugbank_drug_targets_file) %>% 
+  select(DB_ID, Name, ATC, Status, Gene_Target, P_id, Gene_Desc, Organism, Type, Known_Action, Mech_Of_Action) %>% 
+  mutate(DB_ID=toupper(DB_ID), Name=tolower(Name), ATC=toupper(ATC), Status=tolower(Status), Gene_Target=toupper(Gene_Target), Gene_Desc=tolower(Gene_Desc), Organism=tolower(Organism), Type=tolower(Type), Known_Action=tolower(Known_Action), Mech_Of_Action=tolower(Mech_Of_Action)) %>%
+  unique()
+glimpse(drugbank_drug_targets_df)
+```
+
+And drug synonyms file (DrugBank):
+
+```{r}
+drugbank_drug_synonyms_file = "/work/ccnr/j.aguirreplans/Databases/DrugBank/data/out/DB_Drug_External_ID_v5.1.9.csv"
+drugbank_drug_synonyms_df = fread(drugbank_drug_synonyms_file, header = TRUE) %>% 
+  select(-V1) %>%
+  rename("DB_ID" = "ID") %>%
+  mutate(DB_ID=toupper(DB_ID), Name=tolower(Name), Source=tolower(Source), ID_external=toupper(ID_external))
+glimpse(drugbank_drug_synonyms_df)
+```
+
+### Map files
+
+Map indications to drug targets:
+
+```{r}
+chembl_indications_df %>% inner_join(drugbank_drug_synonyms_df, by=c("chembl_id"="ID_external"))
+```
+
+Use maximum phase 3 or 4 to use effective drugs.

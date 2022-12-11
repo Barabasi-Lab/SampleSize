@@ -1,5 +1,6 @@
 #!/usr/bin/env Rscript
-#packrat::init("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR")
+packrat::init("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR")
+source("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/GO.R")
 library(optparse)
 library(data.table)
 library(dplyr)
@@ -7,7 +8,9 @@ library(igraph)
 library(ggalluvial)
 library(ggplot2)
 require(magrittr)
+library(patchwork)
 library(tidyr)
+library(wTO)
 set.seed(1510)
 library(NetSci)
 options(bitmapType='cairo')
@@ -15,28 +18,30 @@ options(bitmapType='cairo')
 
 
 option_list = list(
-  make_option(c("-i", "--input_dir"), action="store", type="character", 
+  make_option(c("-a", "--input_dir"), action="store", type="character", 
               help="Directory with input files", metavar="character"),
-  make_option(c("-d", "--name_disease"), action="store", type="character", 
+  make_option(c("-b", "--name_disease"), action="store", type="character", 
               help="Disease name", metavar="character"),
-  make_option(c("-n", "--name_normal"), action="store", type="character", 
+  make_option(c("-c", "--name_normal"), action="store", type="character", 
               help="Normal name", metavar="character"),
-  make_option(c("-a", "--disease_gene_associations_file"), action="store", type="character", 
+  make_option(c("-d", "--disease_gene_associations_file"), action="store", type="character", 
               help="File containing disease-gene associations", metavar="character"),
-  make_option(c("-b", "--disease_name_in_associations_file"), action="store", type="character", 
-              help="File containing disease-gene associations", metavar="character"),
-  make_option(c("-c", "--ppi_file"), action="store", type="character", 
+  make_option(c("-e", "--disease_name_in_associations_file"), action="store", type="character", 
+              help="Name of the disease in the disease-gene associations file", metavar="character"),
+  make_option(c("-f", "--ppi_file"), action="store", type="character", 
               help="Protein-protein interactions network file", metavar="character"),
-  make_option(c("-p", "--plots_dir"), action="store", type="character", 
+  make_option(c("-g", "--plots_dir"), action="store", type="character", 
               help="Directory to store the plots", metavar="character"),
-  make_option(c("-t", "--tables_dir"), action="store", type="character",
+  make_option(c("-i", "--tables_dir"), action="store", type="character",
               help="Directory to store the tables", metavar="character"),
-  make_option(c("-p", "--pval_threshold"), action="store", type="double", default = 0.05,
+  make_option(c("-j", "--pval_threshold"), action="store", type="double", default = 0.01,
               help="P-value threshold", metavar="double"),
-  make_option(c("-c", "--pval_correction"), action="store", type="double", default = "pval_Phi_Tilde.adj.fdr",
+  make_option(c("-k", "--pval_correction"), action="store", type="double", default = "pval_Phi_Tilde.adj.fdr",
               help="P-value threshold", metavar="double"),
-  make_option(c("-f", "--nodes_to_follow_file"), action="store", type="character",
-              help="File with the nodes to follow", metavar="character")
+  make_option(c("-l", "--nodes_to_follow_file"), action="store", type="character",
+              help="File with the nodes to follow", metavar="character"),
+  make_option(c("-m", "--drug_targets_file"), action="store", type="character", 
+              help="Drug-targets file used for the disease", metavar="character"),
 ); 
 # Example of execution
 # Rscript /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_differentially_coexpressed_network.R 
@@ -48,7 +53,7 @@ opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
 
 # Check for missing arguments
-if (is.null(opt$input_dir) | is.null(opt$nodes_to_follow_file)){
+if (is.null(opt$input_dir)){
   print_help(opt_parser)
   stop("Argument must be supplied (input_dir, nodes_to_follow_file).n", call.=FALSE)
 }
@@ -62,16 +67,20 @@ disease_name_in_associations_file = opt$disease_name_in_associations_file
 ppi_file = opt$ppi_file
 plots_dir = opt$plots_dir
 tables_dir = opt$tables_dir
-nodes_to_follow_file = opt$nodes_to_follow_file
 pval_threshold = as.double(opt$pval_threshold)
 pval_correction_field = opt$pval_correction
+nodes_to_follow_file = opt$nodes_to_follow_file
 
 # Define other inputs
 name2color = data.frame(name=c("common", "disease-specific", "normal-specific", "undefined", "different", "all"), color.codes=c("#619CFF", "#F8766D", "#00BA38", "#808080", "#C77CFF", "#CD9600"))
-plots_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/plots_differential_coexpression"
-tables_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables"
-disease_gene_associations_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022.csv"
-ppi_file = "/work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv"
+
+
+# PREDEFINED INPUTS
+# disease_gene_associations_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022.csv"
+# plots_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/plots_differential_coexpression"
+# tables_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/tables_differential_coexpression"
+# ppi_file = "/work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv"
+# drug_targets_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/drug_targets/DB_DrugTargets_1201.csv"
 
 # # For Breast Cancer (Female)
 # input_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA_female___Breast.Mammary.Tissue_female"
@@ -79,17 +88,17 @@ ppi_file = "/work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv"
 # name_N = "gtex.breast.female"
 # disease_name_in_associations_file = "breast.neoplasms"
 # pval_correction_field = "pval_Phi_Tilde.adj.fdr"
-# pval_threshold = 0.05
+# pval_threshold = 0.01
 # nodes_to_follow = c("BRCA1", "BRCA2", "PALB2", "CHEK2", "CDH1", "PTEN", "STK11", "TP53")
 
 # # For Breast Cancer (both sex)
-input_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA___Breast.Mammary.Tissue/consensus"
-name_D = "tcga.brca"
-name_N = "gtex.breast"
-disease_name_in_associations_file = "breast.neoplasms"
-pval_correction_field = "pval_Phi_Tilde.adj.fdr"
-pval_threshold = 0.05
-nodes_to_follow = c("BRCA1", "BRCA2", "PALB2", "CHEK2", "CDH1", "PTEN", "STK11", "TP53")
+# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA___Breast.Mammary.Tissue/consensus"
+# name_D = "tcga.brca"
+# name_N = "gtex.breast"
+# disease_name_in_associations_file = "breast.neoplasms"
+# pval_correction_field = "pval_Phi_Tilde.adj.fdr"
+# pval_threshold = 0.01
+# nodes_to_follow = c("BRCA1", "BRCA2", "PALB2", "CHEK2", "CDH1", "PTEN", "STK11", "TP53")
 
 # # For Breast Cancer - NORMAL TISSUE vs. GTEx Breast (both sex)
 # input_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA-normal___Breast.Mammary.Tissue/consensus"
@@ -97,7 +106,7 @@ nodes_to_follow = c("BRCA1", "BRCA2", "PALB2", "CHEK2", "CDH1", "PTEN", "STK11",
 # name_N = "gtex.breast"
 # disease_name_in_associations_file = "breast.neoplasms"
 # pval_correction_field = "pval_Phi_Tilde.adj.fdr"
-# pval_threshold = 0.05
+# pval_threshold = 0.01
 # nodes_to_follow = c("BRCA1", "BRCA2", "PALB2", "CHEK2", "CDH1", "PTEN", "STK11", "TP53")
 
 # # For Breast Cancer vs. Breast Cancer - NORMAL TISSUE (both sex)
@@ -106,7 +115,7 @@ nodes_to_follow = c("BRCA1", "BRCA2", "PALB2", "CHEK2", "CDH1", "PTEN", "STK11",
 # name_N = "tcga.brca.normal"
 # disease_name_in_associations_file = "breast.neoplasms"
 # pval_correction_field = "pval_Phi_Tilde.adj.fdr"
-# pval_threshold = 0.05
+# pval_threshold = 0.01
 # nodes_to_follow = c("BRCA1", "BRCA2", "PALB2", "CHEK2", "CDH1", "PTEN", "STK11", "TP53")
 
 
@@ -116,7 +125,7 @@ nodes_to_follow = c("BRCA1", "BRCA2", "PALB2", "CHEK2", "CDH1", "PTEN", "STK11",
 # name_N = "gtex.whole.blood"
 # disease_name_in_associations_file = "arthritis.rheumatoid"
 # pval_correction_field = "pval_Phi_Tilde.adj.fdr"
-# pval_threshold = 0.05
+# pval_threshold = 0.01
 # nodes_to_follow = c("TNF", "IL6ST", "IL6R", "PTPN22", "HOTAIR", "MALAT1")
 
 # # For RA (complete.nonresponder)
@@ -125,14 +134,86 @@ nodes_to_follow = c("BRCA1", "BRCA2", "PALB2", "CHEK2", "CDH1", "PTEN", "STK11",
 # name_N = "gtex.whole.blood"
 # disease_name_in_associations_file = "arthritis.rheumatoid"
 # pval_correction_field = "pval_Phi_Tilde.adj.fdr"
-# pval_threshold = 0.05
+# pval_threshold = 0.01
 # nodes_to_follow = c("TNF", "IL6ST", "IL6R", "PTPN22", "HOTAIR", "MALAT1")
+
+# # For Breast Cancer (female) vs. Breast (female)
+# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSizeProject/differential_coexpression_analysis/reads/TCGA-BRCA_female___TCGA-Breast_female/consensus"
+# plots_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/plots_differential_coexpression/TCGA-BRCA_female___TCGA-Breast_female"
+# tables_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/tables_differential_coexpression/TCGA-BRCA_female___TCGA-Breast_female"
+# name_D = "tcga.brca.female"
+# name_N = "tcga.breast.female"
+# disease_name_in_associations_file = "breast.neoplasms"
+# pval_correction_field = "pval_Phi_Tilde.adj.fdr"
+# pval_threshold = 0.01
+# nodes_to_follow_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/nodes_to_follow/breast_cancer.txt"
+
+# For KIRC vs. Kidney
+# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSizeProject/differential_coexpression_analysis/reads/TCGA-KIRC___TCGA-Kidney/consensus"
+# plots_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/plots_differential_coexpression/TCGA-KIRC___TCGA-Kidney"
+# tables_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/tables_differential_coexpression/TCGA-KIRC___TCGA-Kidney"
+# name_D = "tcga.kirc"
+# name_N = "tcga.kidney"
+# disease_name_in_associations_file = "kidney.neoplasms"
+# pval_correction_field = "pval_Phi_Tilde.adj.fdr"
+# pval_threshold = 0.01
+
+# For LUAD (Lung Adenocarcinoma) vs. Lung
+# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSizeProject/differential_coexpression_analysis/reads/TCGA-LUAD___TCGA-Lung/consensus"
+# plots_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/plots_differential_coexpression/TCGA-LUAD___TCGA-Lung"
+# tables_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/tables_differential_coexpression/TCGA-LUAD___TCGA-Lung"
+# name_D = "tcga.luad"
+# name_N = "tcga.lung"
+# disease_name_in_associations_file = "carcinoma.non.small.cell.lung"
+# pval_correction_field = "pval_Phi_Tilde.adj.fdr"
+# pval_threshold = 0.01
+
+# For LUSC (Lung Squamous Cell Carcinoma) vs. Lung
+# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSizeProject/differential_coexpression_analysis/reads/TCGA-LUSC___TCGA-Lung/consensus"
+# plots_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/plots_differential_coexpression/TCGA-LUSC___TCGA-Lung"
+# tables_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/tables_differential_coexpression/TCGA-LUSC___TCGA-Lung"
+# name_D = "tcga.lusc"
+# name_N = "tcga.lung"
+# disease_name_in_associations_file = "carcinoma.non.small.cell.lung"
+# pval_correction_field = "pval_Phi_Tilde.adj.fdr"
+# pval_threshold = 0.01
+
+# For LUAD (Lung Adenocarcinoma) vs. LUSC (Lung Squamous Cell Carcinoma)
+# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSizeProject/differential_coexpression_analysis/reads/TCGA-LUAD___TCGA-LUSC/consensus"
+# plots_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/plots_differential_coexpression/TCGA-LUAD___TCGA-LUSC"
+# tables_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/tables_differential_coexpression/TCGA-LUAD___TCGA-LUSC"
+# name_D = "tcga.luad"
+# name_N = "tcga.lusc"
+# disease_name_in_associations_file = "carcinoma.non.small.cell.lung"
+# pval_correction_field = "pval_Phi_Tilde.adj.fdr"
+# pval_threshold = 0.01
+
+# For BRCA.LumA vs. BRCA.LumB
+# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSizeProject/differential_coexpression_analysis/reads/TCGA-BRCA.LumA___TCGA-BRCA.LumB/consensus"
+# plots_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/plots_differential_coexpression/TCGA-BRCA.LumA___TCGA-BRCA.LumB"
+# tables_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/tables_differential_coexpression/TCGA-BRCA.LumA___TCGA-BRCA.LumB"
+# name_D = "tcga.brca.luma"
+# name_N = "tcga.brca.lumb"
+# disease_name_in_associations_file = "breast.neoplasms"
+# pval_correction_field = "pval_Phi_Tilde.adj.fdr"
+# pval_threshold = 0.01
+# nodes_to_follow = c("BRCA1", "BRCA2", "PALB2", "CHEK2", "CDH1", "PTEN", "STK11", "TP53", "HER2", "ER", "ER1", "LIV1", "FOXA1", "KI67")
+
+
+#---- Create directories if necessary ----#
+if(!(is.na(plots_dir))){
+  dir.create(plots_dir, showWarnings = FALSE)
+}
+if(!(is.na(tables_dir))){
+  dir.create(tables_dir, showWarnings = FALSE)
+}
 
 
 #---- Read disease genes data ----#
 
 GDA = fread(disease_gene_associations_file)
 GDA_disease = GDA %>% select("DiseaseName.no.sp.char", "HGNC_Symbol") %>% filter(DiseaseName.no.sp.char == disease_name_in_associations_file)
+#unique(GDA$DiseaseName.no.sp.char[grepl("lung", GDA$DiseaseName.no.sp.char)])
 
 
 #---- Compile files ----#
@@ -392,94 +473,99 @@ ggsave(
 
 #---- Plot change of category of relevant genes ----#
 
-if(!(length(reps) == 1 && reps == "consensus-consensus")){
-  for (important_node in nodes_to_follow){
-  
-    # Skip if node not in analysis
-    if (!(important_node %in% unique(nodes_expanded_df$Node))){
-      next
+if(!(is.na(nodes_to_follow_file))){
+  # Read nodes to follow
+  nodes_to_follow = fread(nodes_to_follow_file, header = F)$V1
+  if(!(length(reps) == 1 && reps == "consensus-consensus")){
+    for (important_node in nodes_to_follow){
+      
+      # Skip if node not in analysis
+      if (!(important_node %in% unique(nodes_expanded_df$Node))){
+        next
+      }
+      
+      # Filter results by important node
+      important_df = nodes_expanded_df %>% 
+        filter(size %in% sizes_to_plot) %>%
+        filter(!(is.na(DiseaseName.no.sp.char))) %>%
+        filter(Node == important_node) %>%
+        select(Phi_name, size, rep_D, rep_N) %>%
+        group_by(Phi_name, size) %>% 
+        summarize(n_evidences = n()) %>% 
+        ungroup()
+      
+      # Define levels
+      important_df$Phi_name <- as.factor(important_df$Phi_name)
+      important_df$size = as.character(important_df$size)
+      levels(important_df$Phi_name) = sort(unique(important_df$Phi_name))
+      important_df$size <- factor(important_df$size, levels=as.character(sort(unique(as.integer(important_df$size)))))
+      
+      # Plot
+      important_df = important_df %>%
+        left_join(name2color, by=c("Phi_name"="name"))
+      important_node_plot = important_df %>% 
+        ggplot(aes(fill=Phi_name, y=n_evidences, x=size)) + 
+        geom_bar(position="fill", stat="identity", width = 0.7, col="black") +
+        #geom_bar(position = position_dodge(), stat="identity", col="black", width = 0.6) +
+        xlab("Number of samples") +
+        ylab("Fraction of evidences") +
+        scale_fill_manual(values=setNames(important_df$color.codes, important_df$Phi_name)) +
+        guides(fill=guide_legend(title="Gene category")) +
+        theme_linedraw() +
+        theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 12), legend.text = element_text(size = 12), legend.title=element_text(size=14, face="bold"))
+      
+      # Save plot
+      plot_file = paste(plots_dir, paste("codina_", name_D, "_", name_N, "_important_gene_", important_node, ".png", sep=""), sep="/")
+      ggsave(
+        plot_file,
+        plot=important_node_plot,
+        dpi = 1200,
+        width = 9000,
+        height = 6000,
+        units = c("px")
+      )
     }
-    
-    # Filter results by important node
-    important_df = nodes_expanded_df %>% 
-      filter(size %in% sizes_to_plot) %>%
-      filter(!(is.na(DiseaseName.no.sp.char))) %>%
-      filter(Node == important_node) %>%
-      select(Phi_name, size, rep_D, rep_N) %>%
-      group_by(Phi_name, size) %>% 
-      summarize(n_evidences = n()) %>% 
-      ungroup()
-    
-    # Define levels
-    important_df$Phi_name <- as.factor(important_df$Phi_name)
-    important_df$size = as.character(important_df$size)
-    levels(important_df$Phi_name) = sort(unique(important_df$Phi_name))
-    important_df$size <- factor(important_df$size, levels=as.character(sort(unique(as.integer(important_df$size)))))
-    
-    # Plot
-    important_df = important_df %>%
-      left_join(name2color, by=c("Phi_name"="name"))
-    important_node_plot = important_df %>% 
-      ggplot(aes(fill=Phi_name, y=n_evidences, x=size)) + 
-      geom_bar(position="fill", stat="identity", width = 0.7, col="black") +
-      #geom_bar(position = position_dodge(), stat="identity", col="black", width = 0.6) +
-      xlab("Number of samples") +
-      ylab("Fraction of evidences") +
-      scale_fill_manual(values=setNames(important_df$color.codes, important_df$Phi_name)) +
-      guides(fill=guide_legend(title="Gene category")) +
-      theme_linedraw() +
-      theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 12), legend.text = element_text(size = 12), legend.title=element_text(size=14, face="bold"))
-    
-    # Save plot
-    plot_file = paste(plots_dir, paste("codina_", name_D, "_", name_N, "_important_gene_", important_node, ".png", sep=""), sep="/")
-    ggsave(
-      plot_file,
-      plot=important_node_plot,
-      dpi = 1200,
-      width = 9000,
-      height = 6000,
-      units = c("px")
-    )
-  }
-} else {
-  for (important_node in nodes_to_follow){
-    
-    # Skip if node not in analysis
-    if (!(important_node %in% unique(nodes_expanded_df$Node))){
-      next
+  } else {
+    for (important_node in nodes_to_follow){
+      
+      # Skip if node not in analysis
+      if (!(important_node %in% unique(nodes_expanded_df$Node))){
+        next
+      }
+      
+      important_df = nodes_expanded_df %>% 
+        filter(Node == important_node) %>%
+        filter(!(is.na(DiseaseName.no.sp.char))) %>%
+        filter(Node %in% nodes_to_follow) %>%
+        select(Node, Phi_name, size)
+      
+      # Plot
+      important_df = important_df %>%
+        left_join(name2color, by=c("Phi_name"="name"))
+      important_node_plot = important_df %>% 
+        ggplot(aes(x=size, y=Phi_name, col=Phi_name, group=Node)) + 
+        geom_line(size=1) +
+        xlab("Number of samples") +
+        ylab(NULL) +
+        guides(col=guide_legend(title="Gene category")) +
+        scale_color_manual(values=setNames(important_df$color.codes, important_df$Phi_name)) +
+        theme_linedraw() +
+        theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 12), legend.text = element_text(size = 12), legend.title=element_text(size=14, face="bold"))
+      
+      # Save plot
+      plot_file = paste(plots_dir, paste("codina_", name_D, "_", name_N, "_important_gene_", important_node, ".png", sep=""), sep="/")
+      ggsave(
+        plot_file,
+        plot=important_node_plot,
+        dpi = 1200,
+        width = 9000,
+        height = 6000,
+        units = c("px")
+      )
     }
-    
-    important_df = nodes_expanded_df %>% 
-      filter(Node == important_node) %>%
-      filter(!(is.na(DiseaseName.no.sp.char))) %>%
-      filter(Node %in% nodes_to_follow) %>%
-      select(Node, Phi_name, size)
-
-    # Plot
-    important_df = important_df %>%
-      left_join(name2color, by=c("Phi_name"="name"))
-    important_node_plot = important_df %>% 
-      ggplot(aes(x=size, y=Phi_name, col=Phi_name, group=Node)) + 
-      geom_line(size=1) +
-      xlab("Number of samples") +
-      ylab(NULL) +
-      guides(col=guide_legend(title="Gene category")) +
-      scale_color_manual(values=setNames(important_df$color.codes, important_df$Phi_name)) +
-      theme_linedraw() +
-      theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 12), legend.text = element_text(size = 12), legend.title=element_text(size=14, face="bold"))
-    
-    # Save plot
-    plot_file = paste(plots_dir, paste("codina_", name_D, "_", name_N, "_important_gene_", important_node, ".png", sep=""), sep="/")
-    ggsave(
-      plot_file,
-      plot=important_node_plot,
-      dpi = 1200,
-      width = 9000,
-      height = 6000,
-      units = c("px")
-    )
   }
 }
+
 
 
 #---- Calculate fraction of genes that change or not change category for each sample size ----#
@@ -570,44 +656,22 @@ ggsave(
 )
 
 
-#---- Read edge files and calculate edge categories associated to each node ----#
+#---- Plot stability + flow patchwork ----#
 
-cols = c("num_disease_genes_in_top", "size", "rep_D", "rep_N")
-num_disease_genes_in_top_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
-missing_edge_files = c()
-sizes_list = sort(unique(file_info_df$size))
+(plot_stable_genes /
+  plot_flow) + 
+  plot_annotation(tag_levels = 'A') & # Include letters 
+  theme(plot.tag = element_text(face = 'bold')) # that are bold
 
-for(x in seq(sizes_list)){
-  size = sizes_list[x]
-  print(size)
-  same_size_files_df = file_info_df %>% filter((size==!!size) & (type_analysis=="edges")) %>% arrange(rep_D, rep_N)
-  input_files = same_size_files_df$file_name
-  # same_size_info_df = data.frame()
-  for(input_file in input_files){
-    r_D = (same_size_files_df %>% filter(file_name == input_file))$rep_D
-    r_N = (same_size_files_df %>% filter(file_name == input_file))$rep_N
-    individual_df = fread(paste(input_dir, input_file, sep="/"))
-    if (nrow(individual_df) > 0){
-      # Count the number of edge classifications for each node
-      node_edge_counts_df = rbind((individual_df %>% select(Node.1, Phi_tilde) %>% rename(Node=Node.1)), (individual_df %>% select(Node.2, Phi_tilde) %>% rename(Node=Node.2))) %>% 
-        group_by(Node, Phi_tilde) %>% 
-        summarize(Phi_edge_count = n()) %>% 
-        mutate(Phi_edge_frac = Phi_edge_count / sum(Phi_edge_count)) %>%
-        ungroup() %>%
-        rename(Phi_tilde_edge = Phi_tilde) %>%
-        inner_join((nodes_filtered_df %>% filter(size == !!size) %>% select(Node, DiseaseName.no.sp.char, Phi_tilde) %>% rename(Phi_tilde_node = Phi_tilde)), by=c("Node")) %>%
-        filter((Phi_tilde_node %in% c("b.D", "g.D", "g.N")) & (Phi_tilde_edge == Phi_tilde_node)) %>%
-        rename(Phi_tilde = Phi_tilde_edge) %>% 
-        select(-Phi_tilde_node) %>%
-        arrange(desc(Phi_edge_count), desc(Phi_edge_frac)) %>%
-        slice_head(n=20)
-      num_disease_genes_in_top_df = rbind(data.frame(num_disease_genes_in_top=nrow(node_edge_counts_df %>% filter(!(is.na(DiseaseName.no.sp.char)))), size=size, rep_D=r_D, rep_N=r_N))
-    } else {
-      missing_edge_files = c(missing_edge_files, input_file)
-    }
-    rm(individual_df)
-  }
-}
+
+plot_file = paste(plots_dir, "/codina_stability_results.png", sep="")
+ggsave(
+  plot_file,
+  dpi = 1200,
+  width = 9000,
+  height = 12000,
+  units = c("px")
+)
 
 
 #---- Read PPI file ----#
@@ -616,43 +680,164 @@ ppi_df = fread(ppi_file) %>% dplyr::select(HGNC_Symbol.1, HGNC_Symbol.2) %>% dpl
 ppi_net = graph_from_data_frame(ppi_df, directed=F) %>% simplify()
 
 
-#---- Calculate PPI disease module using all genes ----#
+#---- Calculate PPI module of the different categories of genes ----#
 
-# Get disease subgraph
-all_genes_in_analysis = unique(nodes_filtered_df$Node)
-ppi_genes_in_analysis = all_genes_in_analysis[all_genes_in_analysis %in% V(ppi_net)$name]
-disease_subgraph_all_genes = induced.subgraph(ppi_net, vids=ppi_genes_in_analysis)
-disease_net_all_genes_df = ppi_df %>% filter((Node.1 %in% V(disease_subgraph_all_genes)$name) & (Node.2 %in% V(disease_subgraph_all_genes)$name))
+cols = c("size", "type_genes", "Phi_name", "num_nodes", "num_edges", "num_components", "num_nodes_lcc", "num_edges_lcc", "lcc_significance_z", "lcc_significance_pval")
+codina_ppi_analysis_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
 
-# Get calculations of the disease subgraph (number of genes, components, LCC, LCC significance)
-num_disease_genes_subgraph = length(unique(c(disease_net_all_genes_df$Node.1, disease_net_all_genes_df$Node.2)))
-disease_components = igraph::components(disease_subgraph_all_genes)
-disease_lcc = igraph::induced.subgraph(disease_subgraph_all_genes, vids = V(disease_subgraph_all_genes)[disease_components$membership == which.max(disease_components$csize)] )
-num_disease_lcc_nodes = gorder(disease_lcc)
-num_disease_lcc_edges = gsize(disease_lcc)
-if (length(V(disease_lcc)$name) > 0){
-  disease_lcc_sig = LCC_Significance(N = 1000, Targets = V(disease_lcc)$name, G = network_graph, bins=1) # With bin=1, the degree distribution is not maintained and the hypothesis changes
-} else {
-  disease_lcc_sig = list(Z=NA, emp_p=NA) # If empty network, leave result as NA
+cols = c("size", "type_genes", "GO.ID", "Term", "Annotated", "Significant", "Expected", "Rank in classic", "classic", "KS", "weight")
+codina_ppi_go_enrichment_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+
+cols = c("size", "type_genes", "Node", "Phi_name")
+codina_ppi_lcc_nodes_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+
+for(size_selected in sizes_list){
+  
+  for (type_genes_selected in c("all", "disease_gene")){
+
+    for (category_selected in c("disease-gene", "disease-specific", "normal-specific", "different", "common", "undefined")){
+      
+      if ((type_genes_selected == "all") & (category_selected == "disease-gene")){
+        next # Skip because it is the same as disease_gene
+      }
+      
+      # Filter by type of analysis
+      nodes_filtered_type_analysis_df = nodes_filtered_df %>% filter(size == size_selected)
+      if ((type_genes_selected == "disease_gene") | (category_selected == "disease-gene")){
+        nodes_filtered_type_analysis_df = nodes_filtered_df %>% filter(!(is.na(DiseaseName.no.sp.char)))
+      }
+      
+      # Select category genes in PPI
+      if (!(category_selected == "disease-gene")){
+        nodes_filtered_type_analysis_df = nodes_filtered_type_analysis_df %>% filter(Phi_name == category_selected)
+      }
+      category_ppi_genes_in_analysis = unique(nodes_filtered_type_analysis_df$Node[nodes_filtered_type_analysis_df$Node %in% V(ppi_net)$name])
+      
+      if (length(category_ppi_genes_in_analysis) > 0){
+        
+        # Calculate subgraph of the category
+        category_subgraph = induced.subgraph(ppi_net, vids=category_ppi_genes_in_analysis)
+        category_subgraph_df = as.data.frame(get.edgelist(category_subgraph))
+        
+        # Calculate LCC and significance
+        category_components = igraph::components(category_subgraph)
+        category_lcc = igraph::induced.subgraph(category_subgraph, vids = V(category_subgraph)[category_components$membership == which.max(category_components$csize)] )
+        if (length(V(category_lcc)$name) > 0){
+          category_lcc_sig = LCC_Significance(N = 1000 
+                                              , Targets = V(category_lcc)$name
+                                              , G = ppi_net
+                                              #, bins=1 #With bin=1, the degree distribution is not maintained and the hypothesis changes
+          )
+          codina_ppi_lcc_nodes_df = rbind(codina_ppi_lcc_nodes_df, data.frame(size=size_selected, type_genes=type_genes_selected, Node=V(category_lcc)$name, Phi_name=category_selected))
+        } else {
+          category_lcc_sig = list(Z=NA, emp_p=NA) # If empty network, leave result as NA
+        }
+        codina_ppi_analysis_df = rbind(codina_ppi_analysis_df, data.frame(size=size_selected, type_genes=type_genes_selected, Phi_name=category_selected, 
+                                                                          num_nodes=gorder(category_subgraph), num_edges=gsize(category_subgraph),
+                                                                          num_components=category_components$no, num_nodes_lcc=gorder(category_lcc), num_edges_lcc=gsize(category_lcc),
+                                                                          lcc_significance_z=category_lcc_sig$Z, lcc_significance_pval=category_lcc_sig$emp_p))
+        
+        GO_enrichment = GO(ID_type = "symbol", 
+                           g = V(category_lcc)$name,
+                           ONTO = "BP", 
+                           bg = V(ppi_net)$name)
+        codina_ppi_go_enrichment_df = rbind(codina_ppi_go_enrichment_df, cbind(data.frame(size=size_selected, type_genes=type_genes_selected), GO_enrichment$Sign))
+        
+      } else {
+        codina_ppi_analysis_df = rbind(codina_ppi_analysis_df, data.frame(size=size_selected, type_genes=type_genes_selected, Phi_name=category_selected, num_nodes=0, num_edges=0, num_components=0, num_nodes_lcc=0, num_edges_lcc=0, lcc_significance_z=NA, lcc_significance_pval=NA))
+      }
+    }
+        
+  }
+
 }
 
-#---- Calculate PPI disease module using disease genes ----#
+codina_ppi_lcc_nodes_file = paste(tables_dir, "codina_ppi_lcc_nodes.txt", sep="/")
+codina_ppi_lcc_nodes_df %>% fwrite(codina_ppi_lcc_nodes_file)
+codina_ppi_analysis_file = paste(tables_dir, "codina_ppi_analysis.txt", sep="/")
+codina_ppi_analysis_df %>% fwrite(codina_ppi_analysis_file)
+codina_ppi_go_enrichment_file = paste(tables_dir, "codina_ppi_go_enrichment.txt", sep="/")
+codina_ppi_go_enrichment_df %>% fwrite(codina_ppi_go_enrichment_file)
 
-# Get disease subgraph
-disase_genes_in_analysis = unique((nodes_filtered_df %>% filter(!(is.na(DiseaseName.no.sp.char))))$Node)
-ppi_disease_genes_in_analysis = disase_genes_in_analysis[disase_genes_in_analysis %in% V(ppi_net)$name]
-disease_subgraph = induced.subgraph(ppi_net, vids=ppi_disease_genes_in_analysis)
-disease_net_df = ppi_df %>% filter((Node.1 %in% V(disease_subgraph)$name) & (Node.2 %in% V(disease_subgraph)$name))
 
-# Get calculations of the disease subgraph (number of genes, components, LCC, LCC significance)
-num_disease_genes_subgraph = length(unique(c(disease_net_df$Node.1, disease_net_df$Node.2)))
-disease_components = igraph::components(disease_subgraph)
-disease_lcc = igraph::induced.subgraph(disease_subgraph, vids = V(disease_subgraph)[disease_components$membership == which.max(disease_components$csize)] )
-num_disease_lcc_nodes = gorder(disease_lcc)
-num_disease_lcc_edges = gsize(disease_lcc)
-if (length(V(disease_lcc)$name) > 0){
-  disease_lcc_sig = LCC_Significance(N = 1000, Targets = V(disease_lcc)$name, G = network_graph, bins=1) # With bin=1, the degree distribution is not maintained and the hypothesis changes
-} else {
-  disease_lcc_sig = list(Z=NA, emp_p=NA) # If empty network, leave result as NA
+#---- Calculate separation between PPI module of different categories of genes ----#
+
+for(size_selected in sizes_list){
+  
+  for (type_genes_selected in c("all", "disease_gene")){
+    
+    All = codina_ppi_lcc_nodes_df %>% filter((size == size_selected) & (type_genes == type_genes_selected)) %>% select(Phi_name, Node) %>% unique()
+
+    Jac = Jaccard(All)
+    sab = separation(ppi_net, All)
+    S = sab$Sab
+    S[lower.tri(S)] = t(S)[lower.tri(S)]
+    S = S %>% wTO.in.line() %>% rename("sab"="wTO")
+    S = S %>% full_join(Jac, by=c("Node.1", "Node.2"))
+    S$size = size_selected
+    S$type_genes = type_genes_selected
+    
+  }
+  
 }
+
+codina_ppi_lcc_separation_file = paste(tables_dir, "codina_ppi_lcc_separation.txt", sep="/")
+S %>% fwrite(codina_ppi_lcc_separation_file)
+
+x = data.frame(n1 = sample(LETTERS[1:5]),
+               n2 =  sample(LETTERS[1:20]))
+
+D1 = data.frame(gene = c("H", "I", "S", "N", "A"), disease = "D1")
+D2 = data.frame(gene = c("E", "C",  "R" , "J", "Q", "O"), disease = "D2")
+D3 = data.frame(gene = c("E", "G", "T", "P"), disease = "D3")
+D4 = data.frame(gene = c("A", "B", "E"), disease = "D4")
+
+Diseases = rbind(D1, D2, D3, D4)
+Diseases %<>% dplyr::select(disease, gene)
+g = igraph::graph_from_data_frame(x, directed = FALSE)
+g = igraph::simplify(g)
+
+sab = separation(G = g, ST = Diseases)
+
+
+#---- Read edge files and calculate edge categories associated to each node ----#
+
+# cols = c("num_disease_genes_in_top", "size", "rep_D", "rep_N")
+# num_disease_genes_in_top_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+# missing_edge_files = c()
+# sizes_list = sort(unique(file_info_df$size))
+# 
+# for(x in seq(sizes_list)){
+#   size = sizes_list[x]
+#   print(size)
+#   same_size_files_df = file_info_df %>% filter((size==!!size) & (type_analysis=="edges")) %>% arrange(rep_D, rep_N)
+#   input_files = same_size_files_df$file_name
+#   # same_size_info_df = data.frame()
+#   for(input_file in input_files){
+#     r_D = (same_size_files_df %>% filter(file_name == input_file))$rep_D
+#     r_N = (same_size_files_df %>% filter(file_name == input_file))$rep_N
+#     individual_df = fread(paste(input_dir, input_file, sep="/"))
+#     if (nrow(individual_df) > 0){
+#       # Count the number of edge classifications for each node
+#       node_edge_counts_df = rbind((individual_df %>% select(Node.1, Phi_tilde) %>% rename(Node=Node.1)), (individual_df %>% select(Node.2, Phi_tilde) %>% rename(Node=Node.2))) %>% 
+#         group_by(Node, Phi_tilde) %>% 
+#         summarize(Phi_edge_count = n()) %>% 
+#         mutate(Phi_edge_frac = Phi_edge_count / sum(Phi_edge_count)) %>%
+#         ungroup() %>%
+#         rename(Phi_tilde_edge = Phi_tilde) %>%
+#         inner_join((nodes_filtered_df %>% filter(size == !!size) %>% select(Node, DiseaseName.no.sp.char, Phi_tilde) %>% rename(Phi_tilde_node = Phi_tilde)), by=c("Node")) %>%
+#         filter((Phi_tilde_node %in% c("b.D", "g.D", "g.N")) & (Phi_tilde_edge == Phi_tilde_node)) %>%
+#         rename(Phi_tilde = Phi_tilde_edge) %>% 
+#         select(-Phi_tilde_node) %>%
+#         arrange(desc(Phi_edge_count), desc(Phi_edge_frac)) %>%
+#         slice_head(n=20)
+#       num_disease_genes_in_top_df = rbind(data.frame(num_disease_genes_in_top=nrow(node_edge_counts_df %>% filter(!(is.na(DiseaseName.no.sp.char)))), size=size, rep_D=r_D, rep_N=r_N))
+#     } else {
+#       missing_edge_files = c(missing_edge_files, input_file)
+#     }
+#     rm(individual_df)
+#   }
+# }
+
+
 

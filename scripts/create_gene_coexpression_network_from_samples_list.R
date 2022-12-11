@@ -57,7 +57,7 @@ aracne_eps = as.double(opt$aracne_eps)
 correction_method = opt$correction_method
 
 #scripts.dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts'
-#samples_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood_female/RNAseq_samples_Whole.Blood_female_size_10_rep_1.txt'
+#samples_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood_female/RNAseq_samples_Whole.Blood_female_size_20_rep_1.txt'
 #samples_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-03-28-Dataset/sampling_with_repetition/TCGA/RNAseq_samples_TCGA_size_9900_rep_2.txt'
 #samples_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/complete_dataset/scipher_complete_dataset_size_580_rep_4.txt'
 #samples_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor/TCGA-BRCA_female/tcga_TCGA-BRCA_female_size_800_rep_1.txt"

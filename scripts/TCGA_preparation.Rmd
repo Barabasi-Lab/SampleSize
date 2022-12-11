@@ -33,7 +33,7 @@ set.seed(1510)
 type_counts = "reads" # tpm, reads
 
 # Define working directories
-gdc_dir = '/work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA'
+gdc_dir = '/work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA'
 input_dir = paste(gdc_dir, 'raw', sep='/')
 data_dir = paste(input_dir, 'data', sep='/')
 metadata_dir = paste(input_dir, 'metadata', sep='/')
@@ -66,7 +66,7 @@ table(metadata_with_distinct_counts$num_samples_per_participant, metadata_with_d
 ```
 
 ```{r}
-head(metadata_df %>% group_by(participant) %>% filter(n()>1) %>% ungroup() %>% select(file_id, entity_submitter_id, participant, sample_code, portion_code, sample_type, project_id))
+head(metadata_df %>% group_by(participant) %>% filter(n()>1) %>% ungroup() %>% select(file_id, entity_submitter_id, participant, sample_code, portion_code, sample_type, project_id)) %>% arrange(participant)
 ```
 
 However, there is still a small number of samples that might belong to the same participant and also come from the same type of tissue. In these cases, the sample information might come from different samples, vials, portions or plates.
@@ -76,7 +76,7 @@ See this website for more information: https://docs.gdc.cancer.gov/Encyclopedia/
 head(metadata_df %>% select(file_id, entity_submitter_id, participant, sample, sample_code, portion_code, plate, center, sample_type, project_id) %>% unique() %>% group_by(participant) %>% filter(n()>1) %>% mutate(num_sample_types_per_participant=n_distinct(sample_type)) %>% mutate(num_samples_per_participant=n_distinct(file_id)) %>% filter((num_sample_types_per_participant == 1 & num_samples_per_participant > 1)) %>% ungroup(), 12)
 ```
 
-This means that later, we will have to merge the expression of the samples that are from same participant and come from the same tissue type, but are from different vials, portions or plates. We will do it by using the participant_sample_type code:
+This means that later, we will have to merge the expression of the samples that are from same participant and come from the same sample type (cancer or normal tissue), but are from different vials, portions or plates. We will do it by using the participant_sample_type code:
 
 ```{r}
 if(!("participant_sample_type" %in% colnames(metadata_df))){
@@ -102,12 +102,27 @@ metadata_cases_df = metadata_df %>% select(participant, project_id, project_dise
 table(metadata_cases_df$sample_type_simplified, metadata_cases_df$project_id)
 ```
 
+We create a table summarizing the number of samples for each cancer type:
+
+```{r}
+summary_n_samples_df = metadata_df %>% select(participant_sample_type, sample_type_simplified, project_id, project_disease_type) %>% 
+  unique() %>% 
+  group_by(project_id, project_disease_type, sample_type_simplified) %>%
+  summarize(n_samples=n_distinct(participant_sample_type)) %>%
+  pivot_wider(names_from = sample_type_simplified, values_from = n_samples) %>%
+  mutate(tumor = replace_na(tumor, 0), normal = replace_na(normal, 0))
+print(summary_n_samples_df)
+summary_n_samples_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/tcga_num_samples.txt"
+summary_n_samples_df %>% fwrite(summary_n_samples_file)
+```
+
+We create a plot summarizing the number of samples for each cancer type:
+
 ```{r}
 # Plot project IDs
 metadata_cases_count_tumor <- metadata_cases_df %>% filter(sample_type_simplified == "tumor") %>% count(project_id)
 metadata_cases_count_normal <- metadata_cases_df %>% filter(sample_type_simplified == "normal") %>% count(project_id)
 metadata_cases_count_by_sample_type = full_join(metadata_cases_count_tumor %>% rename(tumor=n), metadata_cases_count_normal %>% rename(normal=n), by="project_id") %>% replace(is.na(.), 0) %>% pivot_longer(-project_id, names_to="sample_type_simplified", values_to="n")
-metadata_cases_plot_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/tcga_num_cases_per_project.png'
 metadata_cases_plot <- metadata_cases_count_by_sample_type %>% 
   mutate(project_id = fct_reorder(project_id, n)) %>%
   ggplot( aes(x=project_id, y=n, fill=sample_type_simplified)) +
@@ -117,10 +132,131 @@ metadata_cases_plot <- metadata_cases_count_by_sample_type %>%
     guides(fill=guide_legend(title="Type of sample")) +
     #theme_bw()
     theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 12), legend.text = element_text(size = 12), legend.title=element_text(size=14, face="bold"))
+metadata_cases_plot_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/tcga_num_cases_per_project.png'
 ggsave(metadata_cases_plot_file, plot=metadata_cases_plot, type='cairo', dpi = 300, height=8, width = 10)
 #ggsave(metadata_cases_plot_file,plot = metadata_cases_plot,type='cairo',dpi = 1200,width = 9000,height = 6000,units = c("px"))
 
 metadata_cases_plot
+```
+
+The selected samples come from `r length(unique(metadata_df$tissue_or_organ_of_origin))`different tissues, `r length(unique((metadata_df %>% filter(sample_type_simplified == "normal"))$tissue_or_organ_of_origin))` tissues from normal samples and `r length(unique((metadata_df %>% filter(sample_type_simplified == "tumor"))$tissue_or_organ_of_origin))` tissues from tumor samples. 
+
+Let's try to group normal samples from the same tissue.
+
+First, we group redundant tissues:
+
+```{r}
+# Group redundant tissues
+metadata_df = metadata_df %>% 
+  mutate(tissue_simplified = replace(tissue_or_organ_of_origin, tissue_or_organ_of_origin %in% c("Anterior wall of bladder", "Bladder, NOS", "Bladder neck", "Dome of bladder", "Lateral wall of bladder", "Posterior wall of bladder", "Trigone of bladder", "Ureteric orifice"), "Bladder")) %>% 
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Cortex of adrenal gland", "Medulla of adrenal gland"), "Adrenal gland")) %>% 
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Breast, NOS", "Lower-inner quadrant of breast", "Lower-outer quadrant of breast", "Overlapping lesion of breast", "Overlapping lesion of breast", "Upper-inner quadrant of breast", "Upper-outer quadrant of breast"), "Breast")) %>% 
+  mutate(tissue_simplified = replace(tissue_simplified, ((project_id == "TCGA-BRCA") & (tissue_or_organ_of_origin == "")), "Breast")) %>% 
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Extrahepatic bile duct", "Intrahepatic bile duct", "Gallbladder"), "Bile.duct")) %>% 
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Ascending colon", "Cecum", "Colon, NOS", "Descending colon", "Hepatic flexure of colon", "Sigmoid colon", "Hepatic flexure of colon", "Sigmoid colon", "Splenic flexure of colon", "Transverse colon", "Rectosigmoid junction", "Rectum, NOS"), "Colon.Rectum")) %>%
+  mutate(tissue_simplified = replace(tissue_simplified, ((project_id == "TCGA-COAD") & (tissue_or_organ_of_origin == "")), "Colon.Rectum")) %>% 
+  mutate(tissue_simplified = replace(tissue_simplified, ((project_id == "TCGA-READ") & ((tissue_or_organ_of_origin == "") | (tissue_or_organ_of_origin == "Unknown primary site"))), "Colon.Rectum")) %>%
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Esophagus, NOS", "Lower third of esophagus", "Middle third of esophagus", "Thoracic esophagus", "Upper third of esophagus"), "Esophagus")) %>% 
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Brain, NOS", "Brain stem", "Cerebrum", "Cerebellum, NOS", "Frontal lobe", "Occipital lobe", "Parietal lobe", "Temporal lobe"), "Brain")) %>% 
+  mutate(tissue_simplified = replace(tissue_simplified, ((project_id == "TCGA-GBM") & (tissue_or_organ_of_origin == "")), "Brain")) %>%
+  mutate(tissue_simplified = replace(tissue_simplified, ((project_id == "TCGA-LGG") & (tissue_or_organ_of_origin == "")), "Brain")) %>%
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Anterior floor of mouth", "Base of tongue, NOS", "Border of tongue", "Cheek mucosa", "Floor of mouth, NOS", "Gum, NOS", "Hard palate", "Hypopharynx, NOS", "Larynx, NOS", "Lip, NOS", "Lower gum", "Mandible", "Mouth, NOS", "Oropharynx, NOS", "Overlapping lesion of lip, oral cavity and pharynx", "Palate, NOS", "Pharynx, NOS", "Posterior wall of oropharynx", "Retromolar area", "Supraglottis", "Tongue, NOS", "Tonsil, NOS", "Upper Gum", "Ventral surface of tongue, NOS"), "Mouth.Larynx")) %>%
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Kidney, NOS"), "Kidney")) %>%
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Liver"), "Liver")) %>%
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Lower lobe, lung", "Lung, NOS", "Main bronchus", "Middle lobe, lung", "Upper lobe, lung", "Lower lobe, lung", "Overlapping lesion of lung"), "Lung")) %>%
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Nervous system, NOS", "Peripheral nerves and autonomic nervous system of upper limb and shoulder"), "Nervous.system")) %>%
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Pleura, NOS"), "Pleura")) %>% 
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Body of pancreas", "Head of pancreas", "Overlapping lesion of pancreas", "Pancreas, NOS", "Tail of pancreas"), "Pancreas")) %>%
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Adrenal gland, NOS"), "Adrenal.gland")) %>%
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Prostate gland"), "Prostate")) %>%
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Connective, subcutaneous and other soft tissues, NOS", "Connective, subcutaneous and other soft tissues of abdomen", "Connective, subcutaneous and other soft tissues of head, face, and neck", "Connective, subcutaneous and other soft tissues of lower limb and hip", "Connective, subcutaneous and other soft tissues of pelvis", "Connective, subcutaneous and other soft tissues of thorax", "Connective, subcutaneous and other soft tissues of trunk, NOS", "Connective, subcutaneous and other soft tissues of upper limb and shoulder", "Overlapping lesion of connective, subcutaneous and other soft tissues", "Specified parts of peritoneum", "Retroperitoneum"), "Connective.tissue")) %>%
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Skin, NOS"), "Skin")) %>%
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Body of stomach", "Cardia, NOS", "Fundus of stomach", "Gastric antrum", "Lesser curvature of stomach, NOS", "Pylorus", "Stomach, NOS"), "Stomach")) %>%
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Testis, NOS"), "Testis")) %>%
+  mutate(tissue_simplified = replace(tissue_simplified, ((project_id == "TCGA-TGCT") & (tissue_or_organ_of_origin == "")), "Testis")) %>%
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Thyroid gland"), "Thyroid.gland")) %>%
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Thymus"), "Thymus")) %>%
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Cervix uteri", "Corpus uteri", "Endometrium", "Fundus uteri", "Isthmus uteri", "Uterus, NOS"), "Uterus.Cervix")) %>% 
+  mutate(tissue_simplified = replace(tissue_simplified, ((project_id == "TCGA-UCEC") & (tissue_or_organ_of_origin == "")), "Uterus.Cervix")) %>%
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Choroid", "Ciliary body", "Overlapping lesion of eye and adnexa"), "Eye")) %>%
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Anterior mediastinum", "Mediastinum, NOS"), "Mediastinum")) %>%
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Bones of skull and face and associated joints", "Long bones of lower limb and associated joints", "Short bones of lower limb and associated joints"), "Bones")) %>%
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Intra-abdominal lymph nodes", "Intrathoracic lymph nodes", "Lymph nodes of axilla or arm", "Lymph nodes of head, face and neck", "Lymph nodes of inguinal region or leg"), "Lymph.nodes")) %>%
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Small intestine, NOS"), "Small intestine")) %>%
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Head, face or neck, NOS"), "Head.face.neck")) %>%
+  mutate(tissue_simplified = replace(tissue_simplified, tissue_or_organ_of_origin %in% c("Thorax, NOS"), "Thorax"))
+
+metadata_df$tissue_simplified <- gsub(' ', '.', gsub(' - ', '.', gsub('[\\(\\)]', '', gsub('/', '.', metadata_df$tissue_simplified))))
+
+# Save changes
+metadata_df %>% fwrite(metadata_file)
+metadata_df = fread(metadata_file, header=TRUE)
+```
+
+Then, we count the number of samples of different projects obtained from the simplified tissues:
+
+```{r}
+metadata_normal_cases_count_by_tissue = metadata_df %>% select(participant_sample_type, sample_type_simplified, project_id, project_disease_type, tissue_simplified) %>% 
+  filter(sample_type_simplified == "normal") %>%
+  group_by(tissue_simplified) %>%
+  mutate(n_samples_total=n_distinct(participant_sample_type)) %>%
+  ungroup() %>%
+  unique() %>% 
+  group_by(tissue_simplified, project_id, project_disease_type, n_samples_total) %>%
+  summarize(n_samples_project=n_distinct(participant_sample_type)) %>%
+  ungroup() %>%
+  arrange(desc(n_samples_total), desc(n_samples_project)) %>%
+  as.data.frame()
+
+metadata_normal_cases_count_by_tissue_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/tcga_num_normal_samples_per_tissue.txt"
+metadata_normal_cases_count_by_tissue %>% fwrite(metadata_normal_cases_count_by_tissue_file)
+metadata_normal_cases_count_by_tissue
+```
+
+We plot the number of normal samples per tissue:
+
+```{r}
+metadata_normal_cases_by_tissue_plot <- metadata_normal_cases_count_by_tissue %>%
+  select(tissue_simplified, n_samples_total) %>%
+  unique() %>%
+  mutate(tissue_simplified = fct_reorder(tissue_simplified, n_samples_total)) %>%
+  ggplot( aes(x=tissue_simplified, y=n_samples_total)) +
+    geom_bar(stat="identity", fill="#f68060", alpha=.6, width=.4) +
+    coord_flip() +
+    xlab("") +
+    ylab("n") +
+    guides(fill=guide_legend(title="Type of sample")) +
+    #theme_bw()
+    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 12), legend.text = element_text(size = 12), legend.title=element_text(size=14, face="bold"))
+
+metadata_normal_cases_by_tissue_plot_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/tcga_num_normal_samples_per_tissue.png'
+ggsave(metadata_normal_cases_by_tissue_plot_file, plot=metadata_normal_cases_by_tissue_plot, type='cairo', dpi = 300, height=8, width = 10)
+metadata_normal_cases_by_tissue_plot
+```
+
+Let's check the number of samples for each cancer subtype:
+
+```{r}
+metadata_subtypes_count = metadata_df %>% 
+  select(participant_sample_type, cancer_subtype, sample_type_simplified) %>% 
+  filter(!(cancer_subtype == "")) %>%
+  separate(col=cancer_subtype, into=c("cancer_type", "cancer_subtype"), sep="\\.") %>%
+  filter(sample_type_simplified == "tumor") %>%
+  select(-sample_type_simplified) %>%
+  group_by(cancer_type) %>%
+  mutate(n_samples_total=n_distinct(participant_sample_type)) %>%
+  ungroup() %>%
+  unique() %>% 
+  group_by(cancer_type, cancer_subtype, n_samples_total) %>%
+  summarize(n_samples_subtype=n_distinct(participant_sample_type)) %>%
+  ungroup() %>%
+  unique() %>% 
+  arrange(desc(n_samples_total), desc(n_samples_subtype)) %>%
+  as.data.frame()
+
+metadata_subtypes_count_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/tcga_num_subtypes.txt"
+metadata_subtypes_count %>% fwrite(metadata_subtypes_count_file)
+metadata_subtypes_count
 ```
 
 ## Data

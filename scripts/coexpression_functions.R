@@ -89,12 +89,25 @@ calculate_correlation <- function(rnaseq, out_name, cor_method="pearson", dispar
 #'
 calculate_correlation_and_pvalue <- function(rnaseq, out_name, cor_method="spearman", correction_method="bonferroni", disparity_filter=FALSE, disparity_filter_pval_threshold=0.05){
   
+  # Calculate correlation & p-value
   correlation_result <- rcorr(as.matrix(rnaseq), type=cor_method)
-  correlation_result_mat = correlation_result$r
+  
+  # Order the genes
+  correlation_result$r = correlation_result$r[order(rownames(correlation_result$r)), order(colnames(correlation_result$r))]
+  correlation_result$P = correlation_result$P[order(rownames(correlation_result$P)), order(colnames(correlation_result$P))]
+  
+  if (isTRUE(disparity_filter)){
+    # Keep correlation matrix
+    correlation_result_mat = correlation_result$r
+  }
+  
+  # Transform into long format the matrices and removing pairs that are the same gene
   correlation_pval_mat = correlation_result$P %>% wTO.in.line() %>% rename("pval" := "wTO")
   correlation_result = correlation_result$r %>% wTO.in.line() %>% rename("score" := "wTO")
+  # Merge matrices
   correlation_result = correlation_result %>% inner_join(correlation_pval_mat)
   rm(correlation_pval_mat)
+  # Calculate adjusted p-value
   correlation_result$pval.adj = p.adjust(correlation_result$pval, method=correction_method)
   
   if (isTRUE(disparity_filter)){
@@ -117,6 +130,7 @@ calculate_correlation_and_pvalue <- function(rnaseq, out_name, cor_method="spear
   }
   #correlation_result = correlation_result %>% rename(!!cor_method := "score")
   
+  # Save data
   fwrite(correlation_result, out_name)
   
 }

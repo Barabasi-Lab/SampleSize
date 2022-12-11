@@ -33,7 +33,7 @@ topology_results_file ='/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts
 results_df = fread(topology_results_file)
 gtex_rnaseq_dir = "/work/ccnr/j.aguirreplans/Databases/GTEx/v8/tpm/rnaseq_filtered_files_by_tissue"
 tcga_rnaseq_dir = "/work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/tpm/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project"
-scipher_rnaseq_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/rnaseq_filtered_files_by_group"
+scipher_rnaseq_dir = "/work/ccnr/j.aguirreplans/data/Scipher/Dec2021/00_data/rnaseq_filtered_files_by_group"
 data_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data'
 plots_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots'
 ```
