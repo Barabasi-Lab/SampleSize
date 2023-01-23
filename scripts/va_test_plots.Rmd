@@ -1,0 +1,82 @@
+---
+title: "Untitled"
+author: "Joaquim Aguirre-Plans"
+date: '2023-01-20'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+### Description
+
+Create test figures for the VA project.
+
+```{r}
+packrat::init("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR")
+```
+
+```{r}
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(patchwork)
+library(tidyr)
+set.seed(1510)
+options(bitmapType='cairo')
+`%ni%` <- Negate(`%in%`)
+```
+
+```{r}
+head(mtcars)
+```
+
+```{r}
+name2color = c(
+  "ICVD" = "#FBB4AE",
+  "IHD" = "#B3CDE3",
+  "PAD" = "#CCEBC5"
+)
+```
+
+```{r}
+mtcars_mod = mtcars %>%
+  mutate(ASCVD = am, DISEASECAT = gear, gender = cyl) %>%
+  mutate(DISEASECAT = replace(DISEASECAT, DISEASECAT == 3, "IHD")) %>%
+  mutate(DISEASECAT = replace(DISEASECAT, DISEASECAT == 4, "ICVD")) %>%
+  mutate(DISEASECAT = replace(DISEASECAT, DISEASECAT == 5, "PAD")) %>%
+  mutate(gender = replace(gender, gender == 4, "F")) %>%
+  mutate(gender = replace(gender, gender == 6, "Unknown")) %>%
+  mutate(gender = replace(gender, gender == 8, "M"))
+mtcars_mod$MVPCore_id = row.names(mtcars_mod)
+head(mtcars_mod)
+```
+
+```{r}
+mtcars_mod_gender = mtcars_mod %>%
+  select(MVPCore_id, gender, ASCVD) %>%
+  group_by(gender, ASCVD) %>%
+  summarize(num_subjects=n()) %>%
+  ungroup()
+head(mtcars_mod_gender)
+```
+
+```{r}
+mtcars_mod_gender %>%
+  ggplot(aes(x=factor(gender), y=num_subjects, fill=factor(ASCVD), color=factor(ASCVD))) +
+  geom_bar(stat="identity", position="dodge") +
+  scale_fill_manual(values = c("#F8766D", "grey")) +
+  scale_color_manual(values = c("#F8766D", "grey")) +
+  xlab("Gender") +
+  ylab("Number of subjects") +
+  theme_bw() +
+  theme(aspect.ratio=1,
+        axis.title = element_text(size=14, face="bold"),
+        axis.text = element_text(size=13, face="bold"),
+        legend.title = element_text(size=14, face="bold"),
+        legend.text = element_text(size=13),
+        panel.grid.major=element_blank()) +
+  geom_text(aes(label=num_subjects), position=position_dodge(width=0.9), vjust=-0.3, color="gray25")
+```
