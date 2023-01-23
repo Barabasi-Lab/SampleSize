@@ -1216,7 +1216,10 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differ
 # Analysis of differential co-expressed genes #
 #---------------------------------------------#
 
+# General analysis
 sbatch Projects/Scipher/SampleSize/scripts/analyze_differentially_coexpressed_genes_cluster.sh
+# GO enrichment & proximity analysis
+sbatch Projects/Scipher/SampleSize/scripts/parameters_analysis_diff_coexpr.sh
 
 
 ############################
@@ -1227,6 +1230,12 @@ Analysis of 1,000,000 edges across sample size:
 
 sbatch /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/merge_networks.sh
 sbatch /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analysis_individual_edges.sh
+
+Analysis of standard deviation of edge across repetitions of each sample size:
+
+sbatch /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/merge_networks.sh ==> Execute merge_networks.R to merge network of specific sample sizes (20, 100, 200, 300, 400, 500) and all repetitions (1-5) into the same dataframe.
+sbatch /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analysis_individual_edges.sh ==> Execute analysis_sd_coexpression_weight.R to plot standard deviation of repetitions across sample size using a half violin plot.
+
 
 ##########################
 ANALYSIS OF SPECIFIC EDGES
@@ -1399,6 +1408,49 @@ pip install GEOparse
 To use the function girvan_newman of networkx, there was an incompatibility with the package decorator, it required a version of decorator lower than 5. So I have downgraded it:
 source activate ScipherSampleSizeEnv
 pip install --upgrade decorator==4.3
+
+
+############################
+JOB ARRAYS EXAMPLE FROM ENZO
+############################
+
+#### SCRIPT xxxx.sh ####
+#!/bin/bash
+seeds=(82 10 118 94)
+selecs=(5 10 15 20 50)
+clfs=(50 100 200)
+ks=(41 44 42 43 45 46 47 48 49 50 60 70 80 90 100 200)
+for k in ${ks[@]};
+do
+for clf in ${clfs[@]};
+do
+for selec in ${selecs[@]};
+do
+for see in ${seeds[@]};
+do
+sbatch --export=selec=$selec,clf=$clf,k=$k,cpt="",sele="",no_sele=0,filter=0,clini=0,seed=$see main.sh
+done
+done
+done
+done
+########################
+
+#### SCRIPT main.sh ####
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=15
+#SBATCH --mem=8G
+#SBATCH --job-name=stratification
+#SBATCH --time=4-00:00:00
+#SBATCH --error=/work/ccnr/e.battistella/logs/%x.%j.error
+#SBATCH --partition=long
+#SBATCH --chdir=/home/e.battistella/stratification/
+#SBATCH --output=/work/ccnr/e.battistella/logs/%x.%j.out
+module load anaconda3/2022.01
+source activate stratification
+python main.py $selec $clf $k "$cpt" "$sele" $no_sele $filter $clini $seed
+########################
 
 
 #######

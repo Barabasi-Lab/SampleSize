@@ -43,7 +43,7 @@ disease_name_in_associations_file = "breast.neoplasms"
 ppi_file = "/work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv"
 plots_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/plots_differential_coexpression/TCGA-BRCA_female___TCGA-Breast_female"
 tables_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/tables_differential_coexpression/TCGA-BRCA_female___TCGA-Breast_female"
-name2color = data.frame(name=c("common", "disease-specific", "normal-specific", "undefined", "different", "all"), color.codes=c("#619CFF", "#F8766D", "#00BA38", "#808080", "#C77CFF", "#CD9600"))
+name2color = data.frame(name=c("common", "disease-gene", "disease-specific", "normal-specific", "undefined", "different", "all"), color.codes=c("#619CFF", "#cc68f7", "#F8766D", "#00BA38", "#808080", "#C77CFF", "#CD9600"))
 ```
 
 
@@ -202,7 +202,7 @@ plot_stable_genes = stable_genes_df %>%
   guides(col=guide_legend(title="Gene category"), size="none") +
   theme_linedraw() +
   theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 12), legend.text = element_text(size = 12), legend.title=element_text(size=14, face="bold"))
-stable_genes_df
+plot_stable_genes
 ```
 
 ### Analyze the modules of different categories considering all the genes
@@ -212,6 +212,7 @@ Read file:
 ```{r}
 codina_ppi_analysis_file = paste(tables_dir, "codina_ppi_analysis.txt", sep="/")
 codina_ppi_analysis_df = fread(codina_ppi_analysis_file)
+head(codina_ppi_analysis_df)
 ```
 
 Analyze number of nodes in the LCC:
@@ -220,27 +221,62 @@ Analyze number of nodes in the LCC:
 codina_ppi_analysis_df %>%
   filter(type_genes == "all") %>%
   ggplot(aes(x = size, y = num_nodes_lcc)) + 
-  geom_line(aes(col = Phi_name))
+  geom_line(aes(col = Phi_name)) +
+  xlab("Number of samples") +
+  ylab("Number of LCC nodes") +
+  scale_color_manual(values=as.vector(name2color[name2color$name %in% levels(factor(unique(codina_ppi_analysis_df$Phi_name))),]$color.codes)) +
+  guides(col=guide_legend(title="Gene category"), size="none") +
+  theme_linedraw() +
+  theme(aspect.ratio=1,
+        plot.title =  element_text(size = 15, face="bold"),
+        axis.title = element_text(size = 14, face="bold"),
+        axis.text = element_text(size = 13),
+        legend.text = element_text(size = 13),
+        legend.title=element_text(size=14, face="bold"))
 ```
 
 ### Analyze the functional enrichment of different categories considering all the genes
 
-Read file:
+Read files:
 
 ```{r}
-codina_ppi_go_enrichment_file = paste(tables_dir, "codina_ppi_go_enrichment.txt", sep="/")
-codina_ppi_go_enrichment_df = fread(codina_ppi_go_enrichment_file)
+enrichment_dir = paste(tables_dir, "functions_by_type_and_category_and_size", sep="/")
+enrichment_files = list.files(enrichment_dir)
+cols = c("size", "type_genes", "Phi_name", "GO.ID", "Term", "Annotated", "Significant", "Expected", "Rank in classic", "classic", "KS", "weight")
+codina_ppi_go_enrichment_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+for(file_name in enrichment_files){
+  info_file = gsub(".txt","",file_name)
+  file_split1 = strsplit(info_file, split="_")[[1]]
+  type_genes_selected = file_split1[(length(file_split1)-4)]
+  category_selected = file_split1[(length(file_split1)-2)]
+  size_selected = as.numeric(file_split1[length(file_split1)])
+  enrichment_file = paste(enrichment_dir, file_name, sep="/")
+  enrichment_single_df = fread(enrichment_file)
+  if (nrow(enrichment_single_df) > 0){
+    codina_ppi_go_enrichment_df = rbind(codina_ppi_go_enrichment_df, cbind(data.frame(size=size_selected, type_genes=type_genes_selected, Phi_name=category_selected), enrichment_single_df))
+  }
+}
 ```
 
-Analyze number of nodes in the LCC:
+Analyze number of functions enriched:
 
 ```{r}
 codina_ppi_go_enrichment_df %>%
   filter(type_genes == "all") %>%
-  group_by(size) %>%
-  summarize(num_go=count(GO.ID)) %>%
-  ggplot(aes(x = size, y = num_nodes_lcc)) + 
-  geom_line(aes(col = Phi_name))
+  group_by(Phi_name, size) %>% count() %>% ungroup() %>% arrange(size) %>%
+  ggplot(aes(x = size, y = n)) + 
+  geom_line(aes(col = Phi_name)) +
+  xlab("Number of samples") +
+  ylab("Number of enriched GO terms") +
+  scale_color_manual(values=as.vector(name2color[name2color$name %in% levels(factor(unique(codina_ppi_go_enrichment_df$Phi_name))),]$color.codes)) +
+  guides(col=guide_legend(title="Gene category"), size="none") +
+  theme_linedraw() +
+  theme(aspect.ratio=1,
+        plot.title =  element_text(size = 15, face="bold"),
+        axis.title = element_text(size = 14, face="bold"),
+        axis.text = element_text(size = 13),
+        legend.text = element_text(size = 13),
+        legend.title=element_text(size=14, face="bold"))
 
 ```
 

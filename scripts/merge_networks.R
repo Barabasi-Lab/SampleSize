@@ -17,7 +17,7 @@ option_list = list(
               help="Co-expression network method [default= %default]", metavar="character"),
   make_option(c("-o", "--output_dataframe"), type="character",
               help="Output dataframe containing all correlations", metavar="character"),
-  make_option(c("-s", "--step"), type="character", default=200,
+  make_option(c("-s", "--step"), type="character", default=20,
               help="Step between sample sizes", metavar="integer"),
   make_option(c("-r", "--max_rep"), type="character", default=1,
               help="Maximum number of repetitions", metavar="integer")
@@ -45,13 +45,15 @@ max_rep = as.integer(opt$max_rep)
 # Examples
 #networks_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_tcga/TCGA"
 #networks_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete.dataset"
-#networks_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/Whole.Blood"
+#networks_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/Whole.Blood"
 #method = "pearson"
-#step = 200
+#step = 100
 #step = 20
 #step = 40
 #max_rep = 1
 #max_rep = 2
+#max_rep = 5
+selected_sizes = c(20, 100, 200, 300, 400, 500)
 
 #### PARSE NETWORKS AND CREATE UNIQUE DATAFRAME ####
 
@@ -69,7 +71,8 @@ for (result_file in result_files){
   }
 }
 
-selected_files_df = result_files_df %>% filter((size %% step == 0) & (rep %in% seq(from=1, to=max_rep, by=1))) %>% arrange(size, rep)
+#selected_files_df = result_files_df %>% filter((size %% step == 0) & (rep %in% seq(from=1, to=max_rep, by=1))) %>% arrange(size, rep)
+selected_files_df = result_files_df %>% filter((size %in% selected_sizes) & (rep %in% seq(from=1, to=max_rep, by=1))) %>% arrange(size, rep)
 
 for (i in 1:nrow(selected_files_df)){
     result_file = selected_files_df[i,]$file_name

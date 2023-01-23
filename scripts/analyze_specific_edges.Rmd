@@ -1,0 +1,166 @@
+---
+title: "Analyze specific edges"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Description
+
+Analyze the evolution correlation in specific edges.
+
+```{r, message=FALSE}
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(igraph)
+require(magrittr)
+library(tidyr)
+set.seed(2106)
+`%ni%` <- Negate(`%in%`)
+```
+
+
+### Read files
+
+Define directories and files:
+
+```{r}
+# Define inputs
+input_data_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/analysis_specific_edges_pearson_gtex_Whole.Blood.txt"
+
+# Define outputs
+plots_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots'
+#som_plot_file = paste(plots_dir, "tcga_TCGA_pearson_som.png", sep="/")
+```
+
+Read input data:
+
+```{r}
+input_df = fread(input_data_file)
+input_df$link = paste(input_df$Node.1, input_df$Node.2, sep="---")
+input_df = input_df %>% mutate(pval.adj = replace(pval.adj, pval.adj < 0.000001, 0.000001))
+head(input_df)
+```
+
+### Analyze specific edges
+
+Calculate mean and SD of correlation among replicates:
+
+```{r}
+input_mean_df = input_df %>% 
+  group_by(link, method, size) %>%
+  summarize(mean_score = mean(abs(score)), sd_score = sd(abs(score)), min_score=min(abs(score)), max_score=max(abs(score)), mean_pval = mean(pval.adj), sd_pval = sd(pval.adj), min_pval=min(pval.adj), max_pval=max(pval.adj)) %>%
+  ungroup()
+head(input_mean_df)
+```
+
+Select several links and make a general plot:
+
+```{r}
+max_size_links_df = input_mean_df %>% 
+  filter(size == max(size)) %>% 
+  mutate(type_correlation="< 0.2") %>% 
+  mutate(type_correlation = replace(type_correlation, abs(mean_score) >= 0.2, "\u2265 0.2 & < 0.4")) %>%
+  mutate(type_correlation = replace(type_correlation, abs(mean_score) >= 0.4, "\u2265 0.4 & < 0.6")) %>%
+  mutate(type_correlation = replace(type_correlation, abs(mean_score) >= 0.6, "\u2265 0.6 & < 0.8")) %>%
+  mutate(type_correlation = replace(type_correlation, abs(mean_score) >= 0.8, "\u2265 0.8"))
+num_links_selected = 1
+specific_links_df = max_size_links_df %>% select(link, type_correlation, mean_score) %>% filter(type_correlation == "< 0.2") %>% sample_n(size=num_links_selected, replace = FALSE)
+specific_links_df = rbind(specific_links_df, max_size_links_df %>% select(link, type_correlation, mean_score) %>% filter(type_correlation == "\u2265 0.2 & < 0.4") %>% filter((abs(mean_score) > 0.25) & (abs(mean_score) < 0.35)) %>% sample_n(size=num_links_selected, replace = FALSE))
+specific_links_df = rbind(specific_links_df, max_size_links_df %>% select(link, type_correlation, mean_score) %>% filter(type_correlation == "\u2265 0.4 & < 0.6") %>% filter((abs(mean_score) > 0.45) & (abs(mean_score) < 0.55)) %>% sample_n(size=num_links_selected, replace = FALSE))
+specific_links_df = rbind(specific_links_df, max_size_links_df %>% select(link, type_correlation, mean_score) %>% filter(type_correlation == "\u2265 0.6 & < 0.8") %>% filter((abs(mean_score) > 0.65) & (abs(mean_score) < 0.75)) %>% sample_n(size=num_links_selected, replace = FALSE))
+specific_links_df = rbind(specific_links_df, max_size_links_df %>% select(link, type_correlation, mean_score) %>% filter(type_correlation == "\u2265 0.8") %>% sample_n(size=num_links_selected, replace = FALSE))
+head(specific_links_df)
+```
+
+```{r}
+specific_links_plot = input_mean_df %>% inner_join((specific_links_df %>% select(link, type_correlation)), by=c("link")) %>% 
+  ggplot(aes(x=size, y=abs(mean_score))) +
+  geom_line(aes(col=type_correlation)) +
+  #geom_point(data=(input_df %>% filter(link %in% specific_links)), aes(x = size, y = abs(score), col=link), alpha=0.2) +
+  geom_ribbon(aes(ymin = abs(min_score), ymax = abs(max_score), fill=type_correlation), alpha=0.3) +
+  #geom_errorbar(aes(ymin=abs(mean_score)-sd_score, ymax=abs(mean_score)+sd_score), width=.2, position=position_dodge(0.05)) +
+  theme_linedraw() +
+  xlab("Num. samples") +
+  ylab("Pearson correlation (abs)") +
+  scale_color_manual(values = c("#ff7b00", "#F8766D", "#7CAE00", "#00BFC4", "#C77CFF")) +
+  scale_fill_manual(values = c("#ff7b00", "#F8766D", "#7CAE00", "#00BFC4", "#C77CFF")) +
+  #scale_color_manual(values = c("#C77CFF", "#7CAE00", "#FF7B00", "#F8766D", "#00BFC4")) +
+  #scale_fill_manual(values = c("#C77CFF", "#7CAE00", "#FF7B00", "#F8766D", "#00BFC4")) +
+  guides(col=guide_legend(title="Correlation strength"), fill=guide_legend(title="Correlation strength")) +
+  #guides(col=guide_legend(title="Link"), fill=guide_legend(title="Link")) +
+  theme(aspect.ratio=1, 
+        plot.title =  element_text(size = 15, face="bold"), 
+        axis.title = element_text(size = 14, face="bold"), 
+        axis.text = element_text(size = 13), 
+        legend.text = element_text(size = 13), 
+        legend.title=element_text(size=14, face="bold"))
+
+print(specific_links_plot)
+plot_file = paste(plots_dir, "specific_links_gtex_Whole.Blood.png", sep="/")
+ggsave(
+  plot_file,
+  plot = specific_links_plot,
+  dpi = 1200,
+  #width = 9000,
+  #height = 6000,
+  units = c("px")
+)
+```
+
+```{r}
+specific_links_sd_plot = input_mean_df %>% inner_join((specific_links_df %>% select(link, type_correlation)), by=c("link")) %>% 
+  ggplot(aes(x=size, y=abs(sd_score))) +
+  geom_line(aes(col=type_correlation)) +
+  #geom_point(data=(input_df %>% filter(link %in% specific_links)), aes(x = size, y = abs(score), col=link), alpha=0.2) +
+  #geom_ribbon(aes(ymin = abs(min_score), ymax = abs(max_score), fill=type_correlation), alpha=0.1) +
+  #geom_errorbar(aes(ymin=abs(mean_score)-sd_score, ymax=abs(mean_score)+sd_score), width=.2, position=position_dodge(0.05)) +
+  scale_color_manual(values = c("#ff7b00", "#F8766D", "#7CAE00", "#00BFC4", "#C77CFF")) +
+  theme_linedraw() +
+  xlab("Num. samples") +
+  ylab("Pearson correlation SD") +
+  guides(col=guide_legend(title="Correlation strength"), fill=guide_legend(title="Correlation strength")) +
+  theme(aspect.ratio=1, 
+        plot.title =  element_text(size = 15, face="bold"), 
+        axis.title = element_text(size = 14, face="bold"), 
+        axis.text = element_text(size = 13), 
+        legend.text = element_text(size = 13), 
+        legend.title=element_text(size=14, face="bold"))
+specific_links_sd_plot
+```
+
+```{r}
+# Use patchwork to concatenate plots
+#(specific_links_plot / specific_links_sd_plot +  theme(legend.position="none")) + 
+#  plot_layout(guides = 'collect') & # Center legend
+#  plot_annotation(tag_levels = 'A') & # Include letters 
+#  guides(fill=guide_legend(title="Correlation strength", title.position="top", nrow=2, byrow=TRUE)) &
+#  theme(legend.position = 'bottom', legend.text = element_text(size = 11),  legend.title=element_text(size=13, face="bold"))
+#  theme(plot.tag = element_text(face = 'bold')) # that are bold
+
+((specific_links_plot + plot_layout(guides = "collect") & theme(legend.position = "bottom", legend.text = element_text(size = 11),  legend.title=element_text(size=13, face="bold"), legend.title.align=0.5) & guides(col=guide_legend(title="Correlation strength", title.position="top", nrow=1, byrow=TRUE))) + (specific_links_sd_plot + theme(legend.position = "none"))) + plot_annotation(tag_levels = 'A') & theme(plot.tag = element_text(face = 'bold'))
+
+plot_file = paste(plots_dir, "/specific_links_results.png", sep="")
+ggsave(
+  plot_file,
+  dpi = 1200,
+  width = 9000,
+  #height = 10000,
+  units = c("px")
+)
+```
+
+```{r}
+input_mean_df %>% inner_join((max_size_links_df %>% select(link, type_correlation)), by=c("link")) %>% 
+  filter(size %in% seq(100, max(input_mean_df$size), 100)) %>%
+  mutate(size=as.character(size)) %>%
+  ggplot(aes(x=size, y=sd_score, col=type_correlation)) +
+  geom_boxplot(aes(fill=type_correlation), alpha=0.4)
+  #geom_point(alpha=0.4, size=3)
+```
+
+
+
