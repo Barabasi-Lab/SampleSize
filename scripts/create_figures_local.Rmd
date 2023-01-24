@@ -39,9 +39,9 @@ options(bitmapType='cairo')
 Un-normalized data:
 
 ```{r}
-input_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data'
-plots_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots'
-tables_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables'
+input_dir = '/Users/j.aguirreplans/Desktop/SampleSizeShiny/data'
+plots_dir = '/Users/j.aguirreplans/Desktop/plots'
+tables_dir = '/Users/j.aguirreplans/Desktop/tables'
 numbers_file = paste(input_dir, 'dataset_numbers_complete_graph.txt', sep='/')
 numbers_df = fread(numbers_file)
 numbers_df$dataset = tolower(numbers_df$dataset)
@@ -76,7 +76,7 @@ name2color <- c(
   "P-value < 0.05" = "red"
   )
 
-input_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/example_pearson_pval_0.05'
+input_dir = '/Users/j.aguirreplans/Desktop/SampleSizeShiny/data/example_pearson_pval_0.05'
 topology_results_file = paste(input_dir, 'topology_results_pearson_pval_0.05.txt', sep='/')
 results_selected_df = fread(topology_results_file)
 topology_results_by_size_file = paste(input_dir, 'topology_results_mean_pearson_pval_0.05.txt', sep='/')
@@ -97,7 +97,7 @@ Normalized data:
 
 ```{r}
 topology_type_normalization = "divide.L"
-input_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/example_pearson_pval_0.05'
+input_dir = '/Users/j.aguirreplans/Desktop/SampleSizeShiny/data/example_pearson_pval_0.05'
 topology_results_file = paste(input_dir, '/', 'topology_results_norm_', topology_type_normalization, '_pearson_pval_0.05.txt', sep='')
 results_selected_norm_df = fread(topology_results_file)
 topology_results_by_size_file = paste(input_dir, '/', 'topology_results_mean_norm_', topology_type_normalization, '_pearson_pval_0.05.txt', sep='')
@@ -173,8 +173,6 @@ curve_plot = results_curve_df %>%
         plot.title =  element_text(size = 15, face="bold"), 
         axis.title = element_text(size = 14, face="bold"), 
         axis.text = element_text(size = 13),
-        panel.grid.major=element_blank(), 
-        panel.grid.minor = element_blank(),
         legend.position="none"
         ) +
   #geom_text_repel(aes(col=rgb_col), box.padding = 0.5, max.overlaps = Inf) +
@@ -201,7 +199,128 @@ ggsave(
 print(curve_plot)
 ```
 
+Plot for Scipher:
+
+```{r}
+datasets_selected = c("gtex:breast.mammary.tissue", "gtex:whole.blood", "tcga:tcga-brca_female", "scipher:scipher.sample.per.patient.baseline")
+results_curve_df = results_selected_norm_df %>%
+  dplyr::filter(type_dataset %in% datasets_selected) %>%
+  dplyr::select(size, rep, unnorm, type_dataset) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.sample.per.patient.baseline", "R. arthritis")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:whole.blood", "GTEx: Whole blood")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca_female", "TCGA: Breast cancer")) %>%
+  inner_join( (name2color %>% as.data.frame() %>% dplyr::rename("rgb_col"=".") %>% tibble::rownames_to_column("type_dataset")), by=c("type_dataset") ) %>%
+  mutate(geom_text_repel_label=dplyr::if_else(type_dataset == "R. arthritis" & size == 240 & rep == 1, "R. arthritis", dplyr::if_else(type_dataset == "GTEx: Whole blood" & size == 700 & rep == 1, "GTEx: Whole blood", dplyr::if_else(type_dataset == "GTEx: Lung" & size == 560 & rep == 1, "GTEx: Lung", dplyr::if_else(type_dataset == "GTEx: Breast" & size == 320 & rep == 1, "GTEx: Breast", dplyr::if_else(type_dataset == "TCGA: Lung cancer" & size == 460 & rep == 1, "TCGA: Lung cancer", dplyr::if_else(type_dataset == "TCGA: Breast cancer" & size == 600 & rep == 1, "TCGA: Breast cancer", "")))))))
+
+# Plot with labels
+curve_plot = results_curve_df %>%
+  ggplot(aes(x=size, y=unnorm, label = geom_text_repel_label)) +
+  geom_point(aes(col=rgb_col), alpha=0.5, size=3) +
+  scale_colour_identity() +
+  theme_linedraw() +
+  xlab("Num. samples") +
+  ylab("Num. significant correlations") +
+  theme(aspect.ratio=1, 
+        plot.title =  element_text(size = 15, face="bold"), 
+        axis.title = element_text(size = 14, face="bold"), 
+        axis.text = element_text(size = 13),
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.position="none"
+        ) +
+  #geom_text_repel(aes(col=rgb_col), box.padding = 0.5, max.overlaps = Inf) +
+  geom_label_repel(aes(col=rgb_col),
+                   fill="white",
+                   box.padding = 0.5, max.overlaps = Inf,
+                   label.size = 0.75, 
+                   size = 4.2,
+                   alpha = 0.9, 
+                   label.padding=0.25, 
+                   fontface = "bold",
+                   na.rm=TRUE,
+                   seed = 1234)
+
+plot_file = paste(plots_dir, "curve_pearson_pval_0.05_scipher.png", sep="/")
+ggsave(
+  plot_file,
+  plot=curve_plot,
+  dpi = 1200,
+  #width = 10000,
+  height = 6000,
+  units = c("px")
+)
+print(curve_plot)
+```
+
 #### Scaling relation plot
+
+Plot for Scipher:
+
+```{r}
+datasets_selected = c("scipher:scipher.sample.per.patient.baseline")
+
+# Calculate data from scaling relationship
+cols = c("size", "S", "type_dataset", "S_lag1", "Fn", "slope", "intercept", "adj.r.squared")
+scaling_relation_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+for (dataset_selected in datasets_selected){
+  scaling_relation_filt = topology_results_selected_by_size_df %>% 
+    filter(type_dataset == dataset_selected) %>%
+    select(size, mean, type_dataset) %>%
+    unique() %>%
+    rename("S"="mean") %>%
+    arrange(size) %>%
+    mutate(S_lag1 = if_else(size == min(size), 0, lag(S))) %>%
+    mutate(Fn = ((S - S_lag1)/S_lag1)) %>%
+    filter((!(is.infinite(Fn))) & (Fn > 0))
+  lm_summary = summary(lm(log(scaling_relation_filt$Fn)~log(scaling_relation_filt$size)))
+  slope = coef(lm_summary)[2]
+  intercept = coef(lm_summary)[1]
+  adj.r.squared = lm_summary$adj.r.squared
+  scaling_relation_df = rbind(scaling_relation_df, cbind(scaling_relation_filt, data.frame(slope=slope, intercept=intercept, adj.r.squared=adj.r.squared)))
+}
+
+# Process results
+scaling_relation_df = scaling_relation_df %>%
+  filter(Fn > 0) %>%
+  mutate_at(c('adj.r.squared'), ~sprintf("%.2f",.)) %>%
+  mutate_at(c('adj.r.squared'), as.character) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.sample.per.patient.baseline", "R. arthritis")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:whole.blood", "GTEx: Whole blood")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca_female", "TCGA: Breast cancer")) %>%
+  inner_join( (name2color %>% as.data.frame() %>% dplyr::rename("rgb_col"=".") %>% tibble::rownames_to_column("type_dataset")), by=c("type_dataset") ) %>%
+  mutate(geom_text_repel_label=dplyr::if_else(type_dataset == "R. arthritis" & size == 240, "R. arthritis", dplyr::if_else(type_dataset == "GTEx: Whole blood" & size == 160, "GTEx: Whole blood", dplyr::if_else(type_dataset == "GTEx: Lung" & size == 160, "GTEx: Lung", dplyr::if_else(type_dataset == "GTEx: Breast" & size == 320, "GTEx: Breast", dplyr::if_else(type_dataset == "TCGA: Lung cancer" & size == 120, "TCGA: Lung cancer", dplyr::if_else(type_dataset == "TCGA: Breast cancer" & size == 600, "TCGA: Breast cancer", "")))))))
+
+# Plot with labels
+scaling_relation_plot = scaling_relation_df %>%
+  ggplot(aes(x=log(size), y=log(Fn), col=rgb_col)) +
+  geom_point(alpha=0.5, size=3) +
+  geom_abline(aes(intercept=intercept, slope=slope, col=rgb_col), size=1) +
+  theme_linedraw() +
+  xlab("log(n)") +
+  ylab(bquote(bold(log((S[n]-S[n-1])/S[n-1])))) +
+  scale_colour_identity() +
+  guides(col=guide_legend(title=bquote(bold(R^2)))) +
+  theme(aspect.ratio=1, 
+        plot.title =  element_text(size = 15, face="bold"), 
+        axis.title = element_text(size = 14, face="bold"), 
+        axis.text = element_text(size = 13), 
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.position="none")
+
+plot_file = paste(plots_dir, "scaling_relation_pearson_pval_0.05_scipher.png", sep="/")
+ggsave(
+  plot_file,
+  plot=scaling_relation_plot,
+  dpi = 1200,
+  #width = 9500,
+  height = 6000,
+  units = c("px")
+)
+print(scaling_relation_plot)
+```
 
 Calculate scaling relation plot:
 
@@ -298,7 +417,7 @@ ggsave(
   plot=scaling_relation_plot,
   dpi = 1200,
   #width = 9500,
-  height = 6000,
+  #height = 6000,
   units = c("px")
 )
 print(scaling_relation_plot)
@@ -348,6 +467,56 @@ regression_plot = stretched_exponential_regression_proc_df %>%
         legend.title=element_text(size=14, face="bold"))
 
 plot_file = paste(plots_dir, "regression_pearson_pval_0.05.png", sep="/")
+ggsave(
+  plot_file,
+  plot=regression_plot,
+  dpi = 1200,
+  #width = 9500,
+  height = 6000,
+  units = c("px")
+)
+print(regression_plot)
+```
+
+Create plot for Scipher:
+
+```{r}
+datasets_selected = c("scipher:scipher.sample.per.patient.baseline")
+model_selected = "Stretched exponential (by linear fit)"
+
+# Process data
+stretched_exponential_regression_proc_df = stretched_exponential_regression_df %>% inner_join((topology_results_selected_analytical_df %>% dplyr::select(type_dataset, model, slope, intercept, a, b) %>% unique()), by=c("type_dataset", "model")) %>%
+  filter((type_dataset %in% datasets_selected) & (model == model_selected)) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.sample.per.patient.baseline", "R. arthritis")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:whole.blood", "GTEx: Whole blood")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:lung", "GTEx: Lung")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-luad", "TCGA: Lung cancer")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca_female", "TCGA: Breast cancer")) %>%
+  inner_join( (name2color %>% as.data.frame() %>% dplyr::rename("rgb_col"=".") %>% tibble::rownames_to_column("type_dataset")), by=c("type_dataset") )
+
+regression_plot = stretched_exponential_regression_proc_df %>%
+  ggplot(aes(x=x, y=y, col=rgb_col)) +
+  geom_point(alpha=0.5, size=3) +
+  geom_abline(aes(intercept=intercept, slope=slope, col=rgb_col), size=1) +
+  theme_linedraw() +
+  xlab("log(n)") +
+  ylab("log[ log(L) - log(S) ]") +
+  #scale_color_manual(values = c("#D55E00", "#E69F00", "#44AA99", "#0072B2", "#56B4E9")) +
+  #scale_color_manual(values = c("#D55E00", "#E69F00", "#44AA99", "#65F3BF", "#0072B2", "#56B4E9")) +
+  #scale_color_manual(values = c("#56B4E9", "#E69F00", "#44AA99", "#65F3BF", "#0072B2", "#D55E00")) +
+  scale_colour_identity(labels = unique(stretched_exponential_regression_proc_df$type_dataset), breaks = unique(stretched_exponential_regression_proc_df$rgb_col), guide = "legend") +
+  guides(col=guide_legend(title="Dataset")) +
+  theme(aspect.ratio=1, 
+        plot.title =  element_text(size = 15, face="bold"), 
+        axis.title = element_text(size = 14, face="bold"), 
+        axis.text = element_text(size = 13), 
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(size = 13), 
+        legend.title=element_text(size=14, face="bold"))
+
+plot_file = paste(plots_dir, "regression_pearson_pval_0.05_scipher.png", sep="/")
 ggsave(
   plot_file,
   plot=regression_plot,
@@ -550,6 +719,52 @@ ggsave(
   dpi = 1200,
   #width = 9500,
   #height = 6000,
+  units = c("px")
+)
+```
+
+Plot for Scipher:
+
+```{r}
+datasets_selected = c("GTEx: Breast", "GTEx: Whole blood", "TCGA: Breast cancer", "R. arthritis")
+
+# Plot with labels
+prediction_plot = prediction_plot_df %>%
+  filter(type_dataset %in% datasets_selected) %>%
+  ggplot(aes(x=size, y=num_edges, col=rgb_col)) +
+  geom_point(alpha=0.5, size=3) +
+  geom_line(aes(x=size, y=model_result, col=rgb_col), size=1) +
+  scale_x_continuous(trans = scales::log10_trans()) +
+  scale_colour_identity() +
+  theme_linedraw() +
+  xlab("Num. samples (Log)") +
+  ylab("Frac. significant correlations") +
+  theme(aspect.ratio=1, 
+        plot.title =  element_text(size = 15, face="bold"), 
+        axis.title = element_text(size = 14, face="bold"), 
+        axis.text = element_text(size = 13), 
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.position="none") +
+  geom_label_repel(aes(col=rgb_col, label=geom_text_repel_label),
+                   fill="white",
+                   box.padding = 0.5, max.overlaps = Inf,
+                   label.size = 0.75, 
+                   size = 4.2,
+                   alpha = 0.9, 
+                   label.padding=0.25, 
+                   fontface = "bold",
+                   na.rm=TRUE,
+                   seed = 1234)
+
+plot_file = paste(plots_dir, "prediction_pearson_pval_0.05_scipher.png", sep="/")
+print(prediction_plot)
+ggsave(
+  plot_file,
+  plot=prediction_plot,
+  dpi = 1200,
+  #width = 9500,
+  height = 6000,
   units = c("px")
 )
 ```
@@ -1093,7 +1308,7 @@ predicted_results_wb_df$model_result_norm = (predicted_results_wb_df$model_resul
 #mtcars_mod %>% ggplot(aes(mpg, wt)) + geom_point(aes(col=carb, size=gear))
 
 dataset_selected = "Whole.Blood"
-all_topology_results_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/analysis_topology.csv'
+all_topology_results_file = '/Users/j.aguirreplans/Desktop/SampleSizeShiny/data/analysis_topology.csv'
 threshold_selected = 0.05
 
 all_results_df = fread(all_topology_results_file)
@@ -1155,7 +1370,7 @@ print(correlation_levels_plot)
 Read data: 
 
 ```{r}
-input_data_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/analysis_specific_edges_pearson_gtex_Whole.Blood.txt"
+input_data_file = "/Users/j.aguirreplans/Desktop/tables/analysis_specific_edges_pearson_gtex_Whole.Blood.txt"
 input_df = fread(input_data_file)
 input_df$link = paste(input_df$Node.1, input_df$Node.2, sep="---")
 input_df = input_df %>% mutate(pval.adj = replace(pval.adj, pval.adj < 0.000001, 0.000001))
@@ -1240,7 +1455,7 @@ ggsave(
   plot = specific_links_plot,
   dpi = 1200,
   #width = 9000,
-  #height = 6000,
+  height = 6000,
   units = c("px")
 )
 print(specific_links_plot)
@@ -1287,7 +1502,7 @@ ggsave(
   plot = sd_plot,
   dpi = 1200,
   #width = 9300,
-  #height = 6000,
+  height = 6000,
   units = c("px")
 )
 print(sd_plot)
@@ -1316,7 +1531,7 @@ ggsave(
 #### Disease modules plot
 
 ```{r}
-all_disease_genes_results_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/analysis_disease_genes.csv'
+all_disease_genes_results_file = '/Users/j.aguirreplans/Desktop/SampleSizeShiny/data/analysis_disease_genes.csv'
 plots_disease_module_dir = paste(plots_dir, 'plots_disease_module', sep='/')
 dir.create(plots_disease_module_dir, showWarnings = FALSE)
 threshold_selected = 0.05
@@ -1626,9 +1841,9 @@ sample_group_type = "tumor" # if dataset = "tcga"
 type_counts = "reads" # tpm, reads
 sizes_selected = c(20, 100, 200, 300)
 threshold_selected = 0.05
-coexpression_pairs_file = sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/ppi_analysis_pairs_pval_%s_%s_%s.txt", as.character(threshold_selected), dataset, type_dataset)
+coexpression_pairs_file = sprintf("/Users/j.aguirreplans/Desktop/tables/ppi_analysis_pairs_pval_%s_%s_%s.txt", as.character(threshold_selected), dataset, type_dataset)
 coexpression_pairs_filt = fread(coexpression_pairs_file)
-perf_file = sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/ppi_coexpression_analysis_ppi_vs_random_far_pairs_performance_pval_%s_%s_%s.txt", as.character(threshold_selected), dataset, type_dataset)
+perf_file = sprintf("/Users/j.aguirreplans/Desktop/tables/ppi_coexpression_analysis_ppi_vs_random_far_pairs_performance_pval_%s_%s_%s.txt", as.character(threshold_selected), dataset, type_dataset)
 perf_df = fread(perf_file)
 
 colors_defined = c("PPI" = "#DBA9CA",
@@ -1650,7 +1865,7 @@ colors_defined = c("PPI" = "#DBA9CA",
 Violin plot of PPI distances across sample size:
 
 ```{r}
-violinplot_ppi_coexpression_by_distances_file = sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/ppi_coexpression_violinplot_by_ppi_distance_pval_%s_%s_%s.png", as.character(threshold_selected), dataset, type_dataset)
+violinplot_ppi_coexpression_by_distances_file = sprintf("/Users/j.aguirreplans/Desktop/plots/ppi_coexpression_violinplot_by_ppi_distance_pval_%s_%s_%s.png", as.character(threshold_selected), dataset, type_dataset)
 colors_defined_filt = colors_defined[names(colors_defined) %in% c("1", "2", "3", "4", "5", "6")]
 violinplot_ppi_coexpression_by_distances = coexpression_pairs_filt %>%
   select(-ppi, -nci, -distances_nci, -random_not_ppi, -random_far_not_ppi, -random_far_not_nci) %>%
@@ -1687,7 +1902,7 @@ ggsave(
   plot = violinplot_ppi_coexpression_by_distances,
   dpi = 1200,
   #width = 9300,
-  #height = 6000,
+  height = 6000,
   units = c("px")
 )
 violinplot_ppi_coexpression_by_distances
@@ -1696,7 +1911,7 @@ violinplot_ppi_coexpression_by_distances
 Violin plot of PPI vs. pairs > 4 distance across sample size:
 
 ```{r}
-violinplot_ppi_coexpression_by_types_file =  sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/ppi_coexpression_violinplot_by_pair_type_pval_%s_%s_%s.png", as.character(threshold_selected), dataset, type_dataset)
+violinplot_ppi_coexpression_by_types_file =  sprintf("/Users/j.aguirreplans/Desktop/plots/ppi_coexpression_violinplot_by_pair_type_pval_%s_%s_%s.png", as.character(threshold_selected), dataset, type_dataset)
 colors_defined_filt = colors_defined[names(colors_defined) %in% c("PPI", "Distance > 4")]
 violinplot_ppi_coexpression_by_types = coexpression_pairs_filt %>%
   select(-distances_ppi, -distances_nci, -nci, -random_not_ppi, -random_far_not_nci) %>%
@@ -1737,7 +1952,7 @@ ggsave(
   plot = violinplot_ppi_coexpression_by_types,
   dpi = 1200,
   #width = 9300,
-  #height = 6000,
+  height = 6000,
   units = c("px")
 )
 ```
@@ -1778,7 +1993,7 @@ auc_plot = perf_auc %>%
        x = "Number of samples"
        )
 
-auc_plot_file =  sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/ppi_coexpression_perf_AUC_pval_%s_%s_%s.png", as.character(threshold_selected), dataset, type_dataset)
+auc_plot_file =  sprintf("/Users/j.aguirreplans/Desktop/plots/ppi_coexpression_perf_AUC_pval_%s_%s_%s.png", as.character(threshold_selected), dataset, type_dataset)
 ggsave(
   auc_plot_file,
   plot = auc_plot,
