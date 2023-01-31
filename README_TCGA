@@ -1,0 +1,126 @@
+####
+TCGA
+####
+
+srun --partition=short --nodes=1 --cpus-per-task=1 --pty /bin/bash
+
+
+#-------------------------#
+  DOWNLOAD GDC-CLIENT APP
+#-------------------------#
+
+Instructions on how to download the dataset: https://www.youtube.com/watch?v=GDxj8DrkZok 
+
+- Download GDC-CLIENT app (Ubuntu - Client) at the following website:
+
+https://gdc.cancer.gov/access-data/gdc-data-transfer-tool
+
+- Transfer to the Discovery cluster:
+
+scp gdc-client_v1.6.1_Ubuntu_x64.zip discovery:/work/ccnr/j.aguirreplans/Databases/TCGA
+
+- Unzip:
+
+cd /work/ccnr/j.aguirreplans/Databases/TCGA
+unzip gdc-client_v1.6.1_Ubuntu_x64.zip
+
+
+#-----------------------------------------------#
+  SELECT TCGA PARAMETERS AND DOWNLOAD MANIFEST  
+#-----------------------------------------------#
+
+################################################################################################################################################################
+I recommend to skip this section and go directly to the next one, which explains how to download the metadata and the manifest using the R package GenomicDataCommons.
+It is better to do it using the R package because the information about samples (which ones are associate to tumors, which ones to normal tissue, etc.) can only be
+mapped to the file names by this approach.
+################################################################################################################################################################
+
+(Date 2022/03/09)
+
+- Go to GDC repository:
+
+https://portal.gdc.cancer.gov/repository
+
+- At the Files tab (at the left part of the website), select the following parameters:
+
+    - Data Category > transcriptome profiling
+    - Data Type > Gene Expression Quantification
+    - Experimental Strategy > RNA-Seq
+    - Workflow Type > HTSeq - Counts
+
+We end up having a total of 17,753 files.
+
+- At the Cases tab (at the left part of the website), select the following parameters:
+
+    - Program > TCGA
+    - Project > Here I selected the type of cancer that I was interested in.
+
+- Download manifest
+
+- To download the file that maps the file ID with the case ID (for the metadata of the patient), click to JSON (in the middle-right part of the screen, just above the table). 
+
+- To download the Biospecimen and Clinical data, click to the button "View xxxx cases in Exploration", and then click to Biospecimen or Clinical. You can also click to Add all files to Cart, go to Cart and download it, but it does not let to add to cart more than 10,000 files.
+
+- To download the information about the projects, click at the Projects tab at the top menu of the web, then select the Program TCGA at the left menu of the web, and finally click at JSON at the upper right part of the Table. 
+
+- Transfer manifest
+
+scp gdc_manifest.2022-03-09.txt discovery:/work/ccnr/j.aguirreplans/Databases/TCGA/manifest
+scp biospecimen.cases_selection.2022-03-09.tar.gz discovery:/work/ccnr/j.aguirreplans/Databases/TCGA/biospecimen/all
+scp clinical.cases_selection.2022-03-09.tar.gz discovery:/work/ccnr/j.aguirreplans/Databases/TCGA/clinical/all
+
+tar -xvzf clinical.cases_selection.2022-03-09.tar.gz
+tar -xvzf biospecimen.cases_selection.2022-03-09.tar.gz
+
+
+#----------------------------------------------------------------------------#
+  USE THE GenomicDataCommons R PACKAGE TO DOWNLOAD THE METADATA AND MANIFEST  
+#----------------------------------------------------------------------------#
+
+- Run the Rmarkdown script "create_TCGA_manifest.Rmd".
+  The script will generate:
+  - Manifest file: /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/raw/additional/gdc_manifest.2022-11-18.txt
+  - Metadata file: /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/raw/metadata/metadata.txt
+
+
+#------------------#
+  DOWNLOAD DATASET  
+#------------------#
+
+- We create a file download.sh:
+
+#!/bin/bash
+#SBATCH --mem=50000
+#SBATCH -p short
+#SBATCH --time=24:00:00
+#SBATCH --constraint="[cascadelake|zen2]"
+#SBATCH -o /work/ccnr/j.aguirreplans/Databases/TCGA/scripts/download.out
+#SBATCH -e /work/ccnr/j.aguirreplans/Databases/TCGA/scripts/download.err
+/work/ccnr/j.aguirreplans/Databases/TCGA/scripts/gdc-client download -m /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/raw/additional/gdc_manifest.2022-11-18.txt -d /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/raw/data
+
+- We run the download.sh file:
+
+sbatch /work/ccnr/j.aguirreplans/Databases/TCGA/scripts/download.sh
+
+
+#-----------------#
+  COMPILE DATASET  
+#-----------------#
+
+- To compile the scattered TCGA expression files into a unique file we use the following script:
+
+mkdir /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads
+mkdir /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/tpm
+
+module load python/3.8.1
+# For a dummy example
+#python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/compile_tcga.py -d /work/ccnr/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/dummy/raw/data -o /work/ccnr/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/dummy/out/dummy.csv
+# For real data (TPM)
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/compile_tcga.py -d /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/raw/data -o /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/tpm/TCGA_tpm.csv -t tpm_unstranded
+# For real data (reads)
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/compile_tcga.py -d /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/raw/data -o /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/TCGA_reads.csv -t unstranded
+
+- However, it takes a long time to compute the main dataset. Therefore, we can use the following command to run it in the cluster:
+
+sbatch /work/ccnr/j.aguirreplans/Databases/TCGA/scripts/compile.sh
+

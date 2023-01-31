@@ -24,6 +24,7 @@ library(dplyr)
 library(igraph)
 library(ggalluvial)
 library(ggplot2)
+library(ggwordcloud)
 require(magrittr)
 library(patchwork)
 library(tidyr)
@@ -43,7 +44,7 @@ disease_name_in_associations_file = "breast.neoplasms"
 ppi_file = "/work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv"
 plots_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/plots_differential_coexpression/TCGA-BRCA_female___TCGA-Breast_female"
 tables_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/tables_differential_coexpression/TCGA-BRCA_female___TCGA-Breast_female"
-name2color = data.frame(name=c("common", "disease-gene", "disease-specific", "normal-specific", "undefined", "different", "all"), color.codes=c("#619CFF", "#cc68f7", "#F8766D", "#00BA38", "#808080", "#C77CFF", "#CD9600"))
+name2color = data.frame(name=c("common", "disease-gene", "disease-specific", "normal-specific", "undefined", "different", "all", "common / common", "common / disease-specific", "common / normal-specific", "common / undefined", "disease-specific / disease-specific", "disease-specific / common", "disease-specific / normal-specific", "disease-specific / undefined", "normal-specific / normal-specific", "normal-specific / common", "normal-specific / disease-specific", "normal-specific / undefined", "undefined / undefined", "undefined / common", "undefined / disease-specific", "undefined / normal-specific", "common (constant)", "common (change)", "disease-specific (constant)", "disease-specific (change)", "normal-specific (constant)", "normal-specific (change)", "undefined (constant)", "undefined (change)"), color.codes=c("#619CFF", "#cc68f7", "#F8766D", "#00BA38", "#808080", "#C77CFF", "#CD9600", "#619CFF", "#7b61ff", "#61eaff", "#778eb5", "#F8766D", "#f86da7", "#f8b06d", "#8f5f5b", "#00BA38", "#41f0a7", "#a8f75e", "#4d855e", "#808080", "#778eb5", "#8f5f5b", "#4d855e", "#619CFF", "#b5d1ff", "#F8766D", "#ffcbc7", "#00BA38", "#a3d1b1", "#808080", "#c2c2c2"))
 ```
 
 
@@ -124,6 +125,7 @@ nodes_filtered_df$size <- factor(nodes_filtered_df$size, levels=as.character(sor
 
 # Get colors
 nodes_filtered_col_df = nodes_filtered_df %>%
+  
   left_join(name2color, by=c("Phi_name"="name"))
 
 # Plot
@@ -147,6 +149,92 @@ plot_flow = nodes_filtered_col_df %>%
         legend.text = element_text(size = 12), 
         legend.title=element_text(size=14, face="bold"))
 plot_flow
+```
+
+Read file:
+
+```{r}
+change_of_category_file = paste(tables_dir, paste("codina_", name_D, "_", name_N, "_changes.txt", sep=""), sep="/")
+change_of_category_df = fread(change_of_category_file)
+```
+
+Make plot improved:
+
+```{r}
+sizes_list = sort(unique(change_of_category_df$size.prev))
+if (max(sizes_list) <= 160) {
+  sizes_to_plot = c(20, 40, 60, 80, 100, 120, 140, 160)
+} else if ((max(sizes_list) > 160) & (max(sizes_list) <= 300)) {
+  sizes_to_plot = c(20, 60, 100, 140, 180, 220, 260, 300)
+} else if ((max(sizes_list) > 300) & (max(sizes_list) <= 440)) {
+  sizes_to_plot = c(20, 80, 140, 200, 260, 320, 380, 440)
+} else {
+  sizes_to_plot = seq(20, max(sizes_list), 100)
+}
+
+# Create last column of plot (size 100)
+change_of_category_size100_df = change_of_category_df %>%
+  filter(size.curr == 100) %>%
+  dplyr::select(Node, Phi_name.curr, size.curr) %>%
+  dplyr::rename("Phi_name.prev"="Phi_name.curr", "size.prev"="size.curr") %>%
+  mutate(Phi_name.curr = NA) %>%
+  mutate(size.curr = NA) %>%
+  mutate(transition_type = NA) %>%
+  mutate(transition_name = NA) %>%
+  mutate(transition_name_simple = Phi_name.prev) %>%
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple == "common", "common (constant)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple == "disease-specific", "disease-specific (constant)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple == "normal-specific", "normal-specific (constant)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple == "undefined", "undefined (constant)")) %>% 
+  left_join(name2color, by=c("Phi_name.prev"="name"))
+
+# Count transitions / merge with colors / merge with last column
+change_of_category_col_df = change_of_category_df %>%
+  mutate(transition_name_simple = transition_name) %>%
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple == "common / common", "common (constant)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple %in% c("common / disease-specific", "common / normal-specific", "common / undefined"), "common (change)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple == "disease-specific / disease-specific", "disease-specific (constant)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple %in% c("disease-specific / common", "disease-specific / normal-specific", "disease-specific / undefined"), "disease-specific (change)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple == "normal-specific / normal-specific", "normal-specific (constant)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple %in% c("normal-specific / common", "normal-specific / disease-specific", "normal-specific / undefined"), "normal-specific (change)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple == "undefined / undefined", "undefined (constant)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple %in% c("undefined / disease-specific", "undefined / normal-specific", "undefined / common"), "undefined (change)")) %>% 
+  left_join(name2color, by=c("transition_name_simple"="name")) %>%
+  full_join(change_of_category_size100_df)
+
+# Define factors
+change_of_category_col_df$transition_name_simple <- factor(change_of_category_col_df$transition_name_simple, levels=c("common (constant)", "common (change)", "disease-specific (constant)",  "disease-specific (change)", "normal-specific (constant)", "normal-specific (change)", "undefined (constant)", "undefined (change)"))
+change_of_category_col_df$size.prev = as.character(change_of_category_col_df$size.prev)
+change_of_category_col_df$size.prev <- factor(change_of_category_col_df$size.prev, levels=as.character(sort(unique(as.integer(change_of_category_col_df$size.prev)))))
+
+plot_flow = change_of_category_col_df %>% 
+  filter(size.prev %in% sizes_to_plot) %>%
+  ggplot(aes(x = size.prev, stratum = transition_name_simple, alluvium = Node, 
+             fill = transition_name_simple, label = transition_name_simple)) +
+  scale_fill_manual(values=setNames(change_of_category_col_df$color.codes, change_of_category_col_df$transition_name_simple)) + # If I want to plot only specific elements in the legend, use the argument breaks with a list of the elements that I want to show
+  scale_color_manual(values=setNames(change_of_category_col_df$color.codes, change_of_category_col_df$transition_name_simple)) +
+  geom_flow(stat = "alluvium", lode.guidance = "frontback") +
+  geom_stratum() +
+  xlab("Number of samples") +
+  ylab("Number of disease genes") +
+  guides(fill=guide_legend(title="Gene category")) +
+  theme_linedraw() +
+  theme(plot.title =  element_text(size = 17, face="bold"), 
+        axis.title = element_text(size = 14, face="bold"), 
+        axis.text = element_text(size = 12), 
+        #legend.position = "bottom",
+        legend.text = element_text(size = 12), 
+        legend.title=element_text(size=14, face="bold"))
+plot_file = paste(plots_dir, paste("codina_", name_D, "_", name_N, "_change_disease_genes_improved.png", sep=""), sep="/")
+ggsave(
+  plot_file,
+  plot = plot_flow,
+  dpi = 1200,
+  width = 10000,
+  height = 6000,
+  units = c("px")
+)
+print(plot_flow)
 ```
 
 ### Plot stability in gene categories
@@ -242,7 +330,7 @@ Read files:
 ```{r}
 enrichment_dir = paste(tables_dir, "functions_by_type_and_category_and_size", sep="/")
 enrichment_files = list.files(enrichment_dir)
-cols = c("size", "type_genes", "Phi_name", "GO.ID", "Term", "Annotated", "Significant", "Expected", "Rank in classic", "classic", "KS", "weight")
+cols = c("size", "type_genes", "Phi_name", "GO.ID", "Term", "Annotated", "Significant", "Expected", "Rank in classic", "classic", "KS", "weight", "classic_p.adj")
 codina_ppi_go_enrichment_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
 for(file_name in enrichment_files){
   info_file = gsub(".txt","",file_name)
@@ -253,32 +341,524 @@ for(file_name in enrichment_files){
   enrichment_file = paste(enrichment_dir, file_name, sep="/")
   enrichment_single_df = fread(enrichment_file)
   if (nrow(enrichment_single_df) > 0){
+    enrichment_single_df = enrichment_single_df %>%
+      mutate(KS = replace(KS, KS == "< 1e-30", 1e-30)) %>% 
+      mutate_at(c('KS'), as.numeric)
     codina_ppi_go_enrichment_df = rbind(codina_ppi_go_enrichment_df, cbind(data.frame(size=size_selected, type_genes=type_genes_selected, Phi_name=category_selected), enrichment_single_df))
   }
 }
 ```
 
+Filter significant functions:
+
+```{r}
+codina_ppi_go_enrichment_sig_df = codina_ppi_go_enrichment_df %>%
+  filter(classic_p.adj < 0.01) %>%
+  filter(KS > 0.8)
+```
+
 Analyze number of functions enriched:
 
 ```{r}
-codina_ppi_go_enrichment_df %>%
+# Create empty dataframe
+count_num_functions_empty_df = expand.grid(sort(unique(codina_ppi_go_enrichment_sig_df$Phi_name)), sort(unique(codina_ppi_go_enrichment_sig_df$size))) %>%
+  rename("Phi_name"="Var1", "size"="Var2")
+# Count functions and merge with empty dataframe to add 0s
+count_num_functions_df = codina_ppi_go_enrichment_sig_df %>%
   filter(type_genes == "all") %>%
-  group_by(Phi_name, size) %>% count() %>% ungroup() %>% arrange(size) %>%
+  group_by(Phi_name, size) %>% 
+  count() %>% 
+  ungroup() %>% 
+  full_join(count_num_functions_empty_df, by=c("Phi_name", "size")) %>% 
+  mutate(n = replace(n, is.na(n), 0)) %>%
+  arrange(size) %>%
+  as.data.frame()
+
+# Plot
+count_num_functions_plot = count_num_functions_df %>%
+  filter(!(Phi_name == "disease-gene")) %>%
   ggplot(aes(x = size, y = n)) + 
-  geom_line(aes(col = Phi_name)) +
-  xlab("Number of samples") +
-  ylab("Number of enriched GO terms") +
-  scale_color_manual(values=as.vector(name2color[name2color$name %in% levels(factor(unique(codina_ppi_go_enrichment_df$Phi_name))),]$color.codes)) +
-  guides(col=guide_legend(title="Gene category"), size="none") +
-  theme_linedraw() +
-  theme(aspect.ratio=1,
-        plot.title =  element_text(size = 15, face="bold"),
-        axis.title = element_text(size = 14, face="bold"),
-        axis.text = element_text(size = 13),
-        legend.text = element_text(size = 13),
-        legend.title=element_text(size=14, face="bold"))
+    geom_line(aes(col = Phi_name)) +
+    xlab("Num. samples") +
+    ylab("Num. enriched GO terms") +
+    scale_color_manual(values=as.vector(name2color[name2color$name %in% levels(factor(unique((count_num_functions_df %>% filter(!(Phi_name == "disease-gene")))$Phi_name))),]$color.codes)) +
+    guides(col=guide_legend(title="Gene category"), size="none") +
+    theme_linedraw() +
+    theme(aspect.ratio=1,
+          plot.title =  element_text(size = 15, face="bold"),
+          axis.title = element_text(size = 14, face="bold"),
+          axis.text = element_text(size = 13),
+          legend.text = element_text(size = 13),
+          legend.title=element_text(size=14, face="bold"))
+
+plot_file = paste(plots_dir, "count_num_functions.png", sep="/")
+ggsave(
+  plot_file,
+  plot=count_num_functions_plot,
+  dpi = 1200,
+  #width = 9500,
+  height = 6000,
+  units = c("px")
+)
+print(count_num_functions_plot)
+```
+
+Check top 10 functions enriched as disease-specific:
+
+```{r}
+functional_enrichment_num_counts_plot = codina_ppi_go_enrichment_sig_df %>%
+  filter((type_genes == "all") & (Phi_name == "disease-specific")) %>%
+  select(size, Term) %>%
+  group_by(Term) %>%
+  summarize(n_times = n()) %>%
+  arrange(desc(n_times)) %>%
+  ungroup() %>%
+  top_n(20, n_times) %>%
+  mutate(Term=forcats::fct_reorder(Term, n_times)) %>%
+  ggplot(aes(x=Term, y=n_times)) +
+    geom_bar(stat="identity") +
+    coord_flip() +
+    theme_linedraw() +
+    ylab("Num. counts") +
+    theme(
+          plot.title =  element_text(size = 15, face="bold"), 
+          axis.title = element_text(size = 14, face="bold"), 
+          axis.text = element_text(size = 12), 
+          axis.title.y = element_blank())
+plot_file = paste(plots_dir, "functional_enrichment_top_functions_vs_num_counts_disease-specific.png", sep="/")
+ggsave(
+  plot_file,
+  plot=functional_enrichment_num_counts_plot,
+  dpi = 1200,
+  width = 12000,
+  height = 6000,
+  units = c("px")
+)
+print(functional_enrichment_num_counts_plot)
+```
+
+```{r}
+functional_enrichment_sample_size_plot = codina_ppi_go_enrichment_sig_df %>%
+  filter((type_genes == "all") & (Phi_name == "disease-specific")) %>%
+  select(size, Term) %>%
+  group_by(Term) %>%
+  mutate(n_times = n()) %>%
+  arrange(desc(n_times)) %>%
+  ungroup() %>%
+  top_n(20, n_times) %>%
+  mutate(Term=forcats::fct_reorder(Term, n_times)) %>%
+  ggplot(mapping = aes(x = Term, y = size)) +
+    geom_point(aes(col = size)) +
+    coord_flip() +
+    scale_color_gradient(low = "orange", high = "darkred", na.value = NA) +
+    ylab("Num. samples") +
+    theme_linedraw() +
+    theme(
+          plot.title =  element_text(size = 15, face="bold"), 
+          axis.title = element_text(size = 14, face="bold"), 
+          axis.text = element_text(size = 12), 
+          axis.title.y = element_blank())
+
+plot_file = paste(plots_dir, "functional_enrichment_top_functions_vs_sample_size_disease-specific.png", sep="/")
+ggsave(
+  plot_file,
+  plot=functional_enrichment_sample_size_plot,
+  dpi = 1200,
+  width = 12000,
+  height = 6000,
+  units = c("px")
+)
+print(functional_enrichment_sample_size_plot)
+```
+
+Analyze functions that appear and disappear:
+
+```{r}
+codina_ppi_go_enrichment_sizes_concat_df = codina_ppi_go_enrichment_sig_df %>%
+  filter((type_genes == "all") & (Phi_name == "disease-specific")) %>%
+  select(size, Term) %>%
+  group_by(Term) %>%
+  arrange(size) %>%
+  mutate(size = paste0(size, collapse = "-")) %>%
+  mutate(n_times = n()) %>%
+  ungroup() %>%
+  arrange(size, desc(n_times))
+table(codina_ppi_go_enrichment_sizes_concat_df$size)
+```
+
+Analyze first functions that appear:
+
+```{r}
+appearing_sizes = c("100", "80-100", "60-80-100", "40-60-80-100")
+appearing_functions_df = codina_ppi_go_enrichment_sizes_concat_df %>%
+  filter(size %in% appearing_sizes)
+
+appearing_functions_plot = appearing_functions_df %>%
+  tidyr::separate_rows(size, convert=TRUE) %>%
+  arrange(desc(n_times)) %>%
+  mutate(Term=forcats::fct_reorder(Term, n_times)) %>%
+  ggplot(mapping = aes(x = Term, y = size)) +
+    geom_point(aes(col = size)) +
+    coord_flip() +
+    scale_color_gradient(low = "orange", high = "darkred", na.value = NA) +
+    scale_y_continuous(breaks=as.vector(sort(unique(codina_ppi_go_enrichment_sig_df$size)))) +
+    ylab("Num. samples") +
+    theme_linedraw() +
+    theme(
+          plot.title =  element_text(size = 15, face="bold"), 
+          axis.title = element_text(size = 14, face="bold"), 
+          axis.text = element_text(size = 12), 
+          axis.title.y = element_blank())
+
+plot_file = paste(plots_dir, "functional_enrichment_top_functions_appearing_vs_sample_size_disease-specific.png", sep="/")
+ggsave(
+  plot_file,
+  plot=appearing_functions_plot,
+  dpi = 1200,
+  width = 12000,
+  height = 6000,
+  units = c("px")
+)
+print(appearing_functions_plot)
+```
+
+Check top 10 functions enriched as normal-specific:
+
+```{r}
+functional_enrichment_num_counts_plot = codina_ppi_go_enrichment_sig_df %>%
+  filter((type_genes == "all") & (Phi_name == "normal-specific")) %>%
+  select(size, Term) %>%
+  group_by(Term) %>%
+  summarize(n_times = n()) %>%
+  arrange(desc(n_times)) %>%
+  ungroup() %>%
+  top_n(20, n_times) %>%
+  mutate(Term=forcats::fct_reorder(Term, n_times)) %>%
+  ggplot(aes(x=Term, y=n_times)) +
+    geom_bar(stat="identity") +
+    coord_flip() +
+    theme_linedraw() +
+    ylab("Num. counts") +
+    theme(
+          plot.title =  element_text(size = 15, face="bold"), 
+          axis.title = element_text(size = 14, face="bold"), 
+          axis.text = element_text(size = 12), 
+          axis.title.y = element_blank())
+plot_file = paste(plots_dir, "functional_enrichment_top_functions_vs_num_counts_normal-specific.png", sep="/")
+ggsave(
+  plot_file,
+  plot=functional_enrichment_num_counts_plot,
+  dpi = 1200,
+  width = 12000,
+  height = 6000,
+  units = c("px")
+)
+print(functional_enrichment_num_counts_plot)
+```
+
+```{r}
+functional_enrichment_sample_size_plot = codina_ppi_go_enrichment_sig_df %>%
+  filter((type_genes == "all") & (Phi_name == "normal-specific")) %>%
+  select(size, Term) %>%
+  group_by(Term) %>%
+  mutate(n_times = n()) %>%
+  arrange(desc(n_times)) %>%
+  ungroup() %>%
+  top_n(20, n_times) %>%
+  mutate(Term=forcats::fct_reorder(Term, n_times)) %>%
+  ggplot(mapping = aes(x = Term, y = size)) +
+    geom_point(aes(col = size)) +
+    coord_flip() +
+    scale_color_gradient(low = "orange", high = "darkred", na.value = NA) +
+    ylab("Num. samples") +
+    theme_linedraw() +
+    theme(
+          plot.title =  element_text(size = 15, face="bold"), 
+          axis.title = element_text(size = 14, face="bold"), 
+          axis.text = element_text(size = 12), 
+          axis.title.y = element_blank())
+
+plot_file = paste(plots_dir, "functional_enrichment_top_functions_vs_sample_size_normal-specific.png", sep="/")
+ggsave(
+  plot_file,
+  plot=functional_enrichment_sample_size_plot,
+  dpi = 1200,
+  width = 12000,
+  height = 6000,
+  units = c("px")
+)
+print(functional_enrichment_sample_size_plot)
+```
+
+Analyze functions that appear and disappear:
+
+```{r}
+codina_ppi_go_enrichment_sizes_concat_df = codina_ppi_go_enrichment_sig_df %>%
+  filter((type_genes == "all") & (Phi_name == "normal-specific")) %>%
+  select(size, Term) %>%
+  group_by(Term) %>%
+  arrange(size) %>%
+  mutate(size = paste0(size, collapse = "-")) %>%
+  mutate(n_times = n()) %>%
+  ungroup() %>%
+  arrange(size, desc(n_times))
+table(codina_ppi_go_enrichment_sizes_concat_df$size)
+
+appearing_sizes = c("100", "80-100", "60-80-100", "40-60-80-100")
+appearing_functions_df = codina_ppi_go_enrichment_sizes_concat_df %>%
+  filter(size %in% appearing_sizes)
+
+appearing_functions_plot = appearing_functions_df %>%
+  tidyr::separate_rows(size, convert=TRUE) %>%
+  arrange(desc(n_times)) %>%
+  mutate(Term=forcats::fct_reorder(Term, n_times)) %>%
+  ggplot(mapping = aes(x = Term, y = size)) +
+    geom_point(aes(col = size)) +
+    coord_flip() +
+    scale_color_gradient(low = "orange", high = "darkred", na.value = NA) +
+    scale_y_continuous(breaks=as.vector(sort(unique(codina_ppi_go_enrichment_sig_df$size)))) +
+    ylab("Num. samples") +
+    theme_linedraw() +
+    theme(
+          plot.title =  element_text(size = 15, face="bold"), 
+          axis.title = element_text(size = 14, face="bold"), 
+          axis.text = element_text(size = 12), 
+          axis.title.y = element_blank())
+
+plot_file = paste(plots_dir, "functional_enrichment_top_functions_appearing_vs_sample_size_normal-specific.png", sep="/")
+ggsave(
+  plot_file,
+  plot=appearing_functions_plot,
+  dpi = 1200,
+  width = 12000,
+  height = 14000,
+  units = c("px")
+)
+print(appearing_functions_plot)
+```
+
+Create a word cloud of the functions for each biomarker category and size:
+
+```{r}
+for (category_selected in sort(unique(codina_ppi_go_enrichment_sig_df$Phi_name))){
+  print(category_selected)
+  for(size_selected in sort(unique(codina_ppi_go_enrichment_sig_df$size))){
+    set.seed(1510)
+    codina_ppi_go_enrichment_specific_df = codina_ppi_go_enrichment_sig_df %>%
+      filter((type_genes == "all") & (Phi_name == category_selected) & (size == size_selected)) %>%
+      select(size, Term)
+    dtm <- TermDocumentMatrix(codina_ppi_go_enrichment_specific_df$Term)
+    dtm_matrix <- as.matrix(dtm) 
+    dtm_words <- sort(rowSums(dtm_matrix),decreasing=TRUE) 
+    wordcloud_df <- data.frame(word = names(dtm_words),freq=dtm_words)
+    print(size_selected)
+    if(nrow(wordcloud_df) > 0){
+      wordcloud_plot <- ggplot(wordcloud_df, aes(label = word, size = freq)) +
+        geom_text_wordcloud_area(rm_outside = TRUE) +
+        scale_size_area(max_size = 15) +
+        theme_minimal()
+      plot_file = paste(plots_dir, "/functional_enrichment_word_cloud_", category_selected, "_size_", size_selected, ".png", sep="")
+      ggsave(
+        plot_file,
+        plot=wordcloud_plot
+        #dpi = 800,
+        #width = 2000,
+        #height = 2000,
+        #units = c("px")
+      )
+      print(wordcloud_plot)
+    }
+  }
+}
+```
+
+Analyze overlap between PPI enriched functions from biomarker categories and from breast cancer-associated genes:
+
+```{r}
+# # Example in Python
+# common = set_elements1 & set_elements2
+# n_common = len(common)
+# n1 = len(set_elements1)
+# n2 = len(set_elements2)
+# # Create the contingency table and calculate the fisher test
+# # Top common, top non-common / non-top common, non-top non-common
+# contigency = [[n_common, n1 - n_common], [n2 - n_common, n_node - n1 - n2 + n_common]]
+# oddsratio, pvalue = fisher_exact(contigency, alternative="greater")
+
+# Define the number of genes in the background (PPI)
+n_total_ppi = 18217
+n_total_coexpr = 18693
+n_total = as.numeric(n_total_ppi)
+
+# Get functions enriched for disease-genes
+codina_ppi_go_enrichment_disease_genes_df = codina_ppi_go_enrichment_sig_df %>%
+  filter((type_genes == "all") & (Phi_name == "disease-gene") & (size == 100)) %>%
+  dplyr::select(GO.ID, Term, KS, classic_p.adj)
+
+# Define table to keep results
+cols = c("size", "Phi_name", "n_common", "n_enriched1", "n_enriched2", "n_total", "odds_ratio", "p.value")
+functional_overlap_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+
+for (category_selected in c("common", "disease-specific", "normal-specific")){
+  for(size_selected in sort(unique(codina_ppi_go_enrichment_sig_df$size))){
+    # Get functions enriched for a specific biomarker category
+    codina_ppi_go_enrichment_specific_df = codina_ppi_go_enrichment_sig_df %>%
+      filter((type_genes == "all") & (Phi_name == category_selected) & (size == size_selected)) %>%
+      dplyr::select(GO.ID, Term, KS, classic_p.adj)
+    # Calculate numbers for contingency table
+    n_common = length(unique(intersect(codina_ppi_go_enrichment_specific_df$GO.ID, codina_ppi_go_enrichment_disease_genes_df$GO.ID)))
+    n_enriched1 = length(unique(codina_ppi_go_enrichment_specific_df$GO.ID))
+    n_enriched2 = length(unique(codina_ppi_go_enrichment_disease_genes_df$GO.ID))
+    # Define contingency table
+    contingency_table <- data.frame(
+      "enriched2" = c(n_common, (n_enriched2 - n_common)),
+      "not_enriched2" = c((n_enriched1 - n_common), (n_total - n_enriched1 - n_enriched2 - n_common)),
+      row.names = c("enriched1", "not_enriched1"),
+      stringsAsFactors = FALSE
+    )
+    fisher_res <- fisher.test(contingency_table, alternative = "greater")
+    functional_overlap_df = rbind(functional_overlap_df, data.frame(size=size_selected, Phi_name=category_selected, n_common=n_common, n_enriched1=n_enriched1, n_enriched2=n_enriched2, n_total=n_total, odds_ratio=fisher_res$estimate[["odds ratio"]], p.value=fisher_res$p.value))
+  }
+}
 
 ```
 
+Check if there are cancer-related functions:
 
+```{r}
+tumor_related_go_terms = subset(codina_ppi_go_enrichment_df$Term, grepl("cancer|tumor|metastasis|metastatic", codina_ppi_go_enrichment_df$Term))
+print(tumor_related_go_terms)
+print(codina_ppi_go_enrichment_sig_df %>% filter(Term %in% tumor_related_go_terms))
+```
+
+Analyze disease genes that are predicted at the top:
+
+```{r}
+ranking_nodes_file = paste(tables_dir, paste("codina_", name_D, "_", name_N, "_nodes_ranked.txt", sep=""), sep="/")
+ranking_nodes_df= fread(ranking_nodes_file) %>%
+  filter(!(Phi_name == "undefined")) %>%
+  group_by(Phi_tilde, size) %>%
+  dplyr::rename("rank_old" = "rank") %>%
+  mutate(rank = rank(-max, ties.method = "first")) %>%
+  ungroup() %>%
+  arrange(rank)
+
+head(ranking_nodes_df)
+tail(ranking_nodes_df)
+```
+
+```{r}
+cols = c("size", "Phi_name", "top", "num_disease_genes")
+num_top_ranked_disease_genes = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+
+for (size_selected in sort(unique(ranking_nodes_df$size))){
+  for (category_selected in sort(unique(ranking_nodes_df$Phi_name))){
+    for (top_selected in c(20, 50, 100, 1000)){
+      top_nodes_selected = ranking_nodes_df %>%
+        filter((size == size_selected) & (Phi_name == category_selected)) %>%
+        top_n(-top_selected, rank)
+      top_nodes_and_disease_genes = top_nodes_selected %>%
+        filter(!(DiseaseName.no.sp.char == ""))
+      num_top_ranked_disease_genes = rbind(num_top_ranked_disease_genes, data.frame(size=size_selected, Phi_name=category_selected, top=top_selected, num_disease_genes=nrow(top_nodes_and_disease_genes)))
+    }
+  }
+}
+```
+
+```{r}
+for (top_selected in c(20, 50, 100, 1000)){
+  num_top_ranked_disease_genes_plot = num_top_ranked_disease_genes %>%
+    filter(top == top_selected) %>%
+    ggplot(aes(x = size, y = num_disease_genes)) + 
+      geom_line(aes(col = Phi_name)) +
+      xlab("Num. samples") +
+      ylab(paste("Num. disease genes at top ", top_selected, sep="")) +
+      scale_color_manual(values=as.vector(name2color[name2color$name %in% levels(factor(unique(num_top_ranked_disease_genes$Phi_name))),]$color.codes)) +
+      guides(col=guide_legend(title="Gene category"), size="none") +
+      theme_linedraw() +
+      theme(aspect.ratio=1,
+            plot.title =  element_text(size = 15, face="bold"),
+            axis.title = element_text(size = 14, face="bold"),
+            axis.text = element_text(size = 13),
+            legend.text = element_text(size = 13),
+            legend.title=element_text(size=14, face="bold"))
+  
+  plot_file = paste(plots_dir, "/num_top_", top_selected, "_ranked_disease_genes.png", sep="")
+  ggsave(
+    plot_file,
+    plot=num_top_ranked_disease_genes_plot,
+    dpi = 1200,
+    #width = 9500,
+    height = 6000,
+    units = c("px")
+  )
+  print(num_top_ranked_disease_genes_plot)
+}
+```
+
+```{r}
+top_nodes_selected = ranking_nodes_df %>%
+  filter((size == 100) & (Phi_name == "normal-specific")) %>%
+  top_n(-100, rank) %>%
+  filter(!(DiseaseName.no.sp.char == ""))
+print(top_nodes_selected)
+```
+
+```{r}
+top_nodes_selected = ranking_nodes_df %>%
+  filter((size == 100) & (Phi_name == "disease-specific")) %>%
+  top_n(-100, rank) %>%
+  filter(!(DiseaseName.no.sp.char == ""))
+print(top_nodes_selected)
+```
+
+```{r}
+nodes_to_follow_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/nodes_to_follow/breast_cancer.txt"
+nodes_to_follow = fread(nodes_to_follow_file, header = F)$V1
+```
+
+```{r}
+nodes_to_follow_ranking_plot = ranking_nodes_df %>%
+  filter(Node %in% nodes_to_follow) %>%
+  mutate(label=if_else(size==max(size), Node, "")) %>%
+  ggplot(aes(x = size, y = rank)) + 
+    geom_point(aes(group = Node, col = Phi_name)) +
+    geom_line(aes(group = Node, col = Phi_name)) +
+    xlab("Num. samples") +
+    ylab("Ranking") +
+    scale_color_manual(values=as.vector(name2color[name2color$name %in% levels(factor(unique(ranking_nodes_df$Phi_name))),]$color.codes)) +
+    scale_y_continuous(trans = "reverse") +
+    guides(col=guide_legend(title="Gene category"), size="none") +
+    theme_linedraw() +
+    theme(aspect.ratio=1, 
+          plot.title =  element_text(size = 15, face="bold"), 
+          axis.title = element_text(size = 14, face="bold"), 
+          axis.text = element_text(size = 13),
+          panel.grid.major=element_blank(), 
+          panel.grid.minor = element_blank(),
+          legend.text = element_text(size = 13), 
+          legend.title=element_text(size=14, face="bold")) +
+    geom_label_repel(aes(col=Phi_name, label = label),
+                     fill="white",
+                     box.padding = 0.2, max.overlaps = Inf,
+                     label.size = 0.75, 
+                     size = 4.2,
+                     alpha = 0.9, 
+                     label.padding=0.25, 
+                     fontface = "bold",
+                     na.rm=TRUE,
+                     show.legend=F,
+                     seed = 1234)
+
+plot_file = paste(plots_dir, "nodes_to_follow_ranking.png", sep="/")
+ggsave(
+  plot_file,
+  plot=nodes_to_follow_ranking_plot,
+  dpi = 1200,
+  #width = 9500,
+  height = 6000,
+  units = c("px")
+)
+print(nodes_to_follow_ranking_plot)
+```
 

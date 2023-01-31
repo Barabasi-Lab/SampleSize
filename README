@@ -1218,7 +1218,8 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differ
 
 # General analysis
 sbatch Projects/Scipher/SampleSize/scripts/analyze_differentially_coexpressed_genes_cluster.sh
-# GO enrichment & proximity analysis
+
+# Functional GO enrichment & proximity & separation analysis
 sbatch Projects/Scipher/SampleSize/scripts/parameters_analysis_diff_coexpr.sh
 
 

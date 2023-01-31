@@ -38,8 +38,8 @@ option_list = list(
               help="Directory to store the tables", metavar="character"),
   make_option(c("-k", "--pval_threshold"), action="store", type="double", default = 0.00001,
               help="P-value threshold", metavar="double"),
-  make_option(c("-l", "--pval_correction"), action="store", type="double", default = "pval_Phi_Tilde.adj.bonf",
-              help="P-value threshold", metavar="double"),
+  make_option(c("-l", "--pval_correction"), action="store", type="character", default = "pval_Phi_Tilde.adj.bonf",
+              help="P-value threshold", metavar="character"),
   make_option(c("-m", "--nodes_to_follow_file"), action="store", type="character",
               help="File with the nodes to follow", metavar="character"),
   make_option(c("-n", "--drug_targets_file"), action="store", type="character", 
@@ -87,7 +87,7 @@ name2color = data.frame(name=c("common", "disease-specific", "normal-specific", 
 # ppi_distances_file = "/work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022_distances_matrix.txt"
 
 # # For Breast Cancer (female) vs. Breast (female)
-# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA_female___TCGA-Breast_female/consensus"
+# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSizeProject/differential_coexpression_analysis/reads/TCGA-BRCA_female___TCGA-Breast_female/consensus"
 # plots_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/plots_differential_coexpression/TCGA-BRCA_female___TCGA-Breast_female"
 # tables_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/tables_differential_coexpression/TCGA-BRCA_female___TCGA-Breast_female"
 # name_D = "tcga.brca.female"
@@ -99,7 +99,7 @@ name2color = data.frame(name=c("common", "disease-specific", "normal-specific", 
 # drug_targets_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/drug_targets/drugbank_targets_breast.neoplasm.txt"
 
 # # For Breast Cancer (Female)
-# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA_female___Breast.Mammary.Tissue_female"
+# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSizeProject/differential_coexpression_analysis/reads/TCGA-BRCA_female___Breast.Mammary.Tissue_female"
 # name_D = "tcga.brca.female"
 # name_N = "gtex.breast.female"
 # disease_name_in_associations_file = "breast.neoplasms"
@@ -108,7 +108,7 @@ name2color = data.frame(name=c("common", "disease-specific", "normal-specific", 
 # nodes_to_follow = c("BRCA1", "BRCA2", "PALB2", "CHEK2", "CDH1", "PTEN", "STK11", "TP53")
 
 # # For Breast Cancer (both sex)
-# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA___Breast.Mammary.Tissue/consensus"
+# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSizeProject/differential_coexpression_analysis/reads/TCGA-BRCA___Breast.Mammary.Tissue/consensus"
 # name_D = "tcga.brca"
 # name_N = "gtex.breast"
 # disease_name_in_associations_file = "breast.neoplasms"
@@ -117,7 +117,7 @@ name2color = data.frame(name=c("common", "disease-specific", "normal-specific", 
 # nodes_to_follow = c("BRCA1", "BRCA2", "PALB2", "CHEK2", "CDH1", "PTEN", "STK11", "TP53")
 
 # # For Breast Cancer - NORMAL TISSUE vs. GTEx Breast (both sex)
-# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA-normal___Breast.Mammary.Tissue/consensus"
+# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSizeProject/differential_coexpression_analysis/reads/TCGA-BRCA-normal___Breast.Mammary.Tissue/consensus"
 # name_D = "tcga.brca.normal"
 # name_N = "gtex.breast"
 # disease_name_in_associations_file = "breast.neoplasms"
@@ -126,7 +126,7 @@ name2color = data.frame(name=c("common", "disease-specific", "normal-specific", 
 # nodes_to_follow = c("BRCA1", "BRCA2", "PALB2", "CHEK2", "CDH1", "PTEN", "STK11", "TP53")
 
 # # For Breast Cancer vs. Breast Cancer - NORMAL TISSUE (both sex)
-# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA___TCGA-BRCA-normal/consensus"
+# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSizeProject/differential_coexpression_analysis/reads/TCGA-BRCA___TCGA-BRCA-normal/consensus"
 # name_D = "tcga.brca"
 # name_N = "tcga.brca.normal"
 # disease_name_in_associations_file = "breast.neoplasms"
@@ -136,7 +136,7 @@ name2color = data.frame(name=c("common", "disease-specific", "normal-specific", 
 
 
 # # For RA (complete.dataset)
-# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/scipher.complete.dataset___Whole.Blood/consensus"
+# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSizeProject/differential_coexpression_analysis/reads/scipher.complete.dataset___Whole.Blood/consensus"
 # name_D = "scipher.complete.dataset"
 # name_N = "gtex.whole.blood"
 # disease_name_in_associations_file = "arthritis.rheumatoid"
@@ -145,7 +145,7 @@ name2color = data.frame(name=c("common", "disease-specific", "normal-specific", 
 # nodes_to_follow = c("TNF", "IL6ST", "IL6R", "PTPN22", "HOTAIR", "MALAT1")
 
 # # For RA (complete.nonresponder)
-# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/scipher.complete.nonresponder___Whole.Blood/consensus"
+# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSizeProject/differential_coexpression_analysis/reads/scipher.complete.nonresponder___Whole.Blood/consensus"
 # name_D = "scipher.complete.nonresponder"
 # name_N = "gtex.whole.blood"
 # disease_name_in_associations_file = "arthritis.rheumatoid"
@@ -154,7 +154,7 @@ name2color = data.frame(name=c("common", "disease-specific", "normal-specific", 
 # nodes_to_follow = c("TNF", "IL6ST", "IL6R", "PTPN22", "HOTAIR", "MALAT1")
 
 # For KIRC vs. Kidney
-# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-KIRC___TCGA-Kidney/consensus"
+# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSizeProject/differential_coexpression_analysis/reads/TCGA-KIRC___TCGA-Kidney/consensus"
 # plots_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/plots_differential_coexpression/TCGA-KIRC___TCGA-Kidney"
 # tables_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/tables_differential_coexpression/TCGA-KIRC___TCGA-Kidney"
 # name_D = "tcga.kirc"
@@ -164,7 +164,7 @@ name2color = data.frame(name=c("common", "disease-specific", "normal-specific", 
 # pval_threshold = 0.00001
 
 # For LUAD (Lung Adenocarcinoma) vs. Lung
-# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-LUAD___TCGA-Lung/consensus"
+# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSizeProject/differential_coexpression_analysis/reads/TCGA-LUAD___TCGA-Lung/consensus"
 # plots_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/plots_differential_coexpression/TCGA-LUAD___TCGA-Lung"
 # tables_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/tables_differential_coexpression/TCGA-LUAD___TCGA-Lung"
 # name_D = "tcga.luad"
@@ -174,7 +174,7 @@ name2color = data.frame(name=c("common", "disease-specific", "normal-specific", 
 # pval_threshold = 0.00001
 
 # For LUSC (Lung Squamous Cell Carcinoma) vs. Lung
-# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-LUSC___TCGA-Lung/consensus"
+# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSizeProject/differential_coexpression_analysis/reads/TCGA-LUSC___TCGA-Lung/consensus"
 # plots_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/plots_differential_coexpression/TCGA-LUSC___TCGA-Lung"
 # tables_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/tables_differential_coexpression/TCGA-LUSC___TCGA-Lung"
 # name_D = "tcga.lusc"
@@ -184,7 +184,7 @@ name2color = data.frame(name=c("common", "disease-specific", "normal-specific", 
 # pval_threshold = 0.00001
 
 # For LUAD (Lung Adenocarcinoma) vs. LUSC (Lung Squamous Cell Carcinoma)
-# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-LUAD___TCGA-LUSC/consensus"
+# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSizeProject/differential_coexpression_analysis/reads/TCGA-LUAD___TCGA-LUSC/consensus"
 # plots_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/plots_differential_coexpression/TCGA-LUAD___TCGA-LUSC"
 # tables_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/tables_differential_coexpression/TCGA-LUAD___TCGA-LUSC"
 # name_D = "tcga.luad"
@@ -194,7 +194,7 @@ name2color = data.frame(name=c("common", "disease-specific", "normal-specific", 
 # pval_threshold = 0.00001
 
 # For BRCA.LumA vs. BRCA.LumB
-# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/differential_coexpression_analysis/reads/TCGA-BRCA.LumA___TCGA-BRCA.LumB/consensus"
+# input_dir = "/scratch/j.aguirreplans/Scipher/SampleSizeProject/differential_coexpression_analysis/reads/TCGA-BRCA.LumA___TCGA-BRCA.LumB/consensus"
 # plots_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/plots_differential_coexpression/TCGA-BRCA.LumA___TCGA-BRCA.LumB"
 # tables_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/tables_differential_coexpression/TCGA-BRCA.LumA___TCGA-BRCA.LumB"
 # name_D = "tcga.brca.luma"
@@ -319,6 +319,10 @@ nodes_expanded_df = nodes_expanded_df %>%
 # Write output file
 nodes_expanded_file = paste(tables_dir, paste("codina_", name_D, "_", name_N, "_nodes.txt", sep=""), sep="/")
 nodes_expanded_df %>% fwrite(nodes_expanded_file)
+
+# Write background genes of the co-expression network
+codina_coexpr_background_nodes_file = paste(tables_nodes_dir, "/codina_coexpr_background_nodes.txt", sep="")
+data.frame(Node=unique(nodes_expanded_df$Node)) %>% fwrite(codina_coexpr_background_nodes_file)
 
 
 #---- Count categories for each gene and size ----#
@@ -735,10 +739,16 @@ for(size_selected in sizes_list){
         nodes_filtered_type_analysis_df = nodes_filtered_df %>% filter(!(is.na(DiseaseName.no.sp.char)))
       }
       
-      # Select category genes in PPI
+      # Select category genes
       if (!(category_selected == "disease-gene")){
         nodes_filtered_type_analysis_df = nodes_filtered_type_analysis_df %>% filter(Phi_name == category_selected)
       }
+      
+      # Save all genes in co-expression network from selected category in a file
+      codina_coexpr_nodes_category_file = paste(tables_nodes_dir, "/codina_coexpr_nodes_type_", type_genes_selected, "_cat_", category_selected, "_size_", size_selected, ".txt", sep="")
+      data.frame(Node=unique(nodes_filtered_type_analysis_df$Node)) %>% fwrite(codina_coexpr_nodes_category_file)
+      
+      # Select genes in PPI
       category_ppi_genes_in_analysis = unique(nodes_filtered_type_analysis_df$Node[nodes_filtered_type_analysis_df$Node %in% V(ppi_net)$name])
       
       if (length(category_ppi_genes_in_analysis) > 0){
@@ -846,44 +856,61 @@ for(size_selected in sizes_list){
 # codina_ppi_lcc_separation_df %>% fwrite(codina_ppi_lcc_separation_file)
 
 
-#---- Read edge files and calculate edge categories associated to each node ----#
+#---- Read edge files and calculate ranking of nodes based on their number of links in the predicted category ----#
 
-# cols = c("num_disease_genes_in_top", "size", "rep_D", "rep_N")
-# num_disease_genes_in_top_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
-# missing_edge_files = c()
-# sizes_list = sort(unique(file_info_df$size))
-# 
-# for(x in seq(sizes_list)){
-#   size = sizes_list[x]
-#   print(size)
-#   same_size_files_df = file_info_df %>% filter((size==!!size) & (type_analysis=="edges")) %>% arrange(rep_D, rep_N)
-#   input_files = same_size_files_df$file_name
-#   # same_size_info_df = data.frame()
-#   for(input_file in input_files){
-#     r_D = (same_size_files_df %>% filter(file_name == input_file))$rep_D
-#     r_N = (same_size_files_df %>% filter(file_name == input_file))$rep_N
-#     individual_df = fread(paste(input_dir, input_file, sep="/"))
-#     if (nrow(individual_df) > 0){
-#       # Count the number of edge classifications for each node
-#       node_edge_counts_df = rbind((individual_df %>% select(Node.1, Phi_tilde) %>% rename(Node=Node.1)), (individual_df %>% select(Node.2, Phi_tilde) %>% rename(Node=Node.2))) %>% 
-#         group_by(Node, Phi_tilde) %>% 
-#         summarize(Phi_edge_count = n()) %>% 
-#         mutate(Phi_edge_frac = Phi_edge_count / sum(Phi_edge_count)) %>%
-#         ungroup() %>%
-#         rename(Phi_tilde_edge = Phi_tilde) %>%
-#         inner_join((nodes_filtered_df %>% filter(size == !!size) %>% select(Node, DiseaseName.no.sp.char, Phi_tilde) %>% rename(Phi_tilde_node = Phi_tilde)), by=c("Node")) %>%
-#         filter((Phi_tilde_node %in% c("b.D", "g.D", "g.N")) & (Phi_tilde_edge == Phi_tilde_node)) %>%
-#         rename(Phi_tilde = Phi_tilde_edge) %>% 
-#         select(-Phi_tilde_node) %>%
-#         arrange(desc(Phi_edge_count), desc(Phi_edge_frac)) %>%
-#         slice_head(n=20)
-#       num_disease_genes_in_top_df = rbind(data.frame(num_disease_genes_in_top=nrow(node_edge_counts_df %>% filter(!(is.na(DiseaseName.no.sp.char)))), size=size, rep_D=r_D, rep_N=r_N))
-#     } else {
-#       missing_edge_files = c(missing_edge_files, input_file)
-#     }
-#     rm(individual_df)
-#   }
-# }
+cols = c("Node", "max", "common", "disease-specific", "normal-specific", "different", "DiseaseName.no.sp.char", "Phi_tilde", "pval", "size", "rep_D", "rep_N", "Phi_name", "rank")
+ranking_nodes_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+missing_edge_files = c()
+sizes_list = sort(unique(file_info_df$size))
+
+for(x in seq(sizes_list)){
+  size = sizes_list[x]
+  print(size)
+  same_size_files_df = file_info_df %>% filter((size==!!size) & (type_analysis=="edges")) %>% arrange(rep_D, rep_N)
+  input_files = same_size_files_df$file_name
+  # same_size_info_df = data.frame()
+  for(input_file in input_files){
+    r_D = (same_size_files_df %>% filter(file_name == input_file))$rep_D
+    r_N = (same_size_files_df %>% filter(file_name == input_file))$rep_N
+    individual_edges_df = fread(paste(input_dir, input_file, sep="/"))
+    individual_nodes_df = nodes_expanded_df %>% 
+      filter((size == !!size) & (rep_D == r_D) & (rep_N == r_N))
+    if (nrow(individual_edges_df) > 0){
+      # Define Phi_name
+      individual_edges_df$Phi_name = ifelse(individual_edges_df$Phi_tilde == "a", "common", ifelse(individual_edges_df$Phi_tilde == "b.D", "different", ifelse(individual_edges_df$Phi_tilde == "g.D", "disease-specific", ifelse(individual_edges_df$Phi_tilde == "g.N", "normal-specific", "undefined"))))
+
+      # Calculate the ranking of nodes
+      ranking_nodes_individual_df = individual_edges_df %>%
+        select(Node.1, Node.2, Phi_name) %>%
+        pivot_longer(-Phi_name) %>%
+        group_by(value, Phi_name) %>%
+        summarise(n = n()) %>%
+        ungroup() %>%
+        group_by(value) %>%
+        mutate(max = max(n)) %>% 
+        pivot_wider(names_from = Phi_name, 
+                    values_from = n, 
+                    values_fill = 0) %>%
+        inner_join(., individual_nodes_df, by = c("value" = "Node")) %>%
+        rename("Node" = "value") %>%
+        ungroup() %>%
+        group_by(Phi_tilde) %>%
+        mutate(rank = rank(-max, ties.method = "first")) %>%
+        ungroup() %>%
+        arrange(rank)
+      
+      ranking_nodes_df = rbind(ranking_nodes_df, ranking_nodes_individual_df)
+    } else {
+      missing_edge_files = c(missing_edge_files, input_file)
+    }
+    rm(individual_edges_df)
+    rm(ranking_nodes_individual_df)
+  }
+}
+
+# Write output file
+ranking_nodes_file = paste(tables_dir, paste("codina_", name_D, "_", name_N, "_nodes_ranked.txt", sep=""), sep="/")
+ranking_nodes_df %>% fwrite(ranking_nodes_file)
 
 
 

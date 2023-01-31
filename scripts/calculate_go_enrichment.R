@@ -5,6 +5,7 @@ library(optparse)
 library(data.table)
 library(dplyr)
 require(magrittr)
+set.seed(1510)
 
 option_list = list(
   make_option(c("-a", "--case_genes_file"), action="store", type="character", 
@@ -45,4 +46,4 @@ GO_enrichment = GO(ID_type = "symbol",
                    bg = background_genes)
 
 # Write output
-GO_enrichment$Sign %>% fwrite(output_file)
+GO_enrichment$Res %>% fwrite(output_file)

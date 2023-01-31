@@ -1,6 +1,7 @@
 ####################################
 ### Author: Deisy Morselli Gysi 
 ### Date: 03/10/2022
+### Updated: 01/27/2023
 ####################################
 ### Keyworks: Tool; Gene Enrichment; GO
 ### Description: Calculates GO enrichment
@@ -23,7 +24,8 @@
 GO = function(ID_type = "symbol", 
               bg, 
               g, 
-              ONTO = 'BP'){
+              ONTO = 'BP', 
+              filter_KS = 0.8){
   require(topGO)
   require(magrittr)
   require(dplyr)
@@ -58,7 +60,7 @@ GO = function(ID_type = "symbol",
   pvalKS <- score(resultKS)
   resultWeight <- getSigGroups(GOdata, test.weight)
   pvalWeight <- score(resultWeight, whichGO = names(pvalFis))
-  cor(pvalFis, pvalWeight)
+  # cor(pvalFis, pvalWeight)
   geneData(resultWeight)
   allRes_BP <- GenTable(GOdata, 
                         classic = resultFisher, 
@@ -80,8 +82,24 @@ GO = function(ID_type = "symbol",
   
   ID2GO_sign = ID2GO %>% 
     filter(GOs %in% goID)
+    
   
-  allRes_BP_f = subset(allRes_BP, allRes_BP$weight < 0.01)
+  # 
+  # allRes_BP_f = subset(allRes_BP, allRes_BP$weight < 0.01)
+  # 
+
+  # Correct classic p-value (Fisher's test) using Bonferroni
+  allRes_BP = allRes_BP %>% 
+    mutate(classic = replace(classic, classic == "< 1e-30", 1e-30)) %>%
+    mutate(weight = replace(weight, weight == "< 1e-30", 1e-30)) %>%
+    mutate(KS = replace(KS, KS == "< 1e-30", 1e-30)) %>%
+    mutate(classic_p.adj = p.adjust(classic, "bonferroni"))
+  
+  # Filter by classic p-value adjusted and by KS
+  allRes_BP_f = allRes_BP %>%
+    filter(classic_p.adj < 0.01) %>%
+    filter(KS > filter_KS)
+  
   return(list(Res = allRes_BP, 
               Sign = allRes_BP_f, 
               Gene2GO = ID2GO_sign))
