@@ -1246,6 +1246,14 @@ Analysis of a given number of specific edges across sample size:
 
 sbatch /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analysis_specific_edges.sh
 
+
+##########################
+ANALYSIS OF PPI PREDICTION
+##########################
+
+/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/compare_coexpression_to_ppi.Rmd
+
+
 ######################################
 ANALYSIS DISEASE GENES VS. SAMPLE SIZE
 ######################################

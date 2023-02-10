@@ -221,7 +221,7 @@ if(!(is.na(tables_nodes_dir))){
 #---- Read disease genes data ----#
 
 GDA = fread(disease_gene_associations_file)
-GDA_disease = GDA %>% select("DiseaseName.no.sp.char", "HGNC_Symbol") %>% filter(DiseaseName.no.sp.char == disease_name_in_associations_file)
+GDA_disease = GDA %>% dplyr::select("DiseaseName.no.sp.char", "HGNC_Symbol") %>% dplyr::filter(DiseaseName.no.sp.char == disease_name_in_associations_file)
 #unique(GDA$DiseaseName.no.sp.char[grepl("lung", GDA$DiseaseName.no.sp.char)])
 
 
@@ -403,7 +403,15 @@ if(!(length(reps) == 1 && reps == "consensus-consensus")){
     scale_color_manual(values=setNames(counts_categories_col_df$color.codes, counts_categories_col_df$Phi_name)) +
     guides(col=guide_legend(title="Gene category"), fill=guide_legend(title="Gene category")) +
     theme_linedraw() +
-    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 12), legend.text = element_text(size = 12), legend.title=element_text(size=14, face="bold"))
+    theme(aspect.ratio=1,
+          plot.title =  element_text(size = 15, face="bold"), 
+          axis.title = element_text(size = 14, face="bold"), 
+          axis.text = element_text(size = 13),
+          panel.grid.major=element_blank(), 
+          panel.grid.minor = element_blank(),
+          legend.text = element_text(size = 13), 
+          legend.title=element_text(size=14, face="bold"),
+          text = element_text(family = "Helvetica"))
 } else {
   plot_counts_categories = counts_categories_col_df %>% 
     group_by(Phi_name, size) %>%
@@ -415,9 +423,16 @@ if(!(length(reps) == 1 && reps == "consensus-consensus")){
     scale_color_manual(values=setNames(counts_categories_col_df$color.codes, counts_categories_col_df$Phi_name)) +
     guides(col=guide_legend(title="Gene category"), fill=guide_legend(title="Gene category")) +
     theme_linedraw() +
-    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 12), legend.text = element_text(size = 12), legend.title=element_text(size=14, face="bold"))
+    theme(aspect.ratio=1,
+          plot.title =  element_text(size = 15, face="bold"), 
+          axis.title = element_text(size = 14, face="bold"), 
+          axis.text = element_text(size = 13),
+          panel.grid.major=element_blank(), 
+          panel.grid.minor = element_blank(),
+          legend.text = element_text(size = 13), 
+          legend.title=element_text(size=14, face="bold"),
+          text = element_text(family = "Helvetica"))
 }
-
 plot_file = paste(plots_dir, paste("codina_", name_D, "_", name_N, "_counts_disease_genes.png", sep=""), sep="/")
 ggsave(
   plot_file,
@@ -466,12 +481,15 @@ plot_flow = nodes_filtered_col_df %>%
   ylab("Number of disease genes") +
   guides(fill=guide_legend(title="Gene category")) +
   theme_linedraw() +
-  theme(plot.title =  element_text(size = 17, face="bold"), 
+  theme(aspect.ratio=1,
+        plot.title =  element_text(size = 15, face="bold"), 
         axis.title = element_text(size = 14, face="bold"), 
-        axis.text = element_text(size = 12), 
-        #legend.position = "bottom",
-        legend.text = element_text(size = 12), 
-        legend.title=element_text(size=14, face="bold"))
+        axis.text = element_text(size = 13),
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(size = 13), 
+        legend.title=element_text(size=14, face="bold"),
+        text = element_text(family = "Helvetica"))
 
 plot_file = paste(plots_dir, paste("codina_", name_D, "_", name_N, "_change_disease_genes.png", sep=""), sep="/")
 ggsave(
@@ -525,8 +543,16 @@ if(!(is.na(nodes_to_follow_file))){
         scale_fill_manual(values=setNames(important_df$color.codes, important_df$Phi_name)) +
         guides(fill=guide_legend(title="Gene category")) +
         theme_linedraw() +
-        theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 12), legend.text = element_text(size = 12), legend.title=element_text(size=14, face="bold"))
-      
+        theme(aspect.ratio=1,
+              plot.title =  element_text(size = 15, face="bold"), 
+              axis.title = element_text(size = 14, face="bold"), 
+              axis.text = element_text(size = 13),
+              panel.grid.major=element_blank(), 
+              panel.grid.minor = element_blank(),
+              legend.text = element_text(size = 13), 
+              legend.title=element_text(size=14, face="bold"),
+              text = element_text(family = "Helvetica"))
+
       # Save plot
       plot_file = paste(plots_dir, paste("codina_", name_D, "_", name_N, "_important_gene_", important_node, ".png", sep=""), sep="/")
       ggsave(
@@ -563,8 +589,16 @@ if(!(is.na(nodes_to_follow_file))){
         guides(col=guide_legend(title="Gene category")) +
         scale_color_manual(values=setNames(important_df$color.codes, important_df$Phi_name)) +
         theme_linedraw() +
-        theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 12), legend.text = element_text(size = 12), legend.title=element_text(size=14, face="bold"))
-      
+        theme(aspect.ratio=1,
+              plot.title =  element_text(size = 15, face="bold"), 
+              axis.title = element_text(size = 14, face="bold"), 
+              axis.text = element_text(size = 13),
+              panel.grid.major=element_blank(), 
+              panel.grid.minor = element_blank(),
+              legend.text = element_text(size = 13), 
+              legend.title=element_text(size=14, face="bold"),
+              text = element_text(family = "Helvetica"))
+
       # Save plot
       plot_file = paste(plots_dir, paste("codina_", name_D, "_", name_N, "_important_gene_", important_node, ".png", sep=""), sep="/")
       ggsave(
@@ -616,46 +650,137 @@ change_of_category_file = paste(tables_dir, paste("codina_", name_D, "_", name_N
 change_of_category_df %>% fwrite(change_of_category_file)
 
 
+#---- Plot an improved representation of the flow between gene categories across sample size ----#
+
+if (max(sizes_list) <= 160) {
+  sizes_to_plot = c(20, 40, 60, 80, 100, 120, 140, 160)
+} else if ((max(sizes_list) > 160) & (max(sizes_list) <= 300)) {
+  sizes_to_plot = c(20, 60, 100, 140, 180, 220, 260, 300)
+} else if ((max(sizes_list) > 300) & (max(sizes_list) <= 440)) {
+  sizes_to_plot = c(20, 80, 140, 200, 260, 320, 380, 440)
+} else {
+  sizes_to_plot = seq(20, max(sizes_list), 100)
+}
+
+# Create last column of plot (size 100)
+change_of_category_size100_df = change_of_category_df %>%
+  filter(size.curr == 100) %>%
+  dplyr::select(Node, Phi_name.curr, size.curr) %>%
+  dplyr::rename("Phi_name.prev"="Phi_name.curr", "size.prev"="size.curr") %>%
+  mutate(Phi_name.curr = NA) %>%
+  mutate(size.curr = NA) %>%
+  mutate(transition_type = NA) %>%
+  mutate(transition_name = NA) %>%
+  mutate(transition_name_simple = Phi_name.prev) %>%
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple == "common", "common (constant)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple == "disease-specific", "disease-specific (constant)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple == "normal-specific", "normal-specific (constant)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple == "undefined", "undefined (constant)")) %>% 
+  left_join(name2color, by=c("Phi_name.prev"="name"))
+
+# Count transitions / merge with colors / merge with last column
+change_of_category_col_df = change_of_category_df %>%
+  mutate(transition_name_simple = transition_name) %>%
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple == "common / common", "common (constant)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple %in% c("common / disease-specific", "common / normal-specific", "common / undefined"), "common (change)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple == "disease-specific / disease-specific", "disease-specific (constant)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple %in% c("disease-specific / common", "disease-specific / normal-specific", "disease-specific / undefined"), "disease-specific (change)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple == "normal-specific / normal-specific", "normal-specific (constant)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple %in% c("normal-specific / common", "normal-specific / disease-specific", "normal-specific / undefined"), "normal-specific (change)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple == "undefined / undefined", "undefined (constant)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple %in% c("undefined / disease-specific", "undefined / normal-specific", "undefined / common"), "undefined (change)")) %>% 
+  left_join(name2color, by=c("transition_name_simple"="name")) %>%
+  full_join(change_of_category_size100_df)
+
+# Define factors
+change_of_category_col_df$transition_name_simple <- factor(change_of_category_col_df$transition_name_simple, levels=c("common (constant)", "common (change)", "disease-specific (constant)",  "disease-specific (change)", "normal-specific (constant)", "normal-specific (change)", "undefined (constant)", "undefined (change)"))
+change_of_category_col_df$size.prev = as.character(change_of_category_col_df$size.prev)
+change_of_category_col_df$size.prev <- factor(change_of_category_col_df$size.prev, levels=as.character(sort(unique(as.integer(change_of_category_col_df$size.prev)))))
+
+# Plot
+plot_flow = change_of_category_col_df %>% 
+  filter(size.prev %in% sizes_to_plot) %>%
+  ggplot(aes(x = size.prev, stratum = transition_name_simple, alluvium = Node, 
+             fill = transition_name_simple, label = transition_name_simple)) +
+  geom_flow(stat = "alluvium", lode.guidance = "frontback") +
+  geom_stratum() +
+  scale_fill_manual(values=setNames(change_of_category_col_df$color.codes, change_of_category_col_df$transition_name_simple)) + # If I want to plot only specific elements in the legend, use the argument breaks with a list of the elements that I want to show
+  scale_color_manual(values=setNames(change_of_category_col_df$color.codes, change_of_category_col_df$transition_name_simple)) +
+  xlab("Number of samples") +
+  ylab("Number of disease genes") +
+  guides(fill=guide_legend(title="Gene category")) +
+  theme_linedraw() +
+  theme(aspect.ratio=1,
+        plot.title =  element_text(size = 15, face="bold"), 
+        axis.title = element_text(size = 14, face="bold"), 
+        axis.text = element_text(size = 13),
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(size = 13), 
+        legend.title=element_text(size=14, face="bold"),
+        text = element_text(family = "Helvetica"))
+
+plot_file = paste(plots_dir, paste("codina_", name_D, "_", name_N, "_change_disease_genes_improved.png", sep=""), sep="/")
+ggsave(
+  plot_file,
+  plot = plot_flow,
+  dpi = 1200,
+  width = 10000,
+  height = 6000,
+  units = c("px")
+)
+
+
 #---- Plot stability in gene categories ----#
 
 # Calculate total of stable genes
 total_stable_change_genes_df = change_of_category_df %>%
-  group_by(size.prev) %>% 
+  group_by(size.curr) %>% 
   mutate(n_total = n()) %>%
   ungroup() %>%
-  select(Node, Phi_name.prev, size.prev, transition_type, n_total) %>% 
-  group_by(size.prev, transition_type, n_total) %>% 
+  select(Node, Phi_name.curr, size.curr, transition_type, n_total) %>% 
+  group_by(size.curr, transition_type, n_total) %>% 
   summarize(n_genes = n()) %>% 
   ungroup() %>%
   mutate(frac_genes = n_genes / n_total)
-total_stable_change_genes_df$Phi_name.prev = "all"
+total_stable_change_genes_df$Phi_name.curr = "all"
 
 # Calculate stable genes by category
 categories_stable_change_genes_df = change_of_category_df %>%
-  group_by(size.prev) %>% 
+  group_by(size.curr) %>% 
   mutate(n_total = n()) %>%
   ungroup() %>%
   filter(transition_type == "stable") %>%
-  select(Node, Phi_name.prev, size.prev, transition_type, n_total) %>% 
-  group_by(Phi_name.prev, size.prev, transition_type, n_total) %>% 
+  select(Node, Phi_name.curr, size.curr, transition_type, n_total) %>% 
+  group_by(Phi_name.curr, size.curr, transition_type, n_total) %>% 
   summarize(n_genes = n()) %>% 
   ungroup() %>%
   mutate(frac_genes = n_genes / n_total)
 
-# Plot
+# Merge two tables
 stable_genes_df = rbind(total_stable_change_genes_df, categories_stable_change_genes_df) %>%
   filter(transition_type == "stable") %>%
-  left_join(name2color, by=c("Phi_name.prev"="name"))
+  left_join(name2color, by=c("Phi_name.curr"="name"))
+
+# Plot
 plot_stable_genes = stable_genes_df %>%
-  ggplot(aes(x = size.prev, y = frac_genes, col = Phi_name.prev)) + 
-  geom_line(aes(size = Phi_name.prev)) +
+  ggplot(aes(x = size.curr, y = frac_genes, col = Phi_name.curr)) + 
+  geom_line(aes(size = Phi_name.curr)) +
   xlab("Number of samples") +
   ylab("Fraction of stable genes") +
   scale_size_manual(values = c("all" = 1, "common" = 0.5, "disease-specific" = 0.5, "normal-specific" = 0.5, "undefined" = 0.5, "different" = 0.5)) +
-  scale_color_manual(values=setNames(stable_genes_df$color.codes, stable_genes_df$Phi_name.prev)) +
+  scale_color_manual(values=setNames(stable_genes_df$color.codes, stable_genes_df$Phi_name.curr)) +
   guides(col=guide_legend(title="Gene category"), size="none") +
   theme_linedraw() +
-  theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 12), legend.text = element_text(size = 12), legend.title=element_text(size=14, face="bold"))
+  theme(aspect.ratio=1,
+        plot.title =  element_text(size = 15, face="bold"), 
+        axis.title = element_text(size = 14, face="bold"), 
+        axis.text = element_text(size = 13),
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(size = 13), 
+        legend.title=element_text(size=14, face="bold"),
+        text = element_text(family = "Helvetica"))
 
 # Save plot
 plot_file = paste(plots_dir, paste("codina_", name_D, "_", name_N, "_stable_genes.png", sep=""), sep="/")
@@ -881,23 +1006,24 @@ for(x in seq(sizes_list)){
 
       # Calculate the ranking of nodes
       ranking_nodes_individual_df = individual_edges_df %>%
-        select(Node.1, Node.2, Phi_name) %>%
-        pivot_longer(-Phi_name) %>%
-        group_by(value, Phi_name) %>%
-        summarise(n = n()) %>%
-        ungroup() %>%
-        group_by(value) %>%
-        mutate(max = max(n)) %>% 
-        pivot_wider(names_from = Phi_name, 
+        dplyr::select(Node.1, Node.2, Phi_name) %>%
+        tidyr::pivot_longer(-Phi_name) %>%
+        dplyr::group_by(value, Phi_name) %>%
+        dplyr::summarise(n = n()) %>% # Get the number of significant links in the network associated to each category for each gene
+        dplyr::ungroup() %>%
+        dplyr::group_by(value) %>%
+        dplyr::mutate(max = max(n)) %>% # Create new variable max where we store the maximum number of links among the different categories associated to each gene
+        tidyr::pivot_wider(names_from = Phi_name, # Create new columns associated to the number of links for each biomarker category
                     values_from = n, 
                     values_fill = 0) %>%
-        inner_join(., individual_nodes_df, by = c("value" = "Node")) %>%
-        rename("Node" = "value") %>%
-        ungroup() %>%
-        group_by(Phi_tilde) %>%
-        mutate(rank = rank(-max, ties.method = "first")) %>%
-        ungroup() %>%
-        arrange(rank)
+        dplyr::inner_join(., individual_nodes_df, by = c("value" = "Node")) %>% # Join the nodes table
+        dplyr::rename("Node" = "value") %>%
+        dplyr::ungroup() %>%
+        dplyr::group_by(Phi_tilde) %>%
+        dplyr::mutate(rank = rank(-max, ties.method = "first")) %>% # Rank nodes by each biomarker category
+        dplyr::ungroup() %>% 
+        as.data.frame() %>%
+        dplyr::arrange(rank)
       
       ranking_nodes_df = rbind(ranking_nodes_df, ranking_nodes_individual_df)
     } else {
