@@ -1650,9 +1650,9 @@ colors_defined = c("PPI" = "#DBA9CA",
 Violin plot of PPI distances across sample size:
 
 ```{r}
-violinplot_ppi_coexpression_by_distances_file = sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/ppi_coexpression_violinplot_by_ppi_distance_pval_%s_%s_%s.png", as.character(threshold_selected), dataset, type_dataset)
+violinplot_ppi_coexpression_by_distances_nofilt_file = sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/ppi_coexpression_violinplot_by_ppi_distance_%s_%s.png", as.character(threshold_selected), dataset, type_dataset)
 colors_defined_filt = colors_defined[names(colors_defined) %in% c("1", "2", "3", "4", "5", "6")]
-violinplot_ppi_coexpression_by_distances = coexpression_pairs_filt %>%
+violinplot_ppi_coexpression_by_distances_nofilt = coexpression_pairs_filt %>%
   select(-ppi, -nci, -distances_nci, -random_not_ppi, -random_far_not_ppi, -random_far_not_nci) %>%
   filter(!(is.na(distances_ppi))) %>%
   pivot_longer(as.character(sizes_selected), names_to = "size", values_to = "correlation", names_transform = list(size = as.character), values_transform = list(correlation = as.numeric)) %>%
@@ -1683,22 +1683,22 @@ violinplot_ppi_coexpression_by_distances = coexpression_pairs_filt %>%
         color = "PPI distance",
         fill = "PPI distance")
 ggsave(
-  violinplot_ppi_coexpression_by_distances_file,
-  plot = violinplot_ppi_coexpression_by_distances,
+  violinplot_ppi_coexpression_by_distances_nofilt_file,
+  plot = violinplot_ppi_coexpression_by_distances_nofilt,
   dpi = 1200,
   #width = 9300,
   #height = 6000,
   units = c("px")
 )
-violinplot_ppi_coexpression_by_distances
+violinplot_ppi_coexpression_by_distances_nofilt
 ```
 
 Violin plot of PPI vs. pairs > 4 distance across sample size:
 
 ```{r}
-violinplot_ppi_coexpression_by_types_file =  sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/ppi_coexpression_violinplot_by_pair_type_pval_%s_%s_%s.png", as.character(threshold_selected), dataset, type_dataset)
+violinplot_ppi_coexpression_by_types_nozero_file =  sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/ppi_coexpression_violinplot_by_pair_type_nozero_pval_%s_%s_%s.png", as.character(threshold_selected), dataset, type_dataset)
 colors_defined_filt = colors_defined[names(colors_defined) %in% c("PPI", "Distance > 4")]
-violinplot_ppi_coexpression_by_types = coexpression_pairs_filt %>%
+violinplot_ppi_coexpression_by_types_nozero = coexpression_pairs_filt %>%
   select(-distances_ppi, -distances_nci, -nci, -random_not_ppi, -random_far_not_nci) %>%
   pivot_longer(c("ppi", "random_far_not_ppi"), names_to = "category", values_to = "category_bool") %>%
   filter(category_bool == TRUE) %>%
@@ -1731,10 +1731,10 @@ violinplot_ppi_coexpression_by_types = coexpression_pairs_filt %>%
   labs (x = "Number of samples",
         y = "Absolute co-expression weight",
         color = "",
-        fill = ""); violinplot_ppi_coexpression_by_types
+        fill = ""); violinplot_ppi_coexpression_by_types_nozero
 ggsave(
-  violinplot_ppi_coexpression_by_types_file,
-  plot = violinplot_ppi_coexpression_by_types,
+  violinplot_ppi_coexpression_by_types_nozero_file,
+  plot = violinplot_ppi_coexpression_by_types_nozero,
   dpi = 1200,
   #width = 9300,
   #height = 6000,
