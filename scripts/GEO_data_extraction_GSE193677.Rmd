@@ -161,33 +161,35 @@ raw_counts_original_file = paste(raw_data_dir, "/GSE193677_MSCCR_Biopsy_counts.t
 Read the gz file:
 
 ```{r}
-raw_counts_original_df = read.table(gzfile(raw_counts_original_file))
-raw_counts_original_df = cbind(data.frame(Ensembl=row.names(raw_counts_original_df)), raw_counts_original_df)
+RNAseq_original = read.table(gzfile(raw_counts_original_file))
+RNAseq_original = cbind(data.frame(Ensembl=row.names(RNAseq_original)), RNAseq_original)
 ```
 
 ```{r}
-dim(raw_counts_original_df)
-raw_counts_original_df[1:5, 1:5]
+dim(RNAseq_original)
+RNAseq_original[1:5, 1:5]
 ```
 
 Filter the samples that are not in the metadata:
 
 ```{r}
-raw_counts_original_df = raw_counts_original_df[, which((names(raw_counts_original_df) %in% c("Ensembl", metadata_df$sample_id)==TRUE))]
-dim(raw_counts_original_df)
+RNAseq_original = RNAseq_original[, which((names(RNAseq_original) %in% c("Ensembl", metadata_df$sample_id)==TRUE))]
+dim(RNAseq_original)
 ```
 
 Are there repeated genes? No:
 
 ```{r}
-nrow(raw_counts_original_df)
-length(unique(raw_counts_original_df$Ensembl))
+nrow(RNAseq_original)
+length(unique(RNAseq_original$Ensembl))
 ```
 
 
 ### Gene pre-processing
 
-In the gene expression dataframe, there are `r nrow(raw_counts_original_df)` genes in Ensembl notation. We will transform these genes into HGNC gene symbol notation.
+#### Map Ensembl to HGNC gene symbol
+
+In the gene expression dataframe, there are `r nrow(RNAseq_original)` genes in Ensembl notation. We will transform these genes into HGNC gene symbol notation.
 
 First we read the file `multiple_hgnc_dict_set_2022-01-01.txt`, containing gene symbols and their aliases in other notations:
 
@@ -205,25 +207,25 @@ head(gene_dict_df)
 We use this dataframe to map Ensembl IDs to HGNC symbol IDs:
 
 ```{r}
-raw_counts_df = inner_join(raw_counts_original_df, gene_dict_df, by=c("Ensembl"="alias"))
-raw_counts_df = cbind((raw_counts_df %>% select("Ensembl", "HGNC_Symbol")), (raw_counts_df %>% select(-"Ensembl", -"HGNC_Symbol"))) %>% unique()
-head(raw_counts_df[1:5,1:5])
+RNAseq = inner_join(RNAseq_original, gene_dict_df, by=c("Ensembl"="alias"))
+RNAseq = cbind((RNAseq %>% select("Ensembl", "HGNC_Symbol")), (RNAseq %>% select(-"Ensembl", -"HGNC_Symbol"))) %>% unique()
+head(RNAseq[1:5,1:5])
 ```
 
 ```{r}
-dim(raw_counts_df)
+dim(RNAseq)
 ```
 
-Now, we have `r length(unique(raw_counts_df$HGNC_Symbol))` unique HGNC symbols mapped to `r length(unique(raw_counts_df$Ensembl))` unique Ensembl IDs from a total of `r nrow(raw_counts_df)` rows. The problem is that there are Ensembl IDs mapped to the same HGNC code and viceversa. So, we have to do the following procedures:
+Now, we have `r length(unique(RNAseq$HGNC_Symbol))` unique HGNC symbols mapped to `r length(unique(RNAseq$Ensembl))` unique Ensembl IDs from a total of `r nrow(RNAseq)` rows. The problem is that there are Ensembl IDs mapped to the same HGNC code and viceversa. So, we have to do the following procedures:
 - If an Ensembl ID has multiple HGNC symbols, keep only one symbol
 - If a HGNC symbol has multiple Ensembl IDs, calculate the median
 
 We get the HGNC symbols with multiple Ensembl IDs:
 
 ```{r}
-repeated_ensembl = unique(raw_counts_df$Ensembl[duplicated(raw_counts_df$Ensembl)])
+repeated_ensembl = unique(RNAseq$Ensembl[duplicated(RNAseq$Ensembl)])
 length(repeated_ensembl)
-repeated_ensembl_df = raw_counts_df[raw_counts_df$Ensembl %in% repeated_ensembl,][,c("Ensembl", "HGNC_Symbol")]
+repeated_ensembl_df = RNAseq[RNAseq$Ensembl %in% repeated_ensembl,][,c("Ensembl", "HGNC_Symbol")]
 repeated_ensembl_df$HGNC_length = nchar(repeated_ensembl_df$HGNC_Symbol)
 repeated_ensembl_df = repeated_ensembl_df %>% arrange(Ensembl, HGNC_length, HGNC_Symbol) %>% unique()
 head(repeated_ensembl_df)
@@ -235,36 +237,70 @@ We keep the smallest symbol, and if not, the first (in alphabetical order):
 repeated_ensembl_distinct_df = repeated_ensembl_df %>% distinct(Ensembl, .keep_all = TRUE) %>% select(Ensembl, HGNC_Symbol) # dplyr::distinct keeps only the first distinct row in terms of Ensembl
 head(repeated_ensembl_distinct_df)
 hgnc_to_remove = repeated_ensembl_df$HGNC_Symbol[!(repeated_ensembl_df$HGNC_Symbol %in% repeated_ensembl_distinct_df$HGNC_Symbol)] # we get the HGNC_Symbol to remove
-raw_counts_df %<>% filter(!(HGNC_Symbol %in% hgnc_to_remove)) # remove HGNC symbols selected before
+RNAseq %<>% filter(!(HGNC_Symbol %in% hgnc_to_remove)) # remove HGNC symbols selected before
 ```
 
 ```{r}
-dim(raw_counts_df)
+dim(RNAseq)
 ```
 
 We get the Ensembl IDs with multiple HGNC symbols:
 
 ```{r}
-repeated_hgnc = unique(raw_counts_df$HGNC_Symbol[duplicated(raw_counts_df$HGNC_Symbol)])
+repeated_hgnc = unique(RNAseq$HGNC_Symbol[duplicated(RNAseq$HGNC_Symbol)])
 length(repeated_hgnc)
-repeated_hgnc_df = (raw_counts_df[raw_counts_df$HGNC_Symbol %in% repeated_hgnc,][,c("Ensembl", "HGNC_Symbol")]) %>% arrange(HGNC_Symbol, Ensembl)
+repeated_hgnc_df = (RNAseq[RNAseq$HGNC_Symbol %in% repeated_hgnc,][,c("Ensembl", "HGNC_Symbol")]) %>% arrange(HGNC_Symbol, Ensembl)
 head(repeated_hgnc_df)
 ```
 
 We calculate the median for the HGNC genes with multiple Ensembl IDs:
 
 ```{r}
-raw_counts_df = subset(raw_counts_df, select=-Ensembl)
-repeated_hgnc_aggregated = aggregate(.~HGNC_Symbol, raw_counts_df[raw_counts_df$HGNC_Symbol %in% repeated_hgnc,], median)
-raw_counts_df = rbind(raw_counts_df[!(raw_counts_df$HGNC_Symbol %in% repeated_hgnc),], repeated_hgnc_aggregated)
-dim(raw_counts_df)
+RNAseq = subset(RNAseq, select=-Ensembl)
+repeated_hgnc_aggregated = aggregate(.~HGNC_Symbol, RNAseq[RNAseq$HGNC_Symbol %in% repeated_hgnc,], median)
+RNAseq = rbind(RNAseq[!(RNAseq$HGNC_Symbol %in% repeated_hgnc),], repeated_hgnc_aggregated) %>% rename("Gene"="HGNC_Symbol")
+dim(RNAseq)
+RNAseq[1:5,1:5]
 ```
+
+
+#### Filter genes without classification
+
+We keep genes that have a classification in HGNC:
+
+```{r}
+gene_annotations_dir = '/work/ccnr/j.aguirreplans/data/gene_annotations/data/out'
+gene_category_file = paste(gene_annotations_dir, 'hgnc_category_set_2022-01-01.txt', sep='/')
+gene_category_df = fread(gene_category_file)
+gene_category_df$HGNC_Symbol = toupper(gene_category_df$HGNC_Symbol)
+head(gene_category_df)
+```
+
+We use this dataframe to map gene category, and we only keep genes that are in this dataframe:
+
+```{r}
+dim(RNAseq)
+genes_with_category = RNAseq$Gene[RNAseq$Gene %in% gene_category_df$HGNC_Symbol]
+genes_dataset_df = gene_category_df %>% filter(HGNC_Symbol %in% genes_with_category)
+RNAseq %<>% filter(Gene %in% genes_with_category)
+dim(RNAseq)
+```
+
+The dataset contains `r as.integer(ncol(RNAseq)-1)` case IDs and `r nrow(RNAseq)` genes with category.
+
+It contains the following number of genes for each category:
+
+```{r}
+table(genes_dataset_df$HGNC_category)
+round(prop.table(table(genes_dataset_df$HGNC_category))*100,2)
+```
+
+Save the results: 
 
 ```{r}
 raw_counts_processed_file = paste(output_dir, "/GSE193677_MSCCR_Biopsy_counts_processed.txt", sep="")
-raw_counts_df %>% fwrite(raw_counts_processed_file, sep='\t')
-raw_counts_df = fread(raw_counts_processed_file)
-raw_counts_df[1:5,1:5]
+RNAseq %>% fwrite(raw_counts_processed_file, sep='\t')
+RNAseq = fread(raw_counts_processed_file)
+RNAseq[1:5,1:5]
 ```
-
 
