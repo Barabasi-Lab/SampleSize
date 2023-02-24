@@ -322,7 +322,8 @@ nodes_expanded_df %>% fwrite(nodes_expanded_file)
 
 # Write background genes of the co-expression network
 codina_coexpr_background_nodes_file = paste(tables_nodes_dir, "/codina_coexpr_background_nodes.txt", sep="")
-data.frame(Node=unique(nodes_expanded_df$Node)) %>% fwrite(codina_coexpr_background_nodes_file)
+codina_coexpr_background_nodes = unique(nodes_expanded_df$Node)
+data.frame(Node=codina_coexpr_background_nodes) %>% fwrite(codina_coexpr_background_nodes_file)
 
 
 #---- Count categories for each gene and size ----#
@@ -821,6 +822,11 @@ if ((is.na(ppi_distances_file)) | (is.null(ppi_distances_file))){
 } else {
   ppi_distances = fread(ppi_distances_file) %>% as.data.frame()
 }
+
+# Write background genes of the co-expression network
+codina_ppi_background_nodes_file = paste(tables_nodes_dir, "/codina_ppi_background_nodes.txt", sep="")
+codina_ppi_background_nodes = codina_coexpr_background_nodes[codina_coexpr_background_nodes %in% V(ppi_net)$name]
+data.frame(Node=codina_ppi_background_nodes) %>% fwrite(codina_ppi_background_nodes_file)
 
 # Read drug targets and filter by targets in the PPI network
 drug_targets_df = fread(drug_targets_file) %>% 

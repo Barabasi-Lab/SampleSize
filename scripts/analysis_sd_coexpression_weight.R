@@ -104,19 +104,29 @@ networks_df %>% fwrite(output_sd_table_file)
 # }
 
 # Plot size vs SD distribution
+
+# Define palette using the scale_fill_brewer Oranges palette and selecting manually the colors using RColorBrewer
+# https://stackoverflow.com/questions/29466239/how-to-set-the-color-range-of-scale-colour-brewer-in-ggplot2-palette-selecte 
+my_orange = RColorBrewer::brewer.pal(n = (length(unique(networks_df$ss)) + 2), "Oranges")[3:(length(unique(networks_df$ss))+2)] # I get 8 and exclude the 2 first colors, which are more light 
+
 networks_df %>%
   mutate(ss = factor(ss, levels = as.character(sort(as.numeric(unique(networks_df$ss)))))) %>%
   ggplot(aes(x = ss, y = sd_correlation)) +
-  geom_half_violin(side = "r", color="orangered4", fill="orangered1") +
+  #geom_half_violin(side = "r", color="orangered4", fill="orangered1") +
+  geom_half_violin(aes(fill=ss), color="transparent", side = "r") +
+  #scale_fill_brewer(palette="Oranges") +
+  scale_fill_manual(values=my_orange) +
   theme_linedraw() +
   theme(aspect.ratio=1, 
         plot.title =  element_text(size = 15, face="bold"), 
         axis.title = element_text(size = 14, face="bold"), 
         axis.text = element_text(size = 13), 
-        legend.text = element_text(size = 13), 
-        legend.title=element_text(size=14, face="bold")) +
-  labs (x = "Number of samples",
-        y = "Co-expression weight SD",
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        text = element_text(family = "Helvetica"),
+        legend.position="none") +
+  labs (x = "Num. samples",
+        y = "Pearson correlation SD",
         color = "",
         fill = "")
 ggsave(

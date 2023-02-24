@@ -46,7 +46,25 @@ disease_name_in_associations_file = "breast.neoplasms"
 ppi_file = "/work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv"
 plots_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/plots_differential_coexpression/TCGA-BRCA_female___TCGA-Breast_female"
 tables_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/tables_differential_coexpression/TCGA-BRCA_female___TCGA-Breast_female"
-name2color = data.frame(name=c("common", "disease-gene", "disease-specific", "normal-specific", "undefined", "different", "all", "common / common", "common / disease-specific", "common / normal-specific", "common / undefined", "disease-specific / disease-specific", "disease-specific / common", "disease-specific / normal-specific", "disease-specific / undefined", "normal-specific / normal-specific", "normal-specific / common", "normal-specific / disease-specific", "normal-specific / undefined", "undefined / undefined", "undefined / common", "undefined / disease-specific", "undefined / normal-specific", "common (constant)", "common (change)", "disease-specific (constant)", "disease-specific (change)", "normal-specific (constant)", "normal-specific (change)", "undefined (constant)", "undefined (change)"), color.codes=c("#619CFF", "#cc68f7", "#F8766D", "#00BA38", "#808080", "#C77CFF", "#CD9600", "#619CFF", "#7b61ff", "#61eaff", "#778eb5", "#F8766D", "#f86da7", "#f8b06d", "#8f5f5b", "#00BA38", "#41f0a7", "#a8f75e", "#4d855e", "#808080", "#778eb5", "#8f5f5b", "#4d855e", "#619CFF", "#b5d1ff", "#F8766D", "#ffcbc7", "#00BA38", "#a3d1b1", "#808080", "#c2c2c2"))
+#name2color = data.frame(name=c("common", "disease-gene", "disease-specific", "normal-specific", "undefined", "different", "all", "common / common", "common / disease-specific", "common / normal-specific", "common / undefined", "disease-specific / disease-specific", "disease-specific / common", "disease-specific / normal-specific", "disease-specific / undefined", "normal-specific / normal-specific", "normal-specific / common", "normal-specific / disease-specific", "normal-specific / undefined", "undefined / undefined", "undefined / common", "undefined / disease-specific", "undefined / normal-specific", "common (constant)", "common (change)", "disease-specific (constant)", "disease-specific (change)", "normal-specific (constant)", "normal-specific (change)", "undefined (constant)", "undefined (change)"), color.codes=c("#619CFF", "#cc68f7", "#F8766D", "#00BA38", "#808080", "#C77CFF", "#CD9600", "#619CFF", "#7b61ff", "#61eaff", "#778eb5", "#F8766D", "#f86da7", "#f8b06d", "#8f5f5b", "#00BA38", "#41f0a7", "#a8f75e", "#4d855e", "#808080", "#778eb5", "#8f5f5b", "#4d855e", "#619CFF", "#b5d1ff", "#F8766D", "#ffcbc7", "#00BA38", "#a3d1b1", "#808080", "#c2c2c2"))
+name2color <- c(
+  "common" = "#619CFF",
+  "disease-gene" = "#cc68f7",
+  "disease-specific" = "#F8766D",
+  "normal-specific" = "#00BA38",
+  "undefined" = "#808080",
+  "different" = "#C77CFF",
+  "all" = "#CD9600",
+  "common (constant)" = "#619CFF",
+  "common (change)" = "#b5d1ff",
+  "disease-specific (constant)" = "#F8766D",
+  "disease-specific (change)" = "#ffcbc7",
+  "normal-specific (constant)" = "#00BA38",
+  "normal-specific (change)" = "#a3d1b1",
+  "undefined (constant)" = "#808080",
+  "undefined (change)" = "#c2c2c2"
+  )
+name2color_df = name2color %>% as.data.frame() %>% dplyr::rename("rgb_col"=".") %>% tibble::rownames_to_column("name")
 ```
 
 
@@ -59,12 +77,12 @@ counts_categories_file = paste(tables_dir, paste("codina_", name_D, "_", name_N,
 counts_categories_df = fread(counts_categories_file)
 ```
 
-Make plot:
+Make plot (number of disease genes vs. number of samples grouped by biomarker category):
 
 ```{r}
 # Get colors
 counts_categories_col_df = counts_categories_df %>%
-  left_join(name2color, by=c("Phi_name"="name"))
+  left_join(name2color_df, by=c("Phi_name"="name"))
 reps = sort(unique(paste(counts_categories_df$rep_D, counts_categories_df$rep_N, sep="-")))
 
 if(!(length(reps) == 1 && reps == "consensus-consensus")){
@@ -74,10 +92,10 @@ if(!(length(reps) == 1 && reps == "consensus-consensus")){
     ggplot(aes(x = size, y = mean_disease, fill = Phi_name)) + 
     geom_line(aes(col = Phi_name)) +
     geom_ribbon(aes(ymin=min_disease, ymax=max_disease), alpha=0.2) +
-    xlab("Number of samples") +
+    xlab("Num. samples") +
     ylab("Number of disease genes") +
-    scale_fill_manual(values=setNames(counts_categories_col_df$color.codes, counts_categories_col_df$Phi_name)) +
-    scale_color_manual(values=setNames(counts_categories_col_df$color.codes, counts_categories_col_df$Phi_name)) +
+    scale_fill_manual(values=setNames(counts_categories_col_df$rgb_col, counts_categories_col_df$Phi_name)) +
+    scale_color_manual(values=setNames(counts_categories_col_df$rgb_col, counts_categories_col_df$Phi_name)) +
     guides(col=guide_legend(title="Gene category"), fill=guide_legend(title="Gene category")) +
     theme_linedraw() +
     theme(aspect.ratio=1,
@@ -95,9 +113,9 @@ if(!(length(reps) == 1 && reps == "consensus-consensus")){
     summarize(mean_disease = mean(n_disease)) %>%
     ggplot(aes(x = size, y = mean_disease)) + 
     geom_line(aes(col = Phi_name)) +
-    xlab("Number of samples") +
-    ylab("Number of disease genes") +
-    scale_color_manual(values=setNames(counts_categories_col_df$color.codes, counts_categories_col_df$Phi_name)) +
+    xlab("Num. samples") +
+    ylab("Num. disease genes") +
+    scale_color_manual(values=setNames(counts_categories_col_df$rgb_col, counts_categories_col_df$Phi_name)) +
     guides(col=guide_legend(title="Gene category"), fill=guide_legend(title="Gene category")) +
     theme_linedraw() +
     theme(aspect.ratio=1,
@@ -160,7 +178,7 @@ print(plot_counts_categories)
 #   scale_color_manual(values=setNames(nodes_filtered_col_df$color.codes, nodes_filtered_col_df$Phi_name)) +
 #   geom_flow(stat = "alluvium", lode.guidance = "frontback") +
 #   geom_stratum() +
-#   xlab("Number of samples") +
+#   xlab("Num. samples") +
 #   ylab("Number of disease genes") +
 #   guides(fill=guide_legend(title="Gene category")) +
 #   theme_linedraw() +
@@ -182,7 +200,7 @@ change_of_category_file = paste(tables_dir, paste("codina_", name_D, "_", name_N
 change_of_category_df = fread(change_of_category_file)
 ```
 
-Make plot:
+Make plot (change of disease genes across sample size grouped by biomarker category):
 
 ```{r}
 sizes_list = sort(unique(change_of_category_df$size.prev))
@@ -210,7 +228,7 @@ change_of_category_size100_df = change_of_category_df %>%
   mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple == "disease-specific", "disease-specific (constant)")) %>% 
   mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple == "normal-specific", "normal-specific (constant)")) %>% 
   mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple == "undefined", "undefined (constant)")) %>% 
-  left_join(name2color, by=c("Phi_name.prev"="name"))
+  left_join(name2color_df, by=c("Phi_name.prev"="name"))
 
 # Count transitions / merge with colors / merge with last column
 change_of_category_col_df = change_of_category_df %>%
@@ -223,7 +241,7 @@ change_of_category_col_df = change_of_category_df %>%
   mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple %in% c("normal-specific / common", "normal-specific / disease-specific", "normal-specific / undefined"), "normal-specific (change)")) %>% 
   mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple == "undefined / undefined", "undefined (constant)")) %>% 
   mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple %in% c("undefined / disease-specific", "undefined / normal-specific", "undefined / common"), "undefined (change)")) %>% 
-  left_join(name2color, by=c("transition_name_simple"="name")) %>%
+  left_join(name2color_df, by=c("transition_name_simple"="name")) %>%
   full_join(change_of_category_size100_df)
 
 # Define factors
@@ -237,11 +255,12 @@ plot_flow = change_of_category_col_df %>%
   ggplot(aes(x = size.prev, stratum = transition_name_simple, alluvium = Node, 
              fill = transition_name_simple, label = transition_name_simple)) +
   geom_flow(stat = "alluvium", lode.guidance = "frontback") +
-  geom_stratum() +
-  scale_fill_manual(values=setNames(change_of_category_col_df$color.codes, change_of_category_col_df$transition_name_simple)) + # If I want to plot only specific elements in the legend, use the argument breaks with a list of the elements that I want to show
-  scale_color_manual(values=setNames(change_of_category_col_df$color.codes, change_of_category_col_df$transition_name_simple)) +
-  xlab("Number of samples") +
-  ylab("Number of disease genes") +
+  #geom_stratum() +
+  geom_stratum(aes(col=transition_name_simple), size=0) +
+  scale_fill_manual(name="Gene category", values=setNames(change_of_category_col_df$rgb_col, change_of_category_col_df$transition_name_simple)) + # If I want to plot only specific elements in the legend, use the argument breaks with a list of the elements that I want to show
+  scale_color_manual(name="Gene category", values=setNames(change_of_category_col_df$rgb_col, change_of_category_col_df$transition_name_simple)) +
+  xlab("Num. samples") +
+  ylab("Num. disease genes") +
   guides(fill=guide_legend(title="Gene category")) +
   theme_linedraw() +
   theme(aspect.ratio=1,
@@ -297,19 +316,19 @@ categories_stable_change_genes_df = change_of_category_df %>%
 # Merge two tables
 stable_genes_df = rbind(total_stable_change_genes_df, categories_stable_change_genes_df) %>%
   filter(transition_type == "stable") %>%
-  left_join(name2color, by=c("Phi_name.curr"="name"))
+  left_join(name2color_df, by=c("Phi_name.curr"="name"))
 ```
 
-Make plot:
+Make plot (Fraction of stable disease genes vs. number of samples grouped by biomarker category):
 
 ```{r}
 plot_stable_genes = stable_genes_df %>%
   ggplot(aes(x = size.curr, y = frac_genes, col = Phi_name.curr)) + 
   geom_line(aes(size = Phi_name.curr)) +
-  xlab("Number of samples") +
-  ylab("Fraction of stable genes") +
+  xlab("Num. samples") +
+  ylab("Fraction of stable disease genes") +
   scale_size_manual(values = c("all" = 1, "common" = 0.5, "disease-specific" = 0.5, "normal-specific" = 0.5, "undefined" = 0.5, "different" = 0.5)) +
-  scale_color_manual(values=setNames(stable_genes_df$color.codes, stable_genes_df$Phi_name.curr)) +
+  scale_color_manual(values=setNames(stable_genes_df$rgb_col, stable_genes_df$Phi_name.curr)) +
   guides(col=guide_legend(title="Gene category"), size="none") +
   theme_linedraw() +
   theme(aspect.ratio=1,
@@ -352,9 +371,9 @@ num_nodes_lcc_plot = codina_ppi_analysis_df %>%
   filter(!(Phi_name == "disease-gene")) %>%
   ggplot(aes(x = size, y = num_nodes_lcc)) + 
   geom_line(aes(col = Phi_name)) +
-  xlab("Number of samples") +
+  xlab("Num. samples") +
   ylab("Number of LCC nodes") +
-  scale_color_manual(values=as.vector(name2color[name2color$name %in% levels(factor(unique((codina_ppi_analysis_df %>% filter(!(Phi_name == "disease-gene")))$Phi_name))),]$color.codes)) +
+  scale_color_manual(values=as.vector(name2color_df[name2color_df$name %in% levels(factor(unique((codina_ppi_analysis_df %>% filter(!(Phi_name == "disease-gene")))$Phi_name))),]$rgb_col)) +
   guides(col=guide_legend(title="Gene category"), size="none") +
   theme_linedraw() +
   theme(aspect.ratio=1,
@@ -445,7 +464,7 @@ for(type_genes_selected2 in c("coexpr", "lcc")){
       geom_line(aes(col = Phi_name)) +
       xlab("Num. samples") +
       ylab("Num. enriched GO terms") +
-      scale_color_manual(values=as.vector(name2color[name2color$name %in% levels(factor(unique((count_num_functions_df %>% filter(!(Phi_name == "disease-gene")))$Phi_name))),]$color.codes)) +
+      scale_color_manual(values=as.vector(name2color_df[name2color_df$name %in% levels(factor(unique((count_num_functions_df %>% filter(!(Phi_name == "disease-gene")))$Phi_name))),]$rgb_col)) +
       guides(col=guide_legend(title="Gene category"), size="none") +
       theme_linedraw() +
       theme(aspect.ratio=1,
@@ -591,18 +610,19 @@ wordcloudPlot(reducedTerms, min.freq=1, colors="black")
 Calculate the overlap between GO enriched functions from genes of different biomarker categories and disease-associated genes:
 
 ```{r}
-# # Get the number of total genes 
-# ppi_nodes_file = "/work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022_nodes.csv"
+# # Get the number of total genes
+# #ppi_nodes_file = "/work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022_nodes.csv" # 18217 nodes
+# ppi_nodes_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/tables_differential_coexpression/TCGA-BRCA_female___TCGA-Breast_female/nodes_by_type_and_category_and_size/codina_ppi_background_nodes.txt"
 # ppi_nodes = unique(fread(ppi_nodes_file)[,1]) %>% pull()
-# length(unique(ppi_nodes)) # 18217
+# length(unique(ppi_nodes)) # 15164
 # coexpr_nodes_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/tables_differential_coexpression/TCGA-BRCA_female___TCGA-Breast_female/nodes_by_type_and_category_and_size/codina_coexpr_background_nodes.txt"
 # coexpr_nodes = unique(fread(coexpr_nodes_file)[,1]) %>% pull()
 # length(unique(coexpr_nodes)) # 18693
 # 
 # # Get the number of total functions
-# geneID2GO <- topGO::annFUN.org("BP", 
+# geneID2GO <- topGO::annFUN.org("BP",
 #                         mapping = "org.Hs.eg.db",
-#                         ID = "symbol") %>% 
+#                         ID = "symbol") %>%
 #     topGO::inverseList()
 # 
 # ID2GO = list()
@@ -613,8 +633,8 @@ Calculate the overlap between GO enriched functions from genes of different biom
 # ID2GO %<>% bind_rows()
 # length(unique(ID2GO$GOs)) # 12417
 # length(unique(ID2GO$gene)) # 18800
-# length(unique((ID2GO %>% filter(gene %in% ppi_nodes))$GOs)) # 12305
-# length(unique((ID2GO %>% filter(gene %in% ppi_nodes))$gene)) # 16458
+# length(unique((ID2GO %>% filter(gene %in% ppi_nodes))$GOs)) # 11856
+# length(unique((ID2GO %>% filter(gene %in% ppi_nodes))$gene)) # 13927
 # length(unique((ID2GO %>% filter(gene %in% coexpr_nodes))$GOs)) # 11869
 # length(unique((ID2GO %>% filter(gene %in% coexpr_nodes))$gene)) # 14337
 ```
@@ -631,7 +651,7 @@ Calculate the overlap between GO enriched functions from genes of different biom
 # oddsratio, pvalue = fisher_exact(contigency, alternative="greater")
 
 # Define the number of genes in the background (PPI (lcc) / co-expression (coexpr)) 
-n_total_functions_list = list(lcc=12305, coexpr=11869)
+n_total_functions_list = list(lcc=11856, coexpr=11869)
 
 # Get functions enriched for disease-genes
 codina_go_enrichment_disease_genes_df = codina_go_enrichment_sig_df %>%
@@ -684,7 +704,7 @@ for(type_genes_selected2 in c("coexpr", "lcc")){
       filter((type_genes1 == "all") & (type_genes2 == type_genes_selected2)) %>%
       ggplot(aes(x = size, y = n_common)) + 
       geom_line(aes(col = Phi_name)) +
-      scale_color_manual(name = "Gene category", values=as.vector(name2color[name2color$name %in% levels(factor(unique(functional_overlap_df$Phi_name))),]$color.codes)) +
+      scale_color_manual(name = "Gene category", values=as.vector(name2color_df[name2color_df$name %in% levels(factor(unique(functional_overlap_df$Phi_name))),]$rgb_col)) +
       xlab("Num. samples") +
       ylab("Num. common functions") +
       theme_linedraw() +
@@ -713,7 +733,7 @@ for(type_genes_selected2 in c("coexpr", "lcc")){
     filter((type_genes1 == "all") & (type_genes2 == type_genes_selected2)) %>%
     ggplot(aes(x = size, y = -log10(p.value))) + 
       geom_line(aes(col = Phi_name)) +
-      scale_color_manual(name = "Gene category", values=as.vector(name2color[name2color$name %in% levels(factor(unique(functional_overlap_df$Phi_name))),]$color.codes)) +
+      scale_color_manual(name = "Gene category", values=as.vector(name2color_df[name2color_df$name %in% levels(factor(unique(functional_overlap_df$Phi_name))),]$rgb_col)) +
       geom_hline(aes(yintercept=as.numeric(-log10(0.05)), linetype = "P-value = 0.05"), linewidth=0.5, color="gray") +
       scale_linetype_manual(name = NULL, values = c("dashed")) +
       xlab("Num. samples") +
@@ -788,7 +808,7 @@ for (top_selected in top_list){
       geom_line(aes(col = Phi_name)) +
       xlab("Num. samples") +
       ylab(paste("Num. disease genes at top ", top_selected, sep="")) +
-      scale_color_manual(values=as.vector(name2color[name2color$name %in% levels(factor(unique(num_top_ranked_disease_genes$Phi_name))),]$color.codes)) +
+      scale_color_manual(values=as.vector(name2color_df[name2color_df$name %in% levels(factor(unique(num_top_ranked_disease_genes$Phi_name))),]$rgb_col)) +
       guides(col=guide_legend(title="Gene category"), size="none") +
       theme_linedraw() +
       theme(aspect.ratio=1,
@@ -865,7 +885,7 @@ for (top_selected in top_list){
     filter(top == top_selected) %>%
     ggplot(aes(x = size, y = n_common)) + 
     geom_line(aes(col = Phi_name)) +
-    scale_color_manual(name = "Gene category", values=as.vector(name2color[name2color$name %in% levels(factor(unique(genetic_overlap_df$Phi_name))),]$color.codes)) +
+    scale_color_manual(name = "Gene category", values=as.vector(name2color_df[name2color_df$name %in% levels(factor(unique(genetic_overlap_df$Phi_name))),]$rgb_col)) +
     xlab("Num. samples") +
     ylab("Num. common genes") +
     theme_linedraw() +
@@ -894,7 +914,7 @@ for (top_selected in top_list){
     filter(top == top_selected) %>%
     ggplot(aes(x = size, y = -log10(p.value))) + 
       geom_line(aes(col = Phi_name)) +
-      scale_color_manual(name = "Gene category", values=as.vector(name2color[name2color$name %in% levels(factor(unique(genetic_overlap_df$Phi_name))),]$color.codes)) +
+      scale_color_manual(name = "Gene category", values=as.vector(name2color_df[name2color_df$name %in% levels(factor(unique(genetic_overlap_df$Phi_name))),]$rgb_col)) +
       geom_hline(aes(yintercept=as.numeric(-log10(0.05)), linetype = "P-value = 0.05"), linewidth=0.5, color="gray") +
       scale_linetype_manual(name = NULL, values = c("dashed")) +
       xlab("Num. samples") +
@@ -961,7 +981,7 @@ nodes_to_follow_ranking_plot = ranking_nodes_df %>%
     geom_line(aes(group = Node, col = Phi_name)) +
     xlab("Num. samples") +
     ylab("Ranking") +
-    scale_color_manual(values=as.vector(name2color[name2color$name %in% levels(factor(unique((ranking_nodes_df %>% filter(Node %in% nodes_to_follow))$Phi_name))),]$color.codes)) +
+    scale_color_manual(values=as.vector(name2color_df[name2color_df$name %in% levels(factor(unique((ranking_nodes_df %>% filter(Node %in% nodes_to_follow))$Phi_name))),]$rgb_col)) +
     scale_y_continuous(trans = "reverse") +
     guides(col=guide_legend(title="Gene category"), size="none") +
     theme_linedraw() +

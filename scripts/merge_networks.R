@@ -53,7 +53,8 @@ max_rep = as.integer(opt$max_rep)
 #max_rep = 1
 #max_rep = 2
 #max_rep = 5
-selected_sizes = c(20, 100, 200, 300, 400, 500)
+selected_sizes = c(20, 40, 60, 80, 100, 120)
+#selected_sizes = c(20, 100, 200, 300, 400, 500)
 
 #### PARSE NETWORKS AND CREATE UNIQUE DATAFRAME ####
 
@@ -63,7 +64,7 @@ result_files_df = data.frame(matrix(ncol=3,nrow=0, dimnames=list(NULL, c("file_n
 for (result_file in result_files){
   file_split = strsplit(gsub(".net", "", result_file), split="_")[[1]]
   if(file_split[1] == method){
-    if(length(file_split) == 7){
+    if((length(file_split) == 7) | (length(file_split) == 8)){
       size = as.integer(file_split[length(file_split)-2])
       rep = as.integer(file_split[length(file_split)])
       result_files_df = rbind(result_files_df, data.frame(file_name=result_file, name=paste(size,rep,sep="."), size=size, rep=rep))

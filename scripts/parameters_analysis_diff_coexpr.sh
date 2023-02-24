@@ -10,7 +10,7 @@ do
 for cat in ${cats[@]};
 do
 sbatch --export=size=$size,type=$type,cat=$cat /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_go_enrichment.sh
-sbatch --export=size=$size,type=$type,cat=$cat /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_go_enrichment_coexpr.sh
+#sbatch --export=size=$size,type=$type,cat=$cat /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_go_enrichment_coexpr.sh
 #sbatch --export=size=$size,type=$type,cat=$cat /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_proximity_multiple_drugs.sh
 done
 done

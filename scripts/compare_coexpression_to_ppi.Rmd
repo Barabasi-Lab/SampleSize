@@ -37,7 +37,8 @@ dataset = "gtex"
 type_dataset = "Whole.Blood"
 sample_group_type = "tumor" # if dataset = "tcga"
 type_counts = "reads" # tpm, reads
-sizes_selected = c(20, 100, 200, 300)
+sizes_selected = c(20, 100, 200, 300, 400, 500)
+sizes_selected_comparison_plot = c(20, 100, 200, 300)
 threshold_selected = 0.05
 ```
 
@@ -425,6 +426,7 @@ boxplot_ppi_coexpression_by_distances = coexpression_pairs_filt %>%
   select(-ppi, -nci, -distances_nci, -random_not_ppi, -random_far_not_ppi, -random_far_not_nci) %>%
   filter(!(is.na(distances_ppi))) %>%
   pivot_longer(as.character(sizes_selected), names_to = "size", values_to = "correlation", names_transform = list(size = as.character), values_transform = list(correlation = as.numeric)) %>%
+  filter(size %in% sizes_selected_comparison_plot) %>%
   filter(!(is.na(correlation))) %>%
   mutate(across(c(distances_ppi), as.character)) %>%
   ggplot() +
@@ -471,6 +473,7 @@ violinplot_ppi_coexpression_by_distances = coexpression_pairs_filt %>%
   select(-ppi, -nci, -distances_nci, -random_not_ppi, -random_far_not_ppi, -random_far_not_nci) %>%
   filter(!(is.na(distances_ppi))) %>%
   pivot_longer(as.character(sizes_selected), names_to = "size", values_to = "correlation", names_transform = list(size = as.character), values_transform = list(correlation = as.numeric)) %>%
+  filter(size %in% sizes_selected_comparison_plot) %>%
   filter(!(is.na(correlation))) %>%
   #filter(abs(correlation) > 0 ) %>% 
   mutate(across(c(distances_ppi), as.character)) %>%
@@ -518,6 +521,7 @@ violinplot_ppi_coexpression_by_distances_nozero = coexpression_pairs_filt %>%
   select(-ppi, -nci, -distances_nci, -random_not_ppi, -random_far_not_ppi, -random_far_not_nci) %>%
   filter(!(is.na(distances_ppi))) %>%
   pivot_longer(as.character(sizes_selected), names_to = "size", values_to = "correlation", names_transform = list(size = as.character), values_transform = list(correlation = as.numeric)) %>%
+  filter(size %in% sizes_selected_comparison_plot) %>%
   filter(!(is.na(correlation))) %>%
   filter(abs(correlation) > 0 ) %>% 
   mutate(across(c(distances_ppi), as.character)) %>%
@@ -565,6 +569,7 @@ violinplot_ppi_coexpression_by_distances_nofilt = coexpression_pairs %>%
   select(-ppi, -nci, -distances_nci, -random_not_ppi, -random_far_not_ppi, -random_far_not_nci) %>%
   filter(!(is.na(distances_ppi))) %>%
   pivot_longer(as.character(sizes_selected), names_to = "size", values_to = "correlation", names_transform = list(size = as.character), values_transform = list(correlation = as.numeric)) %>%
+  filter(size %in% sizes_selected_comparison_plot) %>%
   filter(!(is.na(correlation))) %>%
   mutate(across(c(distances_ppi), as.character)) %>%
   ggplot() +
@@ -618,6 +623,7 @@ boxplot_ppi_coexpression_by_types = coexpression_pairs_filt %>%
   filter(category_bool == TRUE) %>%
   select(-category_bool) %>%
   pivot_longer(as.character(sizes_selected), names_to = "size", values_to = "correlation", names_transform = list(size = as.character), values_transform = list(correlation = as.numeric)) %>%
+  filter(size %in% sizes_selected_comparison_plot) %>%
   filter(!(is.na(correlation))) %>%
   #mutate(category = replace(category, category == "nci", "PPI+iNCI")) %>%
   mutate(category = replace(category, category == "ppi", "PPI")) %>%
@@ -672,6 +678,7 @@ violinplot_ppi_coexpression_by_types = coexpression_pairs_filt %>%
   filter(category_bool == TRUE) %>%
   select(-category_bool) %>%
   pivot_longer(as.character(sizes_selected), names_to = "size", values_to = "correlation", names_transform = list(size = as.character), values_transform = list(correlation = as.numeric)) %>%
+  filter(size %in% sizes_selected_comparison_plot) %>%
   filter(!(is.na(correlation))) %>%
   mutate(category = replace(category, category == "ppi", "PPI")) %>%
   mutate(category = replace(category, category == "random_far_not_ppi", "Distance > 4")) %>%
@@ -721,6 +728,7 @@ violinplot_ppi_coexpression_by_types_nozero = coexpression_pairs_filt %>%
   filter(category_bool == TRUE) %>%
   select(-category_bool) %>%
   pivot_longer(as.character(sizes_selected), names_to = "size", values_to = "correlation", names_transform = list(size = as.character), values_transform = list(correlation = as.numeric)) %>%
+  filter(size %in% sizes_selected_comparison_plot) %>%
   filter(!(is.na(correlation))) %>%
   filter(abs(correlation) > 0 ) %>% 
   mutate(category = replace(category, category == "ppi", "PPI")) %>%
@@ -771,6 +779,7 @@ violinplot_ppi_coexpression_by_types_nofilt = coexpression_pairs %>%
   filter(category_bool == TRUE) %>%
   select(-category_bool) %>%
   pivot_longer(as.character(sizes_selected), names_to = "size", values_to = "correlation", names_transform = list(size = as.character), values_transform = list(correlation = as.numeric)) %>%
+  filter(size %in% sizes_selected_comparison_plot) %>%
   filter(!(is.na(correlation))) %>%
   mutate(category = replace(category, category == "ppi", "PPI")) %>%
   mutate(category = replace(category, category == "random_far_not_ppi", "Distance > 4")) %>%
@@ -1008,6 +1017,10 @@ rm(ppi_coexpression_by_types_df)
 test_results_by_type_df = friedman_results_by_type_df %>% full_join(dunn_results_by_type_df, by=c("category")) %>% rename("comparison"="Comparison", "dunn.z"="Z", "dunn.p.unadj"="P.unadj", "dunn.p.adj"="P.adj")
 test_results_by_type_file = sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/ppi_coexpression_analysis_tests_across_sizes_by_pair_type_%s_%s.txt", dataset, type_dataset)
 test_results_by_type_df %>% fwrite(test_results_by_type_file)
+```
+
+```{r}
+test_results_by_type_df
 ```
 
 ### Calculate differences between groups of protein/gene pairs of the same sample size
@@ -1258,6 +1271,7 @@ performances = function(data, label){
   roc <- ROCR::performance(data,"tpr","fpr")
   roc = data.frame(x = as.numeric(roc@x.values[[1]]),
                    y = as.numeric(roc@y.values[[1]]),
+                   cutoff = as.numeric(roc@alpha.values[[1]]),
                    type = "ROC")
   
   # Calculate AUC
@@ -1268,6 +1282,7 @@ performances = function(data, label){
   prec_rec <- ROCR::performance(data, "prec", "rec")
   prec_rec = data.frame(x = as.numeric(prec_rec@x.values[[1]]),
                         y = as.numeric(prec_rec@y.values[[1]]),
+                        cutoff = as.numeric(prec_rec@alpha.values[[1]]),
                         type = "ROCPR")
 
   # Calculate AUCPR
@@ -1300,7 +1315,7 @@ ppi_vs_random_far_df = coexpression_pairs_filt %>%
   mutate(correlation=abs(correlation))
 
 sum_rocs_df = data.frame(matrix(ncol=length(c("size", "CI_l", "AUC", "CI_h", "base", "measure")),nrow=0, dimnames=list(NULL, c("size", "CI_l", "AUC", "CI_h", "base", "measure"))))
-perf_df = data.frame(matrix(ncol=length(c("size", "x", "y", "type", "base", "AUC", "AUCPR")),nrow=0, dimnames=list(NULL, c("size", "x", "y", "type", "base", "AUC", "AUCPR"))))
+perf_df = data.frame(matrix(ncol=length(c("size", "x", "y", "cutoff", "type", "base", "AUC", "AUCPR")),nrow=0, dimnames=list(NULL, c("size", "x", "y", "cutoff", "type", "base", "AUC", "AUCPR"))))
 for (size_selected in sort(as.numeric(unique(ppi_vs_random_far_df$size)))){
   # Filter correlations by size
   data_filtered_by_size = ppi_vs_random_far_df %>% filter(size == size_selected)
@@ -1367,14 +1382,15 @@ perf_plot = perf_sum %>%
   theme_linedraw() +
   facet_grid(vars(name))+ 
   theme(aspect.ratio=1,
-        legend.position = "bottom", 
-        text = element_text(size = 18),
-        axis.title  = element_text(face = "bold",
-                                   hjust = 0.5), 
-        axis.title.x.top = element_text(face = "bold", 
-                                        hjust = 0.5), 
-        strip.text = element_text(face = "bold", 
-                                  hjust = 0.5)) +
+        plot.title =  element_text(size = 15, face="bold"), 
+        axis.title = element_text(size = 14, face="bold", hjust = 0.5), 
+        axis.text = element_text(size = 13), 
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(size = 13), 
+        legend.title=element_text(size=14, face="bold"),
+        strip.text = element_text(face = "bold", hjust = 0.5),
+        text = element_text(family = "Helvetica")) +
   labs(y = NULL, #"AUC / AUCPR", 
        x = "Number of samples"
        )
@@ -1388,6 +1404,52 @@ ggsave(
   units = c("px")
 )
  perf_plot
+```
+```{r}
+perf_auc = perf_df %>%
+  select(size, AUC) %>%
+  unique()
+print(perf_auc)
+
+auc_plot = perf_auc %>% 
+  mutate(size = factor(size, 
+                       levels = sizes_selected, 
+                       labels = sizes_selected)) %>% 
+  ggplot() +
+  aes(x = size, 
+      #fill = base, 
+      #colour = base, 
+      weight = AUC) +
+  geom_bar(col="#DBA9CA",
+         fill="#DBA9CA") +
+  #scale_fill_manual(values = colors_defined) +
+  #scale_color_manual(values = colors_defined) +
+  coord_cartesian(ylim=c(0.5,NA)) +
+  theme_linedraw() +
+  #facet_grid(vars(name))+ 
+  theme(aspect.ratio=1,
+        plot.title =  element_text(size = 15, face="bold"), 
+        axis.title = element_text(size = 14, face="bold"), 
+        axis.text = element_text(size = 13), 
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(size = 13), 
+        legend.title=element_text(size=14, face="bold"),
+        text = element_text(family = "Helvetica")) +
+  labs(y = "AUROC",
+       x = "Number of samples"
+       )
+
+auc_plot_file =  sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/ppi_coexpression_perf_AUC_pval_%s_%s_%s.png", as.character(threshold_selected), dataset, type_dataset)
+ggsave(
+  auc_plot_file,
+  plot = auc_plot,
+  dpi = 1200,
+  #width = 9300,
+  height = 6000,
+  units = c("px")
+)
+ auc_plot
 ```
 
 #### Results keeping the value of all the links
@@ -1406,7 +1468,7 @@ ppi_vs_random_far_df = coexpression_pairs %>%
   mutate(correlation=abs(correlation))
 
 sum_rocs_df = data.frame(matrix(ncol=length(c("size", "CI_l", "AUC", "CI_h", "base", "measure")),nrow=0, dimnames=list(NULL, c("size", "CI_l", "AUC", "CI_h", "base", "measure"))))
-perf_df = data.frame(matrix(ncol=length(c("size", "x", "y", "type", "base", "AUC", "AUCPR")),nrow=0, dimnames=list(NULL, c("size", "x", "y", "type", "base", "AUC", "AUCPR"))))
+perf_df = data.frame(matrix(ncol=length(c("size", "x", "y", "cutoff", "type", "base", "AUC", "AUCPR")),nrow=0, dimnames=list(NULL, c("size", "x", "y", "cutoff", "type", "base", "AUC", "AUCPR"))))
 for (size_selected in sort(as.numeric(unique(ppi_vs_random_far_df$size)))){
   # Filter correlations by size
   data_filtered_by_size = ppi_vs_random_far_df %>% filter(size == size_selected)
@@ -1448,7 +1510,7 @@ sum_rocs_df %>% select(size, AUC)
 perf_df %>% select("size", "AUC", "AUCPR") %>% unique()
 ```
 
-Plot the AUC:
+Plot the AUC and AUCPR barplot:
 
 ```{r}
 perf_sum = perf_df %>%
@@ -1473,14 +1535,15 @@ perf_plot = perf_sum %>%
   theme_linedraw() +
   facet_grid(vars(name))+ 
   theme(aspect.ratio=1,
-        legend.position = "bottom", 
-        text = element_text(size = 18),
-        axis.title  = element_text(face = "bold",
-                                   hjust = 0.5), 
-        axis.title.x.top = element_text(face = "bold", 
-                                        hjust = 0.5), 
-        strip.text = element_text(face = "bold", 
-                                  hjust = 0.5)) +
+        plot.title =  element_text(size = 15, face="bold"), 
+        axis.title = element_text(size = 14, face="bold", hjust = 0.5), 
+        axis.text = element_text(size = 13), 
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(size = 13), 
+        legend.title=element_text(size=14, face="bold"),
+        strip.text = element_text(face = "bold", hjust = 0.5),
+        text = element_text(family = "Helvetica")) +
   labs(y = NULL, #"AUC / AUCPR", 
        x = "Number of samples"
        )
@@ -1495,3 +1558,277 @@ ggsave(
 )
  perf_plot
 ```
+
+Plot the AUC barplot:
+
+```{r}
+perf_auc = perf_df %>%
+  select(size, AUC) %>%
+  unique()
+print(perf_auc)
+
+auc_plot = perf_auc %>% 
+  mutate(size = factor(size, 
+                       levels = sizes_selected, 
+                       labels = sizes_selected)) %>% 
+  ggplot() +
+  aes(x = size, 
+      #fill = base, 
+      #colour = base, 
+      weight = AUC) +
+  geom_bar(col="#DBA9CA",
+         fill="#DBA9CA") +
+  #scale_fill_manual(values = colors_defined) +
+  #scale_color_manual(values = colors_defined) +
+  coord_cartesian(ylim=c(0.5,NA)) +
+  theme_linedraw() +
+  #facet_grid(vars(name))+ 
+  theme(aspect.ratio=1,
+        plot.title =  element_text(size = 15, face="bold"), 
+        axis.title = element_text(size = 14, face="bold"), 
+        axis.text = element_text(size = 13), 
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(size = 13), 
+        legend.title=element_text(size=14, face="bold"),
+        text = element_text(family = "Helvetica")) +
+  labs(y = "AUROC",
+       x = "Number of samples"
+       )
+
+auc_plot_file =  sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/ppi_coexpression_perf_AUC_%s_%s.png", dataset, type_dataset)
+ggsave(
+  auc_plot_file,
+  plot = auc_plot,
+  dpi = 1200,
+  #width = 9300,
+  height = 6000,
+  units = c("px")
+)
+ auc_plot
+```
+
+Plot the ROC curve:
+
+```{r}
+my_orange = RColorBrewer::brewer.pal(n = (length(unique(perf_df$size)) + 2), "Oranges")[3:(length(unique(perf_df$size))+2)] # I get 8 and exclude the 2 first colors, which are more light 
+roc_curve_plot = perf_df %>% 
+  filter(type == "ROC") %>% 
+  mutate(size = factor(size, levels = as.character(sort(as.numeric(unique(perf_df$size)))))) %>%
+  ggplot(aes(x=x, y=y)) +
+  geom_line(aes(col=size)) +
+  scale_color_manual(values=my_orange) +
+  theme_linedraw() +
+  theme(aspect.ratio=1,
+        plot.title =  element_text(size = 15, face="bold"), 
+        axis.title = element_text(size = 14, face="bold"), 
+        axis.text = element_text(size = 13),
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(size = 13), 
+        legend.title=element_text(size=14, face="bold"),
+        text = element_text(family = "Helvetica")) +
+  labs (x = "FPR",
+        y = "TPR",
+        color = "Num. samples")
+
+roc_curve_plot_file =  sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/ppi_coexpression_perf_ROC_%s_%s.png", dataset, type_dataset)
+ggsave(
+  roc_curve_plot_file,
+  plot = roc_curve_plot,
+  dpi = 1200,
+  #width = 9300,
+  height = 6000,
+  units = c("px")
+)
+roc_curve_plot
+```
+
+Plot the ROCPR curve:
+
+```{r}
+my_orange = RColorBrewer::brewer.pal(n = (length(unique(perf_df$size)) + 2), "Oranges")[3:(length(unique(perf_df$size))+2)] # I get 8 and exclude the 2 first colors, which are more light 
+rocpr_curve_plot = perf_df %>% 
+  filter(type == "ROCPR") %>% 
+  mutate(size = factor(size, levels = as.character(sort(as.numeric(unique(perf_df$size)))))) %>%
+  ggplot(aes(x=x, y=y)) +
+  geom_line(aes(col=size)) +
+  scale_color_manual(values=my_orange) +
+  theme_linedraw() +
+  theme(aspect.ratio=1,
+        plot.title =  element_text(size = 15, face="bold"), 
+        axis.title = element_text(size = 14, face="bold"), 
+        axis.text = element_text(size = 13),
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(size = 13), 
+        legend.title=element_text(size=14, face="bold"),
+        text = element_text(family = "Helvetica")) +
+  labs (x = "Recall",
+        y = "Precision",
+        color = "Num. samples")
+
+rocpr_curve_plot_file =  sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/ppi_coexpression_perf_ROCPR_%s_%s.png", dataset, type_dataset)
+ggsave(
+  rocpr_curve_plot_file,
+  plot = rocpr_curve_plot,
+  dpi = 1200,
+  #width = 9300,
+  height = 6000,
+  units = c("px")
+)
+rocpr_curve_plot
+```
+
+Plot the Specificity vs. Sensitivity curve:
+
+```{r}
+my_orange = RColorBrewer::brewer.pal(n = (length(unique(perf_df$size)) + 2), "Oranges")[3:(length(unique(perf_df$size))+2)] # I get 8 and exclude the 2 first colors, which are more light 
+sensspeccurve_curve_plot = perf_df %>% 
+  filter(type == "ROC") %>% 
+  mutate(size = factor(size, levels = as.character(sort(as.numeric(unique(perf_df$size)))))) %>%
+  ggplot(aes(x=(1-x), y=y)) +
+  geom_line(aes(col=size)) +
+  scale_color_manual(values=my_orange) +
+  theme_linedraw() +
+  theme(aspect.ratio=1,
+        plot.title =  element_text(size = 15, face="bold"), 
+        axis.title = element_text(size = 14, face="bold"), 
+        axis.text = element_text(size = 13),
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(size = 13), 
+        legend.title=element_text(size=14, face="bold"),
+        text = element_text(family = "Helvetica")) +
+  labs (x = "Specificity",
+        y = "Sensitivity",
+        color = "Num. samples")
+
+sensspeccurve_curve_plot_file =  sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/ppi_coexpression_perf_sensspeccurve_%s_%s.png", dataset, type_dataset)
+ggsave(
+  sensspeccurve_curve_plot_file,
+  plot = sensspeccurve_curve_plot,
+  dpi = 1200,
+  #width = 9300,
+  height = 6000,
+  units = c("px")
+)
+sensspeccurve_curve_plot
+```
+
+Plot the balanced accuracy vs. cut-off:
+
+```{r}
+metric2name = list(baccuracy="Balanced Accuracy", TPR="Sensitivity", TNR="Specificity")
+
+perf_vs_cutoff_df = perf_df %>%
+  filter(type == "ROC") %>%
+  select(-type, -base) %>%
+  rename(c(FPR = x, TPR = y)) %>%
+  mutate(cutoff = replace(cutoff, cutoff == Inf, 1)) %>%
+  mutate(TNR = 1 - FPR) %>%
+  mutate(baccuracy = (TPR + TNR) / 2) %>%
+  mutate(size = factor(size, levels = as.character(sort(as.numeric(unique(perf_df$size)))))) %>% 
+  pivot_longer(!c(size, cutoff), names_to = "metric", values_to = "result")
+
+for(metric_selected in c("baccuracy", "TPR", "TNR")){
+  perf_vs_cutoff_plot = perf_vs_cutoff_df %>%
+    filter(metric == metric_selected) %>%
+    ggplot(aes(x=cutoff, y=result)) +
+    geom_line(aes(col=size)) +
+    scale_color_manual(values=my_orange) +
+    theme_linedraw() +
+    theme(aspect.ratio=1,
+          plot.title =  element_text(size = 15, face="bold"), 
+          axis.title = element_text(size = 14, face="bold"), 
+          axis.text = element_text(size = 13),
+          panel.grid.major=element_blank(), 
+          panel.grid.minor = element_blank(),
+          legend.text = element_text(size = 13), 
+          legend.title=element_text(size=14, face="bold"),
+          text = element_text(family = "Helvetica")) +
+    labs (x = "Cut-off",
+          y = metric2name[[metric_selected]],
+          color = "Num. samples")
+  perf_vs_cutoff_plot_file =  sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/ppi_coexpression_perf_%s_vs_cutoff_%s_%s.png", metric_selected, dataset, type_dataset)
+  ggsave(
+    perf_vs_cutoff_plot_file,
+    plot = perf_vs_cutoff_plot,
+    dpi = 1200,
+    #width = 9300,
+    height = 6000,
+    units = c("px")
+  )
+  print(perf_vs_cutoff_plot)
+}
+```
+
+Calculate optimal threshold based on Sensitivity and Specificity:
+
+```{r}
+cutoff_df = data.frame(matrix(ncol=length(c("size", "cutoff")),nrow=0, dimnames=list(NULL, c("size", "cutoff"))))
+for(size_selected in unique(ppi_vs_random_far_df$size)){
+  ppi_vs_random_far_size_df = ppi_vs_random_far_df %>% filter(size == size_selected)
+  cp <- cutpointr::cutpointr(ppi_vs_random_far_size_df, correlation, category, 
+                  method = cutpointr::maximize_metric, metric = cutpointr::sum_sens_spec)
+  cutoff_df = rbind(cutoff_df, data.frame(size=size_selected, cutoff=cp$optimal_cutpoint))
+  #summary(cp)
+  #plot(cp)
+}
+cutoff_df
+```
+
+```{r}
+perf_by_selected_cutoff_df = data.frame(matrix(ncol=length(c("size", "metric", "result", "cutoff")),nrow=0, dimnames=list(NULL, c("size", "metric", "result", "cutoff"))))
+cutoffs = c(0.40, 0.50)
+for(cutoff_selected in cutoffs){
+  perf_by_cutoff_df = ppi_vs_random_far_df %>%
+    mutate(prediction = if_else(correlation >= cutoff_selected, "ppi", "random_far_not_ppi")) %>%
+    mutate(result = if_else(((category == "ppi") & (prediction == "ppi")), "TP", if_else(((category == "random_far_not_ppi") & (prediction == "random_far_not_ppi")), "TN", ifelse(((category == "ppi") & (prediction == "random_far_not_ppi")), "FP", "FN"))))
+  perf_sum_by_cutoff_df = perf_by_cutoff_df %>%
+    group_by(size, result) %>%
+    summarize(n_result = n()) %>%
+    ungroup() %>% 
+    pivot_wider(names_from = result, values_from = n_result) %>%
+    as.data.frame()
+  perf_sum_by_cutoff_df$TPR = perf_sum_by_cutoff_df$TP / (perf_sum_by_cutoff_df$TP + perf_sum_by_cutoff_df$FN) # TPR = Sensitivity: Proportion of predicted positives identified correctly
+  perf_sum_by_cutoff_df$TNR = perf_sum_by_cutoff_df$TN / (perf_sum_by_cutoff_df$TN + perf_sum_by_cutoff_df$FP) # TNR = Specificity: Proportion of predicted negatives identified correctly
+  perf_sum_by_cutoff_df$FPR = perf_sum_by_cutoff_df$FP / (perf_sum_by_cutoff_df$TN + perf_sum_by_cutoff_df$FP)
+  perf_sum_by_cutoff_df$baccuracy = (perf_sum_by_cutoff_df$TPR + perf_sum_by_cutoff_df$TNR) / 2 # Accuracy: Proportion of predictions (positives or negatives) that the model got correctly
+  perf_sum_by_cutoff_df$precision = perf_sum_by_cutoff_df$TP / (perf_sum_by_cutoff_df$TP + perf_sum_by_cutoff_df$FP) # Precision: Proportion of positives (predicted or not) identified correctly
+  perf_sum_by_cutoff_df = perf_sum_by_cutoff_df %>% pivot_longer(-size, names_to = "metric", values_to = "result")
+  perf_by_selected_cutoff_df = rbind(perf_by_selected_cutoff_df, cbind(perf_sum_by_cutoff_df, data.frame(cutoff=cutoff_selected)))
+  
+  perf_sum_by_cutoff_plot = perf_sum_by_cutoff_df %>%
+    filter(metric %in% c("TPR", "TNR", "baccuracy", "precision")) %>%
+    ggplot(aes(x=size, y=result)) +
+    geom_line(aes(col=metric)) +
+    scale_x_continuous(breaks = unique(perf_sum_by_cutoff_df$size)) +
+    theme_linedraw() +
+    theme(aspect.ratio=1,
+          plot.title =  element_text(size = 15, face="bold"), 
+          axis.title = element_text(size = 14, face="bold"), 
+          axis.text = element_text(size = 13),
+          panel.grid.major=element_blank(), 
+          panel.grid.minor = element_blank(),
+          legend.text = element_text(size = 13), 
+          legend.title=element_text(size=14, face="bold"),
+          text = element_text(family = "Helvetica")) +
+    labs (x = "Num. samples",
+          y = "Metric value",
+          color = "Metric")
+  perf_sum_by_cutoff_plot_file =  sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/ppi_coexpression_perf_by_cutoff_%s_%s_%s.png", cutoff_selected, dataset, type_dataset)
+  ggsave(
+    perf_sum_by_cutoff_plot_file,
+    plot = perf_sum_by_cutoff_plot,
+    dpi = 1200,
+    #width = 9300,
+    height = 6000,
+    units = c("px")
+  )
+  print(perf_sum_by_cutoff_plot)
+}
+```
+
+
+
