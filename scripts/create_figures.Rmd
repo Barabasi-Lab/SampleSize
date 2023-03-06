@@ -179,11 +179,11 @@ results_curve_df = results_selected_norm_df %>%
 #   ylab("Num. significant correlations") +
 #   guides(col=guide_legend(title="Dataset")) +
 #   theme(aspect.ratio=1, 
-#         plot.title =  element_text(size = 15, face="bold"), 
-#         axis.title = element_text(size = 14, face="bold"), 
-#         axis.text = element_text(size = 13), 
-#         legend.text = element_text(size = 13), 
-#         legend.title=element_text(size=14, face="bold"))
+#         plot.title =  element_text(size = 20, face="bold"), 
+#         axis.title = element_text(size = 17, face="bold"), 
+#         axis.text = element_text(size = 16), 
+#         legend.text = element_text(size = 16), 
+#         legend.title=element_text(size=16, face="bold"))
 
 # Plot with labels
 curve_plot = results_curve_df %>%
@@ -194,9 +194,9 @@ curve_plot = results_curve_df %>%
   xlab("Num. samples") +
   ylab("Num. significant correlations") +
   theme(aspect.ratio=1, 
-        plot.title =  element_text(size = 15, face="bold"), 
-        axis.title = element_text(size = 14, face="bold"), 
-        axis.text = element_text(size = 13), 
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16), 
         panel.grid.major=element_blank(), 
         panel.grid.minor = element_blank(),
         text = element_text(family = "Helvetica"),
@@ -207,7 +207,7 @@ curve_plot = results_curve_df %>%
                    fill="white",
                    box.padding = 0.5, max.overlaps = Inf,
                    label.size = 0.75, 
-                   size = 4.2,
+                   size = 5,
                    alpha = 0.9, 
                    label.padding=0.25, 
                    fontface = "bold",
@@ -247,9 +247,9 @@ curve_plot_lessdatasets = results_curve_lessdatasets_df %>%
   xlab("Num. samples") +
   ylab("Num. significant correlations") +
   theme(aspect.ratio=1, 
-        plot.title =  element_text(size = 15, face="bold"), 
-        axis.title = element_text(size = 14, face="bold"), 
-        axis.text = element_text(size = 13), 
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16), 
         panel.grid.major=element_blank(), 
         panel.grid.minor = element_blank(),
         text = element_text(family = "Helvetica"),
@@ -260,7 +260,7 @@ curve_plot_lessdatasets = results_curve_lessdatasets_df %>%
                    fill="white",
                    box.padding = 0.5, max.overlaps = Inf,
                    label.size = 0.75, 
-                   size = 4.2,
+                   size = 5,
                    alpha = 0.9, 
                    label.padding=0.25, 
                    fontface = "bold",
@@ -333,9 +333,9 @@ scaling_relation_df = scaling_relation_df %>%
 #   scale_color_manual(values = c("#56B4E9", "#E69F00", "#44AA99", "#65F3BF", "#0072B2", "#D55E00")) +
 #   guides(col=guide_legend(title=bquote(bold(R^2)))) +
 #   theme(aspect.ratio=1, 
-#         plot.title =  element_text(size = 15, face="bold"), 
-#         axis.title = element_text(size = 14, face="bold"), 
-#         axis.text = element_text(size = 13), 
+#         plot.title =  element_text(size = 20, face="bold"), 
+#         axis.title = element_text(size = 17, face="bold"), 
+#         axis.text = element_text(size = 16), 
 #         legend.position = c(0.895, 0.77),
 #         legend.text = element_text(size = 11), 
 #         legend.title=element_text(size=13, face="bold"),
@@ -353,9 +353,9 @@ scaling_relation_plot = scaling_relation_df %>%
   scale_colour_identity() +
   guides(col=guide_legend(title=bquote(bold(R^2)))) +
   theme(aspect.ratio=1, 
-        plot.title =  element_text(size = 15, face="bold"), 
-        axis.title = element_text(size = 14, face="bold"), 
-        axis.text = element_text(size = 13), 
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16), 
         panel.grid.major=element_blank(), 
         panel.grid.minor = element_blank(),
         text = element_text(family = "Helvetica"),
@@ -364,7 +364,7 @@ scaling_relation_plot = scaling_relation_df %>%
                    fill="white",
                    box.padding = 0.5, max.overlaps = Inf,
                    label.size = 0.75, 
-                   size = 4.2,
+                   size = 5,
                    alpha = 0.6, 
                    label.padding=0.25, 
                    fontface = "bold",
@@ -386,7 +386,7 @@ print(scaling_relation_plot)
 Less datasets:
 
 ```{r}
-datasets_selected = c("tcga:tcga-brca_female")
+datasets_selected = c("gtex:breast.mammary.tissue", "tcga:tcga-brca_female")
 
 # Calculate data from scaling relationship
 cols = c("size", "S", "type_dataset", "S_lag1", "Fn", "slope", "intercept", "adj.r.squared")
@@ -414,38 +414,48 @@ scaling_relation_lessdatasets_df = scaling_relation_lessdatasets_df %>%
   mutate_at(c('adj.r.squared'), ~sprintf("%.2f",.)) %>%
   mutate_at(c('adj.r.squared'), as.character) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca_female", "TCGA: Breast cancer")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
   inner_join( (name2color %>% as.data.frame() %>% dplyr::rename("rgb_col"=".") %>% tibble::rownames_to_column("type_dataset")), by=c("type_dataset") ) %>%
-  mutate(geom_text_repel_label=dplyr::if_else(type_dataset == "TCGA: Breast cancer" & size == 220, "Power law", ""))
+  #mutate(geom_text_repel_label=dplyr::if_else(type_dataset == "TCGA: Breast cancer" & size == 220, "Power law", ""))
+  mutate(geom_text_repel_label=dplyr::if_else(type_dataset == "GTEx: Breast" & size == 420, "GTEx: Breast", dplyr::if_else(type_dataset == "TCGA: Breast cancer" & size == 400, "TCGA: Breast cancer", "")))
+scaling_relation_lessdatasets_df$r2labels = ifelse(scaling_relation_lessdatasets_df$type_dataset == "GTEx: Breast", paste("GTEx Breast: ", unique((scaling_relation_lessdatasets_df %>% filter(type_dataset == "GTEx: Breast"))$adj.r.squared), sep=""), ifelse(scaling_relation_lessdatasets_df$type_dataset == "TCGA: Breast cancer", paste("TCGA Breast c.: ", unique((scaling_relation_lessdatasets_df %>% filter(type_dataset == "TCGA: Breast cancer"))$adj.r.squared), sep=""), ""))
 
 # Plot with labels
 scaling_relation_plot_lessdatasets = scaling_relation_lessdatasets_df %>%
   ggplot(aes(x=log(size), y=log(Fn), col=rgb_col)) +
-  geom_point(alpha=0.5, size=3) +
-  geom_abline(aes(intercept=intercept, slope=slope), col="#cc68f7", size=1) +
+  geom_point(alpha=0.9, size=3) +
+  #geom_abline(aes(intercept=intercept, slope=slope), col="#cc68f7", size=1) +
+  geom_abline(aes(intercept=intercept, slope=slope, col=rgb_col), size=1) +
   theme_linedraw() +
   xlab("log(n)") +
   ylab(bquote(bold(log((S[n]-S[n-1])/S[n-1])))) +
-  scale_colour_identity() +
-  guides(col=guide_legend(title=bquote(bold(R^2)))) +
+  #scale_colour_identity() +
+  scale_colour_identity(guide = 'legend', labels=levels(factor(scaling_relation_lessdatasets_df$r2labels))) +
+  guides(col=guide_legend(title=bquote(bold(.('Power law') ~ R^2)))) +
   theme(aspect.ratio=1, 
-        plot.title =  element_text(size = 15, face="bold"), 
-        axis.title = element_text(size = 14, face="bold"), 
-        axis.text = element_text(size = 13), 
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16), 
         panel.grid.major=element_blank(), 
         panel.grid.minor = element_blank(),
         text = element_text(family = "Helvetica"),
-        legend.position="none") +
-  geom_label_repel(aes(label=geom_text_repel_label),
-                   col="#cc68f7",
-                   fill="white",
-                   box.padding = 0.5, max.overlaps = Inf,
-                   label.size = 0.75, 
-                   size = 4.2,
-                   alpha = 1, 
-                   label.padding=0.25, 
-                   fontface = "bold",
-                   na.rm=TRUE,
-                   seed = 1234)
+        #legend.position="none") +
+        legend.position = c(0.64, 0.85),
+        legend.text = element_text(size = 16), 
+        legend.title=element_text(size=16, face="bold"),
+        legend.background = element_rect(linewidth=0.2, linetype="solid", colour ="black"))
+  #geom_label_repel(aes(label=geom_text_repel_label),
+                   #col="#cc68f7",
+  # geom_label_repel(aes(col=rgb_col, label=geom_text_repel_label),
+  #                  fill="white",
+  #                  box.padding = 0.5, max.overlaps = Inf,
+  #                  label.size = 0.75, 
+  #                  size = 5,
+  #                  alpha = 1, 
+  #                  label.padding=0.25, 
+  #                  fontface = "bold",
+  #                  na.rm=TRUE,
+  #                  seed = 1234)
   
 plot_file = paste(plots_dir, "scaling_relation_pearson_pval_0.05_lessdatasets.png", sep="/")
 ggsave(
@@ -494,13 +504,13 @@ regression_plot = stretched_exponential_regression_proc_df %>%
   scale_colour_identity(labels = unique(stretched_exponential_regression_proc_df$type_dataset), breaks = unique(stretched_exponential_regression_proc_df$rgb_col), guide = "legend") +
   guides(col=guide_legend(title="Dataset")) +
   theme(aspect.ratio=1,
-        plot.title =  element_text(size = 15, face="bold"), 
-        axis.title = element_text(size = 14, face="bold"), 
-        axis.text = element_text(size = 13),
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16),
         panel.grid.major=element_blank(), 
         panel.grid.minor = element_blank(),
-        legend.text = element_text(size = 13), 
-        legend.title=element_text(size=14, face="bold"),
+        legend.text = element_text(size = 16), 
+        legend.title=element_text(size=16, face="bold"),
         text = element_text(family = "Helvetica"))
 
 plot_file = paste(plots_dir, "regression_pearson_pval_0.05.png", sep="/")
@@ -664,11 +674,11 @@ prediction_plot_df = results_selected_norm_df %>%
 #   ylab("Frac. significant correlations") +
 #   guides(col=guide_legend(title="Dataset")) +
 #   theme(aspect.ratio=1, 
-#         plot.title =  element_text(size = 15, face="bold"), 
-#         axis.title = element_text(size = 14, face="bold"), 
-#         axis.text = element_text(size = 13), 
-#         legend.text = element_text(size = 13), 
-#         legend.title=element_text(size=14, face="bold"))
+#         plot.title =  element_text(size = 20, face="bold"), 
+#         axis.title = element_text(size = 17, face="bold"), 
+#         axis.text = element_text(size = 16), 
+#         legend.text = element_text(size = 16), 
+#         legend.title=element_text(size=16, face="bold"))
 
 # Plot with labels
 prediction_plot = prediction_plot_df %>%
@@ -683,9 +693,9 @@ prediction_plot = prediction_plot_df %>%
   xlab("Num. samples (Log)") +
   ylab("Frac. significant correlations") +
   theme(aspect.ratio=1, 
-        plot.title =  element_text(size = 15, face="bold"), 
-        axis.title = element_text(size = 14, face="bold"), 
-        axis.text = element_text(size = 13), 
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16), 
         panel.grid.major=element_blank(), 
         panel.grid.minor = element_blank(),
         text = element_text(family = "Helvetica"),
@@ -694,7 +704,7 @@ prediction_plot = prediction_plot_df %>%
                    fill="white",
                    box.padding = 0.5, max.overlaps = Inf,
                    label.size = 0.75, 
-                   size = 4.2,
+                   size = 5,
                    alpha = 0.9, 
                    label.padding=0.25, 
                    fontface = "bold",
@@ -742,9 +752,9 @@ prediction_plot_lessdatasets = prediction_plot_lessdatasets_df %>%
   xlab("Num. samples (Log)") +
   ylab("Frac. significant correlations") +
   theme(aspect.ratio=1, 
-        plot.title =  element_text(size = 15, face="bold"), 
-        axis.title = element_text(size = 14, face="bold"), 
-        axis.text = element_text(size = 13), 
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16), 
         panel.grid.major=element_blank(), 
         panel.grid.minor = element_blank(),
         text = element_text(family = "Helvetica"),
@@ -753,7 +763,7 @@ prediction_plot_lessdatasets = prediction_plot_lessdatasets_df %>%
                    fill="white",
                    box.padding = 0.5, max.overlaps = Inf,
                    label.size = 0.75, 
-                   size = 4.2,
+                   size = 5,
                    alpha = 0.9, 
                    label.padding=0.25, 
                    fontface = "bold",
@@ -823,11 +833,11 @@ comparison_log_df = results_selected_norm_df %>%
 #   ylab("Frac. significant correlations") +
 #   #guides(col=guide_legend(title="Model")) +
 #   theme(aspect.ratio=1,
-#         plot.title =  element_text(size = 15, face="bold"),
-#         axis.title = element_text(size = 14, face="bold"),
-#         axis.text = element_text(size = 13),
-#         legend.text = element_text(size = 13), 
-#         #legend.title=element_text(size=14, face="bold"), 
+#         plot.title =  element_text(size = 20, face="bold"),
+#         axis.title = element_text(size = 17, face="bold"),
+#         axis.text = element_text(size = 16),
+#         legend.text = element_text(size = 16), 
+#         #legend.title=element_text(size=16, face="bold"), 
 #         legend.title=element_blank(), 
 #         legend.position="bottom")
 
@@ -841,9 +851,9 @@ comparison_plot = comparison_log_df %>%
   xlab("Num. samples") +
   ylab("Frac. significant correlations") +
   theme(aspect.ratio=1, 
-        plot.title =  element_text(size = 15, face="bold"), 
-        axis.title = element_text(size = 14, face="bold"), 
-        axis.text = element_text(size = 13), 
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16), 
         panel.grid.major=element_blank(), 
         panel.grid.minor = element_blank(),
         text = element_text(family = "Helvetica"),
@@ -852,7 +862,7 @@ comparison_plot = comparison_log_df %>%
                    fill="white",
                    box.padding = 0.5, max.overlaps = Inf,
                    label.size = 0.75, 
-                   size = 4.2,
+                   size = 5,
                    alpha = 1, 
                    label.padding=0.25, 
                    fontface = "bold",
@@ -872,7 +882,7 @@ ggsave(
 
 ```
 
-Demonstration of the model goodness-of-fit:
+Demonstration of the model goodness-of-fit for 1 model:
 
 ```{r}
 models_selected = c("Stretched exponential (by linear fit)")
@@ -906,9 +916,9 @@ goodnessfit_plot = goodnessfit_df %>%
   xlab("Num. samples") +
   ylab("Frac. significant correlations") +
   theme(aspect.ratio=1, 
-        plot.title =  element_text(size = 15, face="bold"), 
-        axis.title = element_text(size = 14, face="bold"), 
-        axis.text = element_text(size = 13), 
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16), 
         panel.grid.major=element_blank(), 
         panel.grid.minor = element_blank(),
         text = element_text(family = "Helvetica"),
@@ -917,7 +927,7 @@ goodnessfit_plot = goodnessfit_df %>%
                    fill="white",
                    box.padding = 0.5, max.overlaps = Inf,
                    label.size = 0.75, 
-                   size = 4.2,
+                   size = 5,
                    alpha = 1, 
                    label.padding=0.25, 
                    fontface = "bold",
@@ -925,6 +935,71 @@ goodnessfit_plot = goodnessfit_df %>%
                    seed = 1234)
 
 plot_file = paste(plots_dir, "/goodnessfit_model_pearson_pval_0.05_", dataset_selected, ".png", sep="")
+print(goodnessfit_plot)
+ggsave(
+  plot_file,
+  plot=goodnessfit_plot,
+  dpi = 1200,
+  #width = 6600,
+  #height = 6700,
+  units = c("px")
+)
+
+```
+
+Demonstration of the model goodness-of-fit for 2 models:
+
+```{r}
+models_selected = c("Stretched exponential (by linear fit)")
+#dataset_selected = "gtex:whole.blood"
+dataset_selected = "tcga:tcga-brca_female"
+comparison_palette = name2color[c(dataset_selected, "Analytical model")]
+
+# Join predicted results with mean
+predicted_results_norm_and_mean_df = rbind((topology_results_selected_by_size_norm_df %>% dplyr::select(type_dataset, size, mean_norm) %>% unique() %>% rename("model_result" = "mean_norm") %>% mutate(model="Mean")), (predicted_results_norm_df %>% dplyr::select(type_dataset, size, model_result, model) %>% unique() %>% mutate_at(c('model_result'), as.numeric))) %>% 
+  filter(model %in% models_selected) %>%
+  mutate(model = replace(model, model == "Stretched exponential (by linear fit)", "Analytical model"))
+predicted_results_norm_and_mean_df$model <- factor(predicted_results_norm_and_mean_df$model, levels = c("Mean", "Analytical model", "Logarithm"))
+
+# Process data
+goodnessfit_df = results_selected_norm_df %>% 
+  dplyr::select(type_dataset, size, rep, num_edges) %>%
+  right_join(predicted_results_norm_and_mean_df, by=c("type_dataset", "size")) %>%
+  filter(type_dataset == dataset_selected) %>%
+  filter(size <= max((results_selected_norm_df %>% filter(type_dataset == dataset_selected))$size)) %>%
+  filter(size >= min((results_selected_norm_df %>% filter(type_dataset == dataset_selected))$size)) %>%
+  inner_join( (name2color %>% as.data.frame() %>% dplyr::rename("rgb_col"=".") %>% tibble::rownames_to_column("model") %>% mutate(model = replace(model, model == dataset_selected, "Mean"))), by=c("model") ) %>%
+  mutate(geom_text_repel_label=dplyr::if_else(model == "Logarithm" & size == 280 & rep == 1, "Logarithm", dplyr::if_else(model == "Analytical model" & size == 760 & rep == 1, "Analytical model", dplyr::if_else(model == "Mean" & size == 560 & rep == 1, "Mean", ""))))
+
+# Plot with labels
+goodnessfit_plot = goodnessfit_df %>%
+  ggplot(aes(x=size, y=num_edges)) +
+  geom_point(alpha=0.3, size=3, col=comparison_palette[[dataset_selected]]) +
+  geom_line(aes(x=size, y=model_result, col=rgb_col), size=1) +
+  scale_colour_identity() +
+  theme_linedraw() +
+  xlab("Num. samples") +
+  ylab("Frac. significant correlations") +
+  theme(aspect.ratio=1, 
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16), 
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        text = element_text(family = "Helvetica"),
+        legend.position="none") +
+  geom_label_repel(aes(x=size, y=model_result, col=rgb_col, label=geom_text_repel_label),
+                   fill="white",
+                   box.padding = 0.5, max.overlaps = Inf,
+                   label.size = 0.75, 
+                   size = 5,
+                   alpha = 1, 
+                   label.padding=0.25, 
+                   fontface = "bold",
+                   na.rm=TRUE,
+                   seed = 1234)
+
+plot_file = paste(plots_dir, "/goodnessfit_2models_pearson_pval_0.05_", dataset_selected, ".png", sep="")
 print(goodnessfit_plot)
 ggsave(
   plot_file,
@@ -1037,9 +1112,9 @@ a_vs_fraction_sig_correlations_plot = sample_size_vs_a_plot_df %>%
   ylab("Frac. correlations above 0.2") +
   theme_linedraw() +
   theme(aspect.ratio=1, 
-        plot.title =  element_text(size = 15, face="bold"), 
-        axis.title = element_text(size = 14, face="bold"), 
-        axis.text = element_text(size = 13), 
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16), 
         panel.grid.major=element_blank(), 
         panel.grid.minor = element_blank(),
         text = element_text(family = "Helvetica"),
@@ -1048,7 +1123,7 @@ a_vs_fraction_sig_correlations_plot = sample_size_vs_a_plot_df %>%
                    fill="white",
                    box.padding = 0.5, max.overlaps = Inf,
                    label.size = 0.75, 
-                   size = 4.2,
+                   size = 5,
                    alpha = 0.6, 
                    label.padding=0.25, 
                    fontface = "bold",
@@ -1099,7 +1174,7 @@ for (x in 1:length(parameters)){
   #   labs(x=paste("Gene expression ", parameter2label[[parameter]], " (Log)", sep=""), y = "Number of genes (Log)") +
   #   theme_linedraw() + 
   #   guides(col=guide_legend(title="Dataset")) +
-  #   theme(aspect.ratio=1, plot.title =  element_text(size = 15, face="bold"), axis.title = element_text(size = 14, face="bold"), axis.text = element_text(size = 13), legend.text = element_text(size = 13), legend.title=element_text(size=14, face="bold"))
+  #   theme(aspect.ratio=1, plot.title =  element_text(size = 20, face="bold"), axis.title = element_text(size = 17, face="bold"), axis.text = element_text(size = 16), legend.text = element_text(size = 16), legend.title=element_text(size=16, face="bold"))
 
   # Plot without legend
   distribution_plot = sd_genes_filtered %>%
@@ -1112,9 +1187,9 @@ for (x in 1:length(parameters)){
     theme_linedraw() + 
     guides(col=guide_legend(title="Dataset")) +
     theme(aspect.ratio=1, 
-          plot.title =  element_text(size = 15, face="bold"), 
-          axis.title = element_text(size = 14, face="bold"), 
-          axis.text = element_text(size = 13), 
+          plot.title =  element_text(size = 20, face="bold"), 
+          axis.title = element_text(size = 17, face="bold"), 
+          axis.text = element_text(size = 16), 
           panel.grid.major=element_blank(), 
           panel.grid.minor = element_blank(),
           text = element_text(family = "Helvetica"),
@@ -1163,9 +1238,9 @@ for (x in 1:length(parameters)){
     theme_linedraw() + 
     guides(col=guide_legend(title="Dataset")) +
     theme(aspect.ratio=1, 
-          plot.title =  element_text(size = 15, face="bold"), 
-          axis.title = element_text(size = 14, face="bold"), 
-          axis.text = element_text(size = 13), 
+          plot.title =  element_text(size = 20, face="bold"), 
+          axis.title = element_text(size = 17, face="bold"), 
+          axis.text = element_text(size = 16), 
           panel.grid.major=element_blank(), 
           panel.grid.minor = element_blank(),
           text = element_text(family = "Helvetica"),
@@ -1241,9 +1316,9 @@ for (x in 1:length(parameters)){
     ylab(paste("Frac. genes with ", parameter2label[[parameter]], " above ", cut, sep="")) +
     theme_linedraw() +
     theme(aspect.ratio=1, 
-          plot.title =  element_text(size = 15, face="bold"), 
-          axis.title = element_text(size = 14, face="bold"), 
-          axis.text = element_text(size = 13), 
+          plot.title =  element_text(size = 20, face="bold"), 
+          axis.title = element_text(size = 17, face="bold"), 
+          axis.text = element_text(size = 16), 
           panel.grid.major=element_blank(), 
           panel.grid.minor = element_blank(),
           text = element_text(family = "Helvetica"),
@@ -1252,7 +1327,7 @@ for (x in 1:length(parameters)){
                      fill="white",
                      box.padding = 0.5, max.overlaps = Inf,
                      label.size = 0.75, 
-                     size = 4.2,
+                     size = 5,
                      alpha = 0.6, 
                      label.padding=0.25, 
                      fontface = "bold",
@@ -1305,9 +1380,9 @@ for (x in 1:length(parameters)){
     ylab(paste("Frac. genes with ", parameter2label[[parameter]], " above ", cut, sep="")) +
     theme_linedraw() +
     theme(aspect.ratio=1, 
-          plot.title =  element_text(size = 15, face="bold"), 
-          axis.title = element_text(size = 14, face="bold"), 
-          axis.text = element_text(size = 13), 
+          plot.title =  element_text(size = 20, face="bold"), 
+          axis.title = element_text(size = 17, face="bold"), 
+          axis.text = element_text(size = 16), 
           panel.grid.major=element_blank(), 
           panel.grid.minor = element_blank(),
           text = element_text(family = "Helvetica"),
@@ -1316,7 +1391,7 @@ for (x in 1:length(parameters)){
                      fill="white",
                      box.padding = 0.5, max.overlaps = Inf,
                      label.size = 0.75, 
-                     size = 4.2,
+                     size = 5,
                      alpha = 0.6, 
                      label.padding=0.25, 
                      fontface = "bold",
@@ -1573,13 +1648,13 @@ correlation_levels_plot = correlation_levels_plot_df %>%
   ylab("Frac. significant correlations") +
   guides(col=guide_legend(override.aes = list(alpha = 1, size = 3)), col=guide_legend(title=NULL), size=guide_legend(title="Frac. sig. correlations")) +
   theme(aspect.ratio=1,
-        plot.title =  element_text(size = 15, face="bold"), 
-        axis.title = element_text(size = 14, face="bold"), 
-        axis.text = element_text(size = 13),
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16),
         panel.grid.major=element_blank(), 
         panel.grid.minor = element_blank(),
-        legend.text = element_text(size = 13), 
-        legend.title=element_text(size=14, face="bold"),
+        legend.text = element_text(size = 16), 
+        legend.title=element_text(size=16, face="bold"),
         text = element_text(family = "Helvetica"))
 
 plot_file = paste(plots_dir, "correlation_levels_pearson_pval_0.05_data_gtexwholeblood.png", sep="/")
@@ -1673,13 +1748,13 @@ specific_links_plot = specific_links_plot_df %>%
   #scale_fill_manual(values = c("#C77CFF", "#7CAE00", "#FF7B00", "#F8766D", "#00BFC4")) +
   #guides(col=guide_legend(title="Correlation strength"), fill=guide_legend(title="Correlation strength")) +
   theme(aspect.ratio=1,
-        plot.title =  element_text(size = 15, face="bold"), 
-        axis.title = element_text(size = 14, face="bold"), 
-        axis.text = element_text(size = 13),
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16),
         panel.grid.major=element_blank(), 
         panel.grid.minor = element_blank(),
-        legend.text = element_text(size = 13), 
-        legend.title=element_text(size=14, face="bold"),
+        legend.text = element_text(size = 16), 
+        legend.title=element_text(size=16, face="bold"),
         text = element_text(family = "Helvetica"))
 
 plot_file = paste(plots_dir, "specific_links_gtex_Whole.Blood.png", sep="/")
@@ -1720,9 +1795,9 @@ sd_plot = sd_table_df %>%
   scale_fill_manual(values=my_orange) +
   theme_linedraw() +
   theme(aspect.ratio=1, 
-        plot.title =  element_text(size = 15, face="bold"), 
-        axis.title = element_text(size = 14, face="bold"), 
-        axis.text = element_text(size = 13), 
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16), 
         panel.grid.major=element_blank(), 
         panel.grid.minor = element_blank(),
         text = element_text(family = "Helvetica"),
@@ -1784,9 +1859,9 @@ for (x in 1:length(datasets_analysis)){
     scale_fill_manual(values=my_orange) +
     theme_linedraw() +
     theme(aspect.ratio=1, 
-          plot.title =  element_text(size = 15, face="bold"), 
-          axis.title = element_text(size = 14, face="bold"), 
-          axis.text = element_text(size = 13), 
+          plot.title =  element_text(size = 20, face="bold"), 
+          axis.title = element_text(size = 17, face="bold"), 
+          axis.text = element_text(size = 16), 
           panel.grid.major=element_blank(), 
           panel.grid.minor = element_blank(),
           text = element_text(family = "Helvetica"),
@@ -1831,9 +1906,9 @@ for (x in 1:length(datasets_analysis)){
     scale_fill_manual(values=my_orange) +
     theme_linedraw() +
     theme(aspect.ratio=1, 
-          plot.title =  element_text(size = 15, face="bold"), 
-          axis.title = element_text(size = 14, face="bold"), 
-          axis.text = element_text(size = 13), 
+          plot.title =  element_text(size = 20, face="bold"), 
+          axis.title = element_text(size = 17, face="bold"), 
+          axis.text = element_text(size = 16), 
           panel.grid.major=element_blank(), 
           panel.grid.minor = element_blank(),
           text = element_text(family = "Helvetica"),
@@ -1865,7 +1940,7 @@ AB
 "
 patch_breast = ((sd_plots_small_sizes[[1]] + labs(tag = 'A', title = NULL)) +
   (sd_plots[[1]] + labs(tag = 'B', title = NULL))) +
-  plot_annotation(title = 'TCGA: Breast cancer', theme=theme(plot.title =  element_text(size = 15, face="bold"))) &
+  plot_annotation(title = 'TCGA: Breast cancer', theme=theme(plot.title =  element_text(size = 20, face="bold"))) &
   theme(plot.tag = element_text(face = 'bold') # bold tags
         #,plot.tag.position  = c(.1, 1.02)
         ,plot.margin = margin(0.6, 0.6, 0.6, 0.6, "cm")
@@ -1876,7 +1951,7 @@ CD
 "
 patch_lung = ((sd_plots_small_sizes[[2]] + labs(tag = 'C', title = NULL)) +
   (sd_plots[[2]] + labs(tag = 'D', title = NULL))) +
-  plot_annotation(title = 'TCGA: Lung cancer', theme=theme(plot.title =  element_text(size = 15, face="bold"))) &
+  plot_annotation(title = 'TCGA: Lung cancer', theme=theme(plot.title =  element_text(size = 20, face="bold"))) &
   theme(plot.tag = element_text(face = 'bold') # bold tags
         #,plot.tag.position  = c(.1, 1.02)
         ,plot.margin = margin(0.6, 0.6, 0.6, 0.6, "cm")
@@ -1975,13 +2050,13 @@ plot_flow = change_of_category_col_df %>%
   guides(fill=guide_legend(title="Gene category")) +
   theme_linedraw() +
   theme(aspect.ratio=1,
-        plot.title =  element_text(size = 15, face="bold"), 
-        axis.title = element_text(size = 14, face="bold"), 
-        axis.text = element_text(size = 13),
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16),
         panel.grid.major=element_blank(), 
         panel.grid.minor = element_blank(),
-        legend.text = element_text(size = 13), 
-        legend.title=element_text(size=14, face="bold"),
+        legend.text = element_text(size = 16), 
+        legend.title=element_text(size=16, face="bold"),
         text = element_text(family = "Helvetica"))
 plot_file = paste(diffcoexp_plots_dir, paste("codina_", name_D, "_", name_N, "_change_disease_genes_improved.png", sep=""), sep="/")
 ggsave(
@@ -2041,13 +2116,13 @@ plot_stable_genes = stable_genes_df %>%
   guides(col=guide_legend(title="Gene category"), size="none") +
   theme_linedraw() +
   theme(aspect.ratio=1,
-        plot.title =  element_text(size = 15, face="bold"), 
-        axis.title = element_text(size = 14, face="bold"), 
-        axis.text = element_text(size = 13),
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16),
         panel.grid.major=element_blank(), 
         panel.grid.minor = element_blank(),
-        legend.text = element_text(size = 13), 
-        legend.title=element_text(size=14, face="bold"),
+        legend.text = element_text(size = 16), 
+        legend.title=element_text(size=16, face="bold"),
         text = element_text(family = "Helvetica"))
 
 plot_file = paste(diffcoexp_plots_dir, paste("codina_", name_D, "_", name_N, "_stable_genes.png", sep=""), sep="/")
@@ -2087,19 +2162,19 @@ nodes_to_follow_ranking_plot = ranking_nodes_df %>%
     guides(col=guide_legend(title="Gene category"), size="none") +
     theme_linedraw() +
     theme(aspect.ratio=1,
-          plot.title =  element_text(size = 15, face="bold"), 
-          axis.title = element_text(size = 14, face="bold"), 
-          axis.text = element_text(size = 13),
+          plot.title =  element_text(size = 20, face="bold"), 
+          axis.title = element_text(size = 17, face="bold"), 
+          axis.text = element_text(size = 16),
           panel.grid.major=element_blank(), 
           panel.grid.minor = element_blank(),
-          legend.text = element_text(size = 13), 
-          legend.title=element_text(size=14, face="bold"),
+          legend.text = element_text(size = 16), 
+          legend.title=element_text(size=16, face="bold"),
           text = element_text(family = "Helvetica")) +
     geom_label_repel(aes(col=Phi_name, label = label),
                      fill="white",
                      box.padding = 0.2, max.overlaps = Inf,
                      label.size = 0.75, 
-                     size = 4.2,
+                     size = 5,
                      alpha = 0.9, 
                      label.padding=0.25, 
                      fontface = "bold",
@@ -2207,13 +2282,13 @@ violinplot_ppi_coexpression_by_types_nozero = coexpression_pairs_filt %>%
   scale_color_manual(values = colors_defined_filt) +
   theme_linedraw() +
   theme(aspect.ratio=1,
-        plot.title =  element_text(size = 15, face="bold"), 
-        axis.title = element_text(size = 14, face="bold"), 
-        axis.text = element_text(size = 13),
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16),
         panel.grid.major=element_blank(), 
         panel.grid.minor = element_blank(),
-        legend.text = element_text(size = 13), 
-        legend.title=element_text(size=14, face="bold"),
+        legend.text = element_text(size = 16), 
+        legend.title=element_text(size=16, face="bold"),
         text = element_text(family = "Helvetica")) +
   labs (x = "Number of samples",
         y = "Absolute co-expression weight",
@@ -2254,13 +2329,13 @@ violinplot_ppi_coexpression_by_distances_nozero = coexpression_pairs_filt %>%
   scale_color_manual(values = colors_defined_filt) +
   theme_linedraw() +
   theme(aspect.ratio=1,
-        plot.title =  element_text(size = 15, face="bold"), 
-        axis.title = element_text(size = 14, face="bold"), 
-        axis.text = element_text(size = 13),
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16),
         panel.grid.major=element_blank(), 
         panel.grid.minor = element_blank(),
-        legend.text = element_text(size = 13), 
-        legend.title=element_text(size=14, face="bold"),
+        legend.text = element_text(size = 16), 
+        legend.title=element_text(size=16, face="bold"),
         text = element_text(family = "Helvetica")) +
   labs (x = "Number of samples",
         y = "Absolute co-expression weight",
@@ -2302,13 +2377,13 @@ auc_plot = perf_auc %>%
   theme_linedraw() +
   #facet_grid(vars(name))+ 
   theme(aspect.ratio=1,
-        plot.title =  element_text(size = 15, face="bold"), 
-        axis.title = element_text(size = 14, face="bold"), 
-        axis.text = element_text(size = 13), 
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16), 
         panel.grid.major=element_blank(), 
         panel.grid.minor = element_blank(),
-        legend.text = element_text(size = 13), 
-        legend.title=element_text(size=14, face="bold"),
+        legend.text = element_text(size = 16), 
+        legend.title=element_text(size=16, face="bold"),
         text = element_text(family = "Helvetica")) +
   labs(y = "AUROC",
        x = "Number of samples"
@@ -2440,13 +2515,13 @@ for (x in 1:length(datasets_selected)){
       #xlab("log(N)") +
       ylab("Disease genes fraction in LCC") +
       theme(aspect.ratio=1, 
-            plot.title =  element_text(size = 15, face="bold"), 
-            axis.title = element_text(size = 14, face="bold"), 
-            axis.text = element_text(size = 13), 
+            plot.title =  element_text(size = 20, face="bold"), 
+            axis.title = element_text(size = 17, face="bold"), 
+            axis.text = element_text(size = 16), 
             panel.grid.major=element_blank(), 
             panel.grid.minor = element_blank(),
-            legend.text = element_text(size = 13), 
-            legend.title=element_text(size=14, face="bold"))
+            legend.text = element_text(size = 16), 
+            legend.title=element_text(size=16, face="bold"))
     
     module_rlcc_by_correlation_plots[[((x-1)*length(datasets_selected) + y)]] = module_rlcc_by_correlation_plot
     print(module_rlcc_by_correlation_plot)
@@ -2499,13 +2574,13 @@ for (x in 1:length(datasets_selected)){
       #xlab("log(N)") +
       ylab("Disease LCC log p-value (abs)") +
       theme(aspect.ratio=1, 
-            plot.title =  element_text(size = 15, face="bold"), 
-            axis.title = element_text(size = 14, face="bold"), 
-            axis.text = element_text(size = 13), 
+            plot.title =  element_text(size = 20, face="bold"), 
+            axis.title = element_text(size = 17, face="bold"), 
+            axis.text = element_text(size = 16), 
             panel.grid.major=element_blank(), 
             panel.grid.minor = element_blank(),
-            legend.text = element_text(size = 13), 
-            legend.title=element_text(size=14, face="bold"))
+            legend.text = element_text(size = 16), 
+            legend.title=element_text(size=16, face="bold"))
     
     module_signif_by_correlation_plots[[((x-1)*length(datasets_selected) + y)]] = module_signif_by_correlation_plot
     print(module_signif_by_correlation_plot)
@@ -2559,13 +2634,13 @@ for (x in 1:length(datasets_selected)){
       ylab("Disease LCC log p-value (abs)") +
       guides(col=guide_legend(title="Disease-gene associations")) +
       theme(aspect.ratio=1, 
-            plot.title =  element_text(size = 15, face="bold"), 
-            axis.title = element_text(size = 14, face="bold"), 
-            axis.text = element_text(size = 13), 
+            plot.title =  element_text(size = 20, face="bold"), 
+            axis.title = element_text(size = 17, face="bold"), 
+            axis.text = element_text(size = 16), 
             panel.grid.major=element_blank(), 
             panel.grid.minor = element_blank(),
-            legend.text = element_text(size = 13), 
-            legend.title=element_text(size=14, face="bold"))
+            legend.text = element_text(size = 16), 
+            legend.title=element_text(size=16, face="bold"))
     
     module_signif_by_disease_plots[[((x-1)*length(datasets_selected) + y)]] = module_signif_by_disease_plot
     print(module_signif_by_disease_plot)
@@ -2622,13 +2697,13 @@ for (x in 1:length(diseases_selected)){
       #xlab("log(N)") +
       ylab("Disease LCC log p-value (abs)") +
       theme(aspect.ratio=1, 
-            plot.title =  element_text(size = 15, face="bold"), 
-            axis.title = element_text(size = 14, face="bold"), 
-            axis.text = element_text(size = 13), 
+            plot.title =  element_text(size = 20, face="bold"), 
+            axis.title = element_text(size = 17, face="bold"), 
+            axis.text = element_text(size = 16), 
             panel.grid.major=element_blank(), 
             panel.grid.minor = element_blank(),
-            legend.text = element_text(size = 13), 
-            legend.title=element_text(size=14, face="bold"))
+            legend.text = element_text(size = 16), 
+            legend.title=element_text(size=16, face="bold"))
     
     module_signif_by_dataset_plots[[((x-1)*length(diseases_selected) + y)]] = module_signif_by_dataset_plot
     print(module_signif_by_dataset_plot)

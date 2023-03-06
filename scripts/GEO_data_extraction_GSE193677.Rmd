@@ -140,7 +140,8 @@ Create a file with simplified metadata:
 
 ```{r}
 metadata_df = metadata_complete_df %>%
-  dplyr::select(title, geo_accession, `diseasetypere:ch1`, `ibd_disease:ch1`, `ibd_clinicianmeasure_inactive_active:ch1`, `demographics_gender:ch1`, `regionre:ch1`, `study_eligibility_age_at_endo:ch1`) %>%
+  mutate(inflammation=if_else(`diseasetypere:ch1` %in% c("CD.I", "UC.I"), "inflamed", "noninflamed")) %>%
+  dplyr::select(title, geo_accession, `diseasetypere:ch1`, inflammation, `ibd_disease:ch1`, `ibd_clinicianmeasure_inactive_active:ch1`, `demographics_gender:ch1`, `regionre:ch1`, `study_eligibility_age_at_endo:ch1`) %>%
   dplyr::rename("sample_type"=`diseasetypere:ch1`, "disease"=`ibd_disease:ch1`, "disease_activity"=`ibd_clinicianmeasure_inactive_active:ch1`, "gender"=`demographics_gender:ch1`, "tissue"=`regionre:ch1`, "age"=`study_eligibility_age_at_endo:ch1`) %>%
   tidyr::separate(title, into=c("sample_id", NA, NA), sep = ",")
 metadata_simple_file = paste(output_dir, "/metadata_simple.txt", sep="")
@@ -148,6 +149,13 @@ metadata_df %>% fwrite(metadata_simple_file)
 metadata_df = fread(metadata_simple_file)
 head(metadata_df)
 ```
+
+Number of samples by inflammation:
+
+```{r}
+table(metadata_df$inflammation)
+```
+
 
 
 ### Access the raw counts
@@ -183,6 +191,7 @@ Are there repeated genes? No:
 nrow(RNAseq_original)
 length(unique(RNAseq_original$Ensembl))
 ```
+
 
 
 ### Gene pre-processing
@@ -262,6 +271,7 @@ RNAseq = rbind(RNAseq[!(RNAseq$HGNC_Symbol %in% repeated_hgnc),], repeated_hgnc_
 dim(RNAseq)
 RNAseq[1:5,1:5]
 ```
+
 
 
 #### Filter genes without classification

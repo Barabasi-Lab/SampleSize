@@ -73,7 +73,7 @@ tables_dir = opt$tables_dir
 pval_threshold = as.double(opt$pval_threshold)
 pval_correction_field = opt$pval_correction
 nodes_to_follow_file = opt$nodes_to_follow_file
-drug_targets_file = opt$drug_targets_file
+#drug_targets_file = opt$drug_targets_file
 
 # Define other inputs
 name2color = data.frame(name=c("common", "disease-specific", "normal-specific", "undefined", "different", "all"), color.codes=c("#619CFF", "#F8766D", "#00BA38", "#808080", "#C77CFF", "#CD9600"))
@@ -223,6 +223,7 @@ if(!(is.na(tables_nodes_dir))){
 GDA = fread(disease_gene_associations_file)
 GDA_disease = GDA %>% dplyr::select("DiseaseName.no.sp.char", "HGNC_Symbol") %>% dplyr::filter(DiseaseName.no.sp.char == disease_name_in_associations_file)
 #unique(GDA$DiseaseName.no.sp.char[grepl("lung", GDA$DiseaseName.no.sp.char)])
+#unique(GDA$DiseaseName.no.sp.char[grepl("bowel", GDA$DiseaseName.no.sp.char)]) # inflammatory.bowel.diseases
 
 
 #---- Compile files ----#
@@ -828,12 +829,12 @@ codina_ppi_background_nodes_file = paste(tables_nodes_dir, "/codina_ppi_backgrou
 codina_ppi_background_nodes = codina_coexpr_background_nodes[codina_coexpr_background_nodes %in% V(ppi_net)$name]
 data.frame(Node=codina_ppi_background_nodes) %>% fwrite(codina_ppi_background_nodes_file)
 
-# Read drug targets and filter by targets in the PPI network
-drug_targets_df = fread(drug_targets_file) %>% 
-  filter(Target %in% V(ppi_net)$name) %>% 
-  select(ID, Target) %>% 
-  unique() 
-possible_targets = drug_targets_df$Target %>% unique()
+# # Read drug targets and filter by targets in the PPI network
+# drug_targets_df = fread(drug_targets_file) %>% 
+#   filter(Target %in% V(ppi_net)$name) %>% 
+#   select(ID, Target) %>% 
+#   unique() 
+# possible_targets = drug_targets_df$Target %>% unique()
 
 #---- Calculate PPI module of the different categories of genes ----#
 

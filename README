@@ -548,6 +548,27 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coex
 # consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/subtype/UCEC.CN_LOW -t 0.05 -m pearson
 
 
+#-----------#
+# GSE193677 #
+#-----------#
+
+# SAMPLES INPUT DIRS: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GEO/GSE193677/sampling_with_repetition/inflamed
+# RNASEQ INPUT DIRS: /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out/reads/filter_genes_low_counts/rnaseq_GSE193677.txt
+# OUTPUT DIRS: /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed
+
+#---- PEARSON ----#
+
+# inflamed - PEARSON - READS 
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GEO/GSE193677/sampling_with_repetition/inflamed -r /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out/reads/filter_genes_low_counts/rnaseq_GSE193677.txt -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed -m pearson
+# consensus: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed -t 0.05 -m pearson
+
+# noninflamed - PEARSON - READS 
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GEO/GSE193677/sampling_with_repetition/noninflamed -r /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out/reads/filter_genes_low_counts/rnaseq_GSE193677.txt -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/noninflamed -m pearson
+# consensus: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/noninflamed -t 0.05 -m pearson
+
+
 
 ######################################################
 ANALYSIS OF GENE CO-EXPRESSION NETWORKS IN THE CLUSTER
@@ -694,6 +715,35 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coe
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_scipher/reads/scipher.sample.per.patient.baseline -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_scipher.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_scipher.csv -g /work/ccnr/j.aguirreplans/data/Scipher/Dec2021/00_data/genes_from_rnaseq_filtered_files_by_group/scipher_rnaseq_gene_info_scipher.sample.per.patient.baseline.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_scipher/reads/scipher.sample.per.patient.baseline -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_scipher/reads/scipher.sample.per.patient.baseline
 # output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_scipher/reads/scipher.sample.per.patient.baseline
+
+
+
+
+#-----------#
+# GSE193677 #
+#-----------#
+
+# CO-EXPRESSION NETWORKS INPUT DIR: /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed
+# PPI NETWORK FILE: /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv 
+# DISEASE-GENE ASSOCIATIONS FILE: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_GSE193677.csv
+# ESSENTIAL GENES FILE: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_GSE193677.csv 
+# GENE INFO FILE: /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out/reads/filter_genes_low_counts/rnaseq_gene_info_GSE193677.csv
+# OUTPUT ANALYSES DIR: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_geo/GSE193677/reads/inflamed
+# OUTPUT SUBGRAPHS DIR: /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_geo/GSE193677/reads/inflamed
+
+#---- PEARSON ----#
+
+# inflamed - READS
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_GSE193677.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_GSE193677.csv -g /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out/reads/filter_genes_low_counts/rnaseq_gene_info_GSE193677.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_geo/GSE193677/reads/inflamed -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_geo/GSE193677/reads/inflamed
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_geo/GSE193677/reads/inflamed
+
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GEO/GSE193677/sampling_with_repetition/inflamed -r /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out/reads/filter_genes_low_counts/rnaseq_GSE193677.txt -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed -m pearson
+
+# noninflamed - READS /
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/noninflamed -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_GSE193677.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_GSE193677.csv -g /work/ccnr/j.aguirreplans/data/Scipher/Dec2021/00_data/genes_from_rnaseq_filtered_files_by_group/scipher_rnaseq_gene_info_scipher.complete.nonresponder.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_geo/GSE193677/reads/noninflamed -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_geo/GSE193677/reads/noninflamed
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_geo/GSE193677/reads/noninflamed
 
 
 
@@ -1211,6 +1261,18 @@ module load python/3.8.1
 # Consensus
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differentially_coexpressed_genes_cluster.py -d /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/subtype/UCEC.CN_HIGH/consensus -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/subtype/UCEC.CN_LOW/consensus -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/differential_coexpression_analysis/reads/TCGA-UCEC.CN_HIGH___TCGA-UCEC.CN_LOW/consensus -p 0.05 -s -f
 
+#------------------------------------#
+# GSE193677 infalmed vs. noninflamed #
+#------------------------------------#
+
+# TCGA-BRCA vs. TCGA-Breast
+-d /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed/consensus
+-n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/noninflamed/consensus
+-o /scratch/j.aguirreplans/Scipher/SampleSizeProject/differential_coexpression_analysis/reads/GSE193677-inflamed___GSE193677-noninflamed/consensus
+module load python/3.8.1
+# Consensus
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differentially_coexpressed_genes_cluster.py -d /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed/consensus -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/noninflamed/consensus -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/differential_coexpression_analysis/reads/GSE193677-inflamed___GSE193677-noninflamed/consensus -p 0.05 -s -f
+
 
 #---------------------------------------------#
 # Analysis of differential co-expressed genes #
@@ -1218,6 +1280,37 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differ
 
 # General analysis
 sbatch Projects/Scipher/SampleSize/scripts/analyze_differentially_coexpressed_genes_cluster.sh
+
+# Get disease-gene associations
+disease_gene_associations_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022.csv"
+GDA = fread(disease_gene_associations_file)
+GDA_disease = GDA %>% dplyr::select("DiseaseName.no.sp.char", "HGNC_Symbol") %>% dplyr::filter(DiseaseName.no.sp.char == disease_name_in_associations_file)
+unique(GDA$DiseaseName.no.sp.char[grepl("bowel", GDA$DiseaseName.no.sp.char)])  # inflammatory.bowel.diseases
+
+# Get drug-target interactions for proximity analysis
+/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/get_drug_target_interactions.Rmd
+
+# Get nodes to follow
+# Inflammatory bowel disease:
+/home/j.aguirreplans/Projects/Scipher/SampleSize/data/nodes_to_follow/inflammatory_bowel_disease.txt
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4629465/
+- NOD2: Susceptibility of Chron's Disease. Dendritic Cells in CD patients with variants in NOD2 gene are deficient in autophagy induction and show reduced localization of bacteria in autophagolysosomes.
+- Genetic factors account for only a small proportion of the disease variance (13.1% for CD and 8.2% for UC).
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4172738/
+- IBD is considred a non-Mendelian polygenic disorder with improtant environmental interactions (microbial factors, smoking).
+- Susceptibility genes discovered can be categorized into different levels of susceptibility: (1) Innate immunity; (2) Human leucocyte antigen (HLA) molecules; (3) Epithelial integrity (4); Drug transporter; and (5) Cell adhesion.
+- Innate immunity:
+    - NOD2: Specific mutations of the NOD2 gene have been definitively associated with increased susceptibility to ileal Crohn's disease in Western (but not Asian) populations.
+    - NOD1/ CARD4: Genetic variants of NOD1 have been shown to be associated with disease susceptibility.
+    - TLR3, TLR4, TLR1, TLR6: TLRs are abundantly expressed on the surface of monocytes, macrophages, dendritic and epithelial cells. Alterations of TLR3 and TLR4 expression by intestinal epithelial cells have been described in IBD[12], suggesting that there is differential expression of TLR family members. Pierik et al[17] showed that TLR1 R80T and TLR2 R753G polymorphisms were associated with pancolitis in UC patients, while a negative association was observed between TLR6 S249P and proctitis in patients with UC. These results suggest that TLR2 and its co-receptors TLR1 and TLR6 are involved in the initial immune response to bacteria in the pathogenesis of IBD.
+- Antigen Presentation Molecules:
+    - HLA-DRB1: HLA-DRB1 is the most extensively studied gene in IBD. In a meta-analysis made by Stokkers et al[18], positive associations between UC and HLA-DR2, HLA-DRB1*1502 (OR = 3.74, CI: 2.2-6.38), HLA-DR9 (OR = 1.54, CI: 1.06-2.24) and HLA-DRB1*0103 (OR = 3.42, CI: 1.52-3.69) were found; a negative association was found with HLA-DR4 (OR = 0.54, CI: 0.43-0.68). Another study found that HLA-DRB1*0103 allele was associated with UC and its severe manifestations such as colectomy and pancolitis (P = 0.003, OR = 3.6, CI 95%: 1.46-8.9), while HLA-DRB1*15 allele was only associated with pancolitis in patients with UC (P = 0.001, OR = 8.5)[19].
+    - TNF: polymorphisms associated to cytokine production.
+- Epithelial integrity:
+    - OCTN (NOT IN THE DATA!): The organic cation transporter (OCTN) is a family of transporter proteins for organic cations, and may also transport carnitine, an essential cofactor of the metabolism of lipids. Carnitine is involved in the transport of long-chain fatty acids into the mitochondria. There is evidence that inhibition of fatty acid oxidation in the epithelium of the colonic mucosa is associated with the development of UC. There are two subtypes of this gene, OCTN1 and OCTN2, and some mutations have been reported in them: SLC22A4 1672C/T for OCTN1 and SLC22A5-207G/C for OCTN2, which are associated with the development of CD
+- Drug transporter:
+    - MDR-1 (NOT IN THE DATA!): The multidrug-resistance (MDR-1) gene encodes the drug efflux pump P-glycoprotein 170 (Pgp-170). Various polymorphisms have been identified within MDR-1.
+- Cell adhesion: Cell surface adhesion molecules conveying leukocyte-endothelial interactions, govern homing of activated inflammatory cells into gut. Extravasation and migration into the site of inflammation are mediated by integrins and selectins, and these molecules are increased in IBD patients. There are targeting therapies against adhesion molecules in clinical trials to date including natalizumab (integrin α4 subunit) and MLN-02 (selective adhesion molecule blocker for integrin α4β7). In Japanese patients with IBD, the intercellular adhesion molecule-1 (ICAM-1) K469 allele is associated with CD and UC.
 
 # Functional GO enrichment & proximity & separation analysis
 sbatch Projects/Scipher/SampleSize/scripts/parameters_analysis_diff_coexpr.sh

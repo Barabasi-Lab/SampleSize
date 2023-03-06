@@ -54,7 +54,7 @@ Read drug targets file (DrugBank):
 drugbank_drug_dictionary_file = "/work/ccnr/j.aguirreplans/Databases/DrugBank/data/out/DB_Drug_Dictionary_v5.1.9.csv"
 drugbank_drug_targets_file = "/work/ccnr/j.aguirreplans/Databases/DrugBank/data/out/DB_Drug_Targets_v5.1.9.csv"
 drugbank_drug_targets_df = fread(drugbank_drug_targets_file) %>% 
-  select(DB_ID, Name, ATC, Status, Gene_Target, P_id, Gene_Desc, Organism, Type, Known_Action, Mech_Of_Action) %>% 
+  select(DB_ID, Name, ATC, Status, Gene_Target, P_id, Gene_Desc, Organism, Type, Known_Action, Mech_Of_Action, Indication) %>% 
   rename("DB_Name"="Name") %>%
   mutate(DB_ID=toupper(DB_ID), DB_Name=tolower(DB_Name), ATC=toupper(ATC), Status=tolower(Status), Gene_Target=toupper(Gene_Target), Gene_Desc=tolower(Gene_Desc), Organism=tolower(Organism), Type=tolower(Type), Known_Action=tolower(Known_Action), Mech_Of_Action=tolower(Mech_Of_Action)) %>%
   unique()
@@ -113,4 +113,42 @@ breast_cancer_drug_targets_file = "/home/j.aguirreplans/Projects/Scipher/SampleS
 breast_cancer_drug_targets %>% fwrite(breast_cancer_drug_targets_file)
 ```
 
+Breast cancer:
+
+```{r}
+unique(otp_indications_to_drugbank_targets$efo_term[grepl("bowel", otp_indications_to_drugbank_targets$efo_term)])
+```
+
+```{r}
+# Using indications from OTP
+ibd_drug_targets_otp = otp_indications_to_drugbank_targets %>%
+  dplyr::filter(efo_term == "inflammatory bowel disease") %>%
+  dplyr::select(DB_Name, Gene_Target) %>%
+  dplyr::rename("ID"="DB_Name", "Target"="Gene_Target") %>%
+  unique()
+head(ibd_drug_targets_otp)
+length(unique(ibd_drug_targets_otp$ID))
+length(unique(ibd_drug_targets_otp$Target))
+nrow((ibd_drug_targets_otp %>% dplyr::select(ID, Target) %>% unique()))
+# Using indications from DrugBank
+drugbank_drug_targets_df %>% dplyr::filter(grepl("inflammatory bowel disease", Indication)) %>% select(DB_Name, Indication) %>% unique()
+ibd_drug_targets_db = drugbank_drug_targets_df %>%
+  dplyr::filter(grepl("inflammatory bowel disease", Indication)) %>%
+  dplyr::select(DB_Name, Gene_Target) %>%
+  dplyr::rename("ID"="DB_Name", "Target"="Gene_Target") %>%
+  unique()
+head(ibd_drug_targets_db)
+length(unique(ibd_drug_targets_db$ID))
+length(unique(ibd_drug_targets_db$Target))
+nrow((ibd_drug_targets_db %>% dplyr::select(ID, Target) %>% unique()))
+# Merge both methods together
+ibd_drug_targets = rbind(ibd_drug_targets_otp, ibd_drug_targets_db) %>% unique()
+head(ibd_drug_targets)
+length(unique(ibd_drug_targets$ID))
+length(unique(ibd_drug_targets$Target))
+nrow((ibd_drug_targets %>% dplyr::select(ID, Target) %>% unique()))
+# Save
+ibd_drug_targets_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/drug_targets/drugbank_targets_inflammatory.bowel.disease.txt"
+ibd_drug_targets %>% fwrite(ibd_drug_targets_file)
+```
 

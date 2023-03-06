@@ -13,7 +13,7 @@
 
 <meta name="date" content="2023-02-24" />
 
-<title>GEO</title>
+<title>Pre-process</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -356,7 +356,7 @@ pre code {
 
 
 
-<h1 class="title toc-ignore">GEO</h1>
+<h1 class="title toc-ignore">Pre-process</h1>
 <h4 class="author">Joaquim Aguirre-Plans</h4>
 <h4 class="date">2023-02-24</h4>
 
@@ -365,190 +365,57 @@ pre code {
 
 <div id="description" class="section level3">
 <h3>Description</h3>
-<p>Analyze GEO dataset. References: <a href="http://genomicsclass.github.io/book/pages/GEOquery.html" class="uri">http://genomicsclass.github.io/book/pages/GEOquery.html</a>
-<a href="https://www.bioconductor.org/packages/devel/bioc/vignettes/GEOquery/inst/doc/GEOquery.html" class="uri">https://www.bioconductor.org/packages/devel/bioc/vignettes/GEOquery/inst/doc/GEOquery.html</a>
-<a href="https://kasperdanielhansen.github.io/genbioconductor/html/GEOquery.html" class="uri">https://kasperdanielhansen.github.io/genbioconductor/html/GEOquery.html</a>
-Information from the dataset: <a href="https://pubmed.ncbi.nlm.nih.gov/36109152/" class="uri">https://pubmed.ncbi.nlm.nih.gov/36109152/</a></p>
+<p>Pre-process GSE193677 data before creating gene co-expression
+networks.</p>
 <pre class="r"><code>packrat::init(&quot;/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR&quot;)</code></pre>
 <pre class="r"><code>library(data.table)
 library(dplyr)
-library(GEOquery)
 library(ggplot2)
 require(magrittr)
 library(tidyr)
-set.seed(1510)</code></pre>
+library(igraph)
+set.seed(1510)
+`%ni%` &lt;- Negate(`%in%`)</code></pre>
 </div>
-<div id="access-the-geo-series-data" class="section level3">
-<h3>Access the GEO Series data</h3>
-<pre class="r"><code>geo_id = &quot;GSE193677&quot;
+<div id="define-variables" class="section level3">
+<h3>Define variables</h3>
+<pre class="r"><code># Define type of counts used
+type_counts = &quot;reads&quot; # tpm, reads
+
+# Define working directories
+geo_id = &quot;GSE193677&quot;
 geo_dir = &quot;/work/ccnr/j.aguirreplans/Databases/GEO&quot;
 geo_id_dir = paste(geo_dir, &quot;/&quot;, geo_id, sep=&quot;&quot;)
 raw_data_dir = paste(geo_id_dir, &quot;/raw&quot;, sep=&quot;&quot;)
 output_dir = paste(geo_id_dir, &quot;/out&quot;, sep=&quot;&quot;)
-dir.create(geo_id_dir, showWarnings = FALSE)
-dir.create(raw_data_dir, showWarnings = FALSE)
+
+# Define the input files
+raw_counts_processed_file = paste(output_dir, &#39;/GSE193677_MSCCR_Biopsy_counts_processed.txt&#39;, sep=&#39;&#39;)
+metadata_file = paste(output_dir, &#39;/metadata_simple.txt&#39;, sep=&#39;&#39;)
+output_dir = paste(output_dir, type_counts, sep=&#39;/&#39;)
 dir.create(output_dir, showWarnings = FALSE)</code></pre>
-<p><code>getGEO</code> function interprets its input to determine how to
-get the data from GEO and then parse the data into useful R data
-structures. In the case of the dataset GSE193677, it downloads two
-files: * <code>GPL16791.soft.gz</code>: Containing the phenotypic data
-in soft format. * <code>GSE193677_series_matrix.txt.gz</code>:
-Containing the phenotypic format in series format.</p>
-<pre class="r"><code>gse &lt;- getGEO(geo_id, GSEMatrix = TRUE, destdir=raw_data_dir)</code></pre>
-<pre><code>## Found 1 file(s)</code></pre>
-<pre><code>## GSE193677_series_matrix.txt.gz</code></pre>
-<pre><code>## Using locally cached version: /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_series_matrix.txt.gz</code></pre>
-<pre><code>## Using locally cached version of GPL16791 found here:
-## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GPL16791.soft.gz</code></pre>
-<pre class="r"><code>show(gse)</code></pre>
-<pre><code>## $GSE193677_series_matrix.txt.gz
-## ExpressionSet (storageMode: lockedEnvironment)
-## assayData: 0 features, 2490 samples 
-##   element names: exprs 
-## protocolData: none
-## phenoData
-##   sampleNames: GSM5976499 GSM5976500 ... GSM5978988 (2490 total)
-##   varLabels: title geo_accession ... study_eligibility_age_at_endo:ch1
-##     (52 total)
-##   varMetadata: labelDescription
-## featureData: none
-## experimentData: use &#39;experimentData(object)&#39;
-##   pubMedIds: 36109152 
-## Annotation: GPL16791</code></pre>
-<p>Now, <code>gse</code> contains the R data structure (of class GSE)
-that represents the <code>geo_id</code> entry from GEO. If using
-<code>GSEMatrix = TRUE</code>, the data structure returned from this
-parsing is a list of ExpressionSets.</p>
-<pre class="r"><code>show(pData(phenoData(gse[[1]]))[1:5,c(1,6,8)])</code></pre>
-<pre><code>##                                                                        title
-## GSM5976499       MSCCR_reGRID_1_Biopsy_1, UC participants,Rectum NonI tissue
-## GSM5976500    MSCCR_reGRID_1_Biopsy_2, UC participants,LeftColon NonI tissue
-## GSM5976501        MSCCR_reGRID_1_Biopsy_3, UC participants,Ileum NonI tissue
-## GSM5976502 MSCCR_reGRID_10_Biopsy_18, CD participants,RightColon NonI tissue
-## GSM5976503  MSCCR_reGRID_10_Biopsy_19, CD participants,LeftColon NonI tissue
-##            type source_name_ch1
-## GSM5976499  SRA          Biopsy
-## GSM5976500  SRA          Biopsy
-## GSM5976501  SRA          Biopsy
-## GSM5976502  SRA          Biopsy
-## GSM5976503  SRA          Biopsy</code></pre>
-<p>Store the metadata in a file:</p>
-<pre class="r"><code>metadata_complete_df = pData(gse[[1]])
-metadata_complete_file = paste(raw_data_dir, &quot;/metadata_complete.txt&quot;, sep=&quot;&quot;)
-metadata_complete_df %&gt;% fwrite(metadata_complete_file)
-metadata_complete_df = fread(metadata_complete_file)
-metadata_complete_df[1:5, 1:5]</code></pre>
-<pre><code>##                                                                title
-## 1:       MSCCR_reGRID_1_Biopsy_1, UC participants,Rectum NonI tissue
-## 2:    MSCCR_reGRID_1_Biopsy_2, UC participants,LeftColon NonI tissue
-## 3:        MSCCR_reGRID_1_Biopsy_3, UC participants,Ileum NonI tissue
-## 4: MSCCR_reGRID_10_Biopsy_18, CD participants,RightColon NonI tissue
-## 5:  MSCCR_reGRID_10_Biopsy_19, CD participants,LeftColon NonI tissue
-##    geo_accession                status submission_date last_update_date
-## 1:    GSM5976499 Public on Sep 16 2022     Mar 28 2022      Sep 16 2022
-## 2:    GSM5976500 Public on Sep 16 2022     Mar 28 2022      Sep 16 2022
-## 3:    GSM5976501 Public on Sep 16 2022     Mar 28 2022      Sep 16 2022
-## 4:    GSM5976502 Public on Sep 16 2022     Mar 28 2022      Sep 16 2022
-## 5:    GSM5976503 Public on Sep 16 2022     Mar 28 2022      Sep 16 2022</code></pre>
 </div>
-<div id="access-raw-files" class="section level3">
-<h3>Access raw files</h3>
-<p>The function <code>getGEOSuppFiles</code>, in the case of the dataset
-GSE193677, it downloads two files: *
-<code>GSE193677_MSCCR_Biopsy_counts.txt.gz</code>: Containing the raw
-counts. * <code>GSE193677_MSCCR_Biopsy_adjcounts.txt.gz</code>:
-Containing the adjusted counts.</p>
-<pre class="r"><code>filePaths = getGEOSuppFiles(geo_id, makeDirectory = FALSE, baseDir = raw_data_dir)
-filePaths</code></pre>
-<pre><code>##                                                                                                    size
-## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_adjcounts.txt.gz 278394867
-## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_counts.txt.gz    107824100
-##                                                                                               isdir
-## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_adjcounts.txt.gz FALSE
-## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_counts.txt.gz    FALSE
-##                                                                                               mode
-## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_adjcounts.txt.gz  660
-## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_counts.txt.gz     660
-##                                                                                                             mtime
-## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_adjcounts.txt.gz 2023-03-01 15:34:47
-## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_counts.txt.gz    2023-03-01 15:34:48
-##                                                                                                             ctime
-## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_adjcounts.txt.gz 2023-03-01 15:34:47
-## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_counts.txt.gz    2023-03-01 15:34:48
-##                                                                                                             atime
-## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_adjcounts.txt.gz 2023-03-01 15:34:47
-## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_counts.txt.gz    2023-03-01 15:34:48
-##                                                                                                      uid
-## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_adjcounts.txt.gz 1825758390
-## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_counts.txt.gz    1825758390
-##                                                                                               gid
-## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_adjcounts.txt.gz 100
-## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_counts.txt.gz    100
-##                                                                                                        uname
-## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_adjcounts.txt.gz j.aguirreplans
-## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_counts.txt.gz    j.aguirreplans
-##                                                                                               grname
-## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_adjcounts.txt.gz  users
-## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_counts.txt.gz     users</code></pre>
-</div>
-<div id="access-gse-data-tables-from-geo" class="section level3">
-<h3>Access GSE Data Tables from GEO</h3>
-<p>Sometimes GSEs are include separate data tables with the sample
-information. If these exist, you can use the getGSEDataTables()
-function. For example here is the phenoData object from a different GSE
-accession GSE3494 with a Data Table.</p>
-<pre class="r"><code>df1 &lt;- getGSEDataTables(geo_id)
-lapply(df1, head)</code></pre>
-<pre><code>## list()</code></pre>
-</div>
-<div id="analyze-metadata" class="section level3">
-<h3>Analyze metadata</h3>
-<p>Number of samples by gender:</p>
-<pre class="r"><code>table(metadata_complete_df$`demographics_gender:ch1`)</code></pre>
-<pre><code>## 
-## Female   Male 
-##   1174   1316</code></pre>
-<p>Number of samples by tissue:</p>
-<pre class="r"><code>table(metadata_complete_df$`regionre:ch1`)</code></pre>
-<pre><code>## 
-##      Cecum      Ileum  LeftColon     Rectum RightColon    Sigmoid Transverse 
-##        229        672        180        904        252        163         90</code></pre>
-<p>Number of samples by inflammation and disease:</p>
-<pre class="r"><code>table(metadata_complete_df$`diseasetypere:ch1`)</code></pre>
-<pre><code>## 
-##         CD.I      CD.NonI Control.NonI         UC.I      UC.NonI 
-##          419          738          461          293          579</code></pre>
-<p>Number of samples by disease:</p>
-<pre class="r"><code>table(metadata_complete_df$`ibd_disease:ch1`)</code></pre>
-<pre><code>## 
-##       CD CD_Pouch  Control       UC UC_Pouch 
-##     1153        4      461      843       29</code></pre>
-<p>Disease activity depending on the sample type and disease:</p>
-<pre class="r"><code>table(metadata_complete_df$`diseasetypere:ch1`, metadata_complete_df$`ibd_clinicianmeasure_inactive_active:ch1`)</code></pre>
-<pre><code>##               
-##                Active Inactive
-##   CD.I             71      270
-##   CD.NonI         108      511
-##   Control.NonI      0        0
-##   UC.I             74      219
-##   UC.NonI          52      527</code></pre>
-<pre class="r"><code>table(metadata_complete_df$`ibd_disease:ch1`, metadata_complete_df$`ibd_clinicianmeasure_inactive_active:ch1`)</code></pre>
-<pre><code>##           
-##            Active Inactive
-##   CD          177      779
-##   CD_Pouch      2        2
-##   Control       0        0
-##   UC          112      731
-##   UC_Pouch     14       15</code></pre>
-<p>Create a file with simplified metadata:</p>
-<pre class="r"><code>metadata_df = metadata_complete_df %&gt;%
-  mutate(inflammation=if_else(`diseasetypere:ch1` %in% c(&quot;CD.I&quot;, &quot;UC.I&quot;), &quot;inflamed&quot;, &quot;noninflamed&quot;)) %&gt;%
-  dplyr::select(title, geo_accession, `diseasetypere:ch1`, inflammation, `ibd_disease:ch1`, `ibd_clinicianmeasure_inactive_active:ch1`, `demographics_gender:ch1`, `regionre:ch1`, `study_eligibility_age_at_endo:ch1`) %&gt;%
-  dplyr::rename(&quot;sample_type&quot;=`diseasetypere:ch1`, &quot;disease&quot;=`ibd_disease:ch1`, &quot;disease_activity&quot;=`ibd_clinicianmeasure_inactive_active:ch1`, &quot;gender&quot;=`demographics_gender:ch1`, &quot;tissue&quot;=`regionre:ch1`, &quot;age&quot;=`study_eligibility_age_at_endo:ch1`) %&gt;%
-  tidyr::separate(title, into=c(&quot;sample_id&quot;, NA, NA), sep = &quot;,&quot;)
-metadata_simple_file = paste(output_dir, &quot;/metadata_simple.txt&quot;, sep=&quot;&quot;)
-metadata_df %&gt;% fwrite(metadata_simple_file)
-metadata_df = fread(metadata_simple_file)
+<div id="read-files" class="section level3">
+<h3>Read files</h3>
+<pre class="r"><code>RNAseq = fread(raw_counts_processed_file)</code></pre>
+<p>The GEO dataframe contains 2490 columns (samples) and 37328 rows
+(genes).</p>
+<pre class="r"><code>head(RNAseq[1:10,1:5])</code></pre>
+<pre><code>##        Gene MSCCR_reGRID_1_Biopsy_3 MSCCR_reGRID_1_Biopsy_2
+## 1:   TSPAN6                     704                    2855
+## 2:     TNMD                       5                      18
+## 3:     DPM1                     587                     563
+## 4:    SCYL3                     534                     472
+## 5: C1ORF112                     257                     186
+## 6:      FGR                     408                      36
+##    MSCCR_reGRID_1_Biopsy_1 MSCCR_reGRID_3_Biopsy_6
+## 1:                    2088                     771
+## 2:                       9                       2
+## 3:                     685                     680
+## 4:                     433                     367
+## 5:                     311                     207
+## 6:                     122                      70</code></pre>
+<pre class="r"><code>metadata_df = fread(metadata_file)
 head(metadata_df)</code></pre>
 <pre><code>##                    sample_id geo_accession sample_type inflammation disease
 ## 1:   MSCCR_reGRID_1_Biopsy_1    GSM5976499     UC.NonI  noninflamed      UC
@@ -564,161 +431,10 @@ head(metadata_df)</code></pre>
 ## 4:           Active Female RightColon  60
 ## 5:           Active Female  LeftColon  60
 ## 6:           Active Female Transverse  60</code></pre>
-<p>Number of samples by inflammation:</p>
-<pre class="r"><code>table(metadata_df$inflammation)</code></pre>
-<pre><code>## 
-##    inflamed noninflamed 
-##         712        1778</code></pre>
 </div>
-<div id="access-the-raw-counts" class="section level3">
-<h3>Access the raw counts</h3>
-<p>The raw counts are stored in the file
-<code>GSE193677_MSCCR_Biopsy_counts.txt.gz</code>.</p>
-<pre class="r"><code>raw_counts_original_file = paste(raw_data_dir, &quot;/GSE193677_MSCCR_Biopsy_counts.txt.gz&quot;, sep=&quot;&quot;)</code></pre>
-<p>Read the gz file:</p>
-<pre class="r"><code>RNAseq_original = read.table(gzfile(raw_counts_original_file))
-RNAseq_original = cbind(data.frame(Ensembl=row.names(RNAseq_original)), RNAseq_original)</code></pre>
-<pre class="r"><code>dim(RNAseq_original)</code></pre>
-<pre><code>## [1] 56632  2491</code></pre>
-<pre class="r"><code>RNAseq_original[1:5, 1:5]</code></pre>
-<pre><code>##                         Ensembl MSCCR_reGRID_1_Biopsy_3 MSCCR_reGRID_1_Biopsy_2
-## ENSG00000000003 ENSG00000000003                     704                    2855
-## ENSG00000000005 ENSG00000000005                       5                      18
-## ENSG00000000419 ENSG00000000419                     587                     563
-## ENSG00000000457 ENSG00000000457                     534                     472
-## ENSG00000000460 ENSG00000000460                     257                     186
-##                 MSCCR_reGRID_1_Biopsy_1 MSCCR_reGRID_3_Biopsy_6
-## ENSG00000000003                    2088                     771
-## ENSG00000000005                       9                       2
-## ENSG00000000419                     685                     680
-## ENSG00000000457                     433                     367
-## ENSG00000000460                     311                     207</code></pre>
-<p>Filter the samples that are not in the metadata:</p>
-<pre class="r"><code>RNAseq_original = RNAseq_original[, which((names(RNAseq_original) %in% c(&quot;Ensembl&quot;, metadata_df$sample_id)==TRUE))]
-dim(RNAseq_original)</code></pre>
-<pre><code>## [1] 56632  2491</code></pre>
-<p>Are there repeated genes? No:</p>
-<pre class="r"><code>nrow(RNAseq_original)</code></pre>
-<pre><code>## [1] 56632</code></pre>
-<pre class="r"><code>length(unique(RNAseq_original$Ensembl))</code></pre>
-<pre><code>## [1] 56632</code></pre>
-</div>
-<div id="gene-pre-processing" class="section level3">
-<h3>Gene pre-processing</h3>
-<div id="map-ensembl-to-hgnc-gene-symbol" class="section level4">
-<h4>Map Ensembl to HGNC gene symbol</h4>
-<p>In the gene expression dataframe, there are 56632 genes in Ensembl
-notation. We will transform these genes into HGNC gene symbol
-notation.</p>
-<p>First we read the file
-<code>multiple_hgnc_dict_set_2022-01-01.txt</code>, containing gene
-symbols and their aliases in other notations:</p>
-<pre class="r"><code>gene_annotations_dir = &#39;/work/ccnr/j.aguirreplans/data/gene_annotations/data/out&#39;
-gene_dict_file = paste(gene_annotations_dir, &#39;multiple_hgnc_dict_set_2022-01-01.txt&#39;, sep=&#39;/&#39;)
-gene_dict_df = fread(gene_dict_file) %&gt;% unique()
-gene_dict_df = gene_dict_df[!((gene_dict_df$HGNC_Symbol==&quot;&quot;)|(gene_dict_df$alias==&quot;&quot;)),]
-gene_dict_df$HGNC_Symbol = toupper(gene_dict_df$HGNC_Symbol)
-gene_dict_df$alias = toupper(gene_dict_df$alias)
-gene_dict_df %&lt;&gt;% unique()
-head(gene_dict_df)</code></pre>
-<pre><code>##    HGNC_Symbol           alias
-## 1:       MT-TF ENSG00000210049
-## 2:       MT-TF ENST00000387314
-## 3:       MT-TF       MT-TF-201
-## 4:     MT-RNR1 ENSG00000211459
-## 5:     MT-RNR1 ENST00000389680
-## 6:     MT-RNR1     MT-RNR1-201</code></pre>
-<p>We use this dataframe to map Ensembl IDs to HGNC symbol IDs:</p>
-<pre class="r"><code>RNAseq = inner_join(RNAseq_original, gene_dict_df, by=c(&quot;Ensembl&quot;=&quot;alias&quot;))
-RNAseq = cbind((RNAseq %&gt;% select(&quot;Ensembl&quot;, &quot;HGNC_Symbol&quot;)), (RNAseq %&gt;% select(-&quot;Ensembl&quot;, -&quot;HGNC_Symbol&quot;))) %&gt;% unique()
-head(RNAseq[1:5,1:5])</code></pre>
-<pre><code>##           Ensembl HGNC_Symbol MSCCR_reGRID_1_Biopsy_3 MSCCR_reGRID_1_Biopsy_2
-## 1 ENSG00000000003      TSPAN6                     704                    2855
-## 2 ENSG00000000005        TNMD                       5                      18
-## 3 ENSG00000000419        DPM1                     587                     563
-## 4 ENSG00000000457       SCYL3                     534                     472
-## 5 ENSG00000000460    C1ORF112                     257                     186
-##   MSCCR_reGRID_1_Biopsy_1
-## 1                    2088
-## 2                       9
-## 3                     685
-## 4                     433
-## 5                     311</code></pre>
-<pre class="r"><code>dim(RNAseq)</code></pre>
-<pre><code>## [1] 37508  2492</code></pre>
-<p>Now, we have 37494 unique HGNC symbols mapped to 37392 unique Ensembl
-IDs from a total of 37508 rows. The problem is that there are Ensembl
-IDs mapped to the same HGNC code and viceversa. So, we have to do the
-following procedures: - If an Ensembl ID has multiple HGNC symbols, keep
-only one symbol - If a HGNC symbol has multiple Ensembl IDs, calculate
-the median</p>
-<p>We get the HGNC symbols with multiple Ensembl IDs:</p>
-<pre class="r"><code>repeated_ensembl = unique(RNAseq$Ensembl[duplicated(RNAseq$Ensembl)])
-length(repeated_ensembl)</code></pre>
-<pre><code>## [1] 116</code></pre>
-<pre class="r"><code>repeated_ensembl_df = RNAseq[RNAseq$Ensembl %in% repeated_ensembl,][,c(&quot;Ensembl&quot;, &quot;HGNC_Symbol&quot;)]
-repeated_ensembl_df$HGNC_length = nchar(repeated_ensembl_df$HGNC_Symbol)
-repeated_ensembl_df = repeated_ensembl_df %&gt;% arrange(Ensembl, HGNC_length, HGNC_Symbol) %&gt;% unique()
-head(repeated_ensembl_df)</code></pre>
-<pre><code>##           Ensembl HGNC_Symbol HGNC_length
-## 1 ENSG00000018607      ZNF806           6
-## 2 ENSG00000018607    ZNF285CP           8
-## 3 ENSG00000034239        CLXN           4
-## 4 ENSG00000034239      EFCAB1           6
-## 5 ENSG00000093134        VNN3           4
-## 6 ENSG00000093134       VNN3P           5</code></pre>
-<p>We keep the smallest symbol, and if not, the first (in alphabetical
-order):</p>
-<pre class="r"><code>repeated_ensembl_distinct_df = repeated_ensembl_df %&gt;% distinct(Ensembl, .keep_all = TRUE) %&gt;% select(Ensembl, HGNC_Symbol) # dplyr::distinct keeps only the first distinct row in terms of Ensembl
-head(repeated_ensembl_distinct_df)</code></pre>
-<pre><code>##           Ensembl HGNC_Symbol
-## 1 ENSG00000018607      ZNF806
-## 2 ENSG00000034239        CLXN
-## 3 ENSG00000093134        VNN3
-## 4 ENSG00000101898       MCTS2
-## 5 ENSG00000135248     FAM71F1
-## 6 ENSG00000142530     FAM71E1</code></pre>
-<pre class="r"><code>hgnc_to_remove = repeated_ensembl_df$HGNC_Symbol[!(repeated_ensembl_df$HGNC_Symbol %in% repeated_ensembl_distinct_df$HGNC_Symbol)] # we get the HGNC_Symbol to remove
-RNAseq %&lt;&gt;% filter(!(HGNC_Symbol %in% hgnc_to_remove)) # remove HGNC symbols selected before</code></pre>
-<pre class="r"><code>dim(RNAseq)</code></pre>
-<pre><code>## [1] 37392  2492</code></pre>
-<p>We get the Ensembl IDs with multiple HGNC symbols:</p>
-<pre class="r"><code>repeated_hgnc = unique(RNAseq$HGNC_Symbol[duplicated(RNAseq$HGNC_Symbol)])
-length(repeated_hgnc)</code></pre>
-<pre><code>## [1] 14</code></pre>
-<pre class="r"><code>repeated_hgnc_df = (RNAseq[RNAseq$HGNC_Symbol %in% repeated_hgnc,][,c(&quot;Ensembl&quot;, &quot;HGNC_Symbol&quot;)]) %&gt;% arrange(HGNC_Symbol, Ensembl)
-head(repeated_hgnc_df)</code></pre>
-<pre><code>##           Ensembl HGNC_Symbol
-## 1 ENSG00000188626     GOLGA8M
-## 2 ENSG00000261480     GOLGA8M
-## 3 ENSG00000256150   ITFG2-AS1
-## 4 ENSG00000258325   ITFG2-AS1
-## 5 ENSG00000237940   LINC01238
-## 6 ENSG00000261186   LINC01238</code></pre>
-<p>We calculate the median for the HGNC genes with multiple Ensembl
-IDs:</p>
-<pre class="r"><code>RNAseq = subset(RNAseq, select=-Ensembl)
-repeated_hgnc_aggregated = aggregate(.~HGNC_Symbol, RNAseq[RNAseq$HGNC_Symbol %in% repeated_hgnc,], median)
-RNAseq = rbind(RNAseq[!(RNAseq$HGNC_Symbol %in% repeated_hgnc),], repeated_hgnc_aggregated) %&gt;% rename(&quot;Gene&quot;=&quot;HGNC_Symbol&quot;)
-dim(RNAseq)</code></pre>
-<pre><code>## [1] 37378  2491</code></pre>
-<pre class="r"><code>RNAseq[1:5,1:5]</code></pre>
-<pre><code>##       Gene MSCCR_reGRID_1_Biopsy_3 MSCCR_reGRID_1_Biopsy_2
-## 1   TSPAN6                     704                    2855
-## 2     TNMD                       5                      18
-## 3     DPM1                     587                     563
-## 4    SCYL3                     534                     472
-## 5 C1ORF112                     257                     186
-##   MSCCR_reGRID_1_Biopsy_1 MSCCR_reGRID_3_Biopsy_6
-## 1                    2088                     771
-## 2                       9                       2
-## 3                     685                     680
-## 4                     433                     367
-## 5                     311                     207</code></pre>
-</div>
-<div id="filter-genes-without-classification" class="section level4">
-<h4>Filter genes without classification</h4>
-<p>We keep genes that have a classification in HGNC:</p>
+<div id="prepare-gene-information" class="section level3">
+<h3>Prepare gene information</h3>
+<p>We load HGNC file:</p>
 <pre class="r"><code>gene_annotations_dir = &#39;/work/ccnr/j.aguirreplans/data/gene_annotations/data/out&#39;
 gene_category_file = paste(gene_annotations_dir, &#39;hgnc_category_set_2022-01-01.txt&#39;, sep=&#39;/&#39;)
 gene_category_df = fread(gene_category_file)
@@ -734,7 +450,7 @@ head(gene_category_df)</code></pre>
 <p>We use this dataframe to map gene category, and we only keep genes
 that are in this dataframe:</p>
 <pre class="r"><code>dim(RNAseq)</code></pre>
-<pre><code>## [1] 37378  2491</code></pre>
+<pre><code>## [1] 37328  2491</code></pre>
 <pre class="r"><code>genes_with_category = RNAseq$Gene[RNAseq$Gene %in% gene_category_df$HGNC_Symbol]
 genes_dataset_df = gene_category_df %&gt;% filter(HGNC_Symbol %in% genes_with_category)
 RNAseq %&lt;&gt;% filter(Gene %in% genes_with_category)
@@ -750,24 +466,214 @@ dim(RNAseq)</code></pre>
 <pre><code>## 
 ##      non-coding RNA               other protein-coding gene          pseudogene 
 ##               17.13                1.54               50.10               31.23</code></pre>
-<p>Save the results:</p>
-<pre class="r"><code>raw_counts_processed_file = paste(output_dir, &quot;/GSE193677_MSCCR_Biopsy_counts_processed.txt&quot;, sep=&quot;&quot;)
-RNAseq %&gt;% fwrite(raw_counts_processed_file, sep=&#39;\t&#39;)
-RNAseq = fread(raw_counts_processed_file)
-RNAseq[1:5,1:5]</code></pre>
-<pre><code>##        Gene MSCCR_reGRID_1_Biopsy_3 MSCCR_reGRID_1_Biopsy_2
-## 1:   TSPAN6                     704                    2855
-## 2:     TNMD                       5                      18
-## 3:     DPM1                     587                     563
-## 4:    SCYL3                     534                     472
-## 5: C1ORF112                     257                     186
-##    MSCCR_reGRID_1_Biopsy_1 MSCCR_reGRID_3_Biopsy_6
-## 1:                    2088                     771
-## 2:                       9                       2
-## 3:                     685                     680
-## 4:                     433                     367
-## 5:                     311                     207</code></pre>
 </div>
+<div id="filter-genes-with-low-counts" class="section level2">
+<h2>Filter genes with low counts</h2>
+<p>We filter the genes that have low expression in all samples, keeping
+the ones that meet these rules:</p>
+<p>In the case of TPM:</p>
+<ul>
+<li>Sum of the expression of all samples above 0.</li>
+<li>Mean of the expression of all samples above 1.</li>
+<li>Median of the expression of all samples above 1.</li>
+<li>Standard deviation of all samples above 0.</li>
+<li>Less than half of the samples with empty counts (0s).</li>
+</ul>
+<p>In the case of reads:</p>
+<ul>
+<li>Sum of the expression of all samples above 0.</li>
+<li>Mean of the expression of all samples above 5.</li>
+<li>Median of the expression of all samples above 5.</li>
+<li>Standard deviation of all samples above 0.</li>
+<li>Less than half of the samples with empty counts (0s).</li>
+</ul>
+<pre class="r"><code># We separate samples depending on sample type
+filter_low_counts_dir = paste(output_dir, &#39;filter_genes_low_counts&#39;, sep=&#39;/&#39;)
+dir.create(filter_low_counts_dir, showWarnings = FALSE)
+samples_selected = unique(metadata_df$sample_id)
+RNAseq_selected = RNAseq %&gt;% select(c(&quot;Gene&quot;, all_of(samples_selected)))
+# We calculate the number of times that a gene has 0 counts
+info_df = data.frame(Gene=RNAseq_selected$Gene, sum=rowSums(RNAseq_selected[,-1]))
+info_df$sd = apply(RNAseq_selected[,-1], 1, sd)
+info_df$mean = rowMeans(RNAseq_selected[,-1])
+info_df$median = apply(RNAseq_selected[,-1], 1, median)
+info_df$sum_zero_counts = as.numeric(apply(RNAseq_selected[,-1], 1, function(i) sum(i == 0) )) # Number of times that the counts are equal to 0
+# We keep the genes following all criteria
+if(type_counts == &quot;tpm&quot;){
+  info_filt_df = info_df[(info_df$sum &gt; 0) &amp; (info_df$mean &gt; 1) &amp; (info_df$median &gt; 1) &amp; (info_df$sd &gt; 0) &amp; (info_df$sum_zero_counts &lt; dim(RNAseq_selected[, -1])[2]/2) ,]
+} else if(type_counts == &quot;reads&quot;){
+  info_filt_df = info_df[(info_df$sum &gt; 0) &amp; (info_df$mean &gt; 5) &amp; (info_df$median &gt; 5) &amp; (info_df$sd &gt; 0) &amp; (info_df$sum_zero_counts &lt; dim(RNAseq_selected[, -1])[2]/2) ,]
+} else {
+  stop(&quot;Unknown type of data&quot;)
+}
+# We filter the gene expression
+RNAseq_filt_low_counts = RNAseq_selected %&gt;% filter(Gene %in% info_filt_df$Gene)
+# We write final file
+rnaseq_final_file = paste(filter_low_counts_dir, &#39;/rnaseq_&#39;, geo_id, &#39;.txt&#39;, sep=&#39;&#39;)
+fwrite(RNAseq_filt_low_counts, rnaseq_final_file, sep=&#39;\t&#39;)
+print(paste(&quot;Number of columns (samples):&quot;, as.integer(ncol(RNAseq_filt_low_counts)-1), &quot;Number of rows (genes):&quot;, nrow(RNAseq_filt_low_counts)))</code></pre>
+<pre><code>## [1] &quot;Number of columns (samples): 2490 Number of rows (genes): 18197&quot;</code></pre>
+<pre class="r"><code># Write the information about the selected genes of the dataset in a separate file
+genes_dataset_df$enough_counts = ifelse(genes_dataset_df$HGNC_Symbol %in% info_filt_df$Gene, TRUE, FALSE)
+genes_dataset_file = paste(filter_low_counts_dir, &#39;/rnaseq_gene_info_&#39;, geo_id, &#39;.csv&#39;, sep=&#39;&#39;)
+fwrite(genes_dataset_df, genes_dataset_file)
+# Check the percentage of genes in each category after filtering by counts
+genes_dataset_filtered_df = genes_dataset_df %&gt;% filter(HGNC_Symbol %in% info_filt_df$Gene) %&gt;% unique
+table(genes_dataset_filtered_df$HGNC_category)</code></pre>
+<pre><code>## 
+##      non-coding RNA               other protein-coding gene          pseudogene 
+##                1657                 231               15003                1306</code></pre>
+<pre class="r"><code>round(prop.table(table(genes_dataset_filtered_df$HGNC_category))*100,2)</code></pre>
+<pre><code>## 
+##      non-coding RNA               other protein-coding gene          pseudogene 
+##                9.11                1.27               82.45                7.18</code></pre>
+</div>
+<div id="prepare-disease-genes-information-dataset" class="section level2">
+<h2>Prepare disease genes information dataset</h2>
+<p>Read the disease-gene associations dataset:</p>
+<pre class="r"><code>gene_associations_dir = &#39;/work/ccnr/j.aguirreplans/data/gene_associations/data/out&#39;
+disease_genes_file = paste(gene_associations_dir, &#39;GDA_Filtered_04042022.csv&#39;, sep=&#39;/&#39;)
+GDA = fread(disease_genes_file) %&gt;% unique()
+GDA$HGNC_Symbol = toupper(GDA$HGNC_Symbol)
+head(GDA)</code></pre>
+<pre><code>##                     NewName  MESHID HGNC_Symbol         evidence Strong Weak
+## 1:             hepatomegaly D006529        A1BG CTD|DisGeNET_GDA      0    2
+## 2:            schizophrenia D012559        A1BG CTD|DisGeNET_GDA      0    2
+## 3:      acute kidney injury D058186         A2M CTD|DisGeNET_GDA      0    2
+## 4:       adenoma liver cell D018248         A2M CTD|DisGeNET_GDA      0    2
+## 5:        alzheimer disease D000544         A2M CTD|DisGeNET_GDA      0    2
+## 6: carcinoma hepatocellular D006528         A2M              CTD      0    1
+##    Incompatible Inferred Did not provide TreeNumber
+## 1:            0        0               0    C06|C23
+## 2:            0        0               0        F03
+## 3:            0        0               0    C13|C12
+## 4:            0        0               0    C06|C04
+## 5:            0        0               0    F03|C10
+## 6:            0        0               0    C06|C04
+##                                                                     DescriptorName
+## 1:           Digestive System Diseases|Pathological Conditions, Signs and Symptoms
+## 2:                                                                Mental Disorders
+## 3: Female Urogenital Diseases and Pregnancy Complications|Male Urogenital Diseases
+## 4:                                             Digestive System Diseases|Neoplasms
+## 5:                                        Mental Disorders|Nervous System Diseases
+## 6:                                             Digestive System Diseases|Neoplasms</code></pre>
+<p>There are 102362 disease-gene associations (919 diseases, 16537
+genes)</p>
+<p>Prepare the disease-gene associations for the GEO dataset:</p>
+<pre class="r"><code>disease_genes_info_file = paste(&quot;/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_&quot;, geo_id, &quot;.csv&quot;, sep=&quot;&quot;)
+
+GDA[is.na(GDA)]&lt;-0
+GDA$NewName = tolower(GDA$NewName)
+GDA$DescriptorName = tolower(GDA$DescriptorName)
+GDA$MESHID = toupper(GDA$MESHID)
+GDA$HGNC_Symbol = toupper(GDA$HGNC_Symbol)
+GDA %&lt;&gt;% 
+  filter(Strong &gt; 0 | 
+           Weak &gt; 0 |
+           Incompatible &gt; 0) %&gt;%
+  mutate(DiseaseName = NewName) %&gt;%
+  filter(DescriptorName %ni% c(&quot;behavioral disciplines and activities&quot;)) %&gt;%
+  mutate(MESHID_remove = stringr::str_detect(TreeNumber, pattern = &quot;C22|C25|F04&quot;)) %&gt;%
+  mutate(MESHID_remove = ifelse(TreeNumber == &quot;F01&quot;, TRUE,MESHID_remove)) %&gt;%
+  filter(!(MESHID_remove)) %&gt;%
+  select(DiseaseName, HGNC_Symbol, DescriptorName) %&gt;% 
+  unique() %&gt;% 
+  mutate(gene_in_dataset = ifelse(HGNC_Symbol %in% RNAseq_selected$Gene, TRUE, FALSE))
+
+# Make columns without special characters  
+GDA$DiseaseName.no.sp.char &lt;- gsub(&#39; &#39;, &#39;.&#39;, gsub(&#39;, &#39;, &#39;.&#39;, gsub(&#39;-&#39;, &#39;.&#39;, gsub(&#39;[\\(\\)]&#39;, &#39;&#39;, GDA$DiseaseName))))
+GDA$DescriptorName.no.sp.char &lt;- gsub(&#39; &#39;, &#39;.&#39;, gsub(&#39;, &#39;, &#39;.&#39;, gsub(&#39;-&#39;, &#39;.&#39;, gsub(&#39;[\\(\\)]&#39;, &#39;&#39;, GDA$DescriptorName))))
+
+# Write output file
+GDA %&gt;% fwrite(disease_genes_info_file)
+
+head(GDA)</code></pre>
+<pre><code>##                 DiseaseName HGNC_Symbol
+## 1:             hepatomegaly        A1BG
+## 2:            schizophrenia        A1BG
+## 3:      acute kidney injury         A2M
+## 4:       adenoma liver cell         A2M
+## 5:        alzheimer disease         A2M
+## 6: carcinoma hepatocellular         A2M
+##                                                                     DescriptorName
+## 1:           digestive system diseases|pathological conditions, signs and symptoms
+## 2:                                                                mental disorders
+## 3: female urogenital diseases and pregnancy complications|male urogenital diseases
+## 4:                                             digestive system diseases|neoplasms
+## 5:                                        mental disorders|nervous system diseases
+## 6:                                             digestive system diseases|neoplasms
+##    gene_in_dataset   DiseaseName.no.sp.char
+## 1:            TRUE             hepatomegaly
+## 2:            TRUE            schizophrenia
+## 3:            TRUE      acute.kidney.injury
+## 4:            TRUE       adenoma.liver.cell
+## 5:            TRUE        alzheimer.disease
+## 6:            TRUE carcinoma.hepatocellular
+##                                                          DescriptorName.no.sp.char
+## 1:            digestive.system.diseases|pathological.conditions.signs.and.symptoms
+## 2:                                                                mental.disorders
+## 3: female.urogenital.diseases.and.pregnancy.complications|male.urogenital.diseases
+## 4:                                             digestive.system.diseases|neoplasms
+## 5:                                        mental.disorders|nervous.system.diseases
+## 6:                                             digestive.system.diseases|neoplasms</code></pre>
+<p>There are 65425 disease-gene associations (870 diseases, 14833
+genes), and 59208 disease-gene associations in the GEO dataset (870
+diseases, 13902 genes).</p>
+</div>
+<div id="prepare-essential-genes-dataset" class="section level2">
+<h2>Prepare essential genes dataset</h2>
+<p>Prepare the essential genes of the GEO dataset:</p>
+<pre class="r"><code># Read the essential genes file
+essential_genes_dir = &#39;/work/ccnr/j.aguirreplans/Databases/OGEE&#39;
+essential_genes_original_file = paste(essential_genes_dir, &#39;OGEE_esential_genes_20190416.txt&#39;, sep=&#39;/&#39;)
+# Filter by human genes
+essential_genes_df = fread(essential_genes_original_file, header=TRUE) %&gt;% rename(&quot;taxID&quot;=&quot;#taxID&quot;)
+head(essential_genes_df)</code></pre>
+<pre><code>##    taxID      sciName           locus essential pubmedID               dataType
+## 1:  9606 Homo sapiens ENSG00000000003        NE 26472760 LargescaleAllAvailable
+## 2:  9606 Homo sapiens ENSG00000000003        NE 26472758 LargescaleAllAvailable
+## 3:  9606 Homo sapiens ENSG00000000003        NE 26472758 LargescaleAllAvailable
+## 4:  9606 Homo sapiens ENSG00000000003        NE 26472758 LargescaleAllAvailable
+## 5:  9606 Homo sapiens ENSG00000000003        NE 18239125 LargescaleAllAvailable
+## 6:  9606 Homo sapiens ENSG00000000003        NE 26472760 LargescaleAllAvailable
+##        dataSource
+## 1: PMID: 26472760
+## 2: PMID: 26472758
+## 3: PMID: 26472758
+## 4: PMID: 26472758
+## 5: PMID: 18239125
+## 6: PMID: 26472760</code></pre>
+<pre class="r"><code># Read the gene annotations dictionary
+gene_annotations_dir = &#39;/work/ccnr/j.aguirreplans/data/gene_annotations/data/out&#39;
+gene_dict_file = paste(gene_annotations_dir, &#39;multiple_hgnc_dict_set_2022-01-01.txt&#39;, sep=&#39;/&#39;)
+gene_dict_df = fread(gene_dict_file) %&gt;% unique()
+gene_dict_df = gene_dict_df[!((gene_dict_df$HGNC_Symbol==&quot;&quot;)|(gene_dict_df$alias==&quot;&quot;)),]
+gene_dict_df$HGNC_Symbol = toupper(gene_dict_df$HGNC_Symbol)
+gene_dict_df$alias = toupper(gene_dict_df$alias)
+gene_dict_df %&lt;&gt;% unique()
+head(gene_dict_df)</code></pre>
+<pre><code>##    HGNC_Symbol           alias
+## 1:       MT-TF ENSG00000210049
+## 2:       MT-TF ENST00000387314
+## 3:       MT-TF       MT-TF-201
+## 4:     MT-RNR1 ENSG00000211459
+## 5:     MT-RNR1 ENST00000389680
+## 6:     MT-RNR1     MT-RNR1-201</code></pre>
+<pre class="r"><code># Map ENSEMBL IDs to HGNC symbols
+essential_genes_df = essential_genes_df %&gt;% filter((taxID == 9606) &amp; (essential==&quot;E&quot;))
+essential_genes_df = essential_genes_df %&gt;% inner_join(gene_dict_df, by=c(&quot;locus&quot;=&quot;alias&quot;)) %&gt;% select(taxID, sciName, HGNC_Symbol) %&gt;% unique()
+essential_genes_df$gene_in_dataset = ifelse(essential_genes_df$HGNC_Symbol %in% RNAseq_selected$Gene, TRUE, FALSE)
+head(essential_genes_df)</code></pre>
+<pre><code>##    taxID      sciName HGNC_Symbol gene_in_dataset
+## 1:  9606 Homo sapiens        DPM1            TRUE
+## 2:  9606 Homo sapiens       SCYL3            TRUE
+## 3:  9606 Homo sapiens         FGR            TRUE
+## 4:  9606 Homo sapiens        GCLC            TRUE
+## 5:  9606 Homo sapiens        NFYA            TRUE
+## 6:  9606 Homo sapiens       LAS1L            TRUE</code></pre>
+<pre class="r"><code>essential_genes_geo_file = paste(&quot;/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/OGEE_essential_genes_&quot;, geo_id, &quot;.csv&quot;, sep=&quot;&quot;)
+essential_genes_df %&gt;% fwrite(essential_genes_geo_file)</code></pre>
+<p>There are 7108 essential genes, 7014 in the GEO dataset.</p>
 </div>
 
 

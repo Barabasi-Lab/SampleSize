@@ -107,7 +107,7 @@ def create_gene_coexpression_networks(options):
     datasets = [f for f in os.listdir(input_dir) if fileExist(os.path.join(input_dir, f))]
     #sizes = [str(size) for size in range(10, 12000, 20)]
     #sizes = [str(size) for size in range(20, 12000, 20)]
-    sizes = [10] + [str(size) for size in range(20, 12000, 20)]
+    sizes = [10] + [str(size) for size in range(20, 711, 20)]
     #sizes = [10] + [str(size) for size in range(100, 12000, 100)]
     #reps = [str(rep) for rep in range(5, 11, 1)]
     #reps = [str(rep) for rep in range(1, 11, 1)]
@@ -230,7 +230,8 @@ def submit_command_to_queue(command, queue=None, max_jobs_in_queue=None, queue_f
                     fd.write('source activate {}\n'.format(conda_environment))
                 if rstudio_environment:
                     fd.write('RSTUDIO_IMAGE="{}"\n'.format(rstudio_environment))
-                    command = 'singularity run -B "/scratch:/scratch,/work:/work, ${PWD}/tmp:/tmp" $RSTUDIO_IMAGE ' + command
+                    #command = 'singularity run -B "/scratch:/scratch,/work:/work, ${PWD}/tmp:/tmp" $RSTUDIO_IMAGE ' + command
+                    command = 'singularity run -B "/scratch:/scratch,/work:/work" $RSTUDIO_IMAGE ' + command
                 fd.write('{}\n'.format(command)) # command
             os.system("sbatch {}".format(script)) # execute bash file
         else:
