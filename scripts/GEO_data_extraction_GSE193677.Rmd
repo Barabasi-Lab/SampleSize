@@ -143,7 +143,10 @@ metadata_df = metadata_complete_df %>%
   mutate(inflammation=if_else(`diseasetypere:ch1` %in% c("CD.I", "UC.I"), "inflamed", "noninflamed")) %>%
   dplyr::select(title, geo_accession, `diseasetypere:ch1`, inflammation, `ibd_disease:ch1`, `ibd_clinicianmeasure_inactive_active:ch1`, `demographics_gender:ch1`, `regionre:ch1`, `study_eligibility_age_at_endo:ch1`) %>%
   dplyr::rename("sample_type"=`diseasetypere:ch1`, "disease"=`ibd_disease:ch1`, "disease_activity"=`ibd_clinicianmeasure_inactive_active:ch1`, "gender"=`demographics_gender:ch1`, "tissue"=`regionre:ch1`, "age"=`study_eligibility_age_at_endo:ch1`) %>%
-  tidyr::separate(title, into=c("sample_id", NA, NA), sep = ",")
+  tidyr::separate(title, into=c("sample_id", NA, NA), sep = ",") %>%
+  tidyr::separate(sample_id, into=c(NA, NA, "subject_id", NA, "biopsy_id"), sep = "_", remove=FALSE, convert=TRUE) %>%
+  arrange(subject_id, sample_id, geo_accession) %>%
+  as.data.frame()
 metadata_simple_file = paste(output_dir, "/metadata_simple.txt", sep="")
 metadata_df %>% fwrite(metadata_simple_file)
 metadata_df = fread(metadata_simple_file)
@@ -156,6 +159,19 @@ Number of samples by inflammation:
 table(metadata_df$inflammation)
 ```
 
+We see that there are subjects with multiple biopsies, many of them extracted from different tissues.
+
+We observe that some of the biopsies from the same subject can be both inflamed or non-inflamed, such as subjects 4 and 5:
+
+```{r}
+metadata_df %>% dplyr::select(subject_id, inflammation) %>% group_by(subject_id, inflammation) %>% summarize(n_inflammation=n()) %>% head(10)
+```
+
+Number of subjects from a specific disease group:
+
+```{r}
+metadata_df %>% dplyr::select(subject_id, disease) %>% group_by(disease) %>% summarize(n_subjects=n())
+```
 
 
 ### Access the raw counts

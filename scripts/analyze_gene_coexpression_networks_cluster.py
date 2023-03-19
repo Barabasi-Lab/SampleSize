@@ -312,7 +312,8 @@ def submit_command_to_queue(command, queue=None, max_jobs_in_queue=None, queue_f
                     fd.write('source activate {}\n'.format(conda_environment))
                 if rstudio_environment:
                     fd.write('RSTUDIO_IMAGE="{}"\n'.format(rstudio_environment))
-                    command = 'singularity run -B "/scratch:/scratch,/work:/work,${PWD}/tmp:/tmp" $RSTUDIO_IMAGE ' + command
+                    fd.write('TMP=$HOME/tmp\n')
+                    command = 'singularity run -B "/scratch:/scratch,/work:/work,$TMP/tmp:/tmp" $RSTUDIO_IMAGE ' + command
                 fd.write('{}\n'.format(command)) # command
             os.system("sbatch {}".format(script)) # execute bash file
         else:
