@@ -142,7 +142,7 @@ Create a file with simplified metadata:
 metadata_df = metadata_complete_df %>%
   mutate(inflammation=if_else(`diseasetypere:ch1` %in% c("CD.I", "UC.I"), "inflamed", "noninflamed")) %>%
   dplyr::select(title, geo_accession, `diseasetypere:ch1`, inflammation, `ibd_disease:ch1`, `ibd_clinicianmeasure_inactive_active:ch1`, `demographics_gender:ch1`, `regionre:ch1`, `study_eligibility_age_at_endo:ch1`) %>%
-  dplyr::rename("sample_type"=`diseasetypere:ch1`, "disease"=`ibd_disease:ch1`, "disease_activity"=`ibd_clinicianmeasure_inactive_active:ch1`, "gender"=`demographics_gender:ch1`, "tissue"=`regionre:ch1`, "age"=`study_eligibility_age_at_endo:ch1`) %>%
+  dplyr::rename("disease_inflammation"=`diseasetypere:ch1`, "disease"=`ibd_disease:ch1`, "disease_activity"=`ibd_clinicianmeasure_inactive_active:ch1`, "gender"=`demographics_gender:ch1`, "tissue"=`regionre:ch1`, "age"=`study_eligibility_age_at_endo:ch1`) %>%
   tidyr::separate(title, into=c("sample_id", NA, NA), sep = ",") %>%
   tidyr::separate(sample_id, into=c(NA, NA, "subject_id", NA, "biopsy_id"), sep = "_", remove=FALSE, convert=TRUE) %>%
   arrange(subject_id, sample_id, geo_accession) %>%
@@ -161,18 +161,164 @@ table(metadata_df$inflammation)
 
 We see that there are subjects with multiple biopsies, many of them extracted from different tissues.
 
-We observe that some of the biopsies from the same subject can be both inflamed or non-inflamed, such as subjects 4 and 5:
+```{r}
+metadata_df %>% dplyr::select(subject_id, tissue) %>% group_by(tissue) %>% summarize(n_subjects=n())
+```
+
+What about the number of subjects per type of sample and tissue?
+
+```{r}
+metadata_df %>% dplyr::select(subject_id, tissue, disease_inflammation) %>% group_by(tissue, disease_inflammation) %>% summarize(n_subjects=n())
+```
+We see that the tissues that have a well-balanced number of inflamed, non-inflamed and control subjects are:
+* **Rectum**
+  * **CD**: 116 infl / 252 non-infl
+  * **UC**: 114 infl / 167 non-infl
+  * **Control**: 225 non-infl
+* **Ileum**
+  * **CD**: 162 infl / 201 non-infl
+  * **UC**: 188 non-infl
+  * **Control**: 121 non-infl
+
+What about the number of subjects per disease and tissue?
+
+```{r}
+metadata_df %>% dplyr::select(subject_id, tissue, disease) %>% filter(!(disease %in% c("CD_Pouch", "UC_Pouch"))) %>% group_by(tissue, disease) %>% summarize(n_subjects=n())
+```
+
+What about the number of subjects per inflammation and tissue?
+
+```{r}
+metadata_df %>% dplyr::select(subject_id, tissue, inflammation) %>% group_by(tissue, inflammation) %>% summarize(n_subjects=n())
+```
+
+We see that the tissues that have a well-balanced number of inflamed, non-inflamed and control subjects are:
+* **Rectum**: 260 infl / 644 non-infl
+* **Ileum**: 162 infl / 510 non-infl
+
+We observe that some of the biopsies from the same subject can be both inflamed or non-inflamed such as subjects 4 and 5, and can have multiple inflamed or non-inflamed samples:
 
 ```{r}
 metadata_df %>% dplyr::select(subject_id, inflammation) %>% group_by(subject_id, inflammation) %>% summarize(n_inflammation=n()) %>% head(10)
 ```
 
-Number of subjects from a specific disease group:
+We also observe that the inflamed biopsies that are from the same subject are from different tissues, and the same happens for non-inflamed biopses from the same subject. This means that there are no samples from the same subject, tissue and inflammation status:
+
+```{r}
+metadata_df %>% dplyr::select(subject_id, tissue, inflammation) %>% group_by(subject_id, tissue, inflammation) %>% summarize(n_inflammation=n()) %>% head(10)
+table((metadata_df %>% dplyr::select(subject_id, tissue, inflammation) %>% group_by(subject_id, tissue, inflammation) %>% summarize(n_inflammation=n()))$n_inflammation)
+```
+
+Number of unique subjects from a specific disease group:
 
 ```{r}
 metadata_df %>% dplyr::select(subject_id, disease) %>% group_by(disease) %>% summarize(n_subjects=n())
 ```
 
+Are there subjects from different disease states? A subject can only have one disease state.
+
+```{r}
+table((metadata_df %>% dplyr::select(subject_id, disease) %>% unique() %>% group_by(subject_id) %>% summarize(n_diseases=n()))$n_diseases)
+```
+
+
+
+### Create groups of samples without repeated samples from the same subject
+
+In gene co-expression networks, it is important not to have samples from the same subjects in the analysis because it affects a lot the correlations of the network. So, we will define some rules to create different datasets, containing different groups of samples.
+
+#### Disease inflamed vs. control (Rectum / Ileum)
+
+The first type of group will be inflamed samples from a specific disease vs. non-inflamed samples from control subjects:
+
+```{r}
+# Create first group, having only disease inflamed samples vs. control as non-inflamed samples
+sample_group_df1 = metadata_df %>% 
+  select(sample_id, subject_id, gender, tissue, disease, inflammation) %>%
+  filter(tissue %in% c("Rectum", "Ileum")) %>%  # Keep only Rectum and Ileum tissue as they are the ones having more samples
+  filter(!(disease %in% c("CD_Pouch", "UC_Pouch"))) %>% # Filter out disease Pouch
+  filter(!((!(disease == "Control")) & (inflammation == "noninflamed"))) %>% # Filter out non-inflamed disease samples (we will only use controls as non-inflamed)
+  unique() %>% 
+  arrange(tissue, disease, inflammation, subject_id, sample_id) %>%
+  unite("sample_group_id", c("tissue", "disease", "inflammation"), remove = FALSE) %>% # Create an ID for each group
+  mutate(sample_group_type = "disease_inflamed_vs_control") # Define the type of group that we are creating
+table(sample_group_df1$sample_group_id)
+head(sample_group_df1)
+```
+
+#### Inflamed vs. control (Rectum / Ileum)
+
+The second type of group will be inflamed samples from any disease vs. non-inflamed samples from control subjects:
+
+```{r}
+# Create second group, having any inflamed samples vs. control as non-inflamed samples
+sample_group_df2 = metadata_df %>% 
+  select(sample_id, subject_id, gender, tissue, disease, inflammation) %>%
+  filter(tissue %in% c("Rectum", "Ileum")) %>%  # Keep only Rectum and Ileum tissue as they are the ones having more samples
+  filter(!(disease %in% c("CD_Pouch", "UC_Pouch"))) %>% # Filter out disease Pouch
+  filter(!((!(disease == "Control")) & (inflammation == "noninflamed"))) %>% # Filter out non-inflamed disease samples (we will only use controls as non-inflamed)
+  unique() %>% 
+  arrange(tissue, disease, inflammation, subject_id, sample_id) %>%
+  unite("sample_group_id", c("tissue", "inflammation"), remove = FALSE) %>% # Create an ID for each group
+  mutate(sample_group_type = "inflamed_vs_control") # Define the type of group that we are creating
+table(sample_group_df2$sample_group_id)
+head(sample_group_df2)
+```
+
+#### Inflamed vs. non-inflamed, removing samples from same subject (Rectum / Ileum)
+
+The third type of group will be inflamed samples from any disease vs. non-inflamed samples from any subject.
+We will make sure to remove samples from same subject in different groups, keeping only one sample for each subject.
+
+First we select all inflamed and non-inflamed samples:
+
+```{r}
+sample_group_df3_raw = metadata_df %>% 
+  select(sample_id, subject_id, gender, tissue, disease, inflammation) %>%
+  filter(tissue %in% c("Rectum", "Ileum")) %>%  # Keep only Rectum and Ileum tissue as they are the ones having more samples
+  filter(!(disease %in% c("CD_Pouch", "UC_Pouch"))) %>% # Filter out disease Pouch
+  unique() %>% 
+  arrange(tissue, disease, inflammation, subject_id, sample_id) %>%
+  unite("sample_group_id", c("tissue", "inflammation"), remove = FALSE) %>% # Create an ID for each group
+  mutate(sample_group_type = "inflamed_vs_noninflamed") # Define the type of group that we are creating
+head(sample_group_df3_raw)
+```
+
+We count the subjects with more than one sample and separate them from the subjects with a single sample:
+
+```{r}
+sample_group_df3_uniquesamp = sample_group_df3_raw %>% group_by(tissue, subject_id) %>% mutate(n_samp = n()) %>% ungroup() %>% filter(n_samp == 1)
+sample_group_df3_multiplesamp = sample_group_df3_raw %>% group_by(tissue, subject_id) %>% mutate(n_samp = n()) %>% ungroup() %>% filter(n_samp > 1)
+table(sample_group_df3_uniquesamp$n_samp)
+table(sample_group_df3_multiplesamp$n_samp)
+```
+
+From the subjects that have multiple samples, we select the sample from the smallest group and add it to the pool of samples that only have one subject:
+
+```{r}
+sample_group_df3 = data.frame(sample_group_df3_uniquesamp) %>% select(-n_samp)
+for(subject_id_selected in unique(sample_group_df3_multiplesamp$subject_id)){
+  groups_samples_selected = (sample_group_df3_multiplesamp %>% filter(subject_id == subject_id_selected))$sample_group_id # Get groups of the subject selected
+  smallest_group = (sample_group_df3 %>% filter(sample_group_id %in% groups_samples_selected) %>% group_by(sample_group_id) %>% summarize(n_samp=n()) %>% ungroup() %>% filter(n_samp == min(n_samp)))$sample_group_id # Get the group with smallest number of samples among the groups of the subject selected
+  sample_selected = (sample_group_df3_multiplesamp %>% filter((subject_id == subject_id_selected) & (sample_group_id == smallest_group)))$sample_id
+  sample_group_df3 = rbind(sample_group_df3, (sample_group_df3_multiplesamp %>% filter(sample_id == sample_selected) %>% select(-n_samp)))
+}
+length(sample_group_df3$sample_id)
+length(sample_group_df3$subject_id)
+table(sample_group_df3$sample_group_id)
+head(sample_group_df3)
+```
+
+Merge all groups and save the data frame as a file:
+
+```{r}
+sample_groups_df = rbind(sample_group_df1, sample_group_df2, sample_group_df3)
+table(sample_groups_df$sample_group_id)
+table(sample_groups_df$sample_group_type)
+head(sample_groups_df)
+sample_groups_file = paste(output_dir, "/sample_groups.txt", sep="")
+fwrite(sample_groups_df, sample_groups_file, sep='\t')
+```
 
 ### Access the raw counts
 

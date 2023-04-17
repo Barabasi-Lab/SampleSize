@@ -470,14 +470,14 @@ filePaths</code></pre>
 ## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_adjcounts.txt.gz  660
 ## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_counts.txt.gz     660
 ##                                                                                                             mtime
-## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_adjcounts.txt.gz 2023-03-01 15:34:47
-## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_counts.txt.gz    2023-03-01 15:34:48
+## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_adjcounts.txt.gz 2023-04-16 11:26:37
+## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_counts.txt.gz    2023-04-16 11:26:38
 ##                                                                                                             ctime
-## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_adjcounts.txt.gz 2023-03-01 15:34:47
-## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_counts.txt.gz    2023-03-01 15:34:48
+## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_adjcounts.txt.gz 2023-04-16 11:26:37
+## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_counts.txt.gz    2023-04-16 11:26:38
 ##                                                                                                             atime
-## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_adjcounts.txt.gz 2023-03-01 15:34:47
-## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_counts.txt.gz    2023-03-01 15:34:48
+## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_adjcounts.txt.gz 2023-04-16 11:26:37
+## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_counts.txt.gz    2023-04-16 11:26:38
 ##                                                                                                      uid
 ## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_adjcounts.txt.gz 1825758390
 ## /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/raw/GSE193677_MSCCR_Biopsy_counts.txt.gz    1825758390
@@ -544,31 +544,382 @@ lapply(df1, head)</code></pre>
 <pre class="r"><code>metadata_df = metadata_complete_df %&gt;%
   mutate(inflammation=if_else(`diseasetypere:ch1` %in% c(&quot;CD.I&quot;, &quot;UC.I&quot;), &quot;inflamed&quot;, &quot;noninflamed&quot;)) %&gt;%
   dplyr::select(title, geo_accession, `diseasetypere:ch1`, inflammation, `ibd_disease:ch1`, `ibd_clinicianmeasure_inactive_active:ch1`, `demographics_gender:ch1`, `regionre:ch1`, `study_eligibility_age_at_endo:ch1`) %&gt;%
-  dplyr::rename(&quot;sample_type&quot;=`diseasetypere:ch1`, &quot;disease&quot;=`ibd_disease:ch1`, &quot;disease_activity&quot;=`ibd_clinicianmeasure_inactive_active:ch1`, &quot;gender&quot;=`demographics_gender:ch1`, &quot;tissue&quot;=`regionre:ch1`, &quot;age&quot;=`study_eligibility_age_at_endo:ch1`) %&gt;%
-  tidyr::separate(title, into=c(&quot;sample_id&quot;, NA, NA), sep = &quot;,&quot;)
+  dplyr::rename(&quot;disease_inflammation&quot;=`diseasetypere:ch1`, &quot;disease&quot;=`ibd_disease:ch1`, &quot;disease_activity&quot;=`ibd_clinicianmeasure_inactive_active:ch1`, &quot;gender&quot;=`demographics_gender:ch1`, &quot;tissue&quot;=`regionre:ch1`, &quot;age&quot;=`study_eligibility_age_at_endo:ch1`) %&gt;%
+  tidyr::separate(title, into=c(&quot;sample_id&quot;, NA, NA), sep = &quot;,&quot;) %&gt;%
+  tidyr::separate(sample_id, into=c(NA, NA, &quot;subject_id&quot;, NA, &quot;biopsy_id&quot;), sep = &quot;_&quot;, remove=FALSE, convert=TRUE) %&gt;%
+  arrange(subject_id, sample_id, geo_accession) %&gt;%
+  as.data.frame()
 metadata_simple_file = paste(output_dir, &quot;/metadata_simple.txt&quot;, sep=&quot;&quot;)
 metadata_df %&gt;% fwrite(metadata_simple_file)
 metadata_df = fread(metadata_simple_file)
 head(metadata_df)</code></pre>
-<pre><code>##                    sample_id geo_accession sample_type inflammation disease
-## 1:   MSCCR_reGRID_1_Biopsy_1    GSM5976499     UC.NonI  noninflamed      UC
-## 2:   MSCCR_reGRID_1_Biopsy_2    GSM5976500     UC.NonI  noninflamed      UC
-## 3:   MSCCR_reGRID_1_Biopsy_3    GSM5976501     UC.NonI  noninflamed      UC
-## 4: MSCCR_reGRID_10_Biopsy_18    GSM5976502     CD.NonI  noninflamed      CD
-## 5: MSCCR_reGRID_10_Biopsy_19    GSM5976503     CD.NonI  noninflamed      CD
-## 6: MSCCR_reGRID_10_Biopsy_20    GSM5976504     CD.NonI  noninflamed      CD
-##    disease_activity gender     tissue age
-## 1:         Inactive   Male     Rectum  44
-## 2:         Inactive   Male  LeftColon  44
-## 3:         Inactive   Male      Ileum  44
-## 4:           Active Female RightColon  60
-## 5:           Active Female  LeftColon  60
-## 6:           Active Female Transverse  60</code></pre>
+<pre><code>##                  sample_id subject_id biopsy_id geo_accession
+## 1: MSCCR_reGRID_1_Biopsy_1          1         1    GSM5976499
+## 2: MSCCR_reGRID_1_Biopsy_2          1         2    GSM5976500
+## 3: MSCCR_reGRID_1_Biopsy_3          1         3    GSM5976501
+## 4: MSCCR_reGRID_3_Biopsy_4          3         4    GSM5977704
+## 5: MSCCR_reGRID_3_Biopsy_5          3         5    GSM5977705
+## 6: MSCCR_reGRID_3_Biopsy_6          3         6    GSM5977706
+##    disease_inflammation inflammation disease disease_activity gender     tissue
+## 1:              UC.NonI  noninflamed      UC         Inactive   Male     Rectum
+## 2:              UC.NonI  noninflamed      UC         Inactive   Male  LeftColon
+## 3:              UC.NonI  noninflamed      UC         Inactive   Male      Ileum
+## 4:              CD.NonI  noninflamed      CD           Active   Male     Rectum
+## 5:              CD.NonI  noninflamed      CD           Active   Male Transverse
+## 6:              CD.NonI  noninflamed      CD           Active   Male      Ileum
+##    age
+## 1:  44
+## 2:  44
+## 3:  44
+## 4:  58
+## 5:  58
+## 6:  58</code></pre>
 <p>Number of samples by inflammation:</p>
 <pre class="r"><code>table(metadata_df$inflammation)</code></pre>
 <pre><code>## 
 ##    inflamed noninflamed 
 ##         712        1778</code></pre>
+<p>We see that there are subjects with multiple biopsies, many of them
+extracted from different tissues.</p>
+<pre class="r"><code>metadata_df %&gt;% dplyr::select(subject_id, tissue) %&gt;% group_by(tissue) %&gt;% summarize(n_subjects=n())</code></pre>
+<pre><code>## # A tibble: 7 × 2
+##   tissue     n_subjects
+##   &lt;chr&gt;           &lt;int&gt;
+## 1 Cecum             229
+## 2 Ileum             672
+## 3 LeftColon         180
+## 4 Rectum            904
+## 5 RightColon        252
+## 6 Sigmoid           163
+## 7 Transverse         90</code></pre>
+<p>What about the number of subjects per type of sample and tissue?</p>
+<pre class="r"><code>metadata_df %&gt;% dplyr::select(subject_id, tissue, disease_inflammation) %&gt;% group_by(tissue, disease_inflammation) %&gt;% summarize(n_subjects=n())</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;tissue&#39;. You can override using the
+## `.groups` argument.</code></pre>
+<pre><code>## # A tibble: 34 × 3
+## # Groups:   tissue [7]
+##    tissue    disease_inflammation n_subjects
+##    &lt;chr&gt;     &lt;chr&gt;                     &lt;int&gt;
+##  1 Cecum     CD.I                         36
+##  2 Cecum     CD.NonI                      43
+##  3 Cecum     Control.NonI                 84
+##  4 Cecum     UC.I                         17
+##  5 Cecum     UC.NonI                      49
+##  6 Ileum     CD.I                        162
+##  7 Ileum     CD.NonI                     201
+##  8 Ileum     Control.NonI                121
+##  9 Ileum     UC.NonI                     188
+## 10 LeftColon CD.I                         26
+## # … with 24 more rows</code></pre>
+<p>We see that the tissues that have a well-balanced number of inflamed,
+non-inflamed and control subjects are: * <strong>Rectum</strong> *
+<strong>CD</strong>: 116 infl / 252 non-infl * <strong>UC</strong>: 114
+infl / 167 non-infl * <strong>Control</strong>: 225 non-infl *
+<strong>Ileum</strong> * <strong>CD</strong>: 162 infl / 201 non-infl *
+<strong>UC</strong>: 188 non-infl * <strong>Control</strong>: 121
+non-infl</p>
+<p>What about the number of subjects per disease and tissue?</p>
+<pre class="r"><code>metadata_df %&gt;% dplyr::select(subject_id, tissue, disease) %&gt;% filter(!(disease %in% c(&quot;CD_Pouch&quot;, &quot;UC_Pouch&quot;))) %&gt;% group_by(tissue, disease) %&gt;% summarize(n_subjects=n())</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;tissue&#39;. You can override using the
+## `.groups` argument.</code></pre>
+<pre><code>## # A tibble: 21 × 3
+## # Groups:   tissue [7]
+##    tissue    disease n_subjects
+##    &lt;chr&gt;     &lt;chr&gt;        &lt;int&gt;
+##  1 Cecum     CD              78
+##  2 Cecum     Control         84
+##  3 Cecum     UC              65
+##  4 Ileum     CD             362
+##  5 Ileum     Control        121
+##  6 Ileum     UC             182
+##  7 LeftColon CD              84
+##  8 LeftColon Control          6
+##  9 LeftColon UC              88
+## 10 Rectum    CD             366
+## # … with 11 more rows</code></pre>
+<p>What about the number of subjects per inflammation and tissue?</p>
+<pre class="r"><code>metadata_df %&gt;% dplyr::select(subject_id, tissue, inflammation) %&gt;% group_by(tissue, inflammation) %&gt;% summarize(n_subjects=n())</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;tissue&#39;. You can override using the
+## `.groups` argument.</code></pre>
+<pre><code>## # A tibble: 14 × 3
+## # Groups:   tissue [7]
+##    tissue     inflammation n_subjects
+##    &lt;chr&gt;      &lt;chr&gt;             &lt;int&gt;
+##  1 Cecum      inflamed             53
+##  2 Cecum      noninflamed         176
+##  3 Ileum      inflamed            162
+##  4 Ileum      noninflamed         510
+##  5 LeftColon  inflamed             72
+##  6 LeftColon  noninflamed         108
+##  7 Rectum     inflamed            260
+##  8 Rectum     noninflamed         644
+##  9 RightColon inflamed             62
+## 10 RightColon noninflamed         190
+## 11 Sigmoid    inflamed             78
+## 12 Sigmoid    noninflamed          85
+## 13 Transverse inflamed             25
+## 14 Transverse noninflamed          65</code></pre>
+<p>We see that the tissues that have a well-balanced number of inflamed,
+non-inflamed and control subjects are: * <strong>Rectum</strong>: 260
+infl / 644 non-infl * <strong>Ileum</strong>: 162 infl / 510
+non-infl</p>
+<p>We observe that some of the biopsies from the same subject can be
+both inflamed or non-inflamed such as subjects 4 and 5, and can have
+multiple inflamed or non-inflamed samples:</p>
+<pre class="r"><code>metadata_df %&gt;% dplyr::select(subject_id, inflammation) %&gt;% group_by(subject_id, inflammation) %&gt;% summarize(n_inflammation=n()) %&gt;% head(10)</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;subject_id&#39;. You can override using the
+## `.groups` argument.</code></pre>
+<pre><code>## # A tibble: 10 × 3
+## # Groups:   subject_id [8]
+##    subject_id inflammation n_inflammation
+##         &lt;int&gt; &lt;chr&gt;                 &lt;int&gt;
+##  1          1 noninflamed               3
+##  2          3 noninflamed               3
+##  3          4 inflamed                  1
+##  4          4 noninflamed               2
+##  5          5 inflamed                  2
+##  6          5 noninflamed               1
+##  7          6 noninflamed               2
+##  8          7 inflamed                  2
+##  9          9 noninflamed               1
+## 10         10 noninflamed               3</code></pre>
+<p>We also observe that the inflamed biopsies that are from the same
+subject are from different tissues, and the same happens for
+non-inflamed biopses from the same subject. This means that there are no
+samples from the same subject, tissue and inflammation status:</p>
+<pre class="r"><code>metadata_df %&gt;% dplyr::select(subject_id, tissue, inflammation) %&gt;% group_by(subject_id, tissue, inflammation) %&gt;% summarize(n_inflammation=n()) %&gt;% head(10)</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;subject_id&#39;, &#39;tissue&#39;. You can override
+## using the `.groups` argument.</code></pre>
+<pre><code>## # A tibble: 10 × 4
+## # Groups:   subject_id, tissue [9]
+##    subject_id tissue     inflammation n_inflammation
+##         &lt;int&gt; &lt;chr&gt;      &lt;chr&gt;                 &lt;int&gt;
+##  1          1 Ileum      noninflamed               1
+##  2          1 LeftColon  noninflamed               1
+##  3          1 Rectum     noninflamed               1
+##  4          3 Ileum      noninflamed               1
+##  5          3 Rectum     noninflamed               1
+##  6          3 Transverse noninflamed               1
+##  7          4 Ileum      inflamed                  1
+##  8          4 Ileum      noninflamed               1
+##  9          4 LeftColon  noninflamed               1
+## 10          5 LeftColon  inflamed                  1</code></pre>
+<pre class="r"><code>table((metadata_df %&gt;% dplyr::select(subject_id, tissue, inflammation) %&gt;% group_by(subject_id, tissue, inflammation) %&gt;% summarize(n_inflammation=n()))$n_inflammation)</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;subject_id&#39;, &#39;tissue&#39;. You can override
+## using the `.groups` argument.</code></pre>
+<pre><code>## 
+##    1 
+## 2490</code></pre>
+<p>Number of unique subjects from a specific disease group:</p>
+<pre class="r"><code>metadata_df %&gt;% dplyr::select(subject_id, disease) %&gt;% group_by(disease) %&gt;% summarize(n_subjects=n())</code></pre>
+<pre><code>## # A tibble: 5 × 2
+##   disease  n_subjects
+##   &lt;chr&gt;         &lt;int&gt;
+## 1 CD             1153
+## 2 CD_Pouch          4
+## 3 Control         461
+## 4 UC              843
+## 5 UC_Pouch         29</code></pre>
+<p>Are there subjects from different disease states? A subject can only
+have one disease state.</p>
+<pre class="r"><code>table((metadata_df %&gt;% dplyr::select(subject_id, disease) %&gt;% unique() %&gt;% group_by(subject_id) %&gt;% summarize(n_diseases=n()))$n_diseases)</code></pre>
+<pre><code>## 
+##    1 
+## 1162</code></pre>
+</div>
+<div id="create-groups-of-samples-without-repeated-samples-from-the-same-subject" class="section level3">
+<h3>Create groups of samples without repeated samples from the same
+subject</h3>
+<p>In gene co-expression networks, it is important not to have samples
+from the same subjects in the analysis because it affects a lot the
+correlations of the network. So, we will define some rules to create
+different datasets, containing different groups of samples.</p>
+<div id="disease-inflamed-vs.-control-rectum-ileum" class="section level4">
+<h4>Disease inflamed vs. control (Rectum / Ileum)</h4>
+<p>The first type of group will be inflamed samples from a specific
+disease vs. non-inflamed samples from control subjects:</p>
+<pre class="r"><code># Create first group, having only disease inflamed samples vs. control as non-inflamed samples
+sample_group_df1 = metadata_df %&gt;% 
+  select(sample_id, subject_id, gender, tissue, disease, inflammation) %&gt;%
+  filter(tissue %in% c(&quot;Rectum&quot;, &quot;Ileum&quot;)) %&gt;%  # Keep only Rectum and Ileum tissue as they are the ones having more samples
+  filter(!(disease %in% c(&quot;CD_Pouch&quot;, &quot;UC_Pouch&quot;))) %&gt;% # Filter out disease Pouch
+  filter(!((!(disease == &quot;Control&quot;)) &amp; (inflammation == &quot;noninflamed&quot;))) %&gt;% # Filter out non-inflamed disease samples (we will only use controls as non-inflamed)
+  unique() %&gt;% 
+  arrange(tissue, disease, inflammation, subject_id, sample_id) %&gt;%
+  unite(&quot;sample_group_id&quot;, c(&quot;tissue&quot;, &quot;disease&quot;, &quot;inflammation&quot;), remove = FALSE) %&gt;% # Create an ID for each group
+  mutate(sample_group_type = &quot;disease_inflamed_vs_control&quot;) # Define the type of group that we are creating
+table(sample_group_df1$sample_group_id)</code></pre>
+<pre><code>## 
+##          Ileum_CD_inflamed  Ileum_Control_noninflamed 
+##                        162                        121 
+##         Rectum_CD_inflamed Rectum_Control_noninflamed 
+##                        115                        225 
+##         Rectum_UC_inflamed 
+##                        136</code></pre>
+<pre class="r"><code>head(sample_group_df1)</code></pre>
+<pre><code>##                   sample_id subject_id gender   sample_group_id tissue disease
+## 1   MSCCR_reGRID_4_Biopsy_7          4   Male Ileum_CD_inflamed  Ileum      CD
+## 2 MSCCR_reGRID_13_Biopsy_25         13   Male Ileum_CD_inflamed  Ileum      CD
+## 3 MSCCR_reGRID_17_Biopsy_38         17 Female Ileum_CD_inflamed  Ileum      CD
+## 4 MSCCR_reGRID_19_Biopsy_43         19   Male Ileum_CD_inflamed  Ileum      CD
+## 5 MSCCR_reGRID_22_Biopsy_49         22   Male Ileum_CD_inflamed  Ileum      CD
+## 6 MSCCR_reGRID_29_Biopsy_62         29   Male Ileum_CD_inflamed  Ileum      CD
+##   inflammation           sample_group_type
+## 1     inflamed disease_inflamed_vs_control
+## 2     inflamed disease_inflamed_vs_control
+## 3     inflamed disease_inflamed_vs_control
+## 4     inflamed disease_inflamed_vs_control
+## 5     inflamed disease_inflamed_vs_control
+## 6     inflamed disease_inflamed_vs_control</code></pre>
+</div>
+<div id="inflamed-vs.-control-rectum-ileum" class="section level4">
+<h4>Inflamed vs. control (Rectum / Ileum)</h4>
+<p>The second type of group will be inflamed samples from any disease
+vs. non-inflamed samples from control subjects:</p>
+<pre class="r"><code># Create second group, having any inflamed samples vs. control as non-inflamed samples
+sample_group_df2 = metadata_df %&gt;% 
+  select(sample_id, subject_id, gender, tissue, disease, inflammation) %&gt;%
+  filter(tissue %in% c(&quot;Rectum&quot;, &quot;Ileum&quot;)) %&gt;%  # Keep only Rectum and Ileum tissue as they are the ones having more samples
+  filter(!(disease %in% c(&quot;CD_Pouch&quot;, &quot;UC_Pouch&quot;))) %&gt;% # Filter out disease Pouch
+  filter(!((!(disease == &quot;Control&quot;)) &amp; (inflammation == &quot;noninflamed&quot;))) %&gt;% # Filter out non-inflamed disease samples (we will only use controls as non-inflamed)
+  unique() %&gt;% 
+  arrange(tissue, disease, inflammation, subject_id, sample_id) %&gt;%
+  unite(&quot;sample_group_id&quot;, c(&quot;tissue&quot;, &quot;inflammation&quot;), remove = FALSE) %&gt;% # Create an ID for each group
+  mutate(sample_group_type = &quot;inflamed_vs_control&quot;) # Define the type of group that we are creating
+table(sample_group_df2$sample_group_id)</code></pre>
+<pre><code>## 
+##     Ileum_inflamed  Ileum_noninflamed    Rectum_inflamed Rectum_noninflamed 
+##                162                121                251                225</code></pre>
+<pre class="r"><code>head(sample_group_df2)</code></pre>
+<pre><code>##                   sample_id subject_id gender sample_group_id tissue disease
+## 1   MSCCR_reGRID_4_Biopsy_7          4   Male  Ileum_inflamed  Ileum      CD
+## 2 MSCCR_reGRID_13_Biopsy_25         13   Male  Ileum_inflamed  Ileum      CD
+## 3 MSCCR_reGRID_17_Biopsy_38         17 Female  Ileum_inflamed  Ileum      CD
+## 4 MSCCR_reGRID_19_Biopsy_43         19   Male  Ileum_inflamed  Ileum      CD
+## 5 MSCCR_reGRID_22_Biopsy_49         22   Male  Ileum_inflamed  Ileum      CD
+## 6 MSCCR_reGRID_29_Biopsy_62         29   Male  Ileum_inflamed  Ileum      CD
+##   inflammation   sample_group_type
+## 1     inflamed inflamed_vs_control
+## 2     inflamed inflamed_vs_control
+## 3     inflamed inflamed_vs_control
+## 4     inflamed inflamed_vs_control
+## 5     inflamed inflamed_vs_control
+## 6     inflamed inflamed_vs_control</code></pre>
+</div>
+<div id="inflamed-vs.-non-inflamed-removing-samples-from-same-subject-rectum-ileum" class="section level4">
+<h4>Inflamed vs. non-inflamed, removing samples from same subject
+(Rectum / Ileum)</h4>
+<p>The third type of group will be inflamed samples from any disease
+vs. non-inflamed samples from any subject. We will make sure to remove
+samples from same subject in different groups, keeping only one sample
+for each subject.</p>
+<p>First we select all inflamed and non-inflamed samples:</p>
+<pre class="r"><code>sample_group_df3_raw = metadata_df %&gt;% 
+  select(sample_id, subject_id, gender, tissue, disease, inflammation) %&gt;%
+  filter(tissue %in% c(&quot;Rectum&quot;, &quot;Ileum&quot;)) %&gt;%  # Keep only Rectum and Ileum tissue as they are the ones having more samples
+  filter(!(disease %in% c(&quot;CD_Pouch&quot;, &quot;UC_Pouch&quot;))) %&gt;% # Filter out disease Pouch
+  unique() %&gt;% 
+  arrange(tissue, disease, inflammation, subject_id, sample_id) %&gt;%
+  unite(&quot;sample_group_id&quot;, c(&quot;tissue&quot;, &quot;inflammation&quot;), remove = FALSE) %&gt;% # Create an ID for each group
+  mutate(sample_group_type = &quot;inflamed_vs_noninflamed&quot;) # Define the type of group that we are creating
+head(sample_group_df3_raw)</code></pre>
+<pre><code>##                   sample_id subject_id gender sample_group_id tissue disease
+## 1   MSCCR_reGRID_4_Biopsy_7          4   Male  Ileum_inflamed  Ileum      CD
+## 2 MSCCR_reGRID_13_Biopsy_25         13   Male  Ileum_inflamed  Ileum      CD
+## 3 MSCCR_reGRID_17_Biopsy_38         17 Female  Ileum_inflamed  Ileum      CD
+## 4 MSCCR_reGRID_19_Biopsy_43         19   Male  Ileum_inflamed  Ileum      CD
+## 5 MSCCR_reGRID_22_Biopsy_49         22   Male  Ileum_inflamed  Ileum      CD
+## 6 MSCCR_reGRID_29_Biopsy_62         29   Male  Ileum_inflamed  Ileum      CD
+##   inflammation       sample_group_type
+## 1     inflamed inflamed_vs_noninflamed
+## 2     inflamed inflamed_vs_noninflamed
+## 3     inflamed inflamed_vs_noninflamed
+## 4     inflamed inflamed_vs_noninflamed
+## 5     inflamed inflamed_vs_noninflamed
+## 6     inflamed inflamed_vs_noninflamed</code></pre>
+<p>We count the subjects with more than one sample and separate them
+from the subjects with a single sample:</p>
+<pre class="r"><code>sample_group_df3_uniquesamp = sample_group_df3_raw %&gt;% group_by(tissue, subject_id) %&gt;% mutate(n_samp = n()) %&gt;% ungroup() %&gt;% filter(n_samp == 1)
+sample_group_df3_multiplesamp = sample_group_df3_raw %&gt;% group_by(tissue, subject_id) %&gt;% mutate(n_samp = n()) %&gt;% ungroup() %&gt;% filter(n_samp &gt; 1)
+table(sample_group_df3_uniquesamp$n_samp)</code></pre>
+<pre><code>## 
+##    1 
+## 1516</code></pre>
+<pre class="r"><code>table(sample_group_df3_multiplesamp$n_samp)</code></pre>
+<pre><code>## 
+##  2 
+## 40</code></pre>
+<p>From the subjects that have multiple samples, we select the sample
+from the smallest group and add it to the pool of samples that only have
+one subject:</p>
+<pre class="r"><code>sample_group_df3 = data.frame(sample_group_df3_uniquesamp) %&gt;% select(-n_samp)
+for(subject_id_selected in unique(sample_group_df3_multiplesamp$subject_id)){
+  groups_samples_selected = (sample_group_df3_multiplesamp %&gt;% filter(subject_id == subject_id_selected))$sample_group_id # Get groups of the subject selected
+  smallest_group = (sample_group_df3 %&gt;% filter(sample_group_id %in% groups_samples_selected) %&gt;% group_by(sample_group_id) %&gt;% summarize(n_samp=n()) %&gt;% ungroup() %&gt;% filter(n_samp == min(n_samp)))$sample_group_id # Get the group with smallest number of samples among the groups of the subject selected
+  sample_selected = (sample_group_df3_multiplesamp %&gt;% filter((subject_id == subject_id_selected) &amp; (sample_group_id == smallest_group)))$sample_id
+  sample_group_df3 = rbind(sample_group_df3, (sample_group_df3_multiplesamp %&gt;% filter(sample_id == sample_selected) %&gt;% select(-n_samp)))
+}
+length(sample_group_df3$sample_id)</code></pre>
+<pre><code>## [1] 1536</code></pre>
+<pre class="r"><code>length(sample_group_df3$subject_id)</code></pre>
+<pre><code>## [1] 1536</code></pre>
+<pre class="r"><code>table(sample_group_df3$sample_group_id)</code></pre>
+<pre><code>## 
+##     Ileum_inflamed  Ileum_noninflamed    Rectum_inflamed Rectum_noninflamed 
+##                162                497                251                626</code></pre>
+<pre class="r"><code>head(sample_group_df3)</code></pre>
+<pre><code>##                   sample_id subject_id gender sample_group_id tissue disease
+## 1 MSCCR_reGRID_13_Biopsy_25         13   Male  Ileum_inflamed  Ileum      CD
+## 2 MSCCR_reGRID_17_Biopsy_38         17 Female  Ileum_inflamed  Ileum      CD
+## 3 MSCCR_reGRID_19_Biopsy_43         19   Male  Ileum_inflamed  Ileum      CD
+## 4 MSCCR_reGRID_22_Biopsy_49         22   Male  Ileum_inflamed  Ileum      CD
+## 5 MSCCR_reGRID_29_Biopsy_62         29   Male  Ileum_inflamed  Ileum      CD
+## 6 MSCCR_reGRID_37_Biopsy_78         37   Male  Ileum_inflamed  Ileum      CD
+##   inflammation       sample_group_type
+## 1     inflamed inflamed_vs_noninflamed
+## 2     inflamed inflamed_vs_noninflamed
+## 3     inflamed inflamed_vs_noninflamed
+## 4     inflamed inflamed_vs_noninflamed
+## 5     inflamed inflamed_vs_noninflamed
+## 6     inflamed inflamed_vs_noninflamed</code></pre>
+<p>Merge all groups and save the data frame as a file:</p>
+<pre class="r"><code>sample_groups_df = rbind(sample_group_df1, sample_group_df2, sample_group_df3)
+table(sample_groups_df$sample_group_id)</code></pre>
+<pre><code>## 
+##          Ileum_CD_inflamed  Ileum_Control_noninflamed 
+##                        162                        121 
+##             Ileum_inflamed          Ileum_noninflamed 
+##                        324                        618 
+##         Rectum_CD_inflamed Rectum_Control_noninflamed 
+##                        115                        225 
+##            Rectum_inflamed         Rectum_noninflamed 
+##                        502                        851 
+##         Rectum_UC_inflamed 
+##                        136</code></pre>
+<pre class="r"><code>table(sample_groups_df$sample_group_type)</code></pre>
+<pre><code>## 
+## disease_inflamed_vs_control         inflamed_vs_control 
+##                         759                         759 
+##     inflamed_vs_noninflamed 
+##                        1536</code></pre>
+<pre class="r"><code>head(sample_groups_df)</code></pre>
+<pre><code>##                   sample_id subject_id gender   sample_group_id tissue disease
+## 1   MSCCR_reGRID_4_Biopsy_7          4   Male Ileum_CD_inflamed  Ileum      CD
+## 2 MSCCR_reGRID_13_Biopsy_25         13   Male Ileum_CD_inflamed  Ileum      CD
+## 3 MSCCR_reGRID_17_Biopsy_38         17 Female Ileum_CD_inflamed  Ileum      CD
+## 4 MSCCR_reGRID_19_Biopsy_43         19   Male Ileum_CD_inflamed  Ileum      CD
+## 5 MSCCR_reGRID_22_Biopsy_49         22   Male Ileum_CD_inflamed  Ileum      CD
+## 6 MSCCR_reGRID_29_Biopsy_62         29   Male Ileum_CD_inflamed  Ileum      CD
+##   inflammation           sample_group_type
+## 1     inflamed disease_inflamed_vs_control
+## 2     inflamed disease_inflamed_vs_control
+## 3     inflamed disease_inflamed_vs_control
+## 4     inflamed disease_inflamed_vs_control
+## 5     inflamed disease_inflamed_vs_control
+## 6     inflamed disease_inflamed_vs_control</code></pre>
+<pre class="r"><code>sample_groups_file = paste(output_dir, &quot;/sample_groups.txt&quot;, sep=&quot;&quot;)
+fwrite(sample_groups_df, sample_groups_file, sep=&#39;\t&#39;)</code></pre>
+</div>
 </div>
 <div id="access-the-raw-counts" class="section level3">
 <h3>Access the raw counts</h3>

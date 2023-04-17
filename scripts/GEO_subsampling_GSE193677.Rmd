@@ -45,10 +45,13 @@ dir.create(sampling_dir, showWarnings = FALSE)
 # Define the input files
 metadata_file = paste(output_dir, '/metadata_simple.txt', sep='')
 metadata_df = fread(metadata_file)
+sample_groups_file = paste(output_dir, "/sample_groups.txt", sep="")
+sample_groups_df = fread(sample_groups_file)
 ```
 
 ```{r}
 head(metadata_df)
+head(sample_groups_df)
 ```
 
 ## Subsampling
@@ -98,34 +101,40 @@ For each type of sample group, we select groups of samples from different sizes:
 ```{r}
 sex_types = c("")
 sex_to_id = data.frame(row.names=c("male","female","") , val=c("Male","Female",""))
-for (sample_type_selected in unique(metadata_df$inflammation)){
-  for (sex in sex_types){
-    if (sex == ""){
-      samples_selected = unique(metadata_df[metadata_df$inflammation == sample_type_selected,]$sample_id)
-      sample_group_sampling_dir = paste(sampling_dir, sample_type_selected, sep='/')
-      dir.create(sample_group_sampling_dir, showWarnings = FALSE)
-      all_samples_output_file = paste(sample_group_sampling_dir, paste(geo_id, '_', sample_type_selected, '_all_samples.txt', sep=''), sep='/')
-      output_file_name = paste(paste(paste(geo_id, sample_type_selected, sep="_")))
-      compilation_samples_output_file = paste(sampling_dir, paste(paste(geo_id, sample_type_selected, sep="_"), '.txt', sep=''), sep='/')
-    } else {
-      sex_id = sex_to_id[sex,]
-      samples_selected = unique(metadata_df[(metadata_df$inflammation == sample_type_selected) & (metadata_df$gender == sex_id),]$sample_id)
-      sample_group_sampling_dir = paste(sampling_dir, paste(sample_type_selected, sex, sep="_"), sep='/')
-      dir.create(sample_group_sampling_dir, showWarnings = FALSE)
-      all_samples_output_file = paste(sample_group_sampling_dir, paste(geo_id, '_', sample_type_selected, '_all_samples.txt', sep=''), sep='/')
-      output_file_name = paste(paste(paste(geo_id, sample_type_selected, sep="_")))
-      compilation_samples_output_file = paste(sampling_dir, paste(paste(geo_id, sample_type_selected, sep="_"), '.txt', sep=''), sep='/')
-    }
-    if (length(samples_selected) > 10){
-      size_list <- seq(10, length(samples_selected), 10)
-      dir.create(sample_group_sampling_dir, showWarnings = FALSE)
-      # Create a file with a list of all samples
-      all_samples_df <- data.frame(samples=samples_selected)
-      all_samples_df %>% write.table(all_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
-      # Create files with lists of subsamples
-      subsamples_df <- create_random_subsamples_with_replacement(samples_list=samples_selected, size_list=size_list, rep=10, output_dir=sample_group_sampling_dir, output_file_name=output_file_name)
-      # Create a final file with a compilation of all selected samples for the same sample type
-      subsamples_df %>% write.table(compilation_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
+for(sample_group_type_selected in unique(sample_groups_df$sample_group_type)){
+  sample_group_type_dir = paste(sampling_dir, sample_group_type_selected, sep='/')
+  dir.create(sample_group_type_dir, showWarnings = FALSE)
+  sample_group_ids = unique((sample_groups_df %>% filter(sample_group_type == sample_group_type_selected))$sample_group_id)
+  for (sample_group_id_selected in sample_group_ids){
+    for (sex in sex_types){
+      if (sex == ""){
+        samples_selected = unique((sample_groups_df %>% filter((sample_group_type == sample_group_type_selected) & (sample_group_id == sample_group_id_selected)))$sample_id)
+        sample_group_sampling_dir = paste(sample_group_type_dir, sample_group_id_selected, sep='/')
+        dir.create(sample_group_sampling_dir, showWarnings = FALSE)
+        all_samples_output_file = paste(sample_group_sampling_dir, paste(geo_id, '_', sample_group_id_selected, '_all_samples.txt', sep=''), sep='/')
+        output_file_name = paste(paste(paste(geo_id, sample_group_id_selected, sep="_")))
+        compilation_samples_output_file = paste(sample_group_type_dir, paste(paste(geo_id, sample_group_id_selected, sep="_"), '.txt', sep=''), sep='/')
+      } else {
+        sex_id = sex_to_id[sex,]
+        samples_selected = unique((sample_groups_df %>% filter((sample_group_type == sample_group_type_selected) & (sample_group_id == sample_group_id_selected) & (gender == sex_id)))$sample_id)
+        sample_group_sampling_dir = paste(sample_group_type_dir, paste(sample_group_id_selected, sex_id, sep="_"), sep='/')
+        dir.create(sample_group_sampling_dir, showWarnings = FALSE)
+        all_samples_output_file = paste(sample_group_sampling_dir, paste(geo_id, '_', sample_group_id_selected, '_', sex_id, '_all_samples.txt', sep=''), sep='/')
+        output_file_name = paste(paste(paste(geo_id, sample_group_id_selected, sex_id, sep="_")))
+        compilation_samples_output_file = paste(sample_group_type_dir, paste(paste(geo_id, sample_group_id_selected, sex_id, sep="_"), '.txt', sep=''), sep='/')
+      }
+      if (length(samples_selected) > 10){
+        # Define list of different sample sizes
+        size_list <- seq(10, length(samples_selected), 10)
+        dir.create(sample_group_sampling_dir, showWarnings = FALSE)
+        # Create a file with a list of all samples
+        all_samples_df <- data.frame(samples=samples_selected)
+        all_samples_df %>% write.table(all_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
+        # Create files with lists of subsamples
+        subsamples_df <- create_random_subsamples_with_replacement(samples_list=samples_selected, size_list=size_list, rep=10, output_dir=sample_group_sampling_dir, output_file_name=output_file_name)
+        # Create a final file with a compilation of all selected samples for the same sample type
+        subsamples_df %>% write.table(compilation_samples_output_file, quote = F, sep='\t', row.names = F, col.names = T)
+      }
     }
   }
 }

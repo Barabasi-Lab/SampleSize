@@ -224,6 +224,7 @@ GDA = fread(disease_gene_associations_file)
 GDA_disease = GDA %>% dplyr::select("DiseaseName.no.sp.char", "HGNC_Symbol") %>% dplyr::filter(DiseaseName.no.sp.char == disease_name_in_associations_file)
 #unique(GDA$DiseaseName.no.sp.char[grepl("lung", GDA$DiseaseName.no.sp.char)])
 #unique(GDA$DiseaseName.no.sp.char[grepl("bowel", GDA$DiseaseName.no.sp.char)]) # inflammatory.bowel.diseases
+#unique(GDA$DiseaseName.no.sp.char[grepl("chron", GDA$DiseaseName.no.sp.char)]) # crohn.disease
 
 
 #---- Compile files ----#

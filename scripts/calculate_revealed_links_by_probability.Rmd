@@ -1,0 +1,154 @@
+---
+title: "Test links revealed by probability"
+author: "Joaquim Aguirre-Plans"
+date: "4/16/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Description
+
+Given a probability to reveal links and a given number of chances to revela each link (number of samples), how many samples do we need to reveal all links.
+
+```{r, message=FALSE}
+library(data.table)
+library(dplyr)
+library(ggplot2)
+require(magrittr)
+library(tidyr)
+library(igraph)
+set.seed(1510)
+`%ni%` <- Negate(`%in%`)
+```
+
+### Define variables
+
+```{r}
+prob_list = c(0.0001, 0.001, 0.01, 0.1)
+size_list = seq(20, 1000, 20)
+links = seq(1, 20000, 1)
+
+# Define palette using the scale_fill_brewer Oranges palette and selecting manually the colors using RColorBrewer
+# https://stackoverflow.com/questions/29466239/how-to-set-the-color-range-of-scale-colour-brewer-in-ggplot2-palette-selecte 
+blue_palette = RColorBrewer::brewer.pal(n = 9, "Blues") # I get 8 and exclude the 4 first
+name2color <- c(
+  "1e-04" = blue_palette[3],
+  "0.001" = blue_palette[5],
+  "0.01" = blue_palette[7],
+  "0.1" = blue_palette[9]
+)
+```
+
+### Run Test
+
+```{r}
+cols = c("link", "result", "size", "prob")
+links_revealed_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+
+for(prob_selected in prob_list){
+  for(size_selected in size_list){
+    # Function to calculate if a link is revealed according to a probability and a number of times to try. If res is > 0, the link is revealed
+    calculate_prob <- function(i) {  # the argument i is not used
+      res = sum(sample(c(0,1), size=size_selected, replace=TRUE, prob=c(1-prob_selected, prob_selected)))
+    }
+    # Use sapply to run calculate_prob for all links and concatenate each result
+    links_revealed_df = rbind(links_revealed_df, data.frame(link=links, result=sapply(links,calculate_prob), size=size_selected, prob=prob_selected))
+  }
+}
+```
+
+Count the results:
+
+```{r}
+num_links_per_size = links_revealed_df %>%
+  filter(result > 0) %>%
+  group_by(size, prob) %>%
+  summarize(n_links=n()) %>%
+  ungroup()
+head(num_links_per_size)
+```
+
+Count the results keeping the link if it has already been revealed:
+
+```{r}
+cols = c("link", "result", "size", "prob", "link_revealed")
+links_revealed_preserving_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+
+for(size_selected in size_list){
+  links_revealed_preserving_df = rbind(links_revealed_preserving_df, links_revealed_df %>%
+    filter(size <= size_selected) %>%
+    group_by(link, prob) %>%
+    mutate(sum_result = sum(result)) %>%
+    ungroup() %>%
+    filter(size == size_selected) %>%
+    mutate(link_revealed=if_else(sum_result > 0, 1, 0)) %>%
+    select(-sum_result))
+}
+```
+
+```{r}
+num_links_per_size_preserving = links_revealed_preserving_df %>%
+  filter(link_revealed > 0) %>%
+  group_by(size, prob) %>%
+  summarize(n_links=n())
+num_links_per_size_preserving
+```
+
+### Plot Test
+
+Links vs. sample size: 
+
+```{r}
+# Plot with legend
+num_links_per_size = num_links_per_size %>%
+  mutate(prob = factor(prob, levels = as.character(sort(unique(num_links_per_size$prob)))))
+
+link_reveal_plot = num_links_per_size %>%
+  ggplot(aes(x=size, y=n_links, col=prob)) +
+  geom_point(alpha=0.8, size=3) +
+  scale_color_manual(name = "Prob. reveal link", values = as.vector(name2color[levels(factor(num_links_per_size$prob))])) +
+  theme_linedraw() +
+  ggtitle("Links revealed vs. sample size") +
+  xlab("Num. samples") +
+  ylab("Num. links revealed") +
+  theme(aspect.ratio=1,
+        plot.title =  element_text(size = 17, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16),
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(size = 16), 
+        legend.title=element_text(size=16, face="bold"),
+        text = element_text(family = "Helvetica"))
+link_reveal_plot
+```
+
+Links vs. sample size preserving links revealed: 
+
+```{r}
+# Plot with legend
+num_links_per_size_preserving = num_links_per_size_preserving %>%
+  mutate(prob = factor(prob, levels = as.character(sort(unique(num_links_per_size_preserving$prob)))))
+
+link_reveal_plot = num_links_per_size_preserving %>%
+  ggplot(aes(x=size, y=n_links, col=prob)) +
+  geom_point(alpha=0.8, size=3) +
+  scale_color_manual(name = "Prob. reveal link", values = as.vector(name2color[levels(factor(num_links_per_size_preserving$prob))])) +
+  theme_linedraw() +
+  ggtitle("Links revealed vs. sample size (preserving links)") +
+  xlab("Num. samples") +
+  ylab("Num. links revealed") +
+  theme(aspect.ratio=1,
+        plot.title =  element_text(size = 17, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16),
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(size = 16), 
+        legend.title=element_text(size=16, face="bold"),
+        text = element_text(family = "Helvetica"))
+link_reveal_plot
+```

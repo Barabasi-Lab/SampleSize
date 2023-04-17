@@ -392,22 +392,46 @@ dir.create(sampling_dir, showWarnings = FALSE)
 
 # Define the input files
 metadata_file = paste(output_dir, &#39;/metadata_simple.txt&#39;, sep=&#39;&#39;)
-metadata_df = fread(metadata_file)</code></pre>
+metadata_df = fread(metadata_file)
+sample_groups_file = paste(output_dir, &quot;/sample_groups.txt&quot;, sep=&quot;&quot;)
+sample_groups_df = fread(sample_groups_file)</code></pre>
 <pre class="r"><code>head(metadata_df)</code></pre>
-<pre><code>##                    sample_id geo_accession sample_type inflammation disease
-## 1:   MSCCR_reGRID_1_Biopsy_1    GSM5976499     UC.NonI  noninflamed      UC
-## 2:   MSCCR_reGRID_1_Biopsy_2    GSM5976500     UC.NonI  noninflamed      UC
-## 3:   MSCCR_reGRID_1_Biopsy_3    GSM5976501     UC.NonI  noninflamed      UC
-## 4: MSCCR_reGRID_10_Biopsy_18    GSM5976502     CD.NonI  noninflamed      CD
-## 5: MSCCR_reGRID_10_Biopsy_19    GSM5976503     CD.NonI  noninflamed      CD
-## 6: MSCCR_reGRID_10_Biopsy_20    GSM5976504     CD.NonI  noninflamed      CD
-##    disease_activity gender     tissue age
-## 1:         Inactive   Male     Rectum  44
-## 2:         Inactive   Male  LeftColon  44
-## 3:         Inactive   Male      Ileum  44
-## 4:           Active Female RightColon  60
-## 5:           Active Female  LeftColon  60
-## 6:           Active Female Transverse  60</code></pre>
+<pre><code>##                  sample_id subject_id biopsy_id geo_accession
+## 1: MSCCR_reGRID_1_Biopsy_1          1         1    GSM5976499
+## 2: MSCCR_reGRID_1_Biopsy_2          1         2    GSM5976500
+## 3: MSCCR_reGRID_1_Biopsy_3          1         3    GSM5976501
+## 4: MSCCR_reGRID_3_Biopsy_4          3         4    GSM5977704
+## 5: MSCCR_reGRID_3_Biopsy_5          3         5    GSM5977705
+## 6: MSCCR_reGRID_3_Biopsy_6          3         6    GSM5977706
+##    disease_inflammation inflammation disease disease_activity gender     tissue
+## 1:              UC.NonI  noninflamed      UC         Inactive   Male     Rectum
+## 2:              UC.NonI  noninflamed      UC         Inactive   Male  LeftColon
+## 3:              UC.NonI  noninflamed      UC         Inactive   Male      Ileum
+## 4:              CD.NonI  noninflamed      CD           Active   Male     Rectum
+## 5:              CD.NonI  noninflamed      CD           Active   Male Transverse
+## 6:              CD.NonI  noninflamed      CD           Active   Male      Ileum
+##    age
+## 1:  44
+## 2:  44
+## 3:  44
+## 4:  58
+## 5:  58
+## 6:  58</code></pre>
+<pre class="r"><code>head(sample_groups_df)</code></pre>
+<pre><code>##                    sample_id subject_id gender   sample_group_id tissue disease
+## 1:   MSCCR_reGRID_4_Biopsy_7          4   Male Ileum_CD_inflamed  Ileum      CD
+## 2: MSCCR_reGRID_13_Biopsy_25         13   Male Ileum_CD_inflamed  Ileum      CD
+## 3: MSCCR_reGRID_17_Biopsy_38         17 Female Ileum_CD_inflamed  Ileum      CD
+## 4: MSCCR_reGRID_19_Biopsy_43         19   Male Ileum_CD_inflamed  Ileum      CD
+## 5: MSCCR_reGRID_22_Biopsy_49         22   Male Ileum_CD_inflamed  Ileum      CD
+## 6: MSCCR_reGRID_29_Biopsy_62         29   Male Ileum_CD_inflamed  Ileum      CD
+##    inflammation           sample_group_type
+## 1:     inflamed disease_inflamed_vs_control
+## 2:     inflamed disease_inflamed_vs_control
+## 3:     inflamed disease_inflamed_vs_control
+## 4:     inflamed disease_inflamed_vs_control
+## 5:     inflamed disease_inflamed_vs_control
+## 6:     inflamed disease_inflamed_vs_control</code></pre>
 </div>
 <div id="subsampling" class="section level2">
 <h2>Subsampling</h2>
@@ -450,34 +474,40 @@ create_random_subsamples_with_replacement &lt;- function(samples_list, size_list
 different sizes:</p>
 <pre class="r"><code>sex_types = c(&quot;&quot;)
 sex_to_id = data.frame(row.names=c(&quot;male&quot;,&quot;female&quot;,&quot;&quot;) , val=c(&quot;Male&quot;,&quot;Female&quot;,&quot;&quot;))
-for (sample_type_selected in unique(metadata_df$inflammation)){
-  for (sex in sex_types){
-    if (sex == &quot;&quot;){
-      samples_selected = unique(metadata_df[metadata_df$inflammation == sample_type_selected,]$sample_id)
-      sample_group_sampling_dir = paste(sampling_dir, sample_type_selected, sep=&#39;/&#39;)
-      dir.create(sample_group_sampling_dir, showWarnings = FALSE)
-      all_samples_output_file = paste(sample_group_sampling_dir, paste(geo_id, &#39;_&#39;, sample_type_selected, &#39;_all_samples.txt&#39;, sep=&#39;&#39;), sep=&#39;/&#39;)
-      output_file_name = paste(paste(paste(geo_id, sample_type_selected, sep=&quot;_&quot;)))
-      compilation_samples_output_file = paste(sampling_dir, paste(paste(geo_id, sample_type_selected, sep=&quot;_&quot;), &#39;.txt&#39;, sep=&#39;&#39;), sep=&#39;/&#39;)
-    } else {
-      sex_id = sex_to_id[sex,]
-      samples_selected = unique(metadata_df[(metadata_df$inflammation == sample_type_selected) &amp; (metadata_df$gender == sex_id),]$sample_id)
-      sample_group_sampling_dir = paste(sampling_dir, paste(sample_type_selected, sex, sep=&quot;_&quot;), sep=&#39;/&#39;)
-      dir.create(sample_group_sampling_dir, showWarnings = FALSE)
-      all_samples_output_file = paste(sample_group_sampling_dir, paste(geo_id, &#39;_&#39;, sample_type_selected, &#39;_all_samples.txt&#39;, sep=&#39;&#39;), sep=&#39;/&#39;)
-      output_file_name = paste(paste(paste(geo_id, sample_type_selected, sep=&quot;_&quot;)))
-      compilation_samples_output_file = paste(sampling_dir, paste(paste(geo_id, sample_type_selected, sep=&quot;_&quot;), &#39;.txt&#39;, sep=&#39;&#39;), sep=&#39;/&#39;)
-    }
-    if (length(samples_selected) &gt; 10){
-      size_list &lt;- seq(10, length(samples_selected), 10)
-      dir.create(sample_group_sampling_dir, showWarnings = FALSE)
-      # Create a file with a list of all samples
-      all_samples_df &lt;- data.frame(samples=samples_selected)
-      all_samples_df %&gt;% write.table(all_samples_output_file, quote = F, sep=&#39;\t&#39;, row.names = F, col.names = T)
-      # Create files with lists of subsamples
-      subsamples_df &lt;- create_random_subsamples_with_replacement(samples_list=samples_selected, size_list=size_list, rep=10, output_dir=sample_group_sampling_dir, output_file_name=output_file_name)
-      # Create a final file with a compilation of all selected samples for the same sample type
-      subsamples_df %&gt;% write.table(compilation_samples_output_file, quote = F, sep=&#39;\t&#39;, row.names = F, col.names = T)
+for(sample_group_type_selected in unique(sample_groups_df$sample_group_type)){
+  sample_group_type_dir = paste(sampling_dir, sample_group_type_selected, sep=&#39;/&#39;)
+  dir.create(sample_group_type_dir, showWarnings = FALSE)
+  sample_group_ids = unique((sample_groups_df %&gt;% filter(sample_group_type == sample_group_type_selected))$sample_group_id)
+  for (sample_group_id_selected in sample_group_ids){
+    for (sex in sex_types){
+      if (sex == &quot;&quot;){
+        samples_selected = unique((sample_groups_df %&gt;% filter((sample_group_type == sample_group_type_selected) &amp; (sample_group_id == sample_group_id_selected)))$sample_id)
+        sample_group_sampling_dir = paste(sample_group_type_dir, sample_group_id_selected, sep=&#39;/&#39;)
+        dir.create(sample_group_sampling_dir, showWarnings = FALSE)
+        all_samples_output_file = paste(sample_group_sampling_dir, paste(geo_id, &#39;_&#39;, sample_group_id_selected, &#39;_all_samples.txt&#39;, sep=&#39;&#39;), sep=&#39;/&#39;)
+        output_file_name = paste(paste(paste(geo_id, sample_group_id_selected, sep=&quot;_&quot;)))
+        compilation_samples_output_file = paste(sample_group_type_dir, paste(paste(geo_id, sample_group_id_selected, sep=&quot;_&quot;), &#39;.txt&#39;, sep=&#39;&#39;), sep=&#39;/&#39;)
+      } else {
+        sex_id = sex_to_id[sex,]
+        samples_selected = unique((sample_groups_df %&gt;% filter((sample_group_type == sample_group_type_selected) &amp; (sample_group_id == sample_group_id_selected) &amp; (gender == sex_id)))$sample_id)
+        sample_group_sampling_dir = paste(sample_group_type_dir, paste(sample_group_id_selected, sex_id, sep=&quot;_&quot;), sep=&#39;/&#39;)
+        dir.create(sample_group_sampling_dir, showWarnings = FALSE)
+        all_samples_output_file = paste(sample_group_sampling_dir, paste(geo_id, &#39;_&#39;, sample_group_id_selected, &#39;_&#39;, sex_id, &#39;_all_samples.txt&#39;, sep=&#39;&#39;), sep=&#39;/&#39;)
+        output_file_name = paste(paste(paste(geo_id, sample_group_id_selected, sex_id, sep=&quot;_&quot;)))
+        compilation_samples_output_file = paste(sample_group_type_dir, paste(paste(geo_id, sample_group_id_selected, sex_id, sep=&quot;_&quot;), &#39;.txt&#39;, sep=&#39;&#39;), sep=&#39;/&#39;)
+      }
+      if (length(samples_selected) &gt; 10){
+        # Define list of different sample sizes
+        size_list &lt;- seq(10, length(samples_selected), 10)
+        dir.create(sample_group_sampling_dir, showWarnings = FALSE)
+        # Create a file with a list of all samples
+        all_samples_df &lt;- data.frame(samples=samples_selected)
+        all_samples_df %&gt;% write.table(all_samples_output_file, quote = F, sep=&#39;\t&#39;, row.names = F, col.names = T)
+        # Create files with lists of subsamples
+        subsamples_df &lt;- create_random_subsamples_with_replacement(samples_list=samples_selected, size_list=size_list, rep=10, output_dir=sample_group_sampling_dir, output_file_name=output_file_name)
+        # Create a final file with a compilation of all selected samples for the same sample type
+        subsamples_df %&gt;% write.table(compilation_samples_output_file, quote = F, sep=&#39;\t&#39;, row.names = F, col.names = T)
+      }
     }
   }
 }</code></pre>

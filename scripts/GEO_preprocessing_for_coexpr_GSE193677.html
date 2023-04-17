@@ -417,20 +417,27 @@ dir.create(output_dir, showWarnings = FALSE)</code></pre>
 ## 6:                     122                      70</code></pre>
 <pre class="r"><code>metadata_df = fread(metadata_file)
 head(metadata_df)</code></pre>
-<pre><code>##                    sample_id geo_accession sample_type inflammation disease
-## 1:   MSCCR_reGRID_1_Biopsy_1    GSM5976499     UC.NonI  noninflamed      UC
-## 2:   MSCCR_reGRID_1_Biopsy_2    GSM5976500     UC.NonI  noninflamed      UC
-## 3:   MSCCR_reGRID_1_Biopsy_3    GSM5976501     UC.NonI  noninflamed      UC
-## 4: MSCCR_reGRID_10_Biopsy_18    GSM5976502     CD.NonI  noninflamed      CD
-## 5: MSCCR_reGRID_10_Biopsy_19    GSM5976503     CD.NonI  noninflamed      CD
-## 6: MSCCR_reGRID_10_Biopsy_20    GSM5976504     CD.NonI  noninflamed      CD
-##    disease_activity gender     tissue age
-## 1:         Inactive   Male     Rectum  44
-## 2:         Inactive   Male  LeftColon  44
-## 3:         Inactive   Male      Ileum  44
-## 4:           Active Female RightColon  60
-## 5:           Active Female  LeftColon  60
-## 6:           Active Female Transverse  60</code></pre>
+<pre><code>##                  sample_id subject_id biopsy_id geo_accession
+## 1: MSCCR_reGRID_1_Biopsy_1          1         1    GSM5976499
+## 2: MSCCR_reGRID_1_Biopsy_2          1         2    GSM5976500
+## 3: MSCCR_reGRID_1_Biopsy_3          1         3    GSM5976501
+## 4: MSCCR_reGRID_3_Biopsy_4          3         4    GSM5977704
+## 5: MSCCR_reGRID_3_Biopsy_5          3         5    GSM5977705
+## 6: MSCCR_reGRID_3_Biopsy_6          3         6    GSM5977706
+##    disease_inflammation inflammation disease disease_activity gender     tissue
+## 1:              UC.NonI  noninflamed      UC         Inactive   Male     Rectum
+## 2:              UC.NonI  noninflamed      UC         Inactive   Male  LeftColon
+## 3:              UC.NonI  noninflamed      UC         Inactive   Male      Ileum
+## 4:              CD.NonI  noninflamed      CD           Active   Male     Rectum
+## 5:              CD.NonI  noninflamed      CD           Active   Male Transverse
+## 6:              CD.NonI  noninflamed      CD           Active   Male      Ileum
+##    age
+## 1:  44
+## 2:  44
+## 3:  44
+## 4:  58
+## 5:  58
+## 6:  58</code></pre>
 </div>
 <div id="prepare-gene-information" class="section level3">
 <h3>Prepare gene information</h3>
@@ -671,7 +678,7 @@ head(essential_genes_df)</code></pre>
 ## 4:  9606 Homo sapiens        GCLC            TRUE
 ## 5:  9606 Homo sapiens        NFYA            TRUE
 ## 6:  9606 Homo sapiens       LAS1L            TRUE</code></pre>
-<pre class="r"><code>essential_genes_geo_file = paste(&quot;/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/OGEE_essential_genes_&quot;, geo_id, &quot;.csv&quot;, sep=&quot;&quot;)
+<pre class="r"><code>essential_genes_geo_file = paste(&quot;/home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_&quot;, geo_id, &quot;.csv&quot;, sep=&quot;&quot;)
 essential_genes_df %&gt;% fwrite(essential_genes_geo_file)</code></pre>
 <p>There are 7108 essential genes, 7014 in the GEO dataset.</p>
 </div>
