@@ -46,6 +46,8 @@ tables_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables'
 numbers_file = paste(input_dir, 'dataset_numbers_complete_graph.txt', sep='/')
 numbers_df = fread(numbers_file)
 numbers_df$dataset = tolower(numbers_df$dataset)
+meta_file = paste(input_dir, "metadata_summary.txt", sep="/")
+meta_df = fread(meta_file)
 sd_genes_file = paste(input_dir, "variation_by_gene.txt", sep="/") # from => calculate_rnaseq_datasets_variation.Rmd
 sd_genes_df = fread(sd_genes_file)
 name2color <- c(
@@ -60,6 +62,7 @@ name2color <- c(
   "gtex:lung" = "#E69F00",
   "GTEx: Breast" = "#56B4E9",
   "gtex:breast.mammary.tissue" = "#56B4E9",
+  "gtex:breast.mammary.tissue_female" = "#56B4E9",
   "R. arthritis" = "#65F3BF",
   "scipher:scipher.sample.per.patient.baseline" = "#65F3BF",
   "arthritis rheumatoid"="#65F3BF", 
@@ -155,18 +158,51 @@ All datasets:
 #datasets_selected = c("gtex:whole.blood", "gtex:artery.tibial", "tcga:tcga-coad", "tcga:tcga-brca", "scipher:scipher.complete.dataset")
 #datasets_selected = c("gtex:breast.mammary.tissue", "gtex:thyroid", "tcga:tcga-brca", "tcga:tcga-thca", "scipher:scipher.complete.dataset")
 #datasets_selected = c("gtex:breast.mammary.tissue", "gtex:thyroid", "gtex:whole.blood", "tcga:tcga-brca", "tcga:tcga-thca", "scipher:scipher.complete.dataset")
-datasets_selected = c("gtex:breast.mammary.tissue", "gtex:lung", "gtex:whole.blood", "tcga:tcga-brca_female", "tcga:tcga-luad", "scipher:scipher.sample.per.patient.baseline")
+datasets_selected = c("gtex:breast.mammary.tissue_female", 
+                      "gtex:lung", 
+                      "gtex:whole.blood", 
+                      "tcga:tcga-brca_female", 
+                      "tcga:tcga-luad", 
+                      "scipher:scipher.sample.per.patient.baseline")
+
 results_curve_df = results_selected_norm_df %>%
   dplyr::filter(type_dataset %in% datasets_selected) %>%
   dplyr::select(size, rep, unnorm, type_dataset) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.sample.per.patient.baseline", "R. arthritis")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:whole.blood", "GTEx: Whole blood")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:lung", "GTEx: Lung")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-luad", "TCGA: Lung cancer")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca_female", "TCGA: Breast cancer")) %>%
-  inner_join( (name2color %>% as.data.frame() %>% dplyr::rename("rgb_col"=".") %>% tibble::rownames_to_column("type_dataset")), by=c("type_dataset") ) %>%
-  mutate(geom_text_repel_label=dplyr::if_else(type_dataset == "R. arthritis" & size == 240 & rep == 1, "R. arthritis", dplyr::if_else(type_dataset == "GTEx: Whole blood" & size == 700 & rep == 1, "GTEx: Whole blood", dplyr::if_else(type_dataset == "GTEx: Lung" & size == 560 & rep == 1, "GTEx: Lung", dplyr::if_else(type_dataset == "GTEx: Breast" & size == 320 & rep == 1, "GTEx: Breast", dplyr::if_else(type_dataset == "TCGA: Lung cancer" & size == 460 & rep == 1, "TCGA: Lung cancer", dplyr::if_else(type_dataset == "TCGA: Breast cancer" & size == 600 & rep == 1, "TCGA: Breast cancer", "")))))))
+  mutate(type_dataset = replace(type_dataset, 
+                                type_dataset == "scipher:scipher.sample.per.patient.baseline", 
+                                "R. arthritis")) %>%
+  mutate(type_dataset = replace(type_dataset, 
+                                type_dataset == "gtex:whole.blood", 
+                                "GTEx: Whole blood")) %>%
+  mutate(type_dataset = replace(type_dataset, 
+                                type_dataset == "gtex:lung", 
+                                "GTEx: Lung")) %>%
+  mutate(type_dataset = replace(type_dataset, 
+                                type_dataset == "gtex:breast.mammary.tissue_female", 
+                                "GTEx: Breast")) %>%
+  mutate(type_dataset = replace(type_dataset, 
+                                type_dataset == "tcga:tcga-luad", 
+                                "TCGA: Lung cancer")) %>%
+  mutate(type_dataset = replace(type_dataset, 
+                                type_dataset == "tcga:tcga-brca_female", 
+                                "TCGA: Breast cancer")) %>%
+  inner_join( (name2color %>% 
+                 as.data.frame() %>% 
+                 dplyr::rename("rgb_col"=".") %>% 
+                 tibble::rownames_to_column("type_dataset")), 
+              by=c("type_dataset") ) %>%
+  mutate(geom_text_repel_label = 
+           dplyr::if_else(type_dataset == "R. arthritis" & size == 240 & rep == 1, 
+                          "R. arthritis", 
+                          dplyr::if_else(type_dataset == "GTEx: Whole blood" & size == 700 & rep == 1, 
+                                         "GTEx: Whole blood", 
+                                         dplyr::if_else(type_dataset == "GTEx: Lung" & size == 560 & rep == 1, "GTEx: Lung", 
+                                                        dplyr::if_else(type_dataset == "GTEx: Breast" & size == 140 & rep == 1, 
+                                                                       "GTEx: Breast", 
+                                                                       dplyr::if_else(type_dataset == "TCGA: Lung cancer" & size == 460 & rep == 1, 
+                                                                                      "TCGA: Lung cancer", 
+                                                                                      dplyr::if_else(type_dataset == "TCGA: Breast cancer" & size == 600 & rep == 1, 
+                                                                                                                          "TCGA: Breast cancer", "")))))))
 
 # # Plot with legend
 # curve_plot = results_curve_df %>%
@@ -229,14 +265,37 @@ print(curve_plot)
 Less datasets:
 
 ```{r}
-datasets_selected = c("gtex:breast.mammary.tissue", "tcga:tcga-brca_female")
+datasets_selected = c("gtex:breast.mammary.tissue_female", 
+                      "tcga:tcga-brca_female")
+
 results_curve_lessdatasets_df = results_selected_norm_df %>%
   dplyr::filter(type_dataset %in% datasets_selected) %>%
   dplyr::select(size, rep, unnorm, type_dataset) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca_female", "TCGA: Breast cancer")) %>%
-  inner_join( (name2color %>% as.data.frame() %>% dplyr::rename("rgb_col"=".") %>% tibble::rownames_to_column("type_dataset")), by=c("type_dataset") ) %>%
-  mutate(geom_text_repel_label=dplyr::if_else(type_dataset == "R. arthritis" & size == 240 & rep == 1, "R. arthritis", dplyr::if_else(type_dataset == "GTEx: Whole blood" & size == 700 & rep == 1, "GTEx: Whole blood", dplyr::if_else(type_dataset == "GTEx: Lung" & size == 560 & rep == 1, "GTEx: Lung", dplyr::if_else(type_dataset == "GTEx: Breast" & size == 320 & rep == 1, "GTEx: Breast", dplyr::if_else(type_dataset == "TCGA: Lung cancer" & size == 460 & rep == 1, "TCGA: Lung cancer", dplyr::if_else(type_dataset == "TCGA: Breast cancer" & size == 600 & rep == 1, "TCGA: Breast cancer", "")))))))
+  mutate(type_dataset = 
+           replace(type_dataset, 
+                   type_dataset == "gtex:breast.mammary.tissue_female", 
+                   "GTEx: Breast")) %>%
+  mutate(type_dataset = 
+           replace(type_dataset, 
+                   type_dataset == "tcga:tcga-brca_female", 
+                   "TCGA: Breast cancer")) %>%
+  inner_join( (name2color %>% 
+                 as.data.frame() %>% 
+                 dplyr::rename("rgb_col"=".") %>% 
+                 tibble::rownames_to_column("type_dataset")), 
+              by = c("type_dataset") ) %>%
+  mutate(geom_text_repel_label = 
+           dplyr::if_else(type_dataset == "R. arthritis" & size == 240 & rep == 1, 
+                          "R. arthritis", 
+                          dplyr::if_else(type_dataset == "GTEx: Whole blood" & size == 700 & rep == 1, 
+                                         "GTEx: Whole blood", 
+                                         dplyr::if_else(type_dataset == "GTEx: Lung" & size == 560 & rep == 1, "GTEx: Lung", 
+                                                        dplyr::if_else(type_dataset == "GTEx: Breast" & size == 140 & rep == 1, 
+                                                                       "GTEx: Breast", 
+                                                                       dplyr::if_else(type_dataset == "TCGA: Lung cancer" & size == 460 & rep == 1, 
+                                                                                      "TCGA: Lung cancer", 
+                                                                                      dplyr::if_else(type_dataset == "TCGA: Breast cancer" & size == 600 & rep == 1, 
+                                                                                                                          "TCGA: Breast cancer", "")))))))
 
 # Plot with labels
 curve_plot_lessdatasets = results_curve_lessdatasets_df %>%
@@ -284,11 +343,27 @@ print(curve_plot_lessdatasets)
 Calculate scaling relation plot:
 
 ```{r}
-datasets_selected = c("gtex:breast.mammary.tissue", "gtex:lung", "gtex:whole.blood", "tcga:tcga-brca_female", "tcga:tcga-luad", "scipher:scipher.sample.per.patient.baseline")
+datasets_selected = c("gtex:breast.mammary.tissue_female", 
+                      "gtex:lung", 
+                      "gtex:whole.blood", 
+                      "tcga:tcga-brca_female", 
+                      "tcga:tcga-luad", 
+                      "scipher:scipher.sample.per.patient.baseline")
 
 # Calculate data from scaling relationship
-cols = c("size", "S", "type_dataset", "S_lag1", "Fn", "slope", "intercept", "adj.r.squared")
-scaling_relation_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+cols = c("size", 
+         "S", 
+         "type_dataset", 
+         "S_lag1", 
+         "Fn", 
+         "slope", 
+         "intercept", 
+         "adj.r.squared")
+
+scaling_relation_df = data.frame(matrix(ncol = length(cols), 
+                                        nrow = 0, 
+                                        dimnames = list(NULL, cols)))
+
 for (dataset_selected in datasets_selected){
   scaling_relation_filt = topology_results_selected_by_size_df %>% 
     filter(type_dataset == dataset_selected) %>%
@@ -299,11 +374,15 @@ for (dataset_selected in datasets_selected){
     mutate(S_lag1 = if_else(size == min(size), 0, lag(S))) %>%
     mutate(Fn = ((S - S_lag1)/S_lag1)) %>%
     filter((!(is.infinite(Fn))) & (Fn > 0))
-  lm_summary = summary(lm(log(scaling_relation_filt$Fn)~log(scaling_relation_filt$size)))
+  lm_summary = summary(lm(log(scaling_relation_filt$Fn) ~ log(scaling_relation_filt$size)))
   slope = coef(lm_summary)[2]
   intercept = coef(lm_summary)[1]
   adj.r.squared = lm_summary$adj.r.squared
-  scaling_relation_df = rbind(scaling_relation_df, cbind(scaling_relation_filt, data.frame(slope=slope, intercept=intercept, adj.r.squared=adj.r.squared)))
+  scaling_relation_df = rbind(scaling_relation_df, 
+                              cbind(scaling_relation_filt, 
+                                    data.frame(slope = slope, 
+                                               intercept = intercept, 
+                                               adj.r.squared = adj.r.squared)))
 }
 
 # Process results
@@ -314,11 +393,11 @@ scaling_relation_df = scaling_relation_df %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.sample.per.patient.baseline", "R. arthritis")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:whole.blood", "GTEx: Whole blood")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:lung", "GTEx: Lung")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue_female", "GTEx: Breast")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-luad", "TCGA: Lung cancer")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca_female", "TCGA: Breast cancer")) %>%
   inner_join( (name2color %>% as.data.frame() %>% dplyr::rename("rgb_col"=".") %>% tibble::rownames_to_column("type_dataset")), by=c("type_dataset") ) %>%
-  mutate(geom_text_repel_label=dplyr::if_else(type_dataset == "R. arthritis" & size == 240, "R. arthritis", dplyr::if_else(type_dataset == "GTEx: Whole blood" & size == 160, "GTEx: Whole blood", dplyr::if_else(type_dataset == "GTEx: Lung" & size == 160, "GTEx: Lung", dplyr::if_else(type_dataset == "GTEx: Breast" & size == 320, "GTEx: Breast", dplyr::if_else(type_dataset == "TCGA: Lung cancer" & size == 120, "TCGA: Lung cancer", dplyr::if_else(type_dataset == "TCGA: Breast cancer" & size == 600, "TCGA: Breast cancer", "")))))))
+  mutate(geom_text_repel_label=dplyr::if_else(type_dataset == "R. arthritis" & size == 240, "R. arthritis", dplyr::if_else(type_dataset == "GTEx: Whole blood" & size == 160, "GTEx: Whole blood", dplyr::if_else(type_dataset == "GTEx: Lung" & size == 160, "GTEx: Lung", dplyr::if_else(type_dataset == "GTEx: Breast" & size == 140, "GTEx: Breast", dplyr::if_else(type_dataset == "TCGA: Lung cancer" & size == 120, "TCGA: Lung cancer", dplyr::if_else(type_dataset == "TCGA: Breast cancer" & size == 600, "TCGA: Breast cancer", "")))))))
 
 # Plot with legend
 # scaling_relation_plot = scaling_relation_df %>%
@@ -386,26 +465,42 @@ print(scaling_relation_plot)
 Less datasets:
 
 ```{r}
-datasets_selected = c("gtex:breast.mammary.tissue", "tcga:tcga-brca_female")
+datasets_selected = c("gtex:breast.mammary.tissue_female", 
+                      "tcga:tcga-brca_female")
 
 # Calculate data from scaling relationship
-cols = c("size", "S", "type_dataset", "S_lag1", "Fn", "slope", "intercept", "adj.r.squared")
-scaling_relation_lessdatasets_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
+cols = c("size", 
+         "S", 
+         "type_dataset", 
+         "S_lag1", 
+         "Fn", 
+         "slope", 
+         "intercept", 
+         "adj.r.squared")
+
+scaling_relation_lessdatasets_df = data.frame(matrix(ncol = length(cols),
+                                                     nrow = 0, 
+                                                     dimnames = list(NULL, cols)))
+
 for (dataset_selected in datasets_selected){
   scaling_relation_filt = topology_results_selected_by_size_df %>% 
     filter(type_dataset == dataset_selected) %>%
     select(size, mean, type_dataset) %>%
     unique() %>%
-    rename("S"="mean") %>%
+    rename("S" = "mean") %>%
     arrange(size) %>%
     mutate(S_lag1 = if_else(size == min(size), 0, lag(S))) %>%
-    mutate(Fn = ((S - S_lag1)/S_lag1)) %>%
+    mutate(Fn = ((S - S_lag1) / S_lag1)) %>%
     filter((!(is.infinite(Fn))) & (Fn > 0))
   lm_summary = summary(lm(log(scaling_relation_filt$Fn)~log(scaling_relation_filt$size)))
   slope = coef(lm_summary)[2]
   intercept = coef(lm_summary)[1]
   adj.r.squared = lm_summary$adj.r.squared
-  scaling_relation_lessdatasets_df = rbind(scaling_relation_lessdatasets_df, cbind(scaling_relation_filt, data.frame(slope=slope, intercept=intercept, adj.r.squared=adj.r.squared)))
+  scaling_relation_lessdatasets_df = rbind(scaling_relation_lessdatasets_df, 
+                                           cbind(scaling_relation_filt, 
+                                                 data.frame(slope = slope, 
+                                                            intercept = intercept, 
+                                                            adj.r.squared = adj.r.squared)))
 }
 
 # Process results
@@ -413,12 +508,34 @@ scaling_relation_lessdatasets_df = scaling_relation_lessdatasets_df %>%
   filter(Fn > 0) %>%
   mutate_at(c('adj.r.squared'), ~sprintf("%.2f",.)) %>%
   mutate_at(c('adj.r.squared'), as.character) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca_female", "TCGA: Breast cancer")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
-  inner_join( (name2color %>% as.data.frame() %>% dplyr::rename("rgb_col"=".") %>% tibble::rownames_to_column("type_dataset")), by=c("type_dataset") ) %>%
+  mutate(type_dataset = replace(type_dataset, 
+                                type_dataset == "tcga:tcga-brca_female", 
+                                "TCGA: Breast cancer")) %>%
+  mutate(type_dataset = replace(type_dataset, 
+                                type_dataset == "gtex:breast.mammary.tissue_female", 
+                                "GTEx: Breast")) %>%
+  inner_join( (name2color %>% 
+                 as.data.frame() %>% 
+                 dplyr::rename("rgb_col"=".") %>% 
+                 tibble::rownames_to_column("type_dataset")), 
+              by=c("type_dataset") ) %>%
   #mutate(geom_text_repel_label=dplyr::if_else(type_dataset == "TCGA: Breast cancer" & size == 220, "Power law", ""))
-  mutate(geom_text_repel_label=dplyr::if_else(type_dataset == "GTEx: Breast" & size == 420, "GTEx: Breast", dplyr::if_else(type_dataset == "TCGA: Breast cancer" & size == 400, "TCGA: Breast cancer", "")))
-scaling_relation_lessdatasets_df$r2labels = ifelse(scaling_relation_lessdatasets_df$type_dataset == "GTEx: Breast", paste("GTEx Breast: ", unique((scaling_relation_lessdatasets_df %>% filter(type_dataset == "GTEx: Breast"))$adj.r.squared), sep=""), ifelse(scaling_relation_lessdatasets_df$type_dataset == "TCGA: Breast cancer", paste("TCGA Breast c.: ", unique((scaling_relation_lessdatasets_df %>% filter(type_dataset == "TCGA: Breast cancer"))$adj.r.squared), sep=""), ""))
+  mutate(geom_text_repel_label = 
+           dplyr::if_else(type_dataset == "GTEx: Breast" & size == 140, "GTEx: Breast", 
+                          dplyr::if_else(type_dataset == "TCGA: Breast cancer" & size == 400, "TCGA: Breast cancer", "")))
+
+scaling_relation_lessdatasets_df$r2labels = 
+  ifelse(scaling_relation_lessdatasets_df$type_dataset == "GTEx: Breast", 
+         paste("GTEx Breast: ", 
+               unique((scaling_relation_lessdatasets_df %>% 
+                         filter(type_dataset == "GTEx: Breast"))$adj.r.squared), 
+               sep=""), 
+         ifelse(scaling_relation_lessdatasets_df$type_dataset == "TCGA: Breast cancer", 
+                paste("TCGA Breast c.: ", 
+                      unique((scaling_relation_lessdatasets_df %>% 
+                                filter(type_dataset == "TCGA: Breast cancer"))$adj.r.squared), 
+                      sep=""), 
+                ""))
 
 # Plot with labels
 scaling_relation_plot_lessdatasets = scaling_relation_lessdatasets_df %>%
@@ -457,7 +574,9 @@ scaling_relation_plot_lessdatasets = scaling_relation_lessdatasets_df %>%
   #                  na.rm=TRUE,
   #                  seed = 1234)
   
-plot_file = paste(plots_dir, "scaling_relation_pearson_pval_0.05_lessdatasets.png", sep="/")
+plot_file = paste(plots_dir, 
+                  "scaling_relation_pearson_pval_0.05_lessdatasets.png", 
+                  sep="/")
 ggsave(
   plot_file,
   plot=scaling_relation_plot_lessdatasets,
@@ -476,7 +595,13 @@ print(scaling_relation_plot_lessdatasets)
 #datasets_selected = c("gtex:whole.blood", "gtex:artery.tibial", "tcga:tcga-coad", "tcga:tcga-brca", "scipher:scipher.complete.dataset")
 #datasets_selected = c("gtex:breast.mammary.tissue", "gtex:thyroid", "tcga:tcga-brca", "tcga:tcga-thca", "scipher:scipher.complete.dataset")
 #datasets_selected = c("gtex:breast.mammary.tissue", "gtex:thyroid", "gtex:whole.blood", "tcga:tcga-brca", "tcga:tcga-thca", "scipher:scipher.complete.dataset")
-datasets_selected = c("gtex:breast.mammary.tissue", "gtex:lung", "gtex:whole.blood", "tcga:tcga-brca_female", "tcga:tcga-luad", "scipher:scipher.sample.per.patient.baseline")
+datasets_selected = c("gtex:breast.mammary.tissue_female", 
+                      "gtex:lung", 
+                      "gtex:whole.blood", 
+                      "tcga:tcga-brca_female", 
+                      "tcga:tcga-luad", 
+                      "scipher:scipher.sample.per.patient.baseline")
+
 #model_selected = "Stretched exponential (by optimization)"
 model_selected = "Stretched exponential (by linear fit)"
 
@@ -486,7 +611,7 @@ stretched_exponential_regression_proc_df = stretched_exponential_regression_df %
   mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.sample.per.patient.baseline", "R. arthritis")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:whole.blood", "GTEx: Whole blood")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:lung", "GTEx: Lung")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue_female", "GTEx: Breast")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-luad", "TCGA: Lung cancer")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca_female", "TCGA: Breast cancer")) %>%
   inner_join( (name2color %>% as.data.frame() %>% dplyr::rename("rgb_col"=".") %>% tibble::rownames_to_column("type_dataset")), by=c("type_dataset") )
@@ -531,7 +656,12 @@ Create a table with the results for the figure:
 #datasets_selected = c("gtex:whole.blood", "gtex:artery.tibial", "tcga:tcga-coad", "tcga:tcga-brca")
 #datasets_selected = c("gtex:whole.blood", "gtex:artery.tibial", "tcga:tcga-coad", "tcga:tcga-brca", "scipher:scipher.complete.dataset")
 #datasets_selected = c("gtex:breast.mammary.tissue", "gtex:thyroid", "tcga:tcga-brca", "tcga:tcga-thca", "scipher:scipher.complete.dataset")
-datasets_selected = c("gtex:breast.mammary.tissue", "gtex:lung", "gtex:whole.blood", "tcga:tcga-brca_female", "tcga:tcga-luad", "scipher:scipher.sample.per.patient.baseline")
+datasets_selected = c("gtex:breast.mammary.tissue_female", 
+                      "gtex:lung", 
+                      "gtex:whole.blood", 
+                      "tcga:tcga-brca_female", 
+                      "tcga:tcga-luad", 
+                      "scipher:scipher.sample.per.patient.baseline")
 #model_selected = "Stretched exponential (by optimization)"
 model_selected = "Stretched exponential (by linear fit)"
 
@@ -543,7 +673,7 @@ scaling_relation_summary_df = scaling_relation_df %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.sample.per.patient.baseline", "R. arthritis")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:whole.blood", "GTEx: Whole blood")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:lung", "GTEx: Lung")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue_female", "GTEx: Breast")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-luad", "TCGA: Lung cancer")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca_female", "TCGA: Breast cancer")) %>%
   rename("R**2" = "adj.r.squared") %>%
@@ -576,7 +706,7 @@ power_law_summary_df = analytical_model_summary_df %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.sample.per.patient.baseline", "R. arthritis")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:whole.blood", "GTEx: Whole blood")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:lung", "GTEx: Lung")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue_female", "GTEx: Breast")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-luad", "TCGA: Lung cancer")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca_female", "TCGA: Breast cancer")) %>%
   rename("alpha"="a", "R**2" = "adj.r.squared", "epsilon" = "relative.error.mean") %>%
@@ -640,7 +770,13 @@ All datasets:
 #datasets_selected = c("gtex:whole.blood", "gtex:artery.tibial", "tcga:tcga-coad", "tcga:tcga-brca", "scipher:scipher.complete.dataset")
 #datasets_selected = c("gtex:breast.mammary.tissue", "gtex:thyroid", "tcga:tcga-brca", "tcga:tcga-thca", "scipher:scipher.complete.dataset")
 #datasets_selected = c("gtex:breast.mammary.tissue", "gtex:thyroid", "gtex:whole.blood", "tcga:tcga-brca", "tcga:tcga-thca", "scipher:scipher.complete.dataset")
-datasets_selected = c("gtex:breast.mammary.tissue", "gtex:lung", "gtex:whole.blood", "tcga:tcga-brca_female", "tcga:tcga-luad", "scipher:scipher.sample.per.patient.baseline")
+datasets_selected = c("gtex:breast.mammary.tissue_female", 
+                      "gtex:lung", 
+                      "gtex:whole.blood", 
+                      "tcga:tcga-brca_female", 
+                      "tcga:tcga-luad", 
+                      "scipher:scipher.sample.per.patient.baseline")
+
 #model_selected = "Stretched exponential (by optimization)"
 model_selected = "Stretched exponential (by linear fit)"
 
@@ -652,11 +788,11 @@ prediction_plot_df = results_selected_norm_df %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.sample.per.patient.baseline", "R. arthritis")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:whole.blood", "GTEx: Whole blood")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:lung", "GTEx: Lung")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue_female", "GTEx: Breast")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-luad", "TCGA: Lung cancer")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca_female", "TCGA: Breast cancer")) %>%
   inner_join( (name2color %>% as.data.frame() %>% dplyr::rename("rgb_col"=".") %>% tibble::rownames_to_column("type_dataset")), by=c("type_dataset") ) %>%
-  mutate(geom_text_repel_label=dplyr::if_else(type_dataset == "R. arthritis" & size == 240 & rep == 1, "R. arthritis", dplyr::if_else(type_dataset == "GTEx: Whole blood" & size == 700 & rep == 1, "GTEx: Whole blood", dplyr::if_else(type_dataset == "GTEx: Lung" & size == 560 & rep == 1, "GTEx: Lung", dplyr::if_else(type_dataset == "GTEx: Breast" & size == 320 & rep == 1, "GTEx: Breast", dplyr::if_else(type_dataset == "TCGA: Lung cancer" & size == 460 & rep == 1, "TCGA: Lung cancer", dplyr::if_else(type_dataset == "TCGA: Breast cancer" & size == 800 & rep == 1, "TCGA: Breast cancer", "")))))))
+  mutate(geom_text_repel_label=dplyr::if_else(type_dataset == "R. arthritis" & size == 240 & rep == 1, "R. arthritis", dplyr::if_else(type_dataset == "GTEx: Whole blood" & size == 700 & rep == 1, "GTEx: Whole blood", dplyr::if_else(type_dataset == "GTEx: Lung" & size == 560 & rep == 1, "GTEx: Lung", dplyr::if_else(type_dataset == "GTEx: Breast" & size == 140 & rep == 1, "GTEx: Breast", dplyr::if_else(type_dataset == "TCGA: Lung cancer" & size == 460 & rep == 1, "TCGA: Lung cancer", dplyr::if_else(type_dataset == "TCGA: Breast cancer" & size == 800 & rep == 1, "TCGA: Breast cancer", "")))))))
 
 # # Plot with legend
 # prediction_plot = prediction_plot_df %>%
@@ -726,7 +862,8 @@ ggsave(
 Less datasets:
 
 ```{r}
-datasets_selected = c("gtex:breast.mammary.tissue", "tcga:tcga-brca_female")
+datasets_selected = c("gtex:breast.mammary.tissue_female", 
+                      "tcga:tcga-brca_female")
 model_selected = "Stretched exponential (by linear fit)"
 
 # Process data
@@ -734,10 +871,10 @@ prediction_plot_lessdatasets_df = results_selected_norm_df %>%
   dplyr::right_join((predicted_results_norm_df %>% dplyr::select(type_dataset, model, model_result, size) %>% mutate_at(c('model_result'), as.numeric) %>% unique()), by=c("type_dataset", "size")) %>%
   dplyr::filter((type_dataset %in% datasets_selected) & (model == model_selected)) %>%
   dplyr::select(size, rep, type_dataset, num_edges, model_result) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue_female", "GTEx: Breast")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca_female", "TCGA: Breast cancer")) %>%
   inner_join( (name2color %>% as.data.frame() %>% dplyr::rename("rgb_col"=".") %>% tibble::rownames_to_column("type_dataset")), by=c("type_dataset") ) %>%
-  mutate(geom_text_repel_label=dplyr::if_else(type_dataset == "R. arthritis" & size == 240 & rep == 1, "R. arthritis", dplyr::if_else(type_dataset == "GTEx: Whole blood" & size == 700 & rep == 1, "GTEx: Whole blood", dplyr::if_else(type_dataset == "GTEx: Lung" & size == 560 & rep == 1, "GTEx: Lung", dplyr::if_else(type_dataset == "GTEx: Breast" & size == 320 & rep == 1, "GTEx: Breast", dplyr::if_else(type_dataset == "TCGA: Lung cancer" & size == 460 & rep == 1, "TCGA: Lung cancer", dplyr::if_else(type_dataset == "TCGA: Breast cancer" & size == 1000 & rep == 1, "TCGA: Breast cancer", "")))))))
+  mutate(geom_text_repel_label=dplyr::if_else(type_dataset == "R. arthritis" & size == 240 & rep == 1, "R. arthritis", dplyr::if_else(type_dataset == "GTEx: Whole blood" & size == 700 & rep == 1, "GTEx: Whole blood", dplyr::if_else(type_dataset == "GTEx: Lung" & size == 560 & rep == 1, "GTEx: Lung", dplyr::if_else(type_dataset == "GTEx: Breast" & size == 140 & rep == 1, "GTEx: Breast", dplyr::if_else(type_dataset == "TCGA: Lung cancer" & size == 460 & rep == 1, "TCGA: Lung cancer", dplyr::if_else(type_dataset == "TCGA: Breast cancer" & size == 1000 & rep == 1, "TCGA: Breast cancer", "")))))))
 
 # Plot with labels
 prediction_plot_lessdatasets = prediction_plot_lessdatasets_df %>%
@@ -785,7 +922,13 @@ ggsave(
 Number of samples for a given % of significant edges:
 
 ```{r}
-datasets_selected = c("gtex:breast.mammary.tissue", "gtex:lung", "gtex:whole.blood", "tcga:tcga-brca_female", "tcga:tcga-luad", "scipher:scipher.sample.per.patient.baseline")
+datasets_selected = c("gtex:breast.mammary.tissue_female", 
+                      "gtex:lung", 
+                      "gtex:whole.blood", 
+                      "tcga:tcga-brca_female", 
+                      "tcga:tcga-luad", 
+                      "scipher:scipher.sample.per.patient.baseline")
+
 model_selected = "Stretched exponential (by linear fit)"
 predicted_results_norm_df %>% dplyr::select(type_dataset, model, model_result, size) %>%
   mutate_at(c('model_result'), as.numeric) %>%
@@ -1025,7 +1168,7 @@ Define functions:
 #'  @param b Intercept coefficient.
 #'  
 calculate_predictions_using_stretched_exponential_model_optimized = function(x, L, a, b){
-  y = L * exp((b*x**(-a+1))/(-a+1))
+  y = L * exp((b * x ** (-a + 1)) / (-a + 1))
   #y = exp(log(L) - exp(b+a*log(x)))
   return(y)
 }
@@ -1040,7 +1183,7 @@ calculate_predictions_using_stretched_exponential_model_optimized = function(x, 
 #'  
 calculate_prediction_from_analytical_model = function(model, x_list, a, b, L){
   if(model == "Logarithmic"){
-    prediction_result = (log(x_list)*a + b)
+    prediction_result = (log(x_list) *a + b)
   } else if((model == "Stretched exponential (by optimization)") | (model == "Stretched exponential (by linear fit)")){
     prediction_result = calculate_predictions_using_stretched_exponential_model_optimized(x=x_list, L=L, a=a, b=b)
   } else if(model == "Stretched exponential (without L)"){
@@ -1057,29 +1200,77 @@ Calculate predictions of the models:
 #datasets_selected = c("gtex:whole.blood", "gtex:artery.tibial", "tcga:tcga-coad", "tcga:tcga-brca", "scipher:scipher.complete.dataset")
 #datasets_selected = c("gtex:breast.mammary.tissue", "gtex:thyroid", "tcga:tcga-brca", "tcga:tcga-thca", "scipher:scipher.complete.dataset")
 #datasets_selected = c("gtex:breast.mammary.tissue", "gtex:thyroid", "gtex:whole.blood", "tcga:tcga-brca", "tcga:tcga-thca", "scipher:scipher.complete.dataset")
-datasets_selected = c("gtex:breast.mammary.tissue", "gtex:lung", "gtex:whole.blood", "tcga:tcga-brca_female", "tcga:tcga-luad", "scipher:scipher.sample.per.patient.baseline")
+datasets_selected = c("gtex:breast.mammary.tissue_female", 
+                      "gtex:lung", 
+                      "gtex:whole.blood", 
+                      "tcga:tcga-brca_female", 
+                      "tcga:tcga-luad", 
+                      "scipher:scipher.sample.per.patient.baseline")
 #model_selected = "Stretched exponential (by optimization)"
 model_selected = "Stretched exponential (by linear fit)"
-sample_size_vs_a_df = analytical_model_summary_df %>% inner_join(sample_size_correlation_df, by=c("type_dataset"="dataset")) %>% 
+sample_size_vs_a_df = analytical_model_summary_df %>% 
+  inner_join(sample_size_correlation_df, 
+             by = c("type_dataset" = "dataset")) %>% 
   #filter((type_dataset %in% datasets_selected) & (model == model_selected)) 
   filter(model == model_selected)
 
 # Calculate number of edges for each critical correlation using model
-sample_size_vs_a_df$num_edges_from_statistical_corrected = calculate_prediction_from_analytical_model(model=model_selected, x_list=sample_size_vs_a_df$sample_size_statistical_corrected, a=sample_size_vs_a_df$a, b=sample_size_vs_a_df$b, L=sample_size_vs_a_df$L)
-sample_size_vs_a_df$num_edges_from_statistical_corrected = sample_size_vs_a_df$num_edges_from_statistical_corrected * sample_size_vs_a_df$max_value_in_dataset
-sample_size_vs_a_df$num_edges_from_statistical_corrected_norm = sample_size_vs_a_df$num_edges_from_statistical_corrected / sample_size_vs_a_df$total_num_edges
+sample_size_vs_a_df$num_edges_from_statistical_corrected = 
+  calculate_prediction_from_analytical_model(model = model_selected, 
+                                             x_list = sample_size_vs_a_df$sample_size_statistical_corrected, 
+                                             a = sample_size_vs_a_df$a, 
+                                             b = sample_size_vs_a_df$b, 
+                                             L = sample_size_vs_a_df$L)
+sample_size_vs_a_df$num_edges_from_statistical_corrected = 
+  sample_size_vs_a_df$num_edges_from_statistical_corrected * sample_size_vs_a_df$max_value_in_dataset
+sample_size_vs_a_df$num_edges_from_statistical_corrected_norm = 
+  sample_size_vs_a_df$num_edges_from_statistical_corrected / sample_size_vs_a_df$total_num_edges
+
+sample_size_vs_a_df = sample_size_vs_a_df %>% 
+  tidyr::separate(type_dataset, 
+                  into = c("dataset", NA), 
+                  sep = ":", 
+                  remove = FALSE) %>%
+  tidyr::separate(type_dataset, 
+                  into = c("dataset_name", "sex"), 
+                  sep = "_", 
+                  remove = TRUE) %>%
+  mutate(type_tcga_tissue = 
+           if_else(dataset == "tcga", 
+                  "tumor", 
+                  "")) %>%
+  mutate(dataset_name = 
+           if_else(dataset == "tcga", 
+                   paste(dataset_name, 
+                         type_tcga_tissue, 
+                         sep = "_"), 
+                   dataset_name)) %>%
+  mutate(dataset_name = 
+           if_else(!(is.na(sex)), 
+                   paste(dataset_name, 
+                         sex, 
+                         sep = "_"), 
+                   dataset_name))
+
+sample_size_vs_a_df %>% head(10)
 ```
 
 Save the predictions:
 
 ```{r}
 type_correlation_selected = "weak"
+
 sample_size_vs_a_df %>%
   filter(type_correlation == type_correlation_selected) %>%
   arrange(desc(a))
 
-output_file = paste(tables_dir, 'a_vs_fraction_sig_correlations_pearson_pval_0.05.txt', sep='/')
-sample_size_vs_a_df %>% arrange(desc(a)) %>% fwrite(output_file)
+a_vs_fraction_corr_file = paste(tables_dir, 
+                                "a_vs_fraction_sig_correlations_pearson_pval_0.05.txt", 
+                                sep = "/")
+
+sample_size_vs_a_df %>% 
+  arrange(desc(a)) %>% 
+  fwrite(a_vs_fraction_corr_file)
 ```
 
 Plot alpha vs. fraction of correlations above 0.2:
@@ -1088,20 +1279,46 @@ Plot alpha vs. fraction of correlations above 0.2:
 # Process data
 sample_size_vs_a_plot_df = sample_size_vs_a_df %>% 
   filter(type_correlation == type_correlation_selected) %>% 
-  filter(!(type_dataset == "tcga:tcga")) %>% 
-  mutate(type_dataset = replace(type_dataset, type_dataset == "scipher:scipher.sample.per.patient.baseline", "R. arthritis")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:whole.blood", "GTEx: Whole blood")) %>%
-  #mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:thyroid", "GTEx: Thyroid")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:lung", "GTEx: Lung")) %>%
-  #mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:artery.tibial", "GTEx: Artery tibial")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
-  #mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-coad", "TCGA: Colon cancer")) %>%
-  #mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-thca", "TCGA: Thyroid cancer")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-luad", "TCGA: Lung cancer")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca_female", "TCGA: Breast cancer")) %>%
-  left_join( (name2color %>% as.data.frame() %>% dplyr::rename("rgb_col"=".") %>% tibble::rownames_to_column("type_dataset")), by=c("type_dataset") ) %>%
+  mutate(dataset_name = 
+           replace(dataset_name, 
+                   dataset_name == "scipher:scipher.sample.per.patient.baseline", 
+                   "R. arthritis")) %>%
+  mutate(dataset_name = 
+           replace(dataset_name, 
+                   dataset_name == "gtex:whole.blood",
+                   "GTEx: Whole blood")) %>%
+  #mutate(dataset_name = replace(dataset_name, dataset_name == "gtex:thyroid", "GTEx: Thyroid")) %>%
+  mutate(dataset_name = 
+           replace(dataset_name, 
+                   dataset_name == "gtex:lung", 
+                   "GTEx: Lung")) %>%
+  #mutate(dataset_name = replace(dataset_name, dataset_name == "gtex:artery.tibial", "GTEx: Artery tibial")) %>%
+  mutate(dataset_name = 
+           replace(dataset_name, 
+                   dataset_name == "gtex:breast.mammary.tissue_female", 
+                   "GTEx: Breast")) %>%
+  #mutate(dataset_name = replace(dataset_name, dataset_name == "tcga:tcga-coad", "TCGA: Colon cancer")) %>%
+  #mutate(dataset_name = replace(dataset_name, dataset_name == "tcga:tcga-thca", "TCGA: Thyroid cancer")) %>%
+  mutate(dataset_name = 
+           replace(dataset_name, 
+                   dataset_name == "tcga:tcga-luad_tumor", 
+                   "TCGA: Lung cancer")) %>%
+  mutate(dataset_name = 
+           replace(dataset_name, 
+                   dataset_name == "tcga:tcga-brca_tumor_female", 
+                   "TCGA: Breast cancer")) %>%
+  left_join( (name2color %>% 
+                as.data.frame() %>% 
+                dplyr::rename("rgb_col" = ".") %>% 
+                tibble::rownames_to_column("dataset_name")), 
+             by = c("dataset_name") ) %>%
   mutate(rgb_col = replace(rgb_col, is.na(rgb_col), "#000000")) %>% # Non-selected datasets with color black
-  mutate(geom_text_repel_label=dplyr::if_else(type_dataset == "R. arthritis", "R. arthritis", dplyr::if_else(type_dataset == "GTEx: Whole blood", "GTEx: Whole blood", dplyr::if_else(type_dataset == "GTEx: Lung", "GTEx: Lung", dplyr::if_else(type_dataset == "GTEx: Breast", "GTEx: Breast", dplyr::if_else(type_dataset == "TCGA: Lung cancer", "TCGA: Lung cancer", dplyr::if_else(type_dataset == "TCGA: Breast cancer", "TCGA: Breast cancer", "")))))))
+  mutate(geom_text_repel_label=dplyr::if_else(dataset_name == "R. arthritis", "R. arthritis", 
+                                              dplyr::if_else(dataset_name == "GTEx: Whole blood", "GTEx: Whole blood", 
+                                                             dplyr::if_else(dataset_name == "GTEx: Lung", "GTEx: Lung", 
+                                                                            dplyr::if_else(dataset_name == "GTEx: Breast", "GTEx: Breast", 
+                                                                                           dplyr::if_else(dataset_name == "TCGA: Lung cancer", "TCGA: Lung cancer", 
+                                                                                                          dplyr::if_else(dataset_name == "TCGA: Breast cancer", "TCGA: Breast cancer", "")))))))
 
 # Make scatter plot
 a_vs_fraction_sig_correlations_plot = sample_size_vs_a_plot_df %>%
@@ -1147,19 +1364,28 @@ ggsave(
 Create plots showing the variation of each gene across samples:
 
 ```{r}
-datasets_selected = c("Breast.Mammary.Tissue", "Lung", "Whole.Blood", "TCGA-BRCA_female", "TCGA-LUAD", "scipher.sample.per.patient.baseline")
+datasets_selected = c("gtex:breast.mammary.tissue_female", 
+                      "gtex:lung", 
+                      "gtex:whole.blood", 
+                      "tcga:tcga-brca_tumor_female", 
+                      "tcga:tcga-luad_tumor", 
+                      "scipher:scipher.sample.per.patient.baseline")
 parameters = c("sd", "mean", "cv")
 parameter2label <- list("sd"="SD", "mean"="mean", "cv"="CV")
+type_counts_selected = "reads"
 distribution_plots = list()
 sd_genes_filtered = sd_genes_df %>%
-  filter(type_dataset %in% datasets_selected) %>%
+  filter(dataset_name %in% datasets_selected) %>%
+  filter(type_counts == type_counts_selected) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "scipher.sample.per.patient.baseline", "R. arthritis")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "Whole.Blood", "GTEx: Whole blood")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "Lung", "GTEx: Lung")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "Breast.Mammary.Tissue", "GTEx: Breast")) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "TCGA-LUAD", "TCGA: Lung cancer")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "TCGA-BRCA_female", "TCGA: Breast cancer")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "TCGA-BRCA", "TCGA: Breast cancer")) %>%
   inner_join( (name2color %>% as.data.frame() %>% dplyr::rename("rgb_col"=".") %>% tibble::rownames_to_column("type_dataset")), by=c("type_dataset") )
+
+print(unique(sd_genes_filtered$dataset_name)) # test to check if datasets are selected correctly
 
 for (x in 1:length(parameters)){
   parameter = parameters[x]
@@ -1214,15 +1440,28 @@ for (x in 1:length(parameters)){
 Less datasets:
 
 ```{r}
-datasets_selected = c("Breast.Mammary.Tissue", "TCGA-BRCA_female")
+datasets_selected = c("gtex:breast.mammary.tissue_female", 
+                      "tcga:tcga-brca_tumor_female")
 parameters = c("sd", "mean", "cv")
 parameter2label <- list("sd"="SD", "mean"="mean", "cv"="CV")
+type_counts_selected = "reads"
 distribution_plots_lessdatasets = list()
 sd_genes_filtered = sd_genes_df %>%
-  filter(type_dataset %in% datasets_selected) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "Breast.Mammary.Tissue", "GTEx: Breast")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "TCGA-BRCA_female", "TCGA: Breast cancer")) %>%
-  inner_join( (name2color %>% as.data.frame() %>% dplyr::rename("rgb_col"=".") %>% tibble::rownames_to_column("type_dataset")), by=c("type_dataset") )
+  filter(dataset_name %in% datasets_selected) %>%
+  filter(type_counts == type_counts_selected) %>%
+  mutate(type_dataset = replace(type_dataset, 
+                                type_dataset == "Breast.Mammary.Tissue", 
+                                "GTEx: Breast")) %>%
+  mutate(type_dataset = replace(type_dataset, 
+                                type_dataset == "TCGA-BRCA", 
+                                "TCGA: Breast cancer")) %>%
+  inner_join( (name2color %>%
+                 as.data.frame() %>%
+                 dplyr::rename("rgb_col"=".") %>%
+                 tibble::rownames_to_column("type_dataset")), 
+              by=c("type_dataset") )
+
+print(unique(sd_genes_filtered$dataset_name)) # test to check if datasets are selected correctly
 
 for (x in 1:length(parameters)){
   parameter = parameters[x]
@@ -1234,7 +1473,10 @@ for (x in 1:length(parameters)){
     scale_colour_identity() +
     scale_x_log10() + 
     scale_y_log10() + 
-    labs(x=paste("Gene expression ", parameter2label[[parameter]], " (Log)", sep=""), y = "Number of genes (Log)") +
+    labs(x=paste("Gene expression ", 
+                 parameter2label[[parameter]], 
+                 " (Log)", sep=""), 
+         y = "Number of genes (Log)") +
     theme_linedraw() + 
     guides(col=guide_legend(title="Dataset")) +
     theme(aspect.ratio=1, 
@@ -1246,10 +1488,15 @@ for (x in 1:length(parameters)){
           text = element_text(family = "Helvetica"),
           legend.position="none")
   
-  # Save distribution plot without changes in the theme, because we will tune it afterwards with patchwork
+  # Save distribution plot without changes in the theme, because we will tune it 
+  # afterwards with patchwork
   distribution_plots_lessdatasets[[x]] = distribution_plot_lessdatasets
   
-  plot_file = paste(plots_dir, "/distribution_", parameter, "_genes_lessdatasets.png", sep="")
+  plot_file = paste(plots_dir, 
+                    "/distribution_", 
+                    parameter, 
+                    "_genes_lessdatasets.png", 
+                    sep="")
   ggsave(
     plot_file,
     plot=distribution_plot_lessdatasets,
@@ -1265,17 +1512,57 @@ for (x in 1:length(parameters)){
 Show numbers:
 
 ```{r}
-a_vs_fraction_corr_file = paste(tables_dir, 'a_vs_fraction_sig_correlations_pearson_pval_0.05.txt', sep='/')
-a_vs_fraction_corr_df = fread(a_vs_fraction_corr_file) %>% rename("dataset_name"="type_dataset")
+a_vs_fraction_corr_file = 
+  paste(tables_dir, 
+        "a_vs_fraction_sig_correlations_pearson_pval_0.05.txt", 
+        sep='/')
+a_vs_fraction_corr_df = fread(a_vs_fraction_corr_file)
 head(a_vs_fraction_corr_df)
 ```
 
 ```{r}
-sd_cut=10
-mean_cut=10
-cv_cut=50
-sd_genes_df %>% group_by(dataset, type_dataset) %>% summarize(mean_sd=mean(sd), median_sd=median(sd), mean_mean=mean(mean), median_mean=median(mean), mean_cv=mean(cv), median_cv=median(cv))
-sd_genes_vs_a_df = sd_genes_df %>% group_by(dataset, type_dataset, dataset_name) %>% summarize(num_genes_above_sd_cut=length(sd[sd >= sd_cut]), num_genes_above_mean_cut=length(mean[mean >= mean_cut]), num_genes_above_cv_cut=length(cv[cv >= cv_cut]), num_genes=n()) %>% ungroup() %>% mutate(fraction_genes_above_sd_cut = num_genes_above_sd_cut / num_genes, fraction_genes_above_mean_cut = num_genes_above_mean_cut / num_genes, fraction_genes_above_cv_cut = num_genes_above_cv_cut / num_genes) %>% inner_join(a_vs_fraction_corr_df, by=c("dataset_name"="dataset_name")) %>% select(!c("type_correlation", "correlation", "sample_size_statistical", "sample_size_statistical_corrected", "num_edges_from_statistical_corrected", "num_edges_from_statistical_corrected_norm")) %>% unique()
+sd_cut <- 10
+mean_cut <- 10
+cv_cut <- 50
+
+sd_genes_df %>% 
+  filter(type_counts == type_counts_selected) %>% 
+  group_by(dataset_name, type_tcga_tissue) %>% 
+  summarize(mean_sd = mean(sd), 
+            median_sd = median(sd), 
+            mean_mean = mean(mean), 
+            median_mean = median(mean), 
+            mean_cv = mean(cv), 
+            median_cv = median(cv)) %>%
+  head(10)
+
+# Calculate number of genes above certain SD, mean and CV cut-offs
+sd_genes_vs_a_df = sd_genes_df %>% 
+  filter(type_counts == type_counts_selected) %>% 
+  group_by(dataset, 
+           type_dataset, 
+           dataset_name, 
+           type_counts, 
+           sex, 
+           type_tcga_tissue) %>% 
+  summarize(num_genes_above_sd_cut = length(sd[sd >= sd_cut]), 
+            num_genes_above_mean_cut = length(mean[mean >= mean_cut]), 
+            num_genes_above_cv_cut = length(cv[cv >= cv_cut]), 
+            num_genes = n()) %>% 
+  ungroup() %>% 
+  mutate(fraction_genes_above_sd_cut = num_genes_above_sd_cut / num_genes, 
+         fraction_genes_above_mean_cut = num_genes_above_mean_cut / num_genes, 
+         fraction_genes_above_cv_cut = num_genes_above_cv_cut / num_genes) %>% 
+  inner_join(a_vs_fraction_corr_df, 
+             by = c("dataset_name", "dataset", "sex", "type_tcga_tissue")) %>% 
+  select(!c("type_correlation", 
+            "correlation", 
+            "sample_size_statistical", 
+            "sample_size_statistical_corrected", 
+            "num_edges_from_statistical_corrected", 
+            "num_edges_from_statistical_corrected_norm")) %>% 
+  unique() %>%
+  as.data.frame()
 
 head(sd_genes_vs_a_df)
 ```
@@ -1285,19 +1572,60 @@ Plot different parameters (sd, mean, cv) vs. alpha:
 ```{r}
 parameters = c("sd", "mean", "cv")
 parameter2label <- list("sd"="SD", "mean"="mean", "cv"="CV")
+
+# Prepare table for plots
 sd_genes_vs_a_filtered = sd_genes_vs_a_df %>%
-  mutate(dataset_name = replace(dataset_name, dataset_name == "scipher:scipher.sample.per.patient.baseline", "R. arthritis")) %>%
-  mutate(dataset_name = replace(dataset_name, dataset_name == "gtex:whole.blood", "GTEx: Whole blood")) %>%
-  mutate(dataset_name = replace(dataset_name, dataset_name == "gtex:lung", "GTEx: Lung")) %>%
-  mutate(dataset_name = replace(dataset_name, dataset_name == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
-  mutate(dataset_name = replace(dataset_name, dataset_name == "tcga:tcga-luad", "TCGA: Lung cancer")) %>%
-  mutate(dataset_name = replace(dataset_name, dataset_name == "tcga:tcga-brca_female", "TCGA: Breast cancer")) %>%
-  left_join( (name2color %>% as.data.frame() %>% dplyr::rename("rgb_col"=".") %>% tibble::rownames_to_column("dataset_name")), by=c("dataset_name") ) %>%
-  mutate(rgb_col = replace(rgb_col, is.na(rgb_col), "#000000")) %>% # Non-selected datasets with color black
-  mutate(geom_text_repel_label=dplyr::if_else(dataset_name == "R. arthritis", "R. arthritis", dplyr::if_else(dataset_name == "GTEx: Whole blood", "GTEx: Whole blood", dplyr::if_else(dataset_name == "GTEx: Lung", "GTEx: Lung", dplyr::if_else(dataset_name == "GTEx: Breast", "GTEx: Breast", dplyr::if_else(dataset_name == "TCGA: Lung cancer", "TCGA: Lung cancer", dplyr::if_else(dataset_name == "TCGA: Breast cancer", "TCGA: Breast cancer", ""))))))) %>% 
+  filter(type_counts == type_counts_selected) %>%
+  mutate(dataset_name = 
+           replace(dataset_name,
+                   dataset_name == "scipher:scipher.sample.per.patient.baseline", 
+                   "R. arthritis")) %>%
+  mutate(dataset_name = 
+           replace(dataset_name, 
+                   dataset_name == "gtex:whole.blood", 
+                   "GTEx: Whole blood")) %>%
+  mutate(dataset_name = 
+           replace(dataset_name, 
+                   dataset_name == "gtex:lung", 
+                   "GTEx: Lung")) %>%
+  mutate(dataset_name = 
+           replace(dataset_name, 
+                   dataset_name == "gtex:breast.mammary.tissue_female", 
+                   "GTEx: Breast")) %>%
+  mutate(dataset_name = 
+           replace(dataset_name, 
+                   dataset_name == "tcga:tcga-luad_tumor", 
+                   "TCGA: Lung cancer")) %>%
+  mutate(dataset_name = 
+           replace(dataset_name, 
+                   dataset_name == "tcga:tcga-brca_tumor_female", 
+                   "TCGA: Breast cancer")) %>%
+  left_join( (name2color %>% 
+                as.data.frame() %>% 
+                dplyr::rename("rgb_col" = ".") %>% 
+                tibble::rownames_to_column("dataset_name")), 
+             by = c("dataset_name") ) %>%
+  mutate(rgb_col = 
+           replace(rgb_col, 
+                   is.na(rgb_col), 
+                   "#000000")) %>% # Non-selected datasets with color black
+  mutate(geom_text_repel_label = 
+           dplyr::if_else(dataset_name == "R. arthritis", 
+                          "R. arthritis", 
+                          dplyr::if_else(dataset_name == "GTEx: Whole blood", 
+                                         "GTEx: Whole blood", 
+                                         dplyr::if_else(dataset_name == "GTEx: Lung", 
+                                                        "GTEx: Lung", dplyr::if_else(dataset_name == "GTEx: Breast", 
+                                                                                     "GTEx: Breast", 
+                                                                                     dplyr::if_else(dataset_name == "TCGA: Lung cancer",
+                                                                                                    "TCGA: Lung cancer", 
+                                                                                                    dplyr::if_else(dataset_name == "TCGA: Breast cancer", "TCGA: Breast cancer", ""))))))) %>% 
   as.data.frame()
 scatter_plots = list()
 
+print(unique(sd_genes_vs_a_filtered$dataset_name)) # test to check if datasets are selected correctly
+
+# Make plot for each type of parameter (SD, mean, CV)
 for (x in 1:length(parameters)){
   parameter = parameters[x]
   if (parameter == "cv"){
@@ -1309,13 +1637,22 @@ for (x in 1:length(parameters)){
   }
   
   param_vs_a_plot = sd_genes_vs_a_filtered %>%
-    ggplot(aes(x=a, y=.data[[paste("fraction_genes_above_", parameter, "_cut", sep="")]], col=rgb_col)) + 
+    ggplot(aes(x = a, 
+               y = .data[[paste("fraction_genes_above_", 
+                                parameter, 
+                                "_cut", 
+                                sep = "")]], 
+               col = rgb_col)) + 
     geom_point() +
     scale_colour_identity() +
     xlab(expression(alpha)) +
-    ylab(paste("Frac. genes with ", parameter2label[[parameter]], " above ", cut, sep="")) +
+    ylab(paste("Frac. genes with ", 
+               parameter2label[[parameter]], 
+               " above ", 
+               cut, 
+               sep = "")) +
     theme_linedraw() +
-    theme(aspect.ratio=1, 
+    theme(aspect.ratio = 1, 
           plot.title =  element_text(size = 20, face="bold"), 
           axis.title = element_text(size = 17, face="bold"), 
           axis.text = element_text(size = 16), 
@@ -1323,15 +1660,17 @@ for (x in 1:length(parameters)){
           panel.grid.minor = element_blank(),
           text = element_text(family = "Helvetica"),
           legend.position="none") +
-    geom_label_repel(aes(col=rgb_col, label=geom_text_repel_label),
-                     fill="white",
-                     box.padding = 0.5, max.overlaps = Inf,
+    geom_label_repel(aes(col = rgb_col, 
+                         label = geom_text_repel_label),
+                     fill = "white",
+                     box.padding = 0.5, 
+                     max.overlaps = Inf,
                      label.size = 0.75, 
                      size = 5,
                      alpha = 0.6, 
                      label.padding=0.25, 
                      fontface = "bold",
-                     na.rm=TRUE,
+                     na.rm = TRUE,
                      seed = 1234)
 
   plot_file = paste(plots_dir, "/a_vs_fraction_genes_above_", parameter, "_cut.png", sep="")
@@ -1350,16 +1689,43 @@ for (x in 1:length(parameters)){
 With less datasets:
 
 ```{r}
-datasets_selected = c("Breast.Mammary.Tissue", "TCGA-BRCA_female")
 parameters = c("sd", "mean", "cv")
 parameter2label <- list("sd"="SD", "mean"="mean", "cv"="CV")
+
+# Prepare table for plots
 sd_genes_vs_a_filtered = sd_genes_vs_a_df %>%
-  mutate(dataset_name = replace(dataset_name, dataset_name == "gtex:breast.mammary.tissue", "GTEx: Breast")) %>%
-  mutate(dataset_name = replace(dataset_name, dataset_name == "tcga:tcga-brca_female", "TCGA: Breast cancer")) %>%
-  left_join( (name2color %>% as.data.frame() %>% dplyr::rename("rgb_col"=".") %>% tibble::rownames_to_column("dataset_name") %>% filter(dataset_name %in% c("TCGA: Breast cancer", "GTEx: Breast"))), by=c("dataset_name") ) %>%
-  mutate(rgb_col = replace(rgb_col, is.na(rgb_col), "#000000")) %>% # Non-selected datasets with color black
-  mutate(geom_text_repel_label=dplyr::if_else(dataset_name == "R. arthritis", "R. arthritis", dplyr::if_else(dataset_name == "GTEx: Whole blood", "GTEx: Whole blood", dplyr::if_else(dataset_name == "GTEx: Lung", "GTEx: Lung", dplyr::if_else(dataset_name == "GTEx: Breast", "GTEx: Breast", dplyr::if_else(dataset_name == "TCGA: Lung cancer", "TCGA: Lung cancer", dplyr::if_else(dataset_name == "TCGA: Breast cancer", "TCGA: Breast cancer", ""))))))) %>% 
+  mutate(dataset_name = 
+           replace(dataset_name, 
+                   dataset_name == "gtex:breast.mammary.tissue_female", 
+                   "GTEx: Breast")) %>%
+  mutate(dataset_name = 
+           replace(dataset_name, 
+                   dataset_name == "tcga:tcga-brca_tumor_female", 
+                   "TCGA: Breast cancer")) %>%
+  left_join( (name2color %>% 
+                as.data.frame() %>% 
+                dplyr::rename("rgb_col"=".") %>% 
+                tibble::rownames_to_column("dataset_name") %>% 
+                filter(dataset_name %in% c("TCGA: Breast cancer", "GTEx: Breast"))), 
+             by=c("dataset_name") ) %>%
+  mutate(rgb_col = replace(rgb_col, 
+                           is.na(rgb_col), 
+                           "#000000")) %>% # Non-selected datasets with color black
+  mutate(geom_text_repel_label = 
+           dplyr::if_else(dataset_name == "R. arthritis", 
+                          "R. arthritis", 
+                          dplyr::if_else(dataset_name == "GTEx: Whole blood", 
+                                         "GTEx: Whole blood", 
+                                         dplyr::if_else(dataset_name == "GTEx: Lung", 
+                                                        "GTEx: Lung", 
+                                                        dplyr::if_else(dataset_name == "GTEx: Breast", 
+                                                                       "GTEx: Breast", dplyr::if_else(dataset_name == "TCGA: Lung cancer", 
+                                                                                                      "TCGA: Lung cancer", 
+                                                                                                      dplyr::if_else(dataset_name == "TCGA: Breast cancer", 
+                                                                                                                     "TCGA: Breast cancer", 
+                                                                                                                     ""))))))) %>% 
   as.data.frame()
+
 scatter_plots_lessdatasets = list()
 
 for (x in 1:length(parameters)){
@@ -1373,13 +1739,22 @@ for (x in 1:length(parameters)){
   }
   
   param_vs_a_plot_lessdatasets = sd_genes_vs_a_filtered %>%
-    ggplot(aes(x=a, y=.data[[paste("fraction_genes_above_", parameter, "_cut", sep="")]], col=rgb_col)) + 
+    ggplot(aes(x = a, 
+               y = .data[[paste("fraction_genes_above_", 
+                                parameter, 
+                                "_cut", 
+                                sep = "")]], 
+               col = rgb_col)) + 
     geom_point() +
     scale_colour_identity() +
     xlab(expression(alpha)) +
-    ylab(paste("Frac. genes with ", parameter2label[[parameter]], " above ", cut, sep="")) +
+    ylab(paste("Frac. genes with ", 
+               parameter2label[[parameter]], 
+               " above ", 
+               cut, 
+               sep = "")) +
     theme_linedraw() +
-    theme(aspect.ratio=1, 
+    theme(aspect.ratio = 1, 
           plot.title =  element_text(size = 20, face="bold"), 
           axis.title = element_text(size = 17, face="bold"), 
           axis.text = element_text(size = 16), 
@@ -1398,7 +1773,11 @@ for (x in 1:length(parameters)){
                      na.rm=TRUE,
                      seed = 1234)
 
-  plot_file = paste(plots_dir, "/a_vs_fraction_genes_above_", parameter, "_cut_lessdatasets.png", sep="")
+  plot_file = paste(plots_dir, 
+                    "/a_vs_fraction_genes_above_", 
+                    parameter, 
+                    "_cut_lessdatasets.png", 
+                    sep = "")
   ggsave(
     plot_file,
     dpi = 1200,
@@ -1516,6 +1895,49 @@ ggsave(
 #   #plot_annotation(tag_levels = 'A') & # Include letters 
 #   theme(plot.tag = element_text(face = 'bold')) # that are bold
 ```
+
+#### CV vs. sample size
+
+We calculate the sample size necessary to reveal 50% of the significant correlations:
+
+```{r}
+calculate_optimal_N <- function(L, a, b, s = 0.5) {
+return(N)
+}
+```
+
+```{r}
+for (dataset_selected in unique(analytical_model_summary_df$type_dataset)){
+  analytical_params_selected = analytical_model_summary_df %>%
+    filter((type_dataset == dataset_selected) & (model == model_selected))
+  N_opt <- calculate_optimal_N(L = analytical_params_selected$L, 
+                               a = analytical_params_selected$a,
+                               b = analytical_params_selected$b, s = 0.5)
+  print(dataset_selected)
+  print(N_opt)
+}
+```
+
+Then, we match the optimal sample size to obtain 50% of significant correlations with the CV of the dataset.
+
+```{r}
+type_counts_selected = "reads"
+meta_filt_df = meta_df %>%
+  filter(type_counts == type_counts_selected) %>%
+  filter(!(dataset == "tcga" & type_tcga_tissue == "normal"))
+head(meta_filt_df)
+```
+
+```{r}
+sd_genes_vs_ss_df = sd_genes_df %>%
+  group_by(dataset, type_dataset, dataset_name) %>% 
+  summarize(num_genes_above_sd_cut=length(sd[sd >= sd_cut]), num_genes_above_mean_cut=length(mean[mean >= mean_cut]), num_genes_above_cv_cut=length(cv[cv >= cv_cut]), num_genes_total=n()) %>% 
+  ungroup() %>% 
+  mutate(fraction_genes_above_sd_cut = num_genes_above_sd_cut / num_genes_total, fraction_genes_above_mean_cut = num_genes_above_mean_cut / num_genes_total, fraction_genes_above_cv_cut = num_genes_above_cv_cut / num_genes_total) %>% 
+  inner_join(meta_filt_df %>% dplyr::select(dataset_name, num_samples, num_genes), by=c("dataset_name")) %>% unique()
+head(sd_genes_vs_ss_df)
+```
+
 
 #### Levels of correlations plot
 

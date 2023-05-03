@@ -29,10 +29,8 @@ options(bitmapType='cairo')
 Define input directories and files:
 
 ```{r}
-topology_results_file ='/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/analysis_topology.csv'
-results_df = fread(topology_results_file)
-gtex_rnaseq_dir = "/work/ccnr/j.aguirreplans/Databases/GTEx/v8/tpm/rnaseq_filtered_files_by_tissue"
-tcga_rnaseq_dir = "/work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/tpm/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project"
+gtex_dir = "/work/ccnr/j.aguirreplans/Databases/GTEx/v8"
+tcga_dir = "/work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out"
 scipher_rnaseq_dir = "/work/ccnr/j.aguirreplans/data/Scipher/Dec2021/00_data/rnaseq_filtered_files_by_group"
 data_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data'
 plots_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots'
@@ -43,24 +41,82 @@ Read RNA-seq files for each database and calculate SD of expression samples for 
 #### Parse GTEx
 
 ```{r}
-dataset_selected = "gtex"
 gtex_sd_genes_df = data.frame()
 gtex_sd_samples_df = data.frame()
 gtex_meta_df = data.frame()
-for (subset_selected in unique((results_df %>% filter(dataset==dataset_selected))$type_dataset)){
-  rnaseq_file = paste(dataset_selected, "_rnaseq_", subset_selected, ".gct", sep="")
-  rnaseq_file_path = paste(gtex_rnaseq_dir, rnaseq_file, sep="/")
-  rnaseq = fread(rnaseq_file_path) %>% as.data.frame()
-  if (nrow(gtex_sd_genes_df) == 0){
-    gtex_sd_genes_df = data.frame(gene=rnaseq$Gene, sd=apply(rnaseq[,-1], 1, sd), mean=apply(rnaseq[,-1], 1, mean), dataset=dataset_selected, type_dataset=subset_selected)
-    gtex_sd_samples_df = data.frame(sample=colnames(rnaseq[,-1]), sd=apply(rnaseq[,-1], 2, sd), mean=apply(rnaseq[,-1], 2, mean), dataset=dataset_selected, type_dataset=subset_selected)
-    gtex_meta_df = data.frame(dataset="gtex", type_dataset=subset_selected, num_samples=ncol(rnaseq[,-1]), num_genes=nrow(rnaseq[,-1]))
-  } else {
-    gtex_sd_genes_df = rbind(gtex_sd_genes_df, data.frame(gene=rnaseq$Gene, sd=apply(rnaseq[,-1], 1, sd), mean=apply(rnaseq[,-1], 1, mean), dataset=dataset_selected, type_dataset=subset_selected))
-    gtex_sd_samples_df = rbind(gtex_sd_samples_df, data.frame(sample=colnames(rnaseq[,-1]), sd=apply(rnaseq[,-1], 2, sd), mean=apply(rnaseq[,-1], 2, mean), dataset=dataset_selected, type_dataset=subset_selected))
-    gtex_meta_df = rbind(gtex_meta_df, data.frame(dataset=dataset_selected, type_dataset=subset_selected, num_samples=ncol(rnaseq[,-1]), num_genes=nrow(rnaseq[,-1])))
+
+for (type_counts in c("reads", "tpm")) {
+  # Get all datasets in GTEx directory
+  gtex_rnaseq_dir = paste(gtex_dir, type_counts, "rnaseq_filtered_files_by_tissue", sep="/")
+  rnaseq_files = list.files(gtex_rnaseq_dir)
+  for (rnaseq_file in rnaseq_files){
+    rnaseq_file_path = paste(gtex_rnaseq_dir, rnaseq_file, sep="/")
+    # Get sex in file name
+    rnaseq_spl = strsplit(gsub(".gct", "", rnaseq_file), split="_", fixed = TRUE)[[1]]
+    sex = NA
+    if (length(rnaseq_spl) == 4) {
+      sex = rnaseq_spl[4]
+    }
+    # Read dataset
+    rnaseq = fread(rnaseq_file_path) %>% as.data.frame()
+    # Define data frame if it is still empty
+    if (nrow(gtex_sd_genes_df) == 0){
+      # SD for each gene in dataset
+      gtex_sd_genes_df = data.frame(gene = rnaseq$Gene, 
+                                    sd = apply(rnaseq[,-1], 1, sd), 
+                                    mean = apply(rnaseq[,-1], 1, mean), 
+                                    dataset = rnaseq_spl[1],
+                                    type_dataset = rnaseq_spl[3], 
+                                    type_counts = type_counts, 
+                                    sex = sex)
+      # SD for each sample in dataset
+      gtex_sd_samples_df = data.frame(sample = colnames(rnaseq[,-1]), 
+                                      sd = apply(rnaseq[,-1], 2, sd), 
+                                      mean = apply(rnaseq[,-1], 2, mean), 
+                                      dataset = rnaseq_spl[1], 
+                                      type_dataset = rnaseq_spl[3], 
+                                      type_counts = type_counts, 
+                                      sex = sex)
+      # Number of genes and samples for each dataset
+      gtex_meta_df = data.frame(dataset = rnaseq_spl[1], 
+                                type_dataset = rnaseq_spl[3], 
+                                type_counts = type_counts, 
+                                sex = sex, 
+                                num_samples = ncol(rnaseq[,-1]), 
+                                num_genes = nrow(rnaseq[,-1]))
+    # Append results if dataframe is already created
+    } else {
+      gtex_sd_genes_df = rbind(gtex_sd_genes_df, 
+                               data.frame(gene = rnaseq$Gene, 
+                                          sd = apply(rnaseq[,-1], 1, sd), 
+                                          mean = apply(rnaseq[,-1], 1, mean), 
+                                          dataset = rnaseq_spl[1], 
+                                          type_dataset = rnaseq_spl[3], 
+                                          type_counts = type_counts,
+                                          sex = sex)
+                               )
+      gtex_sd_samples_df = rbind(gtex_sd_samples_df, 
+                                 data.frame(sample = colnames(rnaseq[,-1]), 
+                                            sd = apply(rnaseq[,-1], 2, sd), 
+                                            mean = apply(rnaseq[,-1], 2, mean), 
+                                            dataset = rnaseq_spl[1], 
+                                            type_dataset = rnaseq_spl[3], 
+                                            type_counts = type_counts,
+                                            sex = sex)
+                                 )
+      gtex_meta_df = rbind(gtex_meta_df, 
+                           data.frame(dataset = rnaseq_spl[1], 
+                                      type_dataset = rnaseq_spl[3], 
+                                      type_counts = type_counts, 
+                                      sex = sex, 
+                                      num_samples = ncol(rnaseq[,-1]), 
+                                      num_genes = nrow(rnaseq[,-1]))
+                           )
+    }
   }
 }
+
+# Calculate CV
 gtex_sd_genes_df$cv = (gtex_sd_genes_df$sd/gtex_sd_genes_df$mean)*100
 gtex_sd_samples_df$cv = (gtex_sd_samples_df$sd/gtex_sd_samples_df$mean)*100
 ```
@@ -71,28 +127,91 @@ head(gtex_sd_samples_df)
 head(gtex_meta_df)
 ```
 
-#### Parase TCGA
+
+#### Parse TCGA
 
 ```{r}
-dataset_selected = "tcga"
 tcga_sd_genes_df = data.frame()
 tcga_sd_samples_df = data.frame()
 tcga_meta_df = data.frame()
-for (subset_selected in unique((results_df %>% filter(dataset==dataset_selected))$type_dataset)){
-  rnaseq_file = paste(dataset_selected, "_rnaseq_", subset_selected, ".csv", sep="")
-  rnaseq_file_path = paste(tcga_rnaseq_dir, rnaseq_file, sep="/")
-  rnaseq = fread(rnaseq_file_path) %>% as.data.frame()
-  rnaseq_sd = apply(rnaseq[,-1], 1, sd)
-  if (nrow(tcga_sd_genes_df) == 0){
-    tcga_sd_genes_df = data.frame(gene=rnaseq$Gene, sd=apply(rnaseq[,-1], 1, sd), mean=apply(rnaseq[,-1], 1, mean), dataset=dataset_selected, type_dataset=subset_selected)
-    tcga_sd_samples_df = data.frame(sample=colnames(rnaseq[,-1]), sd=apply(rnaseq[,-1], 2, sd), mean=apply(rnaseq[,-1], 2, mean), dataset=dataset_selected, type_dataset=subset_selected)
-    tcga_meta_df = data.frame(dataset=dataset_selected, type_dataset=subset_selected, num_samples=ncol(rnaseq[,-1]), num_genes=nrow(rnaseq[,-1]))
-  } else {
-    tcga_sd_genes_df = rbind(tcga_sd_genes_df, data.frame(gene=rnaseq$Gene, sd=apply(rnaseq[,-1], 1, sd), mean=apply(rnaseq[,-1], 1, mean), dataset=dataset_selected, type_dataset=subset_selected))
-    tcga_sd_samples_df = rbind(tcga_sd_samples_df, data.frame(sample=colnames(rnaseq[,-1]), sd=apply(rnaseq[,-1], 2, sd), mean=apply(rnaseq[,-1], 2, mean), dataset=dataset_selected, type_dataset=subset_selected))
-    tcga_meta_df = rbind(tcga_meta_df, data.frame(dataset=dataset_selected, type_dataset=subset_selected, num_samples=ncol(rnaseq[,-1]), num_genes=nrow(rnaseq[,-1])))
+
+for (type_counts in c("reads", "tpm")) {
+  for (type_tcga_tissue in c("tumor", "normal")) {
+    # Get all datasets in TCGA directory
+    tcga_rnaseq_dir = paste(tcga_dir, type_counts, type_tcga_tissue, "filter_genes_low_counts/rnaseq_filtered_files_by_project", sep="/")
+    rnaseq_files = list.files(tcga_rnaseq_dir)
+    for (rnaseq_file in rnaseq_files) {
+      # Get sex in file name
+      rnaseq_file_path = paste(tcga_rnaseq_dir, rnaseq_file, sep="/")
+      rnaseq_spl = strsplit(gsub(".csv", "", rnaseq_file), split="_", fixed = TRUE)[[1]]
+      sex = NA
+      if(length(rnaseq_spl) == 4) {
+        sex = rnaseq_spl[4]
+      }
+      # Read dataset
+      rnaseq = fread(rnaseq_file_path) %>% as.data.frame()
+      # Define data frame if it is still empty
+      if (nrow(tcga_meta_df) == 0) {
+        tcga_sd_genes_df = data.frame(gene = rnaseq$Gene, 
+                                      sd = apply(rnaseq[,-1], 1, sd), 
+                                      mean = apply(rnaseq[,-1], 1, mean), 
+                                      dataset = rnaseq_spl[1], 
+                                      type_dataset = rnaseq_spl[3], 
+                                      type_counts = type_counts, 
+                                      type_tcga_tissue = type_tcga_tissue, 
+                                      sex = sex)
+        tcga_sd_samples_df = data.frame(sample = colnames(rnaseq[,-1]), 
+                                        sd = apply(rnaseq[,-1], 2, sd), 
+                                        mean = apply(rnaseq[,-1], 2, mean), 
+                                        dataset = rnaseq_spl[1], 
+                                        type_dataset = rnaseq_spl[3], 
+                                        type_counts = type_counts, 
+                                        type_tcga_tissue = type_tcga_tissue, 
+                                        sex = sex)
+        tcga_meta_df = data.frame(dataset = rnaseq_spl[1], 
+                                  type_dataset = rnaseq_spl[3], 
+                                  type_counts = type_counts, 
+                                  type_tcga_tissue = type_tcga_tissue, 
+                                  sex = sex, 
+                                  num_samples = ncol(rnaseq[,-1]), 
+                                  num_genes = nrow(rnaseq[,-1]))
+      # Append results if dataframe is already created
+      } else {
+        tcga_sd_genes_df = rbind(tcga_sd_genes_df, 
+                                 data.frame(gene = rnaseq$Gene, 
+                                            sd = apply(rnaseq[,-1], 1, sd),
+                                            mean = apply(rnaseq[,-1], 1, mean), 
+                                            dataset = rnaseq_spl[1], 
+                                            type_dataset = rnaseq_spl[3], 
+                                            type_counts = type_counts, 
+                                            type_tcga_tissue = type_tcga_tissue, 
+                                            sex = sex)
+                                 )
+        tcga_sd_samples_df = rbind(tcga_sd_samples_df, 
+                                   data.frame(sample = colnames(rnaseq[,-1]), 
+                                              sd = apply(rnaseq[,-1], 2, sd), 
+                                              mean = apply(rnaseq[,-1], 2, mean), 
+                                              dataset = rnaseq_spl[1], 
+                                              type_dataset = rnaseq_spl[3], 
+                                              type_counts = type_counts, 
+                                              type_tcga_tissue = type_tcga_tissue, 
+                                              sex = sex)
+                                   )
+        tcga_meta_df = rbind(tcga_meta_df, 
+                             data.frame(dataset = rnaseq_spl[1], 
+                                        type_dataset = rnaseq_spl[3], 
+                                        type_counts = type_counts, 
+                                        type_tcga_tissue = type_tcga_tissue, 
+                                        sex = sex, 
+                                        num_samples = ncol(rnaseq[,-1]), 
+                                        num_genes = nrow(rnaseq[,-1]))
+                             )
+      }
+    }
   }
 }
+
+# Calculate CV
 tcga_sd_genes_df$cv = (tcga_sd_genes_df$sd/tcga_sd_genes_df$mean)*100
 tcga_sd_samples_df$cv = (tcga_sd_samples_df$sd/tcga_sd_samples_df$mean)*100
 ```
@@ -103,28 +222,82 @@ head(tcga_sd_samples_df)
 head(tcga_meta_df)
 ```
 
+
 #### Parse Scipher
 
 ```{r}
-dataset_selected = "scipher"
 scipher_sd_genes_df = data.frame()
 scipher_sd_samples_df = data.frame()
 scipher_meta_df = data.frame()
-for (subset_selected in unique((results_df %>% filter(dataset==dataset_selected))$type_dataset)){
-  rnaseq_file = paste(dataset_selected, "_rnaseq_", subset_selected, ".csv", sep="")
+type_counts="reads"
+
+# Get all datasets in Scipher directory
+rnaseq_files = list.files(scipher_rnaseq_dir)
+
+for (rnaseq_file in rnaseq_files){
   rnaseq_file_path = paste(scipher_rnaseq_dir, rnaseq_file, sep="/")
+  # Get sex in file name
+  rnaseq_spl = strsplit(gsub(".csv", "", rnaseq_file), split="_", fixed=T)[[1]]
+  sex = NA
+  if(length(rnaseq_spl) == 4){
+    sex = rnaseq_spl[4]
+  }
+  # Read dataset
   rnaseq = fread(rnaseq_file_path) %>% as.data.frame()
-  rnaseq_sd = apply(rnaseq[,-1], 1, sd)
-  if (nrow(scipher_sd_genes_df) == 0){
-    scipher_sd_genes_df = data.frame(gene=rnaseq$Gene, sd=apply(rnaseq[,-1], 1, sd), mean=apply(rnaseq[,-1], 1, mean), dataset=dataset_selected, type_dataset=subset_selected)
-    scipher_sd_samples_df = data.frame(sample=colnames(rnaseq[,-1]), sd=apply(rnaseq[,-1], 2, sd), mean=apply(rnaseq[,-1], 2, mean), dataset=dataset_selected, type_dataset=subset_selected)
-    scipher_meta_df = data.frame(dataset=dataset_selected, type_dataset=subset_selected, num_samples=ncol(rnaseq[,-1]), num_genes=nrow(rnaseq[,-1]))
+  # Define data frame if it is still empty
+  if (nrow(scipher_meta_df) == 0){
+    scipher_sd_genes_df = data.frame(gene = rnaseq$Gene, 
+                                     sd = apply(rnaseq[,-1], 1, sd), 
+                                     mean = apply(rnaseq[,-1], 1, mean), 
+                                     dataset = rnaseq_spl[1], 
+                                     type_dataset = rnaseq_spl[3], 
+                                     type_counts = type_counts,
+                                     sex = sex)
+    scipher_sd_samples_df = data.frame(sample = colnames(rnaseq[,-1]), 
+                                       sd = apply(rnaseq[,-1], 2, sd), 
+                                       mean = apply(rnaseq[,-1], 2, mean), 
+                                       dataset = rnaseq_spl[1], 
+                                       type_dataset = rnaseq_spl[3], 
+                                       type_counts = type_counts,
+                                       sex = sex)
+    scipher_meta_df = data.frame(dataset = rnaseq_spl[1], 
+                                 type_dataset = rnaseq_spl[3], 
+                                 type_counts = type_counts, 
+                                 sex = sex, 
+                                 num_samples = ncol(rnaseq[,-1]), 
+                                 num_genes = nrow(rnaseq[,-1]))
+  # Append results if dataframe is already created
   } else {
-    scipher_sd_genes_df = rbind(scipher_sd_genes_df, data.frame(gene=rnaseq$Gene, sd=apply(rnaseq[,-1], 1, sd), mean=apply(rnaseq[,-1], 1, mean), dataset=dataset_selected, type_dataset=subset_selected))
-    scipher_sd_samples_df = rbind(scipher_sd_samples_df, data.frame(sample=colnames(rnaseq[,-1]), sd=apply(rnaseq[,-1], 2, sd), mean=apply(rnaseq[,-1], 2, mean), dataset=dataset_selected, type_dataset=subset_selected))
-    scipher_meta_df = rbind(scipher_meta_df, data.frame(dataset=dataset_selected, type_dataset=subset_selected, num_samples=ncol(rnaseq[,-1]), num_genes=nrow(rnaseq[,-1])))
+    scipher_sd_genes_df = rbind(scipher_sd_genes_df, 
+                                data.frame(gene = rnaseq$Gene, 
+                                           sd = apply(rnaseq[,-1], 1, sd), 
+                                           mean = apply(rnaseq[,-1], 1, mean), 
+                                           dataset = rnaseq_spl[1], 
+                                           type_dataset = rnaseq_spl[3], 
+                                           type_counts = type_counts,
+                                           sex = sex)
+                                )
+    scipher_sd_samples_df = rbind(scipher_sd_samples_df, 
+                                  data.frame(sample = colnames(rnaseq[,-1]), 
+                                             sd = apply(rnaseq[,-1], 2, sd), 
+                                             mean = apply(rnaseq[,-1], 2, mean), 
+                                             dataset = rnaseq_spl[1], 
+                                             type_dataset = rnaseq_spl[3], 
+                                             type_counts = type_counts,
+                                             sex = sex)
+                                  )
+    scipher_meta_df = rbind(scipher_meta_df, 
+                            data.frame(dataset = rnaseq_spl[1], 
+                                       type_dataset = rnaseq_spl[3], 
+                                       type_counts = type_counts, 
+                                       sex = sex, 
+                                       num_samples = ncol(rnaseq[,-1]), 
+                                       num_genes = nrow(rnaseq[,-1]))
+                            )
   }
 }
+
+# Calculate CV
 scipher_sd_genes_df$cv = (scipher_sd_genes_df$sd/scipher_sd_genes_df$mean)*100
 scipher_sd_samples_df$cv = (scipher_sd_samples_df$sd/scipher_sd_samples_df$mean)*100
 ```
@@ -132,25 +305,100 @@ scipher_sd_samples_df$cv = (scipher_sd_samples_df$sd/scipher_sd_samples_df$mean)
 ```{r}
 head(scipher_sd_genes_df)
 head(scipher_sd_samples_df)
-head(scipher_meta_df)
+scipher_meta_df
 ```
+
 
 #### Merge datasets
 
+Merging of SD / mean calculation by gene:
+
 ```{r}
-sd_genes_df = rbind(gtex_sd_genes_df, tcga_sd_genes_df, scipher_sd_genes_df)
-sd_genes_df$dataset_name = paste(sd_genes_df$dataset, sd_genes_df$type_dataset, sep=":")
+# Full join of gene SD datasets
+sd_genes_df = gtex_sd_genes_df %>% 
+  full_join(tcga_sd_genes_df) %>% 
+  full_join(scipher_sd_genes_df)
+
+# Write full dataset name
+sd_genes_df$dataset_name = paste(sd_genes_df$dataset, 
+                                 sd_genes_df$type_dataset, 
+                                 sep = ":")
 sd_genes_df$dataset_name = tolower(sd_genes_df$dataset_name)
+sd_genes_df$dataset_name = ifelse(!(sd_genes_df$type_tcga_tissue == ""),
+                                  paste(sd_genes_df$dataset_name, 
+                                        sd_genes_df$type_tcga_tissue, 
+                                        sep = "_"), 
+                                  sd_genes_df$dataset_name)
+sd_genes_df$dataset_name = ifelse(!(sd_genes_df$sex == ""),
+                                  paste(sd_genes_df$dataset_name, 
+                                        sd_genes_df$sex, 
+                                        sep = "_"), 
+                                  sd_genes_df$dataset_name)
+
+# Write output file
 sd_genes_file = paste(data_dir, "variation_by_gene.txt", sep="/")
 sd_genes_df %>% fwrite(sd_genes_file)
 head(sd_genes_df)
+```
 
-sd_samples_df = rbind(gtex_sd_samples_df, tcga_sd_samples_df, scipher_sd_samples_df)
-sd_samples_df$dataset_name = paste(sd_samples_df$dataset, sd_samples_df$type_dataset, sep=":")
+Merging of SD / mean calculation by samples:
+
+```{r}
+# Full join of sample SD datasets
+sd_samples_df = gtex_sd_samples_df %>% 
+  full_join(tcga_sd_samples_df) %>% 
+  full_join(scipher_sd_samples_df)
+
+# Write full dataset name
+sd_samples_df$dataset_name = paste(sd_samples_df$dataset, 
+                                   sd_samples_df$type_dataset, 
+                                   sep = ":")
 sd_samples_df$dataset_name = tolower(sd_samples_df$dataset_name)
+sd_samples_df$dataset_name = ifelse(!(sd_samples_df$type_tcga_tissue == ""),
+                                  paste(sd_samples_df$dataset_name, 
+                                        sd_samples_df$type_tcga_tissue, 
+                                        sep = "_"), 
+                                  sd_samples_df$dataset_name)
+sd_samples_df$dataset_name = ifelse(!(sd_samples_df$sex == ""), 
+                                    paste(sd_samples_df$dataset_name, 
+                                          sd_samples_df$sex, 
+                                          sep = "_"), 
+                                    sd_samples_df$dataset_name)
+
+# Write output file
 sd_samples_file = paste(data_dir, "variation_by_sample.txt", sep="/")
 sd_samples_df %>% fwrite(sd_samples_file)
 head(sd_samples_df)
+```
+
+Merging of metadata:
+
+```{r}
+# Full join of metadata
+meta_df = gtex_meta_df %>% 
+  full_join(tcga_meta_df) %>% 
+  full_join(scipher_meta_df)
+
+# Write full dataset name
+meta_df$dataset_name = paste(meta_df$dataset, 
+                                   meta_df$type_dataset, 
+                                   sep = ":")
+meta_df$dataset_name = tolower(meta_df$dataset_name)
+meta_df$dataset_name = ifelse(!(meta_df$type_tcga_tissue == ""),
+                              paste(meta_df$dataset_name, 
+                                    meta_df$type_tcga_tissue,
+                                    sep = "_"), 
+                              meta_df$dataset_name)
+meta_df$dataset_name = ifelse(!(meta_df$sex == ""), 
+                              paste(meta_df$dataset_name, 
+                                    meta_df$sex, 
+                                    sep = "_"), 
+                              meta_df$dataset_name)
+
+# Write output file
+meta_file = paste(data_dir, "metadata_summary.txt", sep="/")
+meta_df %>% fwrite(meta_file)
+head(meta_df)
 ```
 
 ### Analyze results

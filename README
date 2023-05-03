@@ -981,6 +981,15 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coe
 scp -r discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots_N100 /Users/quim/Desktop
 
 
+#----------------------------------------------#
+# POSTERIOR ANALYSIS OF CO-EXPRESSION NETWORKS #
+#----------------------------------------------#
+
+1. Run: "parse_coexpression_analysis_results.Rmd"
+
+2. Run: "server_example.R"
+
+3. Run: "calculate_convergence_correlation_types.Rmd"
 
 
 ###################################
@@ -1336,7 +1345,7 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differ
 
 #### DISEASE INFLAMED VS. CONTROL
 
-# Rectum_CD_inflamed vs. Rectum_Control_noninflamed - PEARSON - READS SENT!
+# Rectum_CD_inflamed vs. Rectum_Control_noninflamed - PEARSON - READS DONE!
 -d /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/disease_inflamed_vs_control/Rectum_CD_inflamed/consensus
 -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/disease_inflamed_vs_control/Rectum_Control_noninflamed/consensus
 -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/differential_coexpression_analysis/reads/GSE193677-Rectum_CD_inflamed___GSE193677-Rectum_Control_noninflamed/consensus
@@ -1344,7 +1353,7 @@ module load python/3.8.1
 # Consensus
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/calculate_differentially_coexpressed_genes_cluster.py -d /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/disease_inflamed_vs_control/Rectum_CD_inflamed/consensus -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/disease_inflamed_vs_control/Rectum_Control_noninflamed/consensus -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/differential_coexpression_analysis/reads/GSE193677-Rectum_CD_inflamed___GSE193677-Rectum_Control_noninflamed/consensus -p 0.05 -s -f
 
-# Rectum_UC_inflamed vs. Rectum_Control_noninflamed - PEARSON - READS SENT!
+# Rectum_UC_inflamed vs. Rectum_Control_noninflamed - PEARSON - READS DONE!
 -d /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/disease_inflamed_vs_control/Rectum_UC_inflamed/consensus
 -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/disease_inflamed_vs_control/Rectum_Control_noninflamed/consensus
 -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/differential_coexpression_analysis/reads/GSE193677-Rectum_UC_inflamed___GSE193677-Rectum_Control_noninflamed/consensus
@@ -1426,6 +1435,18 @@ https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4172738/
 - Drug transporter:
     - MDR-1 (NOT IN THE DATA!): The multidrug-resistance (MDR-1) gene encodes the drug efflux pump P-glycoprotein 170 (Pgp-170). Various polymorphisms have been identified within MDR-1.
 - Cell adhesion: Cell surface adhesion molecules conveying leukocyte-endothelial interactions, govern homing of activated inflammatory cells into gut. Extravasation and migration into the site of inflammation are mediated by integrins and selectins, and these molecules are increased in IBD patients. There are targeting therapies against adhesion molecules in clinical trials to date including natalizumab (integrin α4 subunit) and MLN-02 (selective adhesion molecule blocker for integrin α4β7). In Japanese patients with IBD, the intercellular adhesion molecule-1 (ICAM-1) K469 allele is associated with CD and UC.
+
+# Crohn's disease:
+/home/j.aguirreplans/Projects/Scipher/SampleSize/data/nodes_to_follow/crohn_disease.txt
+- NOD2, ATG16L1, IL23R, and IRGM: https://medlineplus.gov/genetics/condition/crohn-disease/#causes 
+
+# Ulcerative colitis:
+/home/j.aguirreplans/Projects/Scipher/SampleSize/data/nodes_to_follow/colitis_ulcerative.txt
+- CCR7 CXCL10 CXCL9 MMP9: https://www.frontiersin.org/articles/10.3389/fphys.2019.00662/full 
+- ECM1, CDH1, HNF4α, and laminin B: 
+    - https://pubmed.ncbi.nlm.nih.gov/21319274/ 
+    - https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4133528/ 
+
 
 
 ############################

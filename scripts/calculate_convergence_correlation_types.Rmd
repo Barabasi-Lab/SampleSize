@@ -169,7 +169,7 @@ print(size_convergence_correlation_df)
 ```
 
 ```{r}
-topology_results_selected_df = topology_results_df %>% filter((method == "pearson") & (dataset == "tcga:tcga-brca") & (threshold == 0.05) & (type_correlation %in% c("all", "very strong", "strong-very strong", "moderate-strong-very strong", "weak-moderate-strong-very strong"))) %>% select(size, rep, num_edges, type_correlation)
+topology_results_selected_df = topology_results_df %>% filter((method == "pearson") & (dataset == "tcga:tcga-brca_female") & (threshold == 0.05) & (type_correlation %in% c("all", "very strong", "strong-very strong", "moderate-strong-very strong", "weak-moderate-strong-very strong"))) %>% select(size, rep, num_edges, type_correlation)
 topology_results_selected_by_size_df = topology_results_selected_df %>%
   group_by(size, type_correlation) %>%
   summarise(mean=mean(num_edges), sd=sd(num_edges)) %>%

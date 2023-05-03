@@ -29,7 +29,7 @@ Define input directories and files:
 ```{r}
 gtex_dir = "/work/ccnr/j.aguirreplans/Databases/GTEx/v8"
 tcga_dir = "/work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out"
-scipher_rnaseq_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/rnaseq_filtered_files_by_group"
+scipher_rnaseq_dir = "/work/ccnr/j.aguirreplans/data/Scipher/Dec2021/00_data/rnaseq_filtered_files_by_group"
 plots_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots'
 ```
 
