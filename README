@@ -669,17 +669,17 @@ module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Breast.Mammary.Tissue_female -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_gtex.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_gtex.csv -g /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/genes_from_rnaseq_filtered_files_by_tissue/gtex_rnaseq_gene_info_Breast.Mammary.Tissue_female.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/reads/Breast.Mammary.Tissue_female -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_gtex/reads/Breast.Mammary.Tissue_female
 # output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/reads/Breast.Mammary.Tissue_female
 
-# Breast.Mammary.Tissue - READS - BOTH SEX / SENT
+# Breast.Mammary.Tissue - READS - BOTH SEX / NOT TO DO
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Breast.Mammary.Tissue -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_gtex.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_gtex.csv -g /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/genes_from_rnaseq_filtered_files_by_tissue/gtex_rnaseq_gene_info_Breast.Mammary.Tissue.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/reads/Breast.Mammary.Tissue -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_gtex/reads/Breast.Mammary.Tissue
 # output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/reads/Breast.Mammary.Tissue
 
-# Skin.Sun.Exposed.Lower.leg - READS - BOTH SEX /
+# Skin.Sun.Exposed.Lower.leg - READS - BOTH SEX / SENT
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Skin.Sun.Exposed.Lower.leg -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_gtex.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_gtex.csv -g /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/genes_from_rnaseq_filtered_files_by_tissue/gtex_rnaseq_gene_info_Skin.Sun.Exposed.Lower.leg.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/reads/Skin.Sun.Exposed.Lower.leg -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_gtex/reads/Skin.Sun.Exposed.Lower.leg
 # output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/reads/Skin.Sun.Exposed.Lower.leg
 
-# Thyroid - READS - BOTH SEX /
+# Thyroid - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Thyroid -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_gtex.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_gtex.csv -g /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/genes_from_rnaseq_filtered_files_by_tissue/gtex_rnaseq_gene_info_Thyroid.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/reads/Thyroid -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_gtex/reads/Thyroid
 # output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_gtex/reads/Thyroid
@@ -767,7 +767,7 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coe
 
 #---- PEARSON ----#
 
-# scipher.complete.dataset - READS / SENT
+# scipher.complete.dataset - READS / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_scipher/reads/scipher.complete.dataset -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_scipher.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_scipher.csv -g /work/ccnr/j.aguirreplans/data/Scipher/Dec2021/00_data/genes_from_rnaseq_filtered_files_by_group/scipher_rnaseq_gene_info_scipher.complete.dataset.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_scipher/reads/scipher.complete.dataset -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_scipher/reads/scipher.complete.dataset
 # output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_scipher/reads/scipher.complete.dataset
@@ -794,7 +794,7 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coe
 # GSE193677 #
 #-----------#
 
-# CO-EXPRESSION NETWORKS INPUT DIR: /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed
+# CO-EXPRESSION NETWORKS INPUT DIR: /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads
 # PPI NETWORK FILE: /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv 
 # DISEASE-GENE ASSOCIATIONS FILE: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_GSE193677.csv
 # ESSENTIAL GENES FILE: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_GSE193677.csv 
@@ -804,15 +804,51 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coe
 
 #---- PEARSON ----#
 
-# inflamed - READS
+# disease_inflamed_vs_control/Rectum_CD_inflamed - READS / DONE
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_GSE193677.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_GSE193677.csv -g /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out/reads/filter_genes_low_counts/rnaseq_gene_info_GSE193677.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_geo/GSE193677/reads/inflamed -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_geo/GSE193677/reads/inflamed
-# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_geo/GSE193677/reads/inflamed
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/disease_inflamed_vs_control/Rectum_CD_inflamed -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_GSE193677.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_GSE193677.csv -g /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out/reads/filter_genes_low_counts/rnaseq_gene_info_GSE193677.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_geo/GSE193677/reads/disease_inflamed_vs_control/Rectum_CD_inflamed -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_geo/GSE193677/reads/disease_inflamed_vs_control/Rectum_CD_inflamed
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_geo/GSE193677/reads/disease_inflamed_vs_control/Rectum_CD_inflamed
 
-# noninflamed - READS /
+# disease_inflamed_vs_control/Rectum_UC_inflamed - READS / DONE
 module load python/3.8.1
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/noninflamed -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_GSE193677.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_GSE193677.csv -g /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out/reads/filter_genes_low_counts/rnaseq_gene_info_GSE193677.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_geo/GSE193677/reads/noninflamed -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_geo/GSE193677/reads/noninflamed
-# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_geo/GSE193677/reads/noninflamed
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/disease_inflamed_vs_control/Rectum_UC_inflamed -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_GSE193677.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_GSE193677.csv -g /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out/reads/filter_genes_low_counts/rnaseq_gene_info_GSE193677.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_geo/GSE193677/reads/disease_inflamed_vs_control/Rectum_UC_inflamed -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_geo/GSE193677/reads/disease_inflamed_vs_control/Rectum_UC_inflamed
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_geo/GSE193677/reads/disease_inflamed_vs_control/Rectum_UC_inflamed
+
+# disease_inflamed_vs_control/Rectum_Control_noninflamed - READS / DONE
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/disease_inflamed_vs_control/Rectum_Control_noninflamed -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_GSE193677.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_GSE193677.csv -g /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out/reads/filter_genes_low_counts/rnaseq_gene_info_GSE193677.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_geo/GSE193677/reads/disease_inflamed_vs_control/Rectum_Control_noninflamed -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_geo/GSE193677/reads/disease_inflamed_vs_control/Rectum_Control_noninflamed
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_geo/GSE193677/reads/disease_inflamed_vs_control/Rectum_Control_noninflamed
+
+# inflamed_vs_noninflamed/Rectum_inflamed - READS /
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed_vs_noninflamed/Rectum_inflamed -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_GSE193677.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_GSE193677.csv -g /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out/reads/filter_genes_low_counts/rnaseq_gene_info_GSE193677.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_geo/GSE193677/reads/inflamed_vs_noninflamed/Rectum_inflamed -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_geo/GSE193677/reads/inflamed_vs_noninflamed/Rectum_inflamed
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_geo/GSE193677/reads/inflamed_vs_noninflamed/Rectum_inflamed
+
+# inflamed_vs_noninflamed/Rectum_noninflamed - READS /
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed_vs_noninflamed/Rectum_noninflamed -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_GSE193677.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_GSE193677.csv -g /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out/reads/filter_genes_low_counts/rnaseq_gene_info_GSE193677.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_geo/GSE193677/reads/inflamed_vs_noninflamed/Rectum_noninflamed -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_geo/GSE193677/reads/inflamed_vs_noninflamed/Rectum_noninflamed
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_geo/GSE193677/reads/inflamed_vs_noninflamed/Rectum_noninflamed
+
+# inflamed_vs_noninflamed/Ileum_inflamed - READS /
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed_vs_noninflamed/Ileum_inflamed -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_GSE193677.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_GSE193677.csv -g /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out/reads/filter_genes_low_counts/rnaseq_gene_info_GSE193677.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_geo/GSE193677/reads/inflamed_vs_noninflamed/Ileum_inflamed -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_geo/GSE193677/reads/inflamed_vs_noninflamed/Ileum_inflamed
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_geo/GSE193677/reads/inflamed_vs_noninflamed/Ileum_inflamed
+
+# inflamed_vs_noninflamed/Ileum_noninflamed - READS /
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed_vs_noninflamed/Ileum_noninflamed -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_GSE193677.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_GSE193677.csv -g /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out/reads/filter_genes_low_counts/rnaseq_gene_info_GSE193677.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_geo/GSE193677/reads/inflamed_vs_noninflamed/Ileum_noninflamed -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_geo/GSE193677/reads/inflamed_vs_noninflamed/Ileum_noninflamed
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_geo/GSE193677/reads/inflamed_vs_noninflamed/Ileum_noninflamed
+
+# inflamed_vs_control/Rectum_inflamed - READS /
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed_vs_control/Rectum_inflamed -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_GSE193677.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_GSE193677.csv -g /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out/reads/filter_genes_low_counts/rnaseq_gene_info_GSE193677.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_geo/GSE193677/reads/inflamed_vs_control/Rectum_inflamed -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_geo/GSE193677/reads/inflamed_vs_control/Rectum_inflamed
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_geo/GSE193677/reads/inflamed_vs_control/Rectum_inflamed
+
+# inflamed_vs_control/Rectum_noninflamed - READS /
+module load python/3.8.1
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed_vs_control/Rectum_noninflamed -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_GSE193677.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_GSE193677.csv -g /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out/reads/filter_genes_low_counts/rnaseq_gene_info_GSE193677.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_geo/GSE193677/reads/inflamed_vs_control/Rectum_noninflamed -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_geo/GSE193677/reads/inflamed_vs_control/Rectum_noninflamed
+# output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_geo/GSE193677/reads/inflamed_vs_control/Rectum_noninflamed
+
 
 
 
@@ -879,7 +915,7 @@ module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/normal/TCGA-LUAD -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/normal/filter_genes_low_counts/genes_filtered_files_by_sample_group/rnaseq_gene_info_TCGA-LUAD.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/normal/TCGA-LUAD -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_tcga/reads/normal/TCGA-LUAD
 # output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/normal/TCGA-LUAD
 
-# TCGA-LUSC (Lung Squamous Cell Carcinoma) - PEARSON - READS - BOTH SEX / SENT
+# TCGA-LUSC (Lung Squamous Cell Carcinoma) - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-LUSC -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/genes_filtered_files_by_sample_group/rnaseq_gene_info_TCGA-LUSC.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/tumor/TCGA-LUSC -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_tcga/reads/tumor/TCGA-LUSC
 # output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/tumor/TCGA-LUSC
@@ -893,7 +929,7 @@ module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-LGG -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/genes_filtered_files_by_sample_group/rnaseq_gene_info_TCGA-LGG.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/tumor/TCGA-LGG -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_tcga/reads/tumor/TCGA-LGG
 # output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/tumor/TCGA-LGG
 
-# TCGA-THCA (Thyroid Carcinoma) - PEARSON - READS - BOTH SEX /
+# TCGA-THCA (Thyroid Carcinoma) - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-THCA -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/genes_filtered_files_by_sample_group/rnaseq_gene_info_TCGA-THCA.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/tumor/TCGA-THCA -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_tcga/reads/tumor/TCGA-THCA
 # output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/tumor/TCGA-THCA
@@ -903,7 +939,7 @@ module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/normal/TCGA-THCA -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/normal/filter_genes_low_counts/genes_filtered_files_by_sample_group/rnaseq_gene_info_TCGA-THCA.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/normal/TCGA-THCA -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_tcga/reads/normal/TCGA-THCA
 # output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/normal/TCGA-THCA
 
-# TCGA-KIRC (Kidney Renal Clear Cell Carcinoma) - READS - BOTH SEX / SENT
+# TCGA-KIRC (Kidney Renal Clear Cell Carcinoma) - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-KIRC -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/genes_filtered_files_by_sample_group/rnaseq_gene_info_TCGA-KIRC.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/tumor/TCGA-KIRC -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_tcga/reads/tumor/TCGA-KIRC
 # output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/tumor/TCGA-KIRC
@@ -912,7 +948,7 @@ module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/normal/TCGA-KIRC -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/normal/filter_genes_low_counts/genes_filtered_files_by_sample_group/rnaseq_gene_info_TCGA-KIRC.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/normal/TCGA-KIRC -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_tcga/reads/normal/TCGA-KIRC
 # output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/normal/TCGA-KIRC
 
-# TCGA-KIRP (Kidney Renal Papillary Cell Carcinoma) - READS - BOTH SEX /
+# TCGA-KIRP (Kidney Renal Papillary Cell Carcinoma) - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-KIRP -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/genes_filtered_files_by_sample_group/rnaseq_gene_info_TCGA-KIRP.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/tumor/TCGA-KIRP -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_tcga/reads/tumor/TCGA-KIRP
 # output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/tumor/TCGA-KIRP
@@ -966,12 +1002,12 @@ module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/subtype/BRCA.LumA -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/subtype/filter_genes_low_counts/genes_filtered_files_by_sample_group/rnaseq_gene_info_BRCA.LumA.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/subtype/BRCA.LumA -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_tcga/reads/subtype/BRCA.LumA
 # output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/subtype/BRCA.LumA
 
-# TCGA-BRCA.LumB - PEARSON - READS - BOTH SEX / DONE
+# TCGA-BRCA.LumB - PEARSON - READS - BOTH SEX /
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/subtype/BRCA.LumB -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/subtype/filter_genes_low_counts/genes_filtered_files_by_sample_group/rnaseq_gene_info_BRCA.LumB.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/subtype/BRCA.LumB -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_tcga/reads/subtype/BRCA.LumB
 # output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/subtype/BRCA.LumB
 
-# TCGA-BRCA.Basal - PEARSON - READS - BOTH SEX / TODO
+# TCGA-BRCA.Basal - PEARSON - READS - BOTH SEX /
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/analyze_gene_coexpression_networks_cluster.py -i /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/subtype/BRCA.Basal -p /work/ccnr/j.aguirreplans/data/PPI/PPI_2022_04042022.csv -d /home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_tcga.csv -e /home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_tcga.csv -g /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/subtype/filter_genes_low_counts/genes_filtered_files_by_sample_group/rnaseq_gene_info_BRCA.Basal.csv -o /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/subtype/BRCA.Basal -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/subgraphs_tcga/reads/subtype/BRCA.Basal
 # output analysis: /home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/analysis_tcga/reads/subtype/BRCA.Basal
@@ -989,7 +1025,9 @@ scp -r discovery:/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots
 
 2. Run: "server_example.R"
 
-3. Run: "calculate_convergence_correlation_types.Rmd"
+3. Run: "calculate_rnaseq_datasets_variation.Rmd"
+
+4???? Is necessary?. Run: "calculate_convergence_correlation_types.Rmd"
 
 
 ###################################
