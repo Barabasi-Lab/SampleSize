@@ -1,0 +1,872 @@
+---
+title: "Analysis significant edges"
+author: "Joaquim Aguirre-Plans"
+date: "2/8/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Introduction
+
+The objective is to analyze how the significant edges of gene co-expression networks evolve across different sample sizes, and if we can predict this tendency.
+
+```{r cars}
+library(data.table)
+library(dplyr)
+library(igraph)
+library(ggplot2)
+require(magrittr)
+set.seed(1510)
+options(bitmapType='cairo')
+`%ni%` <- Negate(`%in%`)
+```
+
+### Plot number of samples vs. significant edges
+
+We read the results file:
+
+```{r}
+input_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/data_shiny_app'
+plots_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots'
+topology_file = paste(input_dir, 'analysis_topology.csv', sep='/')
+topology_df = fread(topology_file) %>% unique()
+topology_df %<>% filter(!(size == "all"))
+topology_df$size = as.numeric(topology_df$size)
+head(topology_df)
+```
+
+We filter the results by focusing on the dataset of TCGA, method Pearson and p-value threshold 0.05:
+
+```{r}
+# Filter by results of the dataset obtained by Pearson correlation and threshold 0.05
+selected_dataset = "tcga"
+selected_type_dataset = "TCGA"
+selected_type_correlation = "all"
+topology_pearson_df = topology_df %>% filter((dataset == selected_dataset) & (type_dataset == selected_type_dataset) & (method == "pearson") & (type_correlation == selected_type_correlation) & (threshold == 0.05))
+head(topology_pearson_df)
+
+# Write small table with results
+output_tables_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables"
+num_edges_num_samples_file = paste(output_tables_dir, paste(selected_dataset, "_pearson_pval_0.05_num_edges_vs_num_samples.txt", sep=""), sep="/")
+topology_pearson_df %>% select(size, rep, num_edges) %>% arrange(size, rep) %>% fwrite(num_edges_num_samples_file)
+
+# Calculate mean and median of the number of edges per size
+topology_pearson_by_size_df = topology_pearson_df %>%
+  group_by(size) %>%
+  summarise_at(vars(num_edges), list(mean=mean, median=median, sd=sd, var=var)) %>%
+  arrange(size)
+topology_pearson_by_size_df$mean.upper = topology_pearson_by_size_df$mean + topology_pearson_by_size_df$var
+topology_pearson_by_size_df$mean.lower = topology_pearson_by_size_df$mean - topology_pearson_by_size_df$var
+
+```
+
+We plot the curve of significant interactions across sample size both in linear and log scale:
+
+```{r}
+# Linear-x Linear-y
+ggplot(topology_pearson_df, aes(x=size, y=num_edges)) + 
+    geom_point(alpha=0.5, size=3, col=2, fill=2) +
+    #geom_line(data=topology_pearson_by_size_df, aes(x=size, y=mean, color="Mean"), size=1) +
+    geom_line(data = topology_pearson_by_size_df, aes(x=size, y=mean, group=1), col=2, lwd=1) +
+    #ggtitle("Num. of significant edges vs. Num. of samples") +
+    labs(x="Number of samples", y = "Number of significant edges") +
+    theme_linedraw() +
+    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom", legend.title=element_blank())
+
+plot_num_edges_num_samples_file = paste(plots_dir, paste(selected_dataset, "_pearson_pval_0.05_num_edges_vs_num_samples.png", sep=""), sep="/")
+ggsave(
+  plot_num_edges_num_samples_file,
+  dpi = 1200,
+  width = 13000,
+  height = 6000,
+  units = c("px")
+)
+
+# Log-x Linear-y
+ggplot(topology_pearson_df, aes(x=log(size), y=num_edges)) + 
+    geom_point(alpha=0.5, size=3, col=2, fill=2) +
+    #geom_line(data=topology_pearson_by_size_df, aes(x=size, y=mean, color="Mean"), size=1) +
+    geom_line(data = topology_pearson_by_size_df, aes(x=log(size), y=mean, group=1), col=2, lwd=1) +
+    #ggtitle("Num. of significant edges vs. Num. of samples") +
+    labs(x="Number of samples (Ln)", y = "Number of significant edges") +
+    theme_linedraw() +
+    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom", legend.title=element_blank())
+
+plot_num_edges_num_samples_file = paste(plots_dir, paste(selected_dataset, "_pearson_pval_0.05_num_edges_vs_log_num_samples.png", sep=""), sep="/")
+ggsave(
+  plot_num_edges_num_samples_file,
+  dpi = 1200,
+  width = 13000,
+  height = 6000,
+  units = c("px")
+)
+
+# Linear-x Log-y
+ggplot(topology_pearson_df, aes(x=size, y=log(num_edges))) + 
+    geom_point(alpha=0.5, size=3, col=2, fill=2) +
+    #geom_line(data=topology_pearson_by_size_df, aes(x=size, y=mean, color="Mean"), size=1) +
+    geom_line(data = topology_pearson_by_size_df, aes(x=size, y=log(mean), group=1), col=2, lwd=1) +
+    #ggtitle("Num. of significant edges vs. Num. of samples") +
+    labs(x="Number of samples", y = "Number of significant edges (Ln)") +
+    theme_linedraw() +
+    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom", legend.title=element_blank())
+
+plot_num_edges_num_samples_file = paste(plots_dir, paste(selected_dataset, "_pearson_pval_0.05_log_num_edges_vs_num_samples.png", sep=""), sep="/")
+ggsave(
+  plot_num_edges_num_samples_file,
+  dpi = 1200,
+  width = 13000,
+  height = 6000,
+  units = c("px")
+)
+
+# Log-x Log-y
+ggplot(topology_pearson_df, aes(x=log(size), y=log(num_edges))) + 
+    geom_point(alpha=0.5, size=3, col=2, fill=2) +
+    #geom_line(data=topology_pearson_by_size_df, aes(x=size, y=mean, color="Mean"), size=1) +
+    geom_line(data = topology_pearson_by_size_df, aes(x=log(size), y=log(mean), group=1), col=2, lwd=1) +
+    #ggtitle("Num. of significant edges vs. Num. of samples") +
+    labs(x="Number of samples (Ln)", y = "Number of significant edges (Ln)") +
+    theme_linedraw() +
+    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom", legend.title=element_blank())
+
+plot_num_edges_num_samples_file = paste(plots_dir, paste(selected_dataset, "_pearson_pval_0.05_log_num_edges_vs_log_num_samples.png", sep=""), sep="/")
+ggsave(
+  plot_num_edges_num_samples_file,
+  dpi = 1200,
+  width = 13000,
+  height = 6000,
+  units = c("px")
+)
+
+```
+
+We use a linear fit model to fit a logarithmic curve:
+
+```{r}
+# Calculate linear fit model
+lm_log = summary(lm(num_edges~log(size), data=topology_pearson_df))
+formula_name = paste("F(x) = ln(x)*", formatC(round(coef(lm_log)[2]), format = "e", digits = 2),  formatC(round(coef(lm_log)[1]), format = "e", digits = 2), sep="")
+
+# Plot curve including linear fit model
+ggplot(topology_pearson_df, aes(x=size, y=num_edges)) + 
+    geom_point(alpha=0.5, size=3, col=2, fill=2) +
+    #geom_smooth(se = TRUE, span = 0.1, method = "lm") + 
+    # geom_smooth(method = "lm", formula = y~sqrt(x), aes(col="y~sqrt(x)"), se=FALSE, size=1) +
+    #scale_y_continuous(trans = "log") + 
+    #geom_smooth(method = "lm", formula = y~ln(x), aes(col="y~ln(x)"), se=FALSE, size=1) +
+    geom_line(data=topology_pearson_by_size_df, aes(x=size, y=mean, color="Mean"), size=1) +
+    #geom_smooth(method = "lm", formula = y~log(x), aes(col="y~ln(x)"), se=F, size=1) +
+    geom_line(data=topology_pearson_df, aes(x=size, y=(log(size)*coef(lm_log)[2] + coef(lm_log)[1]), color=formula_name), size=1) +
+    #ggtitle("Num. of significant edges vs. Num. of samples") +
+    labs(x="Number of samples", y = "Number of significant edges") +
+    theme_linedraw() +
+    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom") +
+    scale_color_manual(name = "",
+                       #breaks = c("Mean", "y~log10(x)", "y~log2(x)", "y~ln(x)"),
+                       #breaks = c("Mean", "Log", "y~log(x)"),
+                       #breaks = c("Mean", "y~log(x)"),
+                       #values = c("Mean" = "blue", "y~log10(x)" = "red", "y~log2(x)" = "green", "y~ln(x)" = "orange") )
+                       #values = c("Mean" = "blue", "Log" = "green", "y~log(x)" = "red") )
+                       values = c("green", "2") )
+
+plot_num_edges_num_samples_file = paste(plots_dir, paste(selected_dataset, "_pearson_pval_0.05_num_edges_vs_num_samples_linear_fit.png", sep=""), sep="/")
+ggsave(
+  plot_num_edges_num_samples_file,
+  dpi = 1200,
+  width = 15000,
+  height = 6000,
+  units = c("px")
+)
+
+# Print linear fit model
+print(lm_log)
+```
+
+We explored the fit to other types of models:
+
+```{r}
+lm_lin = summary(lm(num_edges~size, data=topology_pearson_df))
+
+# Plot curve including linear fit model
+ggplot(topology_pearson_df, aes(x=size, y=num_edges)) + 
+    geom_point(alpha=0.5, size=3, col=2, fill=2) +
+    geom_line(data=topology_pearson_by_size_df, aes(x=size, y=mean, color="Mean"), size=1) +
+    geom_line(data=topology_pearson_df, aes(x=size, y=(size*coef(lm_lin)[2] + coef(lm_lin)[1]), color="Linear model"), size=1) +
+    labs(x="Number of samples", y = "Number of significant edges") +
+    theme_linedraw() +
+    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom") +
+    scale_color_manual(name = "",
+                       values = c("green", "2") )
+
+print(lm_lin)
+
+lm_exp = summary(lm(num_edges~exp(-size), data=topology_pearson_df))
+
+# Plot curve including exponential fit model
+ggplot(topology_pearson_df, aes(x=size, y=num_edges)) + 
+    geom_point(alpha=0.5, size=3, col=2, fill=2) +
+    geom_line(data=topology_pearson_by_size_df, aes(x=size, y=mean, color="Mean"), size=1) +
+    geom_line(data=topology_pearson_df, aes(x=size, y=(exp(-size)*coef(lm_exp)[2] + coef(lm_exp)[1]), color="Exponential model"), size=1) +
+    labs(x="Number of samples", y = "Number of significant edges") +
+    theme_linedraw() +
+    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom") +
+    scale_color_manual(name = "",
+                       values = c("green", "2") )
+
+print(lm_exp)
+
+fit_pl = fit_power_law(topology_pearson_df$num_edges)
+
+# Plot curve including power law fit model
+ggplot(topology_pearson_df, aes(x=size, y=num_edges)) + 
+    geom_point(alpha=0.5, size=3, col=2, fill=2) +
+    geom_line(data=topology_pearson_by_size_df, aes(x=size, y=mean, color="Mean"), size=1) +
+    geom_line(data=topology_pearson_df, aes(x=size, y=size**(-fit_pl$alpha), color="Power law model"), size=1) +
+    labs(x="Number of samples", y = "Number of significant edges") +
+    theme_linedraw() +
+    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom") +
+    scale_color_manual(name = "",
+                       values = c("green", "2") )
+
+```
+
+We use the formula of the logarithmic linear fit model to predict the number of significant interactions in larger sample sizes:
+
+```{r}
+#num_samples=seq(10,10000,1)
+num_samples=seq(10,200000,1)
+prediction_num_edges_df = data.frame(size=num_samples, num_edges=(log(num_samples)*coef(lm_log)[2] + coef(lm_log)[1]))
+#total_num_genes=16266
+total_num_genes=18884
+total_num_edges = total_num_genes * (total_num_genes-1) / 2
+print(total_num_edges)
+closest_num_edges = prediction_num_edges_df$num_edges[which.min(abs(prediction_num_edges_df$num_edges - total_num_edges))]
+print(prediction_num_edges_df[prediction_num_edges_df$num_edges == closest_num_edges,])
+ggplot(prediction_num_edges_df) + 
+    geom_line(aes(x=size, y=num_edges), size=1, col=2) +
+    #lims(x=c(0, 126000), y=c(0, total_num_edges)) +
+    lims(x=c(0, 6500), y=c(0, total_num_edges)) +
+    #ggtitle("Prediction of significant edges vs. Num. of samples") +
+    labs(x="Number of samples", y = "Number of significant edges") +
+    theme_linedraw() +
+    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom")
+
+plot_num_edges_num_samples_file = paste(plots_dir, paste(selected_dataset, "_pearson_pval_0.05_num_edges_vs_num_samples_linear_fit_prediction.png", sep=""), sep="/")
+ggsave(
+  plot_num_edges_num_samples_file,
+  dpi = 1200,
+  width = 15000,
+  height = 6000,
+  units = c("px")
+)
+
+```
+
+We calculate the error of the linear fit using smaller sample sizes
+
+```{r}
+num_samples = unique(topology_pearson_df$size)[order(unique(topology_pearson_df$size))]
+num_samples = num_samples[2:length(num_samples)] # Start from the second value, so that it is possible to create a curve from two points
+prediction_error_df = data.frame(matrix(ncol=3,nrow=0, dimnames=list(NULL, c("num_samples_lm", "size", "predicted_num_edges"))))
+
+for(n in num_samples){
+  # We select the sample size values that are lower or equal than the size selected to create the linear model
+  topology_specific_df = topology_pearson_df %>% filter(size<=n)
+  lm_specific = summary(lm(num_edges~log(size), data=topology_specific_df))
+  prediction_specific_df = data.frame(num_samples_lm=n, size=num_samples, predicted_num_edges=(log(num_samples)*coef(lm_specific)[2] + coef(lm_specific)[1]))
+  prediction_error_df = rbind(prediction_error_df, prediction_specific_df)
+}
+
+# We add to the table a column with the "real" values, which are the mean of the networks of same sample size
+prediction_error_df %<>% inner_join(topology_pearson_by_size_df %>% select("size", "mean"), c("size"="size"))
+# We calculate the difference between the predicted and the real value
+prediction_error_df$diff = abs(prediction_error_df$predicted_num_edges - prediction_error_df$mean)
+prediction_error_df$error = abs(prediction_error_df$predicted_num_edges - prediction_error_df$mean) / prediction_error_df$mean
+
+# We plot the difference vs sample size for the linear models of different sizes
+ggplot(prediction_error_df) +
+  aes(
+    x = size,
+    y = error,
+    colour = num_samples_lm,
+    group = num_samples_lm
+  ) +
+  geom_line(size = 0.5) +
+  scale_color_gradient() +
+  labs(
+    x = "Number of samples",
+    y = "Error",
+    col = "Sample size to create LM"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.title.y = element_text(size = 16,
+    face = "bold"),
+    axis.title.x = element_text(size = 16,
+    face = "bold"),
+    axis.text = element_text(size = 15),
+    legend.title = element_text(size = 16, face = "bold"),
+    legend.text = element_text(size = 14)
+  )
+
+plot_error_num_edges_file = paste(plots_dir, paste(selected_dataset, "_pearson_pval_0.05_error_prediction_num_edges.png", sep=""), sep="/")
+ggsave(
+  plot_error_num_edges_file,
+  dpi = 1200,
+  width = 15000,
+  height = 6000,
+  units = c("px")
+)
+
+```
+
+We calculate the error again but using a smaller dataset to test the accuracy, a size of 200 more samples maximum:
+
+```{r}
+num_samples = unique(topology_pearson_df$size)[order(unique(topology_pearson_df$size))]
+num_samples_to_use = num_samples[2:length(num_samples)] # Start from the second value, so that it is possible to create a curve from two points
+num_samples_to_use = num_samples_to_use[1:which(num_samples_to_use == (max(num_samples_to_use)-200))] # Finish with the sample size that has 200 less samples than the maximum size
+prediction_error_df = data.frame(matrix(ncol=3,nrow=0, dimnames=list(NULL, c("num_samples_lm", "size", "predicted_num_edges"))))
+
+for(n in num_samples_to_use){
+  # We select the sample size values that are lower or equal than the size selected to create the linear model
+  topology_specific_df = topology_pearson_df %>% filter(size<=n)
+  lm_specific = summary(lm(num_edges~log(size), data=topology_specific_df))
+  # We test them in sizes that are higher but not more than 200 samples
+  num_samples_to_test = num_samples[(num_samples > n) & (num_samples <= n+200)]
+  prediction_specific_df = data.frame(num_samples_lm=n, size=num_samples_to_test, predicted_num_edges=(log(num_samples_to_test)*coef(lm_specific)[2] + coef(lm_specific)[1]))
+  prediction_error_df = rbind(prediction_error_df, prediction_specific_df)
+}
+
+# We add to the table a column with the "real" values, which are the mean of the networks of same sample size
+prediction_error_df %<>% inner_join(topology_pearson_by_size_df %>% select("size", "mean"), c("size"="size"))
+# We calculate the difference between the predicted and the real value
+prediction_error_df$diff = abs(prediction_error_df$predicted_num_edges - prediction_error_df$mean)
+prediction_error_df$error = abs(prediction_error_df$predicted_num_edges - prediction_error_df$mean) / prediction_error_df$mean
+
+ggplot(prediction_error_df) +
+  aes(
+    x = size,
+    y = error,
+    colour = num_samples_lm,
+    group = num_samples_lm
+  ) +
+  geom_line(size = 0.5) +
+  scale_color_gradient() +
+  labs(
+    x = "Number of samples",
+    y = "Error",
+    col = "Sample size to create LM"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.title.y = element_text(size = 16,
+    face = "bold"),
+    axis.title.x = element_text(size = 16,
+    face = "bold"),
+    axis.text = element_text(size = 15),
+    legend.title = element_text(size = 16, face = "bold"),
+    legend.text = element_text(size = 14)
+  )
+
+plot_error_num_edges_file = paste(plots_dir, paste(selected_dataset, "_pearson_pval_0.05_error_prediction_reduced_num_edges.png", sep=""), sep="/")
+ggsave(
+  plot_error_num_edges_file,
+  dpi = 1200,
+  width = 15000,
+  height = 6000,
+  units = c("px")
+)
+
+ggplot(prediction_error_df) +
+  aes(x = num_samples_lm, y = error) +
+  geom_point(shape = "circle", size = 1.5, colour = "#112446") +
+  labs(
+    x = "Sample size to create LM",
+    y = "Error"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.title.y = element_text(size = 16,
+    face = "bold"),
+    axis.title.x = element_text(size = 16,
+    face = "bold"),
+    axis.text = element_text(size = 15),
+    legend.title = element_text(size = 16, face = "bold"),
+    legend.text = element_text(size = 14)
+  )
+
+plot_error_num_edges_file = paste(plots_dir, paste(selected_dataset, "_pearson_pval_0.05_error_prediction_reduced_num_edges_with_dots.png", sep=""), sep="/")
+ggsave(
+  plot_error_num_edges_file,
+  dpi = 1200,
+  width = 15000,
+  height = 6000,
+  units = c("px")
+)
+
+```
+
+We compare the curve for different p-value thresholds:
+
+```{r}
+topology_pearson_pval_df = topology_df %>% filter((dataset == selected_dataset) & (type_dataset == selected_type_dataset) & (method == "pearson") & (type_correlation == selected_type_correlation))
+head(topology_pearson_pval_df)
+
+# Calculate mean and median of the number of edges per size
+topology_pearson_pval_by_size_df = topology_pearson_pval_df %>%
+  group_by(threshold, size) %>%
+  summarise_at(vars(num_edges), list(mean=mean, median=median, sd=sd, var=var)) %>%
+  arrange(size)
+topology_pearson_pval_by_size_df$mean.upper = topology_pearson_pval_by_size_df$mean + topology_pearson_pval_by_size_df$var
+topology_pearson_pval_by_size_df$mean.lower = topology_pearson_pval_by_size_df$mean - topology_pearson_pval_by_size_df$var
+
+```
+
+```{r}
+# Linear-x Linear-y
+topology_pearson_pval_df$threshold = as.character(topology_pearson_pval_df$threshold)
+topology_pearson_pval_by_size_df$threshold = as.character(topology_pearson_pval_by_size_df$threshold)
+ggplot(topology_pearson_pval_df, aes(x=size, y=num_edges, group=threshold, col=threshold)) + 
+    geom_point(alpha=0.5, size=3) +
+    geom_line(data = topology_pearson_pval_by_size_df, aes(x=size, y=mean, group=threshold, col=threshold), size=1) +
+    labs(x="Number of samples", y = "Number of significant edges", color="P-value threshold") +
+    theme_linedraw() +
+    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom")
+
+plot_num_edges_num_samples_file = paste(plots_dir, paste(selected_dataset, "_pearson_num_edges_vs_num_samples_by_pval.png", sep=""), sep="/")
+ggsave(
+  plot_num_edges_num_samples_file,
+  dpi = 1200,
+  width = 13000,
+  height = 6000,
+  units = c("px")
+)
+
+# Log-x Linear-y
+ggplot(topology_pearson_pval_df, aes(x=log(size), y=num_edges, group=threshold, col=threshold)) + 
+    geom_point(alpha=0.5, size=3) +
+    geom_line(data = topology_pearson_pval_by_size_df, aes(x=log(size), y=mean, group=threshold, col=threshold), size=1) +
+    labs(x="Number of samples (Ln)", y = "Number of significant edges", color="P-value threshold") +
+    theme_linedraw() +
+    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom")
+
+plot_num_edges_num_samples_file = paste(plots_dir, paste(selected_dataset, "_pearson_num_edges_vs_log_num_samples_by_pval.png", sep=""), sep="/")
+ggsave(
+  plot_num_edges_num_samples_file,
+  dpi = 1200,
+  width = 13000,
+  height = 6000,
+  units = c("px")
+)
+
+# Linear-x Log-y
+ggplot(topology_pearson_pval_df, aes(x=size, y=log(num_edges), group=threshold, col=threshold)) + 
+    geom_point(alpha=0.5, size=3) +
+    geom_line(data = topology_pearson_pval_by_size_df, aes(x=size, y=log(mean), group=threshold, col=threshold), size=1) +
+    labs(x="Number of samples", y = "Number of significant edges (Ln)", color="P-value threshold") +
+    theme_linedraw() +
+    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom")
+
+plot_num_edges_num_samples_file = paste(plots_dir, paste(selected_dataset, "_pearson_log_num_edges_vs_num_samples_by_pval.png", sep=""), sep="/")
+ggsave(
+  plot_num_edges_num_samples_file,
+  dpi = 1200,
+  width = 13000,
+  height = 6000,
+  units = c("px")
+)
+
+# Log-x Log-y
+ggplot(topology_pearson_pval_df, aes(x=log(size), y=log(num_edges), group=threshold, col=threshold)) + 
+    geom_point(alpha=0.5, size=3) +
+    geom_line(data = topology_pearson_pval_by_size_df, aes(x=log(size), y=log(mean), group=threshold, col=threshold), size=1) +
+    labs(x="Number of samples (Ln)", y = "Number of significant edges (Ln)", color="P-value threshold") +
+    theme_linedraw() +
+    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom")
+
+plot_num_edges_num_samples_file = paste(plots_dir, paste(selected_dataset, "_pearson_log_num_edges_vs_log_num_samples_by_pval.png", sep=""), sep="/")
+ggsave(
+  plot_num_edges_num_samples_file,
+  dpi = 1200,
+  width = 13000,
+  height = 6000,
+  units = c("px")
+)
+
+```
+
+We compare the curve for the different methods:
+
+```{r}
+topology_method_df = topology_df %>% filter((dataset == "scipher") & (type_dataset == "complete.dataset") & ((threshold == 0.05) | (threshold == 0)) & is.na(disparity))
+head(topology_method_df)
+
+# Calculate mean and median of the number of edges per size
+topology_method_by_size_df = topology_method_df %>%
+  group_by(method, size) %>%
+  summarise_at(vars(num_edges), list(mean=mean, median=median, sd=sd, var=var)) %>%
+  arrange(size)
+topology_method_by_size_df$mean.upper = topology_method_by_size_df$mean + topology_method_by_size_df$var
+topology_method_by_size_df$mean.lower = topology_method_by_size_df$mean - topology_method_by_size_df$var
+```
+
+```{r}
+# Linear-x Linear-y
+ggplot(topology_method_df, aes(x=size, y=num_edges, group=method, col=method)) + 
+    geom_point(alpha=0.5, size=3) +
+    geom_line(data = topology_method_by_size_df, aes(x=size, y=mean, group=method, col=method), size=1) +
+    labs(x="Number of samples", y = "Number of significant edges", color="Method") +
+    theme_linedraw() +
+    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom")
+
+plot_num_edges_num_samples_file = paste(plots_dir, "scipher_pearson_num_edges_vs_num_samples_by_method.png", sep="/")
+ggsave(
+  plot_num_edges_num_samples_file,
+  dpi = 1200,
+  width = 13000,
+  height = 6000,
+  units = c("px")
+)
+
+# Log-x Linear-y
+ggplot(topology_method_df, aes(x=log(size), y=num_edges, group=method, col=method)) + 
+    geom_point(alpha=0.5, size=3) +
+    geom_line(data = topology_method_by_size_df, aes(x=log(size), y=mean, group=method, col=method), size=1) +
+    labs(x="Number of samples (Ln)", y = "Number of significant edges", color="Method") +
+    theme_linedraw() +
+    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom")
+
+plot_num_edges_num_samples_file = paste(plots_dir, "scipher_pearson_num_edges_vs_log_num_samples_by_method.png", sep="/")
+ggsave(
+  plot_num_edges_num_samples_file,
+  dpi = 1200,
+  width = 13000,
+  height = 6000,
+  units = c("px")
+)
+
+# Linear-x Log-y
+ggplot(topology_method_df, aes(x=size, y=log(num_edges), group=method, col=method)) + 
+    geom_point(alpha=0.5, size=3) +
+    geom_line(data = topology_method_by_size_df, aes(x=size, y=log(mean), group=method, col=method), size=1) +
+    labs(x="Number of samples", y = "Number of significant edges (Ln)", color="Method") +
+    theme_linedraw() +
+    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom")
+
+plot_num_edges_num_samples_file = paste(plots_dir, "scipher_pearson_log_num_edges_vs_num_samples_by_method.png", sep="/")
+ggsave(
+  plot_num_edges_num_samples_file,
+  dpi = 1200,
+  width = 13000,
+  height = 6000,
+  units = c("px")
+)
+
+# Log-x Log-y
+ggplot(topology_method_df, aes(x=log(size), y=log(num_edges), group=method, col=method)) + 
+    geom_point(alpha=0.5, size=3) +
+    geom_line(data = topology_method_by_size_df, aes(x=log(size), y=log(mean), group=method, col=method), size=1) +
+    labs(x="Number of samples (Ln)", y = "Number of significant edges (Ln)", color="Method") +
+    theme_linedraw() +
+    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom")
+
+plot_num_edges_num_samples_file = paste(plots_dir, "scipher_pearson_log_num_edges_vs_log_num_samples_by_method.png", sep="/")
+ggsave(
+  plot_num_edges_num_samples_file,
+  dpi = 1200,
+  width = 13000,
+  height = 6000,
+  units = c("px")
+)
+
+```
+
+We compare the curve for the different datasets:
+
+```{r}
+topology_pearson_dataset_df = topology_df %>% filter(((dataset == "gtex") | (dataset == "scipher")) & ((type_dataset == "Whole.Blood") | (type_dataset == "complete.dataset")) & (method == "pearson") & (threshold == 0.05) & is.na(disparity))
+head(topology_pearson_dataset_df)
+
+# Calculate mean and median of the number of edges per size
+topology_pearson_dataset_by_size_df = topology_pearson_dataset_df %>%
+  group_by(dataset, size) %>%
+  summarise_at(vars(num_edges), list(mean=mean, median=median, sd=sd, var=var)) %>%
+  arrange(size)
+topology_pearson_dataset_by_size_df$mean.upper = topology_pearson_dataset_by_size_df$mean + topology_pearson_dataset_by_size_df$var
+topology_pearson_dataset_by_size_df$mean.lower = topology_pearson_dataset_by_size_df$mean - topology_pearson_dataset_by_size_df$var
+```
+
+```{r}
+# Calculate linear model for scipher dataset
+lm_res_scipher = summary(lm(num_edges~log(size), data=(topology_pearson_dataset_df %>% filter(dataset=="scipher"))))
+formula_name_scipher = paste("F(x) = ln(x)*", formatC(round(coef(lm_res_scipher)[2]), format = "e", digits = 2),  formatC(round(coef(lm_res_scipher)[1]), format = "e", digits = 2), sep="")
+
+# Calculate linear model for gtex dataset
+lm_res_gtex = summary(lm(num_edges~log(size), data=(topology_pearson_dataset_df %>% filter(dataset=="gtex"))))
+formula_name_gtex = paste("F(x) = ln(x)*", round(coef(lm_res_gtex)[2]),  round(coef(lm_res_gtex)[1]), sep="")
+formula_name_gtex = paste("F(x) = ln(x)*", formatC(round(coef(lm_res_gtex)[2]), format = "e", digits = 2),  formatC(round(coef(lm_res_gtex)[1]), format = "e", digits = 2), sep="")
+
+# Plot Scipher vs GTEx curves
+ggplot(topology_pearson_dataset_df, aes(x=size, y=num_edges, col=dataset)) + 
+    geom_point(alpha=0.5, size=3) +
+    geom_line(data=topology_pearson_dataset_by_size_df, aes(x=size, y=mean, col=dataset), size=1) +
+    geom_line(data=topology_pearson_dataset_df, aes(x=size, y=(log(size)*coef(lm_res_scipher)[2] + coef(lm_res_scipher)[1]), color=formula_name_scipher), size=1) +
+    geom_line(data=topology_pearson_dataset_df, aes(x=size, y=(log(size)*coef(lm_res_gtex)[2] + coef(lm_res_gtex)[1]), color=formula_name_gtex), size=1) +
+    labs(x="Number of samples", y = "Number of significant edges") +
+    theme_linedraw() +
+    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom") +
+    scale_color_manual(name = "",
+                       values = c("green", "red", "#7CAE00", "2") )
+
+plot_num_edges_num_samples_file = paste(plots_dir, "pearson_num_edges_vs_log_samples_by_dataset_linear_fit.png", sep="/")
+ggsave(
+  plot_num_edges_num_samples_file,
+  dpi = 1200,
+  width = 15000,
+  height = 6000,
+  units = c("px")
+)
+```
+
+```{r}
+# Plot prediction of significant edges
+# First calculate the prediction
+num_samples=seq(10,10000,1)
+prediction_num_edges_df = data.frame(size=num_samples, num_edges=(log(num_samples)*coef(lm_res_scipher)[2] + coef(lm_res_scipher)[1]), dataset="scipher")
+prediction_num_edges_df = rbind(prediction_num_edges_df, data.frame(size=num_samples, num_edges=(log(num_samples)*coef(lm_res_gtex)[2] + coef(lm_res_gtex)[1]), dataset="gtex"))
+
+# Calculate the total number of edges
+total_num_genes_gtex=10251
+total_num_edges_gtex = total_num_genes_gtex * (total_num_genes_gtex-1) / 2
+closest_num_edges_gtex = prediction_num_edges_df$num_edges[which.min(abs(prediction_num_edges_df$num_edges - total_num_edges_gtex))]
+total_num_genes_scipher=13822
+total_num_edges_scipher = total_num_genes_scipher * (total_num_genes_scipher-1) / 2
+closest_num_edges_scipher = prediction_num_edges_df$num_edges[which.min(abs(prediction_num_edges_df$num_edges - total_num_edges_scipher))]
+prediction_num_edges_df %<>% filter(((dataset == "scipher") & (num_edges <= closest_num_edges_scipher)) | ((dataset == "gtex") & (num_edges <= closest_num_edges_gtex)))
+
+ggplot(prediction_num_edges_df) + 
+    geom_line(aes(x=size, y=num_edges, col=dataset), size=1) +
+    labs(x="Number of samples", y = "Number of significant edges") +
+    theme_linedraw() +
+    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom")
+
+plot_num_edges_num_samples_file = paste(plots_dir, "pearson_pval_0.05_num_edges_vs_num_samples_by_dataset_linear_fit_prediction.png", sep="/")
+ggsave(
+  plot_num_edges_num_samples_file,
+  dpi = 1200,
+  width = 15000,
+  height = 6000,
+  units = c("px")
+)
+```
+
+
+
+
+## Residual code
+
+We assume that the largest sample size distribution of correlations works for the rest of correlations, and use it to predict the number of significant interactions in larger sample sizes:
+
+```{r}
+#network_file = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete.dataset/pearson_complete.dataset_size_20_rep_1.net"
+network_file = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete.dataset/pearson_complete.dataset_all_samples.net"
+
+coexpression_df = as.data.frame(fread(network_file)) %>% dplyr::select(Node.1, Node.2, score)
+
+ne_df = data.frame(matrix(ncol=4,nrow=0, dimnames=list(NULL, c("N", "r", "num_edges", "fraction_edges"))))
+
+N_list = seq(10, 10198, 100)
+total_num_genes = 18884
+#total_num_genes = 20000
+total_num_edges = (total_num_genes*(total_num_genes-1)/2)
+alpha_level = 0.05/ (total_num_edges)
+#alpha_level = 0.05/ (total_num_genes*total_num_genes)/2
+Za = qnorm(alpha_level, lower.tail=F)
+Zb = qnorm(0.8, lower.tail=F)
+
+for(N in N_list){
+  #print(N)
+  a = (Za + Zb)/(0.5 * sqrt(N-3))
+  r = (exp(a) - 1) / (exp(a) + 1)
+  num_edges_above_critical = length((coexpression_df %>% filter(score > r))$score)
+  ne_df = rbind(ne_df, data.frame(N=N, r=r, num_edges=num_edges_above_critical, fraction_edges=num_edges_above_critical/total_num_edges))
+}
+
+ggplot(topology_pearson_df, aes(x=size, y=num_edges)) + 
+    geom_point() +
+    geom_line(data=ne_df, aes(x=N, y=num_edges, colour="Analytical estimate"), size=1) +
+    geom_line(data=topology_pearson_by_size_df, aes(x=size, y=mean, colour="Mean"), size=1) +
+    geom_smooth(method = "lm", formula = y~log(x), aes(col="y~log(x)"), se=F, size=1) +
+    ggtitle("Num. of significant edges vs. Num. of samples") +
+    labs(x="Number of samples", y = "Number of significant edges") +
+    theme_linedraw() +
+    theme(plot.title =  element_text(size = 17, face="bold"), 
+          axis.title = element_text(size = 16, face="bold"), 
+          axis.text = element_text(size = 15), 
+          legend.text = element_text(size = 14), 
+          legend.position="bottom") +
+    scale_color_manual(name = "",
+                       values = c("Mean" = "blue", "Analytical estimate" = "red", "y~log(x)" = "green") )
+
+plot_significant_edges_file = paste(plots_dir, "tcga_pearson_pval_0.05_analytical_estimate_num_edges_vs_num_samples.png", sep="/")
+ggsave(
+  plot_significant_edges_file,
+  dpi = 1200,
+  width = 12000,
+  height = 6000,
+  units = c("px")
+)
+
+```
+
+```{r correlation_expectation, eval=FALSE}
+# Parse correlation of networks from different number of samples
+num_samples_list = c(20, 40, 60, 80, 100, 200, 300, 400, 500)
+r_list = c(0.05, 0.1, 0.2, 0.3, 0.4, 0.5)
+
+networks_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete.dataset"
+#network_file = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete.dataset/pearson_complete.dataset_size_20_rep_1.net"
+corr_num_edges_df = data.frame(matrix(ncol=3,nrow=0, dimnames=list(NULL, c("num_samples", "r", "num_edges"))))
+
+for(num_samples in num_samples_list){
+  
+  print(num_samples)
+  network_file = paste(networks_dir, paste("pearson_complete.dataset_size_", num_samples, "_rep_1.net", sep=""), sep="/")
+  selected_coexpression_df = as.data.frame(fread(network_file)) %>% dplyr::select(Node.1, Node.2, score)
+  for(r in r_list){
+    num_edges = nrow(selected_coexpression_df %>% filter(score >= r))
+    corr_num_edges_df = rbind(corr_num_edges_df, data.frame(num_samples=num_samples, r=r, num_edges=num_edges))
+  }
+  rm(selected_coexpression_df)
+
+}
+
+corr_num_edges_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/num_edges_per_sample_and_correlation.txt"
+corr_num_edges_df %>% fwrite(corr_num_edges_file)
+
+ss_corrected_df = data.frame(matrix(ncol=4,nrow=0, dimnames=list(NULL, c("N", "r", "num_edges", "percent_edges"))))
+
+for (num_samples in N){
+  
+  aprox_num_samples = max(unique(corr_num_edges_df$num_samples)[which.min(abs(unique(corr_num_edges_df$num_samples) - num_samples))])
+  for(r in r_list){
+    exp_num_edges = (corr_num_edges_df %>% filter((num_samples==aprox_num_samples) & (r==!!r)))$num_edges
+    pred_num_edges = (ss_df %>% filter((N==aprox_num_samples) & (r==as.character(!!r))))$num_edges
+    ss_corrected_df = rbind(ss_corrected_df, data.frame(num_samples=num_samples, r=r, num_edges=num_edges, percent_edges))
+  }
+
+}
+
+```
+
+
+
+```{r, eval=FALSE}
+networks_dir = "/scratch/j.aguirreplans/Scipher/SampleSize/networks_scipher/complete.dataset"
+network_file = paste(networks_dir, paste("pearson_complete.dataset_all_samples.net", sep=""), sep="/")
+coexpression_df = as.data.frame(fread(network_file)) %>% dplyr::select(Node.1, Node.2, score, pval.adj)
+num_genes = length(unique(c(coexpression_df$Node.1, coexpression_df$Node.2)))
+
+
+
+ggplot(res_df, aes(x=n, y=num_edges)) + 
+    geom_point() +
+    ggtitle("Num. of significant edges vs. Num. of samples") +
+    labs(x="Number of samples", y = "Number of significant edges") +
+    theme_linedraw() +
+    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom")
+
+
+ggplot(topology_df, aes(x=size, y=num_edges)) + 
+    geom_point() +
+    geom_point(data=(res_df %>% filter(n<600)), aes(x=n, y=num_edges), col="green") +
+    geom_smooth(method = "lm", formula = y~log10(x), aes(col="y~log(x)"), se=FALSE, size=1) +
+    #geom_smooth(method = "lm", formula = y~log2(x), aes(col="y~log2(x)"), se=FALSE, size=1) +
+    #geom_smooth(method = "lm", formula = y~ln(x), aes(col="y~ln(x)"), se=FALSE, size=1) +
+    geom_line(data=topology_by_size_df, aes(x=size, y=mean, color="Mean"), size=1) +
+    #geom_line(data=topology_by_size_df, aes(x=size, y=log(size), color="Log"), size=1) +
+    ggtitle("Num. of significant edges vs. Num. of samples") +
+    labs(x="Number of samples", y = "Number of significant edges") +
+    theme_linedraw() +
+    theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.position="bottom") +
+    scale_color_manual(name = "",
+                       #breaks = c("Mean", "y~log10(x)", "y~log2(x)", "y~ln(x)"),
+                       #breaks = c("Mean", "Log", "y~log(x)"),
+                       breaks = c("Mean", "y~log(x)"),
+                       #values = c("Mean" = "blue", "y~log10(x)" = "red", "y~log2(x)" = "green", "y~ln(x)" = "orange") )
+                       #values = c("Mean" = "blue", "Log" = "green", "y~log(x)" = "red") )
+                       values = c("Mean" = "blue", "y~log(x)" = "red") )
+
+
+```
+
+
+```{r}
+ss_df = data.frame(matrix(ncol=4,nrow=0, dimnames=list(NULL, c("N", "r", "num_edges", "percent_edges"))))
+
+N = seq(10, 15000, 10)
+
+total_num_genes = 18884
+total_num_edges = (total_num_genes*(total_num_genes-1)/2)
+alpha_level = 0.05/ (total_num_edges)
+Za = qnorm(alpha_level, lower.tail=F)
+Zb = qnorm(0.8, lower.tail=F)
+
+r_list = c(0.05, 0.1, 0.2, 0.3, 0.4, 0.5)
+for(r in r_list){
+  Cr =  0.5 * log ((1 + r)/(1 - r))
+  Za_cal = pnorm( Cr*sqrt(N - 3) - Zb, lower.tail=F )
+  ss_df = rbind(ss_df, data.frame(N=N, r=r, num_edges=total_num_edges * (1-Za_cal), percent_edges=(1-Za_cal)))
+}
+ss_df$r = as.character(ss_df$r)
+
+ggplot(ss_df) +
+  aes(x = N, y = percent_edges, colour = r) +
+  geom_line(size = 0.5) +
+  scale_color_hue(direction = 1) +
+  labs(
+    x = "Number of samples",
+    y = "Percentage of significant edges",
+    title = "Num. of significant edges above a correlation",
+    color='Correlation'
+  ) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1L)) +
+  theme_linedraw() +
+  theme(
+    plot.title = element_text(size = 17L,
+                              face = "bold"),
+    axis.title.y = element_text(size = 16L,
+                                face = "bold"),
+    axis.title.x = element_text(size = 16L,
+                                face = "bold"),
+    axis.text = element_text(size = 15L),
+    legend.title = element_text(size = 14L),
+    legend.text = element_text(size = 14L)
+  )
+
+plot_significant_edges_file = paste(plots_dir, "scipher_pearson_pval_0.05_theoretical_significant_edges_per_size_and_correlation.png", sep="/")
+ggsave(
+  plot_significant_edges_file,
+  dpi = 1200,
+  width = 12000,
+  height = 6000,
+  units = c("px")
+)
+
+#r = 0.3
+#Cr =  0.5 * log ((1 + r)/(1 - r))
+#N = ((Za + Zb)/Cr)^2+3
+#a = (Za + Zb)/(0.5 * sqrt(N-3))
+#r = (exp(a) - 1) / (exp(a) + 1)
+#ne * Za_cal
+#plot(N, total_num_edges * (1-Za_cal))
+#plot(N, r)
+
+
+
+```

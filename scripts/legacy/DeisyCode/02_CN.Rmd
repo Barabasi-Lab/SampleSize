@@ -1,0 +1,50 @@
+---
+title: "wTO Consensus"
+output:
+  html_document:
+    theme: united
+    highlight: tang
+author: Deisy Morselli Gysi
+---
+#### Northeastern University
+#### Project: Scipher RA - Responder vs Non-responders to TNF drugs
+
+## Description
+Create the Consensus Network for responders and non-responders. 
+Before we combine the networks, we filter for only significant interactions (FDR corrected, p < 0.001). 
+
+```{r, message=FALSE}
+require(dplyr)
+require(magrittr)
+require(data.table)
+require(ggplot2)
+
+source("99_Consensus.R")
+```
+
+```{r}
+nR3 = fread("../data/out/wTO/NonResponder_3m.csv")
+
+nR6 = fread("../data/out/wTO/NonResponder_6m.csv")
+nR = wTO.Consensus(data = list(nR3[nR3$pval.adj < 0.001,1:4], 
+                          nR6[nR6$pval.adj < 0.001, 1:4]))
+
+fwrite(nR, "../data/out/wTO/NonResponder_CN.csv")
+```
+
+
+```{r}
+R3 = fread("../data/out/wTO/Responder_3m.csv")
+
+R6 = fread("../data/out/wTO/Responder_6m.csv")
+
+
+R = wTO.Consensus(data = list(R3[R3$pval.adj < 0.001,1:4], 
+                          R6[R6$pval.adj < 0.001, 1:4]))
+
+fwrite(R, "../data/out/wTO/Responder_CN.csv")
+```
+## Session Info
+```{r}
+sessioninfo::session_info()
+```

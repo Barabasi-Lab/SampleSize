@@ -1,0 +1,211 @@
+---
+title: "Biomarkers Proximity"
+output:
+  html_document:
+    theme: united
+    highlight: tang
+author: Deisy Morselli Gysi
+---
+#### Northeastern University
+#### Project: Scipher RA - Responder vs Non-responders to TNF drugs
+
+## Description
+The aim here is to perform all the Network Medicine Analysis for the set of genes found. 
+Not that, the enrichment for them are done at [Enrichr](https://maayanlab.cloud/Enrichr/). 
+
+
+```{r, message=FALSE}
+require(tidyr)
+require(data.table)
+require(magrittr)
+require(dplyr)
+require(methods)
+require(magrittr)
+require(tidyverse)
+require(stringr)
+require(ggplot2)
+require(igraph)
+require(progress)
+require(NetSci)
+`%ni%` <- Negate(`%in%`)
+```
+
+## Calculate the LCC for each biomarker group
+
+```{r}
+N = 1000  #Simulations
+
+PPI = fread("../data/PPI_Symbol_Entrez.csv")
+
+gPPI = PPI[, c(3,4)] %>%
+  graph_from_data_frame(., directed = F) %>%
+  simplify() %>%
+  delete.vertices(v="")
+
+Genes_nR = fread("../data/out/CoDINA/CN_nR.txt", header = F)
+Genes_R = fread("../data/out/CoDINA/CN_R.txt", header = F)
+Genes_RnR = fread("../data/out/CoDINA/CN_a.txt", header = F)
+###
+### add genes known to RA
+Genes_RA = fread("../data/RA_Genes.txt", header = F)
+Genes_RA %<>% filter(V1 %in% V(gPPI)$name)
+```
+
+
+
+
+```{r}
+LCC_nR = LCC_Significance(N = N, 
+                          Targets = Genes_nR$V1,
+                          G = gPPI)
+Histogram_LCC(LCC_nR)
+
+LCC_R = LCC_Significance(N = N, 
+                         Targets = Genes_R$V1,
+                         G = gPPI)
+Histogram_LCC(LCC_R)
+
+LCC_RnR = LCC_Significance(N = N, 
+                           Targets = Genes_RnR$V1,
+                           G = gPPI)
+Histogram_LCC(LCC_RnR)
+
+LCC_RA = LCC_Significance(N = N, 
+                          Targets = Genes_RA$V1,
+                          G = gPPI)
+Histogram_LCC(LCC_RA)
+```
+
+## Calculate the separation across the data 
+
+```{r}
+Genes_nR$type = "non resp"
+Genes_R$type = "resp"
+Genes_RnR$type = "common"
+Genes_RA$type = "RA"
+
+All = rbind(Genes_nR, Genes_R, Genes_RnR, Genes_RA)
+
+Jac = Jaccard(All[,c(2,1)])
+Jac
+
+sab = separation(gPPI, All[,c(2,1)])
+S = sab$Sab
+S[lower.tri(S)] = t(S)[lower.tri(S)]
+```
+
+
+```{r}
+S %>% superheat::superheat(., 
+                           pretty.order.rows = TRUE, 
+                           pretty.order.cols = TRUE, 
+                           heat.col.scheme = "red")
+
+
+```
+
+
+## Calculate the proximity to Scipher selected drugs
+
+```{r}
+ScipherDrugs = readxl::read_excel("../data/DrugScipher.xlsx")
+
+DB = fread("../data/DB_DrugTargets_1201.csv")
+
+DB %<>% 
+  filter(Gene_Target %in% V(gPPI)$name) %>%
+  filter(Name %in% ScipherDrugs$Drug) %>%
+  select(Name, Gene_Target) %>% 
+  unique()
+
+# Amount of targets per drug
+DB %>%
+  group_by(Name) %>%
+  summarise(n = n()) %>%
+  arrange(desc(n))
+```
+```{r}
+# Calculate the proximity
+# 
+names(DB) = c('ID', "Target" )
+```
+
+```{r}
+proximity_RA = avr_proximity_multiple_target_sets(
+  set = unique(DB$ID),
+  G = gPPI,
+  ST = DB,
+  source = Genes_RA$V1,
+  N = N
+)
+proximity_RA
+
+proximity_RA %>% 
+  filter(p.adjust(p_lt) < 0.001)
+```
+
+
+```{r}
+proximity_nR = avr_proximity_multiple_target_sets(
+  set = unique(DB$ID),
+  G = gPPI,
+  ST = DB,
+  source = Genes_nR$V1,
+  N = N
+)
+proximity_nR
+
+proximity_nR %>% 
+  filter(p.adjust(p_lt) < 0.001)
+
+```
+
+```{r}
+proximity_nR_RnR = avr_proximity_multiple_target_sets(
+  set = unique(DB$ID),
+  G = gPPI,
+  ST = DB,
+  source = c(Genes_nR$V1, Genes_RnR$V1),
+  N = N
+)
+proximity_nR_RnR
+
+proximity_nR_RnR %>% 
+  filter(p.adjust(p_lt) < 0.001)
+
+```
+```{r}
+proximity_R = avr_proximity_multiple_target_sets(
+  set = unique(DB$ID),
+  G = gPPI,
+  ST = DB,
+  source = Genes_R$V1,
+  N = N
+)
+proximity_R
+
+proximity_R %>% 
+  filter(p.adjust(p_lt) < 0.001)
+
+```
+
+```{r}
+proximity_R_RnR = avr_proximity_multiple_target_sets(
+  set = unique(DB$ID),
+  G = gPPI,
+  ST = DB,
+  source = c(Genes_R$V1, Genes_RnR$V1),
+  N = N
+)
+proximity_R_RnR
+
+proximity_R_RnR %>% 
+  filter(p.adjust(p_lt) < 0.001)
+```
+
+## Session Info 
+
+```{r}
+sessioninfo::session_info()
+```
+

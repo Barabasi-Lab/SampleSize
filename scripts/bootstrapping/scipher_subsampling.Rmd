@@ -1,0 +1,80 @@
+---
+title: "Scipher subsampling"
+author: "Joaquim Aguirre-Plans"
+date: "1/13/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Description
+
+Create subsamples of gene expression data from GTEx, with the aim of testing the effect of sample size in these subsamples.
+
+```{r, message=FALSE}
+library(data.table)
+library(dplyr)
+set.seed(1510)
+```
+
+## Read files
+
+```{r define_files}
+# Define working directories
+databases_dir = '/home/j.aguirreplans/Databases'
+ppi_dir = '/home/j.aguirreplans/data/PPI'
+data_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021'
+output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data'
+
+# Define input file
+group_to_samples_file = paste(data_dir, "00_data/scipher_group_to_samples.csv", sep='/')
+```
+
+```{r read_files}
+# Read input file
+group_to_samples_df = fread(group_to_samples_file)
+```
+
+## Subsampling
+
+```{r sampling_function}
+## Random sampling with replacement
+create_random_subsamples_with_replacement <- function(samples_list, size_list, rep, output_dir, output_file_name){
+  subsamples_df = data.frame(matrix(ncol=3,nrow=0, dimnames=list(NULL, c("size", "rep", "samples"))))
+  seed <- 1
+  for(size in size_list){
+    set.seed(seed)
+    seed <- seed + 1
+    for(r in 1:rep){
+      subsample <- sort(sample(samples_list, size=size, replace=TRUE))
+      subsample_df <- data.frame(samples=subsample)
+      output_file = paste(output_dir, paste(paste(output_file_name, 'size', size, 'rep', r, sep='_'), '.txt', sep=''), sep='/')
+      subsample_df %>% write.table(output_file, quote = F, sep='\t', row.names = F, col.names = T)
+      subsamples_df = rbind(subsamples_df, data.frame(size=size, rep=r, samples=paste(subsample, collapse = ';')))
+    }
+  }
+  return(subsamples_df)
+}
+
+```
+
+For each group of samples, we make a subsampling:
+
+```{r}
+for (group_selected in unique(group_to_samples_df$group)){
+  sampling_dir = paste(output_dir, 'sampling/Scipher/Dec2021/sampling_with_repetition', group_selected, sep='/')
+  dir.create(sampling_dir, showWarnings = FALSE)
+  samples = (group_to_samples_df %>% filter(group == group_selected))$sample_id
+  size_list <- seq(10, length(samples), 10)
+  # Create a file with a list of all samples
+  all_samples_df <- data.frame(samples=samples)
+  output_file = paste(sampling_dir, paste('scipher_', group_selected, '_all_samples.txt', sep=""), sep='/')
+  all_samples_df %>% write.table(output_file, quote = F, sep='\t', row.names = F, col.names = T)
+  # Create files with lists of subsamples
+  output_file_name = paste('scipher_', group_selected, sep = "")
+  subsamples_df <- create_random_subsamples_with_replacement(samples_list=samples, size_list=size_list, rep=10, output_dir=sampling_dir, output_file_name=output_file_name)
+}
+```
+

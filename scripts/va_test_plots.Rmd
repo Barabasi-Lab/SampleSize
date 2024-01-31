@@ -1,0 +1,277 @@
+---
+title: "Untitled"
+author: "Joaquim Aguirre-Plans"
+date: '2023-01-20'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+### Description
+
+Create test figures for the VA project.
+
+```{r}
+packrat::init("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR")
+```
+
+```{r}
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(patchwork)
+library(tidyr)
+set.seed(1510)
+options(bitmapType='cairo')
+`%ni%` <- Negate(`%in%`)
+```
+
+```{r}
+head(mtcars)
+```
+
+```{r}
+name2color = c(
+  "ICVD" = "#FBB4AE",
+  "IHD" = "#B3CDE3",
+  "PAD" = "#CCEBC5"
+)
+```
+
+```{r}
+mtcars_mod = mtcars %>%
+  mutate(ASCVD = am, DISEASECAT = gear, gender = cyl) %>%
+  mutate(DISEASECAT = replace(DISEASECAT, DISEASECAT == 3, "IHD")) %>%
+  mutate(DISEASECAT = replace(DISEASECAT, DISEASECAT == 4, "ICVD")) %>%
+  mutate(DISEASECAT = replace(DISEASECAT, DISEASECAT == 5, "PAD")) %>%
+  mutate(gender = replace(gender, gender == 4, "F")) %>%
+  mutate(gender = replace(gender, gender == 6, "Unknown")) %>%
+  mutate(gender = replace(gender, gender == 8, "M"))
+mtcars_mod$MVPCore_id = row.names(mtcars_mod)
+head(mtcars_mod)
+```
+
+```{r}
+mtcars_mod_gender = mtcars_mod %>%
+  select(MVPCore_id, gender, ASCVD) %>%
+  group_by(gender, ASCVD) %>%
+  summarize(num_subjects=n()) %>%
+  ungroup()
+head(mtcars_mod_gender)
+```
+
+```{r}
+mtcars_mod_gender %>%
+  ggplot(aes(x=factor(gender), y=num_subjects, fill=factor(ASCVD), color=factor(ASCVD))) +
+  geom_bar(stat="identity", position="dodge") +
+  scale_fill_manual(values = c("#F8766D", "grey")) +
+  scale_color_manual(values = c("#F8766D", "grey")) +
+  xlab("Gender") +
+  ylab("Number of subjects") +
+  theme_bw() +
+  theme(aspect.ratio=1,
+        axis.title = element_text(size=14, face="bold"),
+        axis.text = element_text(size=13, face="bold"),
+        legend.title = element_text(size=14, face="bold"),
+        legend.text = element_text(size=13),
+        panel.grid.major=element_blank()) +
+  geom_text(aes(label=num_subjects), position=position_dodge(width=0.9), vjust=-0.3, color="gray25")
+```
+
+```{r}
+total = 840867
+ascvd = 377334
+ascvd_inc = 205320
+no_ascvd = total - ascvd
+print(no_ascvd)
+ascvd_exc = ascvd - ascvd_inc
+print(ascvd_exc)
+```
+
+```{r}
+ascvd_40_80_perc = 90.77
+ascvd_40_perc = 1.77
+ascvd_80_perc = 7.46
+ascvd_40_80 = round(ascvd_40_80_perc / 100 * ascvd)
+ascvd_40 = round(ascvd_40_perc / 100 * ascvd)
+ascvd_80 = round(ascvd_80_perc / 100 * ascvd)
+print(ascvd_40_80)
+print(ascvd_40)
+print(ascvd_80)
+```
+
+```{r}
+ascvd_inc_40_80_perc_incorr = 54.42
+ascvd_exc_40_80_perc_incorr = 36.35
+ascvd_exc_40_perc_incorr = 1.77
+ascvd_exc_80_perc_incorr = 7.46
+ascvd_inc_40_80 = round(ascvd_inc_40_80_perc_incorr / 100 * ascvd)
+ascvd_exc_40_80 = round(ascvd_exc_40_80_perc_incorr / 100 * ascvd)
+ascvd_exc_40 = round(ascvd_exc_40_perc_incorr / 100 * ascvd)
+ascvd_exc_80 = round(ascvd_exc_80_perc_incorr / 100 * ascvd)
+ascvd_inc_40_80_perc_corr = ascvd_inc_40_80 / ascvd_inc * 100
+ascvd_exc_40_80_perc_corr = ascvd_exc_40_80 / ascvd_exc * 100
+ascvd_exc_40_perc_corr = ascvd_exc_40 / ascvd_exc * 100
+ascvd_exc_80_perc_corr = ascvd_exc_80 / ascvd_exc * 100
+print(ascvd_inc_40_80)
+print(ascvd_inc_40_80_perc_corr)
+print(ascvd_exc_40_80)
+print(ascvd_exc_40_80_perc_corr)
+print(ascvd_exc_40)
+print(ascvd_exc_40_perc_corr)
+print(ascvd_exc_80)
+print(ascvd_exc_80_perc_corr)
+```
+```{r}
+ascvd_m = 358032
+ascvd_f = 19280
+no_ascvd_m = 402739
+no_ascvd_f = 60614
+ascvd_m_perc = ascvd_m / ascvd * 100
+ascvd_f_perc = ascvd_f / ascvd * 100
+no_ascvd_m_perc = no_ascvd_m / no_ascvd * 100
+no_ascvd_f_perc = no_ascvd_f / no_ascvd * 100
+print(ascvd_m_perc)
+print(ascvd_f_perc)
+print(no_ascvd_m_perc)
+print(no_ascvd_f_perc)
+```
+```{r}
+ascvd_inc_m_perc_incorr = 51.27
+ascvd_inc_f_perc_incorr = 3.14
+ascvd_exc_m_perc_incorr = 43.62
+ascvd_exc_f_perc_incorr = 1.96
+ascvd_inc_m = round(ascvd_inc_m_perc_incorr / 100 * ascvd)
+ascvd_inc_f = round(ascvd_inc_f_perc_incorr / 100 * ascvd)
+ascvd_exc_m = round(ascvd_exc_m_perc_incorr / 100 * ascvd)
+ascvd_exc_f = round(ascvd_exc_f_perc_incorr / 100 * ascvd)
+ascvd_inc_m_perc_corr = ascvd_inc_m / ascvd_inc * 100
+ascvd_inc_f_perc_corr = ascvd_inc_f / ascvd_inc * 100
+ascvd_exc_m_perc_corr = ascvd_exc_m / ascvd_exc * 100
+ascvd_exc_f_perc_corr = ascvd_exc_f / ascvd_exc * 100
+print(ascvd_inc_m)
+print(ascvd_inc_m_perc_corr)
+print(ascvd_inc_f)
+print(ascvd_inc_f_perc_corr)
+print(ascvd_exc_m)
+print(ascvd_exc_m_perc_corr)
+print(ascvd_exc_f)
+print(ascvd_exc_f_perc_corr)
+```
+```{r}
+ascvd_w = 293180
+ascvd_b = 65251
+ascvd_o = ascvd - (ascvd_w + ascvd_b)
+no_ascvd_w = 335077
+no_ascvd_b = 90581
+no_ascvd_o = no_ascvd - (no_ascvd_w + no_ascvd_b)
+ascvd_w_perc = ascvd_w / ascvd * 100
+ascvd_b_perc = ascvd_b / ascvd * 100
+ascvd_o_perc = ascvd_o / ascvd * 100
+no_ascvd_w_perc = no_ascvd_w / no_ascvd * 100
+no_ascvd_b_perc = no_ascvd_b / no_ascvd * 100
+no_ascvd_o_perc = no_ascvd_o / no_ascvd * 100
+print(ascvd_o)
+print(no_ascvd_o)
+print(ascvd_w_perc)
+print(ascvd_b_perc)
+print(ascvd_o_perc)
+print(no_ascvd_w_perc)
+print(no_ascvd_b_perc)
+print(no_ascvd_o_perc)
+```
+```{r}
+ascvd_inc_w_perc_incorr = 40.8
+ascvd_inc_b_perc_incorr = 10.5
+ascvd_exc_w_perc_incorr = 36.9
+ascvd_exc_b_perc_incorr = 6.79
+ascvd_inc_w = round(ascvd_inc_w_perc_incorr / 100 * ascvd)
+ascvd_inc_b = round(ascvd_inc_b_perc_incorr / 100 * ascvd)
+ascvd_inc_o = ascvd_inc - (ascvd_inc_b + ascvd_inc_w)
+ascvd_exc_w = round(ascvd_exc_w_perc_incorr / 100 * ascvd)
+ascvd_exc_b = round(ascvd_exc_b_perc_incorr / 100 * ascvd)
+ascvd_exc_o = ascvd_exc - (ascvd_exc_b + ascvd_exc_w)
+ascvd_inc_w_perc_corr = ascvd_inc_w / ascvd_inc * 100
+ascvd_inc_b_perc_corr = ascvd_inc_b / ascvd_inc * 100
+ascvd_inc_o_perc_corr = ascvd_inc_o / ascvd_inc * 100
+ascvd_exc_w_perc_corr = ascvd_exc_w / ascvd_exc * 100
+ascvd_exc_b_perc_corr = ascvd_exc_b / ascvd_exc * 100
+ascvd_exc_o_perc_corr = ascvd_exc_o / ascvd_exc * 100
+print(ascvd_inc_w)
+print(ascvd_inc_w_perc_corr)
+print(ascvd_inc_b)
+print(ascvd_inc_b_perc_corr)
+print(ascvd_inc_o)
+print(ascvd_inc_o_perc_corr)
+print(ascvd_exc_w)
+print(ascvd_exc_w_perc_corr)
+print(ascvd_exc_b)
+print(ascvd_exc_b_perc_corr)
+print(ascvd_exc_o)
+print(ascvd_exc_o_perc_corr)
+```
+
+```{r}
+ascvd_cancer_perc = 40.6
+ascvd_no_cancer_perc = 59.4
+ascvd_cancer = round(ascvd_cancer_perc / 100 * ascvd)
+ascvd_no_cancer = round(ascvd_no_cancer_perc / 100 * ascvd)
+print(ascvd_cancer)
+print(ascvd_no_cancer)
+```
+
+```{r}
+ascvd_diab_perc = 55.58
+ascvd_no_diab_perc = 44.42
+ascvd_diab = round(ascvd_diab_perc / 100 * ascvd)
+ascvd_no_diab = round(ascvd_no_diab_perc / 100 * ascvd)
+print(ascvd_diab)
+print(ascvd_no_diab)
+```
+
+```{r}
+ascvd_inc_no_cancer_perc_incorr = 54.42
+ascvd_exc_no_cancer_perc_incorr = 4.98
+ascvd_exc_cancer_perc_incorr = 40.6
+ascvd_inc_no_cancer = round(ascvd_inc_no_cancer_perc_incorr / 100 * ascvd)
+ascvd_exc_no_cancer = round(ascvd_exc_no_cancer_perc_incorr / 100 * ascvd)
+ascvd_exc_cancer = round(ascvd_exc_cancer_perc_incorr / 100 * ascvd)
+ascvd_inc_no_cancer_perc_corr = ascvd_inc_no_cancer / ascvd_inc * 100
+ascvd_exc_no_cancer_perc_corr = ascvd_exc_no_cancer / ascvd_exc * 100
+ascvd_exc_cancer_perc_corr = ascvd_exc_cancer / ascvd_exc * 100
+print(ascvd_inc_no_cancer)
+print(ascvd_inc_no_cancer_perc_corr)
+print(ascvd_exc_no_cancer)
+print(ascvd_exc_no_cancer_perc_corr)
+print(ascvd_exc_cancer)
+print(ascvd_exc_cancer_perc_corr)
+```
+
+```{r}
+ascvd_inc_no_diab_perc_incorr = 23.45
+ascvd_exc_no_diab_perc_incorr = 20.97
+ascvd_inc_diab_perc_incorr = 30.97
+ascvd_exc_diab_perc_incorr = 24.61
+ascvd_inc_no_diab = round(ascvd_inc_no_diab_perc_incorr / 100 * ascvd)
+ascvd_exc_no_diab = round(ascvd_exc_no_diab_perc_incorr / 100 * ascvd)
+ascvd_inc_diab = round(ascvd_inc_diab_perc_incorr / 100 * ascvd)
+ascvd_exc_diab = round(ascvd_exc_diab_perc_incorr / 100 * ascvd)
+ascvd_inc_no_diab_perc_corr = ascvd_inc_no_diab / ascvd_inc * 100
+ascvd_exc_no_diab_perc_corr = ascvd_exc_no_diab / ascvd_exc * 100
+ascvd_inc_diab_perc_corr = ascvd_inc_diab / ascvd_inc * 100
+ascvd_exc_diab_perc_corr = ascvd_exc_diab / ascvd_exc * 100
+print(ascvd_inc_no_diab)
+print(ascvd_inc_no_diab_perc_corr)
+print(ascvd_exc_no_diab)
+print(ascvd_exc_no_diab_perc_corr)
+print(ascvd_inc_diab)
+print(ascvd_inc_diab_perc_corr)
+print(ascvd_exc_diab)
+print(ascvd_exc_diab_perc_corr)
+```
+
+
+

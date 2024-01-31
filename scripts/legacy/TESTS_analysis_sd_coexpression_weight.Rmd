@@ -1,0 +1,215 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r, message=FALSE}
+library(data.table)
+library(dplyr)
+library(gghalves)
+library(ggplot2)
+library(igraph)
+require(magrittr)
+library(stringr)
+library(tidyr)
+set.seed(1510)
+`%ni%` <- Negate(`%in%`)
+```
+
+```{r}
+dataset = "gtex"
+type_dataset = "Whole.Blood"
+sample_group_type = "tumor" # if dataset = "tcga"
+type_counts = "reads" # tpm, reads
+sizes_selected = c(20, 100, 200, 300)
+threshold_selected = 0.05
+```
+
+### Read the co-expression networks across different sample sizes and extract the co-expression
+
+Fetch the files containing the gene co-expression networks of different sample sizes:
+
+```{r}
+coexpression_dir = sprintf("/scratch/j.aguirreplans/Scipher/SampleSize/networks_%s/reads/%s/consensus", dataset, type_dataset)
+all_coexpression_files = list.files(coexpression_dir)
+coexpression_files_selected = data.frame(matrix(ncol=length(c("size", "file")),nrow=0, dimnames=list(NULL, c("size", "file"))))
+
+for (coexpression_file in all_coexpression_files){
+  file_split = strsplit(gsub(".net", "", coexpression_file), split="_")[[1]]
+  size = as.numeric(file_split[(length(file_split)-1)])
+  if (size %in% sizes_selected){
+    coexpression_files_selected = rbind(coexpression_files_selected, data.frame(size=size, file=paste(coexpression_dir, coexpression_file, sep="/")))
+  }
+}
+```
+
+Read the co-expression networks and extract the co-expression.
+Keep only co-expression values with significant p-value (above 0.05). If not, the value is set to 0.
+
+```{r}
+coexpression_file_merged = sprintf("/scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/%s_%s_pearson_consensus_combined_reduced.txt", dataset, type_dataset)
+if (!(file.exists(coexpression_file))){
+  for (i in 1:length(sort(coexpression_files_selected$size))){
+    size_selected = sort(coexpression_files_selected$size)[i]
+    coexpression_file = (coexpression_files_selected %>% filter(size == size_selected))$file
+    coexpression_df = fread(coexpression_file)
+    # Turn unsignificant co-expression values to 0
+    #coexpression_df$CN = ifelse(coexpression_df$pval.fisher >= threshold_selected, 0, coexpression_df$CN)
+    # Rename CN column into size selected
+    coexpression_df = coexpression_df %>% 
+      select(-pval.fisher) %>% 
+      rename(!!as.character(size_selected) := "CN")
+    # Merge current co-expression with other co-expression sizes
+    if (i == 1){
+      coexpression_merged = data.frame(coexpression_df)
+    } else {
+      coexpression_merged = coexpression_merged %>% left_join(coexpression_df, by=c("Node.1", "Node.2"))
+    }
+    rm(coexpression_df)
+  }
+  coexpression_merged %>% fwrite(coexpression_file_merged)
+} else {
+  coexpression_merged = fread(coexpression_file_merged)
+}
+```
+
+```{r}
+coexpression_merged %>%
+  rename("20"="X20") %>%
+  pivot_longer(cols=c(-Node.1, -Node.2), names_to="size", values_to="correlation", names_transform=list(size = as.character), values_transform=list(correlation = as.numeric)) %>%
+  ggplot(aes(x = size, y = correlation)) +
+  geom_half_violin()
+```
+
+```{r}
+coexpression_file_merged = sprintf("/scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/%s_%s_pearson_combined_head100000.txt", dataset, type_dataset)
+networks_df = fread(coexpression_file_merged, header = TRUE)
+```
+
+```{r}
+networks_df = networks_df %>% 
+  mutate(gp = paste(Node.1, Node.2, sep = " -- ")) %>%
+  select(!(c(Node.1, Node.2))) %>%
+  group_by(gp) %>%
+  pivot_longer(!gp, names_to = "ss.rep", values_to = "score") %>%
+  mutate(sd=sd(score)) %>%
+  ungroup() %>% 
+  separate("ss.rep", into=c("ss", "rep"), sep="[.]")
+
+networks_df$ss = as.integer(networks_df$ss)
+networks_df$rep = as.integer(networks_df$rep)
+max_sample_cut = plyr::round_any(max(networks_df$ss), 100, f=ceiling)
+```
+
+```{r}
+networks_df %>% mutate(ssgr=cut(ss, breaks= seq(0, max_sample_cut, by = 100))) %>%
+  group_by(gp, ssgr) %>%
+  mutate(sdgr=sd(score)) %>%
+  ungroup()
+```
+
+```{r}
+coexpression_file_merged = sprintf("/scratch/j.aguirreplans/Scipher/SampleSize/networks_gtex/reads/%s_%s_pearson_combined_with_5_reps_head100000.txt", dataset, type_dataset)
+networks_df = fread(coexpression_file_merged, header = TRUE)
+```
+
+Everything at once:
+
+```{r}
+networks_sd_df = networks_df %>% 
+  mutate(gp = paste(Node.1, Node.2, sep = " -- ")) %>%
+  select(!(c(Node.1, Node.2))) %>%
+  pivot_longer(!gp, names_to = "ss.rep", values_to = "correlation") %>%
+  separate("ss.rep", into=c("ss", "rep"), sep="[.]") %>%
+  group_by(gp, ss) %>%
+  summarise(sd_correlation=sd(correlation)) %>%
+  ungroup()
+```
+
+```{r}
+networks_sd_df %>%
+  mutate(ss = factor(ss, levels = as.character(sort(as.numeric(unique(networks_sd_df$ss)))))) %>%
+  ggplot(aes(x = ss, y = sd_correlation)) +
+  geom_half_violin(side = "r", color="orangered4", fill="orangered1") +
+  theme_linedraw() +
+  theme(aspect.ratio=1, 
+        plot.title =  element_text(size = 15, face="bold"), 
+        axis.title = element_text(size = 14, face="bold"), 
+        axis.text = element_text(size = 13), 
+        legend.text = element_text(size = 13), 
+        legend.title=element_text(size=14, face="bold")) +
+  labs (x = "Number of samples",
+        y = "Co-expression weight SD",
+        color = "",
+        fill = "")
+```
+
+Calculation in chunks:
+
+```{r}
+con <- file(coexpression_file_merged,"r")
+first_line <- readLines(con,n=1)
+close(con)
+cols = strsplit(first_line, split=",")[[1]]
+
+chunk_size = 50000
+x=0
+chunk_count = 0
+connection = file(coexpression_file_merged, "r")
+network_sd = data.frame()
+repeat {
+  x=x+1
+  chunk_count=chunk_count+chunk_size
+  message(paste('Chunk:', chunk_count))
+  skip_param=0
+  if(x==1){
+    skip_param=1
+  }
+  network_chunk = read.table(connection, nrows=chunk_size, skip=skip_param, header=FALSE, fill = TRUE, sep=",", col.names=cols)
+  network_chunk = network_chunk %>% 
+    mutate(gp = paste(Node.1, Node.2, sep = " -- ")) %>%
+    select(!(c(Node.1, Node.2))) %>%
+    pivot_longer(!gp, names_to = "ss.rep", values_to = "correlation") %>%
+    separate("ss.rep", into=c("ss", "rep"), sep="[.]") %>%
+    mutate(across('ss', str_replace, 'X', '')) %>%
+    group_by(gp, ss) %>%
+    summarise(sd_correlation=sd(correlation)) %>%
+    ungroup()
+  if(nrow(network_sd) == 0){
+    network_sd = data.frame(network_chunk)
+  } else {
+    network_sd = rbind(network_sd, network_chunk)
+  }
+  if(nrow(network_chunk) < chunk_size){
+    close(connection)
+    break
+  }
+  rm(network_chunk)
+}
+```
+
+
+
+```{r}
+network_sd %>%
+  mutate(ss = factor(ss, levels = as.character(sort(as.numeric(unique(networks_sd_df$ss)))))) %>%
+  ggplot(aes(x = ss, y = sd_correlation)) +
+  geom_half_violin(side = "r", color="orangered4", fill="orangered1") +
+  theme_linedraw() +
+  theme(aspect.ratio=1, 
+        plot.title =  element_text(size = 15, face="bold"), 
+        axis.title = element_text(size = 14, face="bold"), 
+        axis.text = element_text(size = 13), 
+        legend.text = element_text(size = 13), 
+        legend.title=element_text(size=14, face="bold")) +
+  labs (x = "Number of samples",
+        y = "Co-expression weight SD",
+        color = "",
+        fill = "")
+```
+
