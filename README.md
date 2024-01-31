@@ -13,11 +13,15 @@ The scripts folder contains the scripts necessary to run the analysis.
 
 This is a detailed explanation on how to extract the datasets used in the analysis.
 
-#### GTEx
+#### 1.1. GTEx
 
+Notebook to run:
 
+```
+GTEx_analysis_for_coexpr.Rmd
+```
 
-#### GEO GSE193677
+#### 1.2. GEO GSE193677
 
 Notebook to run:
 
@@ -25,11 +29,69 @@ Notebook to run:
 GEO_data_extraction_GSE193677.Rmd
 ```
 
-#### TCGA
+#### 1.3. TCGA
 
-Check README_TCGA
+##### 1.3.1. Download the GDC-Client App
 
-Notebook to run:
+Instructions on how to download the dataset: https://www.youtube.com/watch?v=GDxj8DrkZok 
+
+* Download GDC-CLIENT app (Ubuntu - Client) at the following website:
+
+https://gdc.cancer.gov/access-data/gdc-data-transfer-tool
+
+* Transfer to the Discovery cluster:
+
+scp gdc-client_v1.6.1_Ubuntu_x64.zip discovery:/path/to/Databases/TCGA
+
+* Unzip:
+
+cd /path/to/Databases/TCGA
+unzip gdc-client_v1.6.1_Ubuntu_x64.zip
+
+##### 1.3.2. Use the GenomicDataCommons R package to download the metadata and manifest
+
+Run the Rmarkdown script: `create_TCGA_manifest.Rmd`.
+
+The script will generate:
+* Manifest file: `gdc_manifest.2022-11-18.txt`
+* Metadata file: `metadata.txt`
+
+##### 1.3.3. Download the dataset
+
+To download the dataset, we use a computational cluster.
+
+* We create a file download.sh:
+
+```
+#!/bin/bash
+#SBATCH --mem=50000
+#SBATCH -p short
+#SBATCH --time=24:00:00
+#SBATCH --constraint="[cascadelake|zen2]"
+#SBATCH -o /path/to/Databases/TCGA/scripts/download.out
+#SBATCH -e /path/to/Databases/TCGA/scripts/download.err
+/path/to/Databases/TCGA/scripts/gdc-client download -m /path/to/Databases/TCGA/2022-11-18-Dataset/TCGA/raw/additional/gdc_manifest.2022-11-18.txt -d /path/to/Databases/TCGA/2022-11-18-Dataset/TCGA/raw/data
+```
+
+* We run the download.sh file:
+
+```
+sbatch /path/to/Databases/TCGA/scripts/download.sh
+```
+
+##### 1.3.4. Compile the dataset
+
+To compile the scattered TCGA expression files into a unique file we use the following script:
+
+```
+python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/compile_tcga.py -d /path/to/Databases/TCGA/2022-11-18-Dataset/TCGA/raw/data -o /path/to/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/TCGA_reads.csv -t unstranded
+```
+
+We can use a computational cluster to run the script, because it requires a lot of memory.
+
+##### 1.3.5. Analyze and prepare the dataset
+
+We run the following notebook to analyze and prepare the dataset:
 
 ```
 TCGA_preparation.Rmd
@@ -51,6 +113,12 @@ GTEx_preprocessing_for_coexpr.Rmd
 
 ```
 GEO_preprocessing_for_coexpr_GSE193677.Rmd
+```
+
+* For Rheumatoid Arthritis dataset:
+
+```
+scipher_preprocessing.Rmd
 ```
 
 * For TCGA:
@@ -79,6 +147,12 @@ GTEx_subsampling.Rmd
 GEO_subsampling_GSE193677.Rmd
 ```
 
+* For Rheumatoid Arthritis dataset:
+
+```
+scipher_subsampling.Rmd
+```
+
 * For TCGA:
 
 ```
@@ -100,6 +174,8 @@ Rscript create_gene_coexpression_network_from_samples_list.R -s <samples_file> -
 
 This is done for all datasets.
 
+To facilitate the calculations, we ran them in a computational cluster.
+
 #### Consensus co-expression networks
 
 Then, we calculated the consensus networks between the 5 replicate genes co-expression networks from each sample size and condition.
@@ -110,6 +186,10 @@ Execution:
 Rscript create_consensus_gene_coexpression_network.R -l <list_coexpression_networks_file> -n <consensus_network_file> -t <threshold> -m <method>
 ```
 
+This is done for all datasets.
+
+To facilitate the calculations, we ran them in a computational cluster.
+
 ### 5. Analyze the gene co-expression networks
 
 ==> folder: gene_coexpression_networks
@@ -119,6 +199,10 @@ Execution:
 ```
 Rscript analyze_coexpression_network_by_significant_edges.R -c <coexpression_network_file> -o <output_results_dir> -s <output_subgraphs_dir> -f <file_name> -t <threshold> -p <ppi_file> -d <disease_genes_file> -e <essential_genes_file> -g <genes_dataset_file>
 ```
+
+This is done for all datasets.
+
+To facilitate the calculations, we ran them in a computational cluster.
 
 
 ### 6. Parse the results of the analyses and create summary tables
@@ -182,4 +266,26 @@ Then, we read the file and plot the standard deviation of the repetitions across
 Rscript analysis_sd_coexpression_weight.R -n <networks_file> -t <output_sd_table_file> -p <output_sd_plot_file>
 ```
 
-### 9.
+### 9. Analyze the gene co-expression of protein-protein interactions
+
+==> folder: analyze_coexpression_ppi
+
+We analyze the influence of sample size on protein-protein interaction co-expression.
+
+The protein-protein interactions network was extracted from Gysi et al., PNAS (2023) (https://doi.org/10.1073/pnas.2301342120).
+
+We have to run the following notebook:
+
+```
+compare_coexpression_to_ppi.Rmd
+```
+
+###  10. Create the figures
+
+==> folder: general_analysis
+
+We have to run the following notebook:
+
+```
+create_figures.Rmd
+```
