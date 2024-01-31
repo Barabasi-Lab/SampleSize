@@ -28,8 +28,9 @@ Define input directories and files:
 
 ```{r}
 gtex_dir = "/work/ccnr/j.aguirreplans/Databases/GTEx/v8"
-tcga_dir = "/work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out"
+tcga_dir = "/work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out"
 scipher_rnaseq_dir = "/work/ccnr/j.aguirreplans/data/Scipher/Dec2021/00_data/rnaseq_filtered_files_by_group"
+geo_dir = "/work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out"
 plots_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots'
 ```
 
@@ -63,10 +64,9 @@ head(gtex_meta_df)
 
 ```{r}
 tcga_meta_df = data.frame()
-rnaseq_files = list.files(tcga_dir)
 for (type_counts in c("reads", "tpm")){
-  for (type_tcga_tissue in c("tumor", "normal")){
-    tcga_rnaseq_dir = paste(tcga_dir, type_counts, type_tcga_tissue, "filter_genes_low_counts/rnaseq_filtered_files_by_project", sep="/")
+  for (subclassification in c("tumor", "tissue", "subtype")){
+    tcga_rnaseq_dir = paste(tcga_dir, type_counts, subclassification, "filter_genes_low_counts/rnaseq_filtered_files_by_sample_group", sep="/")
     rnaseq_files = list.files(tcga_rnaseq_dir)
     for (rnaseq_file in rnaseq_files){
       rnaseq_file_path = paste(tcga_rnaseq_dir, rnaseq_file, sep="/")
@@ -77,9 +77,9 @@ for (type_counts in c("reads", "tpm")){
       }
       rnaseq = fread(rnaseq_file_path) %>% as.data.frame()
       if (nrow(tcga_meta_df) == 0){
-        tcga_meta_df = data.frame(dataset=rnaseq_spl[1], type_dataset=rnaseq_spl[3], type_counts=type_counts, type_tcga_tissue=type_tcga_tissue, sex=sex, num_samples=ncol(rnaseq[,-1]), num_genes=nrow(rnaseq[,-1]))
+        tcga_meta_df = data.frame(dataset=rnaseq_spl[1], type_dataset=rnaseq_spl[3], type_counts=type_counts, subclassification=subclassification, sex=sex, num_samples=ncol(rnaseq[,-1]), num_genes=nrow(rnaseq[,-1]))
       } else {
-        tcga_meta_df = rbind(tcga_meta_df, data.frame(dataset=rnaseq_spl[1], type_dataset=rnaseq_spl[3], type_counts=type_counts, type_tcga_tissue=type_tcga_tissue, sex=sex, num_samples=ncol(rnaseq[,-1]), num_genes=nrow(rnaseq[,-1])))
+        tcga_meta_df = rbind(tcga_meta_df, data.frame(dataset=rnaseq_spl[1], type_dataset=rnaseq_spl[3], type_counts=type_counts, subclassification=subclassification, sex=sex, num_samples=ncol(rnaseq[,-1]), num_genes=nrow(rnaseq[,-1])))
       }
     }
   }
@@ -88,6 +88,23 @@ for (type_counts in c("reads", "tpm")){
 
 ```{r}
 head(tcga_meta_df)
+```
+
+```{r}
+geo_meta_df = data.frame()
+geo_rnaseq_dir = "/work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out/reads/filter_genes_low_counts/rnaseq_GSE193677.txt"
+rnaseq = fread(geo_rnaseq_dir) %>% as.data.frame()
+for (type_dataset in c("Rectum_CD_inflamed", "Rectum_UC_inflamed", "Rectum_Control_noninflamed")) {
+  if (nrow(tcga_meta_df) == 0){
+    geo_meta_df = data.frame(dataset="GSE193677", type_dataset=type_dataset, type_counts="reads", subclassification="disease_inflamed_vs_control", sex=NA, num_samples=ncol(rnaseq[,-1]), num_genes=nrow(rnaseq[,-1]))
+  } else {
+    geo_meta_df = rbind(geo_meta_df, data.frame(dataset="GSE193677", type_dataset=type_dataset, type_counts="reads", subclassification="disease_inflamed_vs_control", sex=NA, num_samples=ncol(rnaseq[,-1]), num_genes=nrow(rnaseq[,-1])))
+  }
+}
+```
+
+```{r}
+head(geo_meta_df)
 ```
 
 ```{r}
@@ -115,9 +132,9 @@ head(scipher_meta_df)
 ```
 
 ```{r}
-gtex_meta_df$type_tcga_tissue = NA
-scipher_meta_df$type_tcga_tissue = NA
-num_df = rbind(gtex_meta_df, tcga_meta_df, scipher_meta_df)
+gtex_meta_df$subclassification = NA
+scipher_meta_df$subclassification = NA
+num_df = rbind(gtex_meta_df, tcga_meta_df, geo_meta_df, scipher_meta_df)
 head(num_df)
 ```
 
@@ -135,11 +152,11 @@ pairs2 = c("TCGA-ACC",      "TCGA-BLCA", "TCGA-BRCA",             "TCGA-UCS", "T
            "TCGA-ESCA",        "TCGA-ESCA",                           "TCGA-PRAD", "TCGA-STAD", "TCGA-THCA", "TCGA-LUAD", "TCGA-LUSC", "TCGA-KIRC", 
            "TCGA-KIRP",     "TCGA-KICH",     "TCGA-GBM",     "TCGA-LGG",     "TCGA-OV", "TCGA-PAAD", "TCGA-SKCM",        "TCGA-TGCT", "TCGA-UCEC")
 pairs_df = data.frame(gtex_tissue=pairs1, tcga_tissue=pairs2) %>% arrange(gtex_tissue) %>% 
-  inner_join((gtex_meta_df %>% select(-dataset, -type_tcga_tissue) %>% rename(c("num_samples_gtex"="num_samples", "num_genes_gtex"="num_genes"))), by=c("gtex_tissue"="type_dataset")) %>% 
+  inner_join((gtex_meta_df %>% select(-dataset, -subclassification) %>% rename(c("num_samples_gtex"="num_samples", "num_genes_gtex"="num_genes"))), by=c("gtex_tissue"="type_dataset")) %>% 
   inner_join((tcga_meta_df %>% select(-dataset) %>% rename(c("num_samples_tcga"="num_samples", "num_genes_tcga"="num_genes"))), by=c("tcga_tissue"="type_dataset", "type_counts"="type_counts", "sex"="sex"))
 pairs_df$sum_num_samples = pairs_df$num_samples_gtex + pairs_df$num_samples_tcga
 pairs_df$sum_num_genes = pairs_df$num_genes_gtex + pairs_df$num_genes_tcga
-pairs_df = pairs_df %>% arrange(desc(sum_num_samples)) %>% relocate(type_tcga_tissue, .after = sex) %>% relocate(num_genes_gtex, .after = type_tcga_tissue) %>% relocate(num_genes_tcga, .after = num_genes_gtex) %>% relocate(sum_num_genes, .after = num_genes_tcga)
+pairs_df = pairs_df %>% arrange(desc(sum_num_samples)) %>% relocate(subclassification, .after = sex) %>% relocate(num_genes_gtex, .after = subclassification) %>% relocate(num_genes_tcga, .after = num_genes_gtex) %>% relocate(sum_num_genes, .after = num_genes_tcga)
 head(pairs_df, 10)
 ```
 

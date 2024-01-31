@@ -1,0 +1,110 @@
+---
+title: "Data Visualization"
+output:
+  html_document:
+    theme: united
+    highlight: tang
+author: Deisy Morselli Gysi
+---
+#### Northeastern University
+#### Project: Scipher RA - Responder vs Non-responders to TNF drugs
+
+## Description
+Data Visualization of the network for Responders, NonResponders in the PPI. Weight of the edges is given by the scores from the co-expression analysis.
+
+```{r}
+# Load the packages
+require(tidyr)
+require(data.table)
+require(magrittr)
+require(dplyr)
+require(methods)
+require(tidyverse)
+require(stringr)
+require(ggplot2)
+require(igraph)
+require(progress)
+require(NetSci)
+`%ni%` <- Negate(`%in%`)
+```
+
+- Read the data
+
+```{r}
+Genes_nR = fread("../data/out/CoDINA/CN_nR.txt", header = F)
+Genes_R = fread("../data/out/CoDINA/CN_R.txt", header = F)
+Genes_RnR = fread("../data/out/CoDINA/CN_a.txt", header = F)
+Genes_RA = fread("../data/RA_Genes.txt", header = F)
+
+network = fread('../data/out/CoDINA/CoDiNA_PPI_CL.csv')
+```
+
+```{r}
+# create the nodes table
+nodes = data.frame(id = c(network$Node.1, 
+                          network$Node.2)) %>% unique()
+
+nodes$type = ifelse(nodes$id %in% Genes_R$V1, "R", NA)
+nodes$type = ifelse(nodes$id %in% Genes_nR$V1, "nR", nodes$type)
+nodes$type = ifelse(nodes$id %in% Genes_RnR$V1, "a", nodes$type)
+nodes$type = ifelse(nodes$id %in% Genes_RA$V1, "RA", nodes$type)
+
+nodes$type = as.factor(nodes$type)
+
+nodes$color = c("#2E294E", "#D7263D",
+                "#1B998B", "#C5D86D", 
+                "#C5D86D")[unclass(nodes$type)]
+
+nodes$frame.color = nodes$color
+```
+
+```{r}
+# create the network
+g = graph_from_data_frame(network, 
+                          directed = FALSE, 
+                          vertices = nodes) %>% 
+  simplify(remove.multiple = F)
+
+g
+```
+```{r}
+# Filter the network
+comp = components(g)$membership
+
+larg_comp = names( comp[comp!= 1])
+g %<>% 
+  delete.vertices(V(.)$name %in% larg_comp) %>%
+  delete.vertices(is.na(V(.)$type)) %>%
+  delete.vertices(degree(.) == 0 ) 
+
+E(g)$weight = E(g)$width = CoDiNA::normalize(E(g)$Score_ratio)^1/10
+g %<>% delete.edges(E(.)[E(.)$weight == 0])%>%
+  delete.vertices(strength(.) < 0.01 ) 
+
+V(g)$size = strength(g) #%>% CoDiNA::normalize() 
+V(g)$size = (V(g)$size + 0.2) * 5
+V(g)$label = NA
+```
+
+
+```{r}
+coord = layout_with_fr(g)
+plot(g, 
+     layout = (coord), 
+     normalize = TRUE
+     )
+leg = nodes %>% 
+  select(type, color) %>% 
+  unique() %>% 
+  na.exclude()
+legend("bottom", 
+       legend = leg$type,
+       fill = leg$color, 
+       bty = "n", 
+       ncol = 4)
+```
+
+## Session Info
+```{r}
+sessioninfo::session_info()
+```

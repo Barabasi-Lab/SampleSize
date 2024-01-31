@@ -1,0 +1,240 @@
+---
+title: "Create Subsamples of gene expression data from RA patients"
+author: "Joaquim Aguirre Plans"
+date: "8/24/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Description
+
+Create subsamples of gene expression data from RA patients, with the aim of testing the effect of sample size in these subsamples.
+
+```{r, message=FALSE}
+require(data.table)
+library(dplyr)
+require(igraph)
+require(NetSci)
+```
+
+## Read gene expression data
+
+```{r read_gene_expression}
+metadata_RNA = fread("/Users/quim/Documents/DATA/BioGroup/ScipherMedicine/data/out/Meta_RNA_Cleaned.csv")
+patients <- metadata_RNA$Subject
+```
+
+The total number of patients is the dataset is `r length(patients)`.
+
+We check the number of labels in these patients:
+
+```{r define_response}
+labels_R_3m = metadata_RNA$Subject[metadata_RNA$acr50_3m == "responder"]
+labels_R_6m =metadata_RNA$Subject[metadata_RNA$acr50_3m == "nonresponder"]
+labels_NR_3m = metadata_RNA$Subject[metadata_RNA$acr50_6m == "responder"]
+labels_NR_6m = metadata_RNA$Subject[metadata_RNA$acr50_6m == "nonresponder"]
+labels_R_3m <- paste(labels_R_3m, 'R3m', sep='_')
+labels_R_6m <- paste(labels_R_6m, 'R6m', sep='_')
+labels_NR_3m <- paste(labels_NR_3m, 'NR3m', sep='_')
+labels_NR_6m <- paste(labels_NR_6m, 'NR6m', sep='_')
+all_labels <- c(labels_R_3m, labels_R_6m, labels_NR_3m, labels_NR_6m)
+```
+
+* Responder (3M): `r length(labels_R_3m)`
+* Responder (6M): `r length(labels_R_6m)`
+* Non-responder (3M): `r length(labels_NR_3m)`
+* Non-responder (6M): `r length(labels_NR_6m)`
+* Total number of labels: `r length(length(all_labels))`
+
+We check the balance of responder and non-responder patients in the dataset.
+
+```{r table_response}
+table(metadata_RNA %>% select(acr50_3m, acr50_6m))
+```
+
+
+## Subsampling
+
+We define the sizes of the subsamples.
+
+```{r rep_step_selection}
+rep = 5
+step = 10
+```
+
+We define the function to make the sampling
+
+```{r sampling_function}
+create_random_subsamples <- function(samples_list, size_list, rep){
+  subsampling_cols <- c('size', 'rep', samples_list)
+  subsampling_df <- data.frame(matrix(ncol=length(subsampling_cols), nrow=0))
+  colnames(subsampling_df) <- subsampling_cols
+  seed <- 1
+  for(size in size_list){
+    set.seed(seed)
+    seed <- seed + 1
+    for(r in 1:rep){
+      #print(c(size, r))
+      subsample <- sample(samples_list, size=size, replace=FALSE)
+      #print(subsample)
+      subsampling_df <- rbind(subsampling_df, c(size, r, ifelse(samples_list %in% subsample, 1, 0)))
+      colnames(subsampling_df) <- subsampling_cols
+      #sub_df <- metadata_RNA[metadata_RNA$Subject %in% subsample]
+      #print(c(length(sub_df$Subject[sub_df$acr50_3m == "responder"]), length(sub_df$Subject[sub_df$acr50_3m == "nonresponder"]), length(sub_df$Subject[sub_df$acr50_6m == "responder"]), length(sub_df$Subject[sub_df$acr50_6m == "nonresponder"])))
+    }
+  }
+  return(subsampling_df)
+}
+```
+
+
+### Randomly sampling *n* patients
+
+```{r size_list_selection_random_patients}
+max_num_samples = length(patients)
+size_list <- 1:max_num_samples
+size_list <- size_list[(size_list %% step) == 0]
+size_list
+```
+
+We randomly select patients for each subsample. The process is repeated `r rep` times for each subsample size.
+
+```{r subsampling_random_patients}
+random_patients_subsampling_df <- create_random_subsamples(samples_list=patients, size_list=size_list, rep=rep)
+random_patients_subsampling_file <- '/Users/quim/Documents/DATA/BioGroup/ScipherMedicine/data/subsampling/subsampling_random_patients.txt'
+random_patients_subsampling_df %>% write.table(random_patients_subsampling_file, quote = F, sep='\t', row.names = F, col.names = T)
+
+# Selecting the patients for sample size 10 and repetition 1
+sub_df <- random_patients_subsampling_df %>% dplyr::filter(size==10, rep==1) %>% dplyr::select(-size, -rep)
+patients_sub <- colnames(sub_df[which(sub_df==1)])
+```
+
+
+### Randomly sampling *n* labels
+
+```{r size_list_selection_random_labels}
+max_num_samples = length(all_labels)
+size_list <- 1:max_num_samples
+size_list <- size_list[(size_list %% step) == 0]
+size_list
+```
+
+We randomly select labels for each subsample. The process is repeated `r rep` times for each subsample size.
+
+```{r subsampling_random_labels}
+random_labels_subsampling_df <- create_random_subsamples(samples_list=all_labels, size_list=size_list, rep=rep)
+random_labels_subsampling_file <- '/Users/quim/Documents/DATA/BioGroup/ScipherMedicine/data/subsampling/subsampling_random_labels.txt'
+random_labels_subsampling_df %>% write.table(random_labels_subsampling_file, quote = F, sep='\t', row.names = F, col.names = T)
+
+# Selecting the patients for sample size 10 and repetition 1
+sub_df <- random_labels_subsampling_df %>% dplyr::filter(size==10, rep==1) %>% dplyr::select(-size, -rep)
+labels_sub <- colnames(sub_df[which(sub_df==1)])
+```
+
+### Randomly sampling *n* labels maintaining the original proportion
+
+We define the function to make the sampling
+
+```{r subsampling_random_labels_of_specific_proportion}
+## Stratified bootstrapping
+create_random_subsamples_of_specific_proportion <- function(size_list, rep, label_to_patients_list, label_to_proportion_list){
+  samples_list <- as.vector(unlist(label_to_patients_list))
+  subsampling_cols <- c('size', 'rep', samples_list)
+  subsampling_df <- data.frame(matrix(ncol=length(subsampling_cols), nrow=0))
+  colnames(subsampling_df) <- subsampling_cols
+  seed <- 1
+  for(size in size_list){
+    set.seed(seed)
+    seed <- seed + 1
+    for(r in 1:rep){
+      #print(c(size, r))
+      samples_selection <- c()
+      for(label in names(label_to_patients_list)){
+        patients <- label_to_patients_list[[label]]
+        proportion <- label_to_proportion_list[[label]]
+        subsample <- sample(patients, size=size*proportion, replace=FALSE)
+        #print(subsample)
+        samples_selection <- c(samples_selection, subsample)
+      }
+      subsampling_df <- rbind(subsampling_df, c(size, r, ifelse(samples_list %in% samples_selection, 1, 0)))
+      colnames(subsampling_df) <- subsampling_cols
+      #sub_df <- metadata_RNA[metadata_RNA$Subject %in% subsample]
+      #print(c(length(sub_df$Subject[sub_df$acr50_3m == "responder"]), length(sub_df$Subject[sub_df$acr50_3m == "nonresponder"]), length(sub_df$Subject[sub_df$acr50_6m == "responder"]), length(sub_df$Subject[sub_df$acr50_6m == "nonresponder"])))
+    }
+  }
+  return(subsampling_df)
+}
+
+select_size_list_by_label_proportion <- function(max_num_samples, step, label_to_patients_list, label_to_proportion_list){
+  initial_size_list <- 1:max_num_samples
+  initial_size_list <- initial_size_list[(initial_size_list %% step) == 0]
+  size_list <- c()
+  for(size in initial_size_list){
+    size_ok = TRUE
+    for(label in names(label_to_patients_list)){
+      patients <- label_to_patients_list[[label]]
+      proportion <- label_to_proportion_list[[label]]
+      if(length(patients) < size*proportion){
+        size_ok = FALSE
+      }
+    }
+    if(!size_ok){
+      break
+    } else {
+      size_list <- c(size_list, size)
+    }
+  }
+  return(size_list)
+}
+
+```
+
+We randomly select labels for each subsample. The process is repeated `r rep` times for each subsample size.
+
+```{r size_list_selection_random_labels_of_original_proportion}
+max_num_samples = length(all_labels)
+label_to_patients_list <- list(R3m = labels_R_3m, R6m = labels_R_6m, NR3m = labels_NR_3m, NR6m = labels_NR_6m)
+label_to_proportion_list <- list(R3m = length(labels_R_3m)/length(all_labels), R6m = length(labels_R_6m)/length(all_labels), NR3m = length(labels_NR_3m)/length(all_labels), NR6m = length(labels_NR_6m)/length(all_labels))
+initial_size_list <- 1:max_num_samples
+initial_size_list <- initial_size_list[(initial_size_list %% step) == 0]
+initial_size_list
+size_list <- select_size_list_by_label_proportion(max_num_samples, step, label_to_patients_list, label_to_proportion_list)
+size_list
+
+```
+
+```{r subsampling_random_labels_of_original_proportion}
+random_labels_subsampling_original_proportion_df <- create_random_subsamples_of_specific_proportion(size_list=size_list, rep=rep, label_to_patients_list=label_to_patients_list, label_to_proportion_list=label_to_proportion_list)
+random_labels_subsampling_original_proportion_file <- '/Users/quim/Documents/DATA/BioGroup/ScipherMedicine/data/subsampling/subsampling_random_labels_original_proportion.txt'
+random_labels_subsampling_original_proportion_df %>% write.table(random_labels_subsampling_original_proportion_file, quote = F, sep='\t', row.names = F, col.names = T)
+
+```
+
+
+### Randomly sampling *n* labels maintaining an equal proportion
+
+```{r size_list_selection_random_labels_of_equal_proportion}
+max_num_samples = length(all_labels)
+label_to_patients_list <- list(R3m = labels_R_3m, R6m = labels_R_6m, NR3m = labels_NR_3m, NR6m = labels_NR_6m)
+label_to_proportion_list <- list(R3m = 0.25, R6m = 0.25, NR3m = 0.25, NR6m = 0.25)
+initial_size_list <- 1:max_num_samples
+initial_size_list <- initial_size_list[(initial_size_list %% step) == 0]
+initial_size_list
+size_list <- select_size_list_by_label_proportion(max_num_samples, step, label_to_patients_list, label_to_proportion_list)
+size_list
+
+```
+
+```{r subsampling_random_labels_of_original_proportion}
+random_labels_subsampling_equal_proportion_df <- create_random_subsamples_of_specific_proportion(size_list=size_list, rep=rep, label_to_patients_list=label_to_patients_list, label_to_proportion_list=label_to_proportion_list)
+random_labels_subsampling_equal_proportion_file <- '/Users/quim/Documents/DATA/BioGroup/ScipherMedicine/data/subsampling/subsampling_random_labels_equal_proportion.txt'
+random_labels_subsampling_equal_proportion_df %>% write.table(random_labels_subsampling_equal_proportion_file, quote = F, sep='\t', row.names = F, col.names = T)
+
+# Selecting the patients for sample size 10 and repetition 1
+sub_df <- random_labels_subsampling_equal_proportion_df %>% dplyr::filter(size==10, rep==1) %>% dplyr::select(-size, -rep)
+patients_sub <- colnames(sub_df[which(sub_df==1)])
+
+```

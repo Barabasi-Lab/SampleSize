@@ -147,6 +147,68 @@ get_square_root_tendency = function(results_dataframe, y_parameter, x_parameter)
   return(list(lm_summary=lm_summary, used_data=used_data, slope=coef(lm_summary)[2], intercept=coef(lm_summary)[1], a=coef(lm_summary)[2], b=coef(lm_summary)[1], L=NaN, adj.r.squared=lm_summary$adj.r.squared))
 }
 
+#'  get_exponential_decay_tendency
+#'  Method to obtain an exponential decay fit from the data.
+#'  @param results_dataframe Dataframe containing the data.
+#'  @param y_parameter Parameter of the Y axis.
+#'  @param x_parameter Parameter of the X axis.
+#'  
+get_exponential_decay_tendency = function(results_dataframe, y_parameter, x_parameter, L){
+  # Calculate mean of repetitions from same sample size
+  results_dataframe_mean = results_dataframe %>% 
+    arrange(get(x_parameter), rep) %>%
+    group_by(get(x_parameter)) %>%
+    summarise_at(vars(all_of(y_parameter)), list(mean=mean, median=median, sd=sd)) %>%
+    rename(!!x_parameter := "get(x_parameter)") %>%
+    ungroup()
+  # Calculate difference between consecutive sizes and y_parameter
+  diff_n = diff(results_dataframe_mean[[x_parameter]])
+  diff_s = diff(results_dataframe_mean$mean)
+  # Calculate gradient = ratio between difference of y_parameter and size
+  grad = 1/(diff_n/diff_s)
+  # Calculate normalized gradient dividing it by size (starting from 2nd position)
+  frac_grad = grad/results_dataframe_mean$mean[2:length(results_dataframe_mean$mean)]
+  # Check which factions are negative so that we ignore them. 
+  # Why? Because some consecutive differences might give negative values! 
+  # This does not make sense in theory, and as the number of situations like this is very small, we ignore it.
+  boo=frac_grad>0
+  # Calculate polynomial equation = gradient vs. sample size (starting from 2nd position) (removing negatives)
+  lm_summary = summary(lm(frac_grad[boo]~results_dataframe_mean[[x_parameter]][2:length(results_dataframe_mean[[x_parameter]])][boo]))
+  used_data = data.frame(y=frac_grad[boo], x=results_dataframe_mean[[x_parameter]][2:length(results_dataframe_mean[[x_parameter]])][boo])
+  return(list(lm_summary=lm_summary, used_data=used_data, slope=coef(lm_summary)[2], intercept=coef(lm_summary)[1], a=coef(lm_summary)[2], b=coef(lm_summary)[1], L=L, adj.r.squared=lm_summary$adj.r.squared))
+}
+
+#'  get_gaussian_tendency
+#'  Method to obtain a gaussian fit from the data.
+#'  @param results_dataframe Dataframe containing the data.
+#'  @param y_parameter Parameter of the Y axis.
+#'  @param x_parameter Parameter of the X axis.
+#'  
+get_gaussian_tendency = function(results_dataframe, y_parameter, x_parameter){
+  # Calculate mean of repetitions from same sample size
+  results_dataframe_mean = results_dataframe %>% 
+    arrange(get(x_parameter), rep) %>%
+    group_by(get(x_parameter)) %>%
+    summarise_at(vars(all_of(y_parameter)), list(mean=mean, median=median, sd=sd)) %>%
+    rename(!!x_parameter := "get(x_parameter)") %>%
+    ungroup()
+  # Calculate difference between consecutive sizes and y_parameter
+  diff_n = diff(results_dataframe_mean[[x_parameter]])
+  diff_s = diff(results_dataframe_mean$mean)
+  # Calculate gradient = ratio between difference of y_parameter and size
+  grad = 1/(diff_n/diff_s)
+  # Calculate normalized gradient dividing it by size (starting from 2nd position)
+  frac_grad = grad/results_dataframe_mean$mean[2:length(results_dataframe_mean$mean)]
+  # Check which factions are negative so that we ignore them. 
+  # Why? Because some consecutive differences might give negative values! 
+  # This does not make sense in theory, and as the number of situations like this is very small, we ignore it.
+  boo=frac_grad>0
+  # Calculate polynomial equation = gradient vs. sample size (starting from 2nd position) (removing negatives)
+  lm_summary = summary(lm(frac_grad[boo]~results_dataframe_mean[[x_parameter]][2:length(results_dataframe_mean[[x_parameter]])][boo]))
+  used_data = data.frame(y=frac_grad[boo], x=results_dataframe_mean[[x_parameter]][2:length(results_dataframe_mean[[x_parameter]])][boo])
+  return(list(lm_summary=lm_summary, used_data=used_data, slope=coef(lm_summary)[2], intercept=coef(lm_summary)[1], a=coef(lm_summary)[2], b=coef(lm_summary)[1], L=NaN, adj.r.squared=lm_summary$adj.r.squared))
+}
+
 #'  calculate_stretched_exponential_model_without_L
 #'  Method to obtain an stretched exponential from the data without L.
 #'  @param results_dataframe Dataframe containing the data.
@@ -279,6 +341,18 @@ calculate_predictions_using_stretched_exponential_model_optimized = function(x, 
   return(y)
 }
 
+#'  calculate_predictions_using_stretched_exponential_model_optimized
+#'  Formula to calculate exponential decay of significant interactions from a list of sample sizes.
+#'  This formula requires the use of the L parameter
+#'  @param x List of sample sizes.
+#'  @param a Slope coefficient.
+#'  @param b Intercept coefficient.
+#'  
+calculate_predictions_using_exponential_decay_model = function(x, L, a, b){
+  y = L * exp(-a * x)
+  return(y)
+}
+
 #'  calculate_analytical_model
 #'  Function to calculate the analytical model from different options
 #'  @param results_dataframe Dataframe containing the data.
@@ -299,6 +373,9 @@ calculate_analytical_model = function(results_dataframe, y_parameter, x_paramete
   } else if(model == "Square root"){
     model_output = get_square_root_tendency(results_dataframe=results_dataframe, y_parameter=y_parameter, x_parameter=x_parameter)
     model_result = (exp((log(sort(unique(results_dataframe[[x_parameter]])))*model_output$a + model_output$b)))
+  } else if(model == "Exponential decay"){
+    model_output = get_exponential_decay_tendency(results_dataframe=results_dataframe, y_parameter=y_parameter, x_parameter=x_parameter, L=L)
+    model_result = calculate_predictions_using_exponential_decay_model(x=sort(unique(results_dataframe[[x_parameter]])), L=L, a=model_output$a, b=model_output$b)
   } else if(model == "Stretched exponential (by optimization)"){
     model_output = calculate_stretched_exponential_model_by_optimization(results_dataframe=results_dataframe, y_parameter=y_parameter, x_parameter=x_parameter, L_guess=c(L))
     model_result = calculate_predictions_using_stretched_exponential_model_optimized(x=sort(unique(results_dataframe[[x_parameter]])), L=model_output$L, a=model_output$a, b=model_output$b)
@@ -333,6 +410,8 @@ calculate_prediction_from_analytical_model = function(model, x_list, a, b, L){
     prediction_result = calculate_predictions_using_stretched_exponential_model_optimized(x=x_list, L=L, a=a, b=b)
   } else if(model == "Stretched exponential (without L)"){
     prediction_result = calculate_predictions_using_stretched_exponential_model_without_L(x=x_list, a=a, b=b)
+  } else if(model == "Exponential decay"){
+    prediction_result = calculate_predictions_using_exponential_decay_model(x=x_list, L=L, a=a, b=b)
   }
   return(prediction_result)
 }
@@ -357,6 +436,8 @@ get_formula = function(model, a, b, L){
     formula_name = paste("F(x) = ", round(L, 2), " * exp[(", round(b, 2), " * x**((", round(a, 2), ") + 1)) / ((", round(a, 2), ") + 1) ]", sep="")
   } else if(model == "Stretched exponential (without L)"){
     formula_name = paste("F(x) = exp[ (exp(", round(b, 2), ") * x**(1 + (", round(a, 2), "))) / (1 + (", round(a, 2), ")) ]", sep="")
+  } else if(model == "Exponential decay"){
+    formula_name = paste("F(x) = exp(-", round(a, 2), " * x)", sep="")
   }
   return(formula_name)
 }
@@ -371,10 +452,10 @@ topology_results_df = fread(topology_results_file)
 ppi_results_df = fread(ppi_results_file)
 disease_genes_results_df = fread(disease_genes_results_file)
 essential_genes_results_df = fread(essential_genes_results_file) %>% rename("num_essential_components" = "num_components", "num_essential_lcc_nodes" = "num_lcc_nodes", "num_essential_lcc_edges" = "num_lcc_edges", "essential_lcc_z" = "lcc_z", "essential_lcc_pvalue" = "lcc_pvalue")
-results_df = inner_join(topology_results_df, ppi_results_df, by = c("method", "dataset", "type_dataset", "type_tcga_tissue", "size", "rep", "type_correlation", "threshold")) %>% inner_join(disease_genes_results_df, by = c("method", "dataset", "type_dataset", "type_tcga_tissue", "size", "rep", "type_correlation", "threshold")) %>% inner_join(essential_genes_results_df, by = c("method", "dataset", "type_dataset", "type_tcga_tissue", "size", "rep", "type_correlation", "threshold"))
+results_df = inner_join(topology_results_df, ppi_results_df, by = c("method", "dataset", "type_dataset", "subclassification", "size", "rep", "type_correlation", "threshold")) %>% inner_join(disease_genes_results_df, by = c("method", "dataset", "type_dataset", "subclassification", "size", "rep", "type_correlation", "threshold")) %>% inner_join(essential_genes_results_df, by = c("method", "dataset", "type_dataset", "subclassification", "size", "rep", "type_correlation", "threshold"))
 results_df$type_dataset = paste(results_df$dataset, results_df$type_dataset, sep=":") # Join dataset and type_dataset
 results_df$type_dataset = tolower(results_df$type_dataset)
-results_df$type_dataset = ifelse(results_df$type_tcga_tissue == "normal", paste(results_df$type_dataset, "normal", sep="-"), results_df$type_dataset)
+results_df$type_dataset = ifelse(results_df$subclassification == "normal", paste(results_df$type_dataset, "normal", sep="-"), results_df$type_dataset)
 results_df$threshold = as.character(results_df$threshold) # Consider threshold as a discrete variable
 results_df$log_disease_lcc_pvalue = abs(log10(results_df$disease_lcc_pvalue))
 results_df$log_disease_lcc_pvalue = replace(results_df$log_disease_lcc_pvalue, is.infinite(results_df$log_disease_lcc_pvalue),abs(log(0.000001))) # Replace infinite values by very high values
@@ -444,7 +525,7 @@ predicted_results_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list
 analytical_model_summary_df = data.frame()
 N_vals = seq(10, 50000, 10)
 
-types_analytical_model = c("Stretched exponential (by optimization)", "Stretched exponential (by linear fit)", "Stretched exponential (without L)", "Logarithmic", "Exponential", "Linear", "Square root")
+types_analytical_model = c("Stretched exponential (by optimization)", "Stretched exponential (by linear fit)", "Stretched exponential (without L)", "Logarithmic", "Exponential", "Linear", "Square root", "Exponential decay")
 for(model in types_analytical_model){
   if (is.null(selected_fill_parameter)){
     # Calculate the analytical model

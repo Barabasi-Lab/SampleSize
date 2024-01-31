@@ -348,10 +348,10 @@ topology_results_df = fread(topology_results_file)
 ppi_results_df = fread(ppi_results_file)
 disease_genes_results_df = fread(disease_genes_results_file)
 essential_genes_results_df = fread(essential_genes_results_file) %>% rename("num_essential_components" = "num_components", "num_essential_lcc_nodes" = "num_lcc_nodes", "num_essential_lcc_edges" = "num_lcc_edges", "essential_lcc_z" = "lcc_z", "essential_lcc_pvalue" = "lcc_pvalue")
-results_df = inner_join(topology_results_df, ppi_results_df, by = c("method", "dataset", "type_dataset", "type_tcga_tissue", "size", "rep", "type_correlation", "threshold")) %>% inner_join(disease_genes_results_df, by = c("method", "dataset", "type_dataset", "type_tcga_tissue", "size", "rep", "type_correlation", "threshold")) %>% inner_join(essential_genes_results_df, by = c("method", "dataset", "type_dataset", "type_tcga_tissue", "size", "rep", "type_correlation", "threshold"))
+results_df = inner_join(topology_results_df, ppi_results_df, by = c("method", "dataset", "type_dataset", "subclassification", "size", "rep", "type_correlation", "threshold")) %>% inner_join(disease_genes_results_df, by = c("method", "dataset", "type_dataset", "subclassification", "size", "rep", "type_correlation", "threshold")) %>% inner_join(essential_genes_results_df, by = c("method", "dataset", "type_dataset", "subclassification", "size", "rep", "type_correlation", "threshold"))
 results_df$type_dataset = paste(results_df$dataset, results_df$type_dataset, sep=":") # Join dataset and type_dataset
 results_df$type_dataset = tolower(results_df$type_dataset)
-results_df$type_dataset = ifelse(results_df$type_tcga_tissue == "normal", paste(results_df$type_dataset, "normal", sep="-"), results_df$type_dataset)
+results_df$type_dataset = ifelse(results_df$subclassification == "normal", paste(results_df$type_dataset, "normal", sep="-"), results_df$type_dataset)
 results_df$threshold = as.character(results_df$threshold) # Consider threshold as a discrete variable
 results_df$log_disease_lcc_pvalue = abs(log10(results_df$disease_lcc_pvalue))
 results_df$log_disease_lcc_pvalue = replace(results_df$log_disease_lcc_pvalue, is.infinite(results_df$log_disease_lcc_pvalue),abs(log(0.000001))) # Replace infinite values by very high values
@@ -479,7 +479,7 @@ server <- function(input, output, session) {
     if ("tcga" %in% c(input$topology_dataset)){
       type_datasets_tcga=c(input$topology_tcga_project)
       type_datasets_tcga = paste("tcga", type_datasets_tcga, sep=":")
-      types_tcga_tissue=c(input$topology_type_tcga_tissue)
+      types_tcga_tissue=c(input$topology_subclassification)
       if ((length(types_tcga_tissue) == 2) & ("normal" %in% types_tcga_tissue)){
         type_datasets_tcga = c(type_datasets_tcga, paste(type_datasets_tcga, "normal", sep="-"))
       }

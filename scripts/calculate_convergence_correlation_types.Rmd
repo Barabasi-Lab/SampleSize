@@ -111,7 +111,7 @@ topology_results_file = paste(input_dir, 'analysis_topology.csv', sep='/')
 topology_results_df = fread(topology_results_file)
 topology_results_df$dataset = paste(topology_results_df$dataset, topology_results_df$type_dataset, sep=":") # Join dataset and type_dataset
 topology_results_df$dataset = tolower(topology_results_df$dataset)
-topology_results_df$dataset = ifelse(topology_results_df$type_tcga_tissue == "normal", paste(topology_results_df$dataset, "normal", sep="-"), topology_results_df$dataset)
+topology_results_df$dataset = ifelse(topology_results_df$subclassification == "normal", paste(topology_results_df$dataset, "normal", sep="-"), topology_results_df$dataset)
 head(topology_results_df)
 ```
 

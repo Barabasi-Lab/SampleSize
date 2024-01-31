@@ -1,0 +1,67 @@
+---
+title: "RA - Generate Data for wTO"
+output:
+  html_document:
+    theme: united
+    highlight: tang
+author: Deisy Morselli Gysi
+---
+#### Northeastern University
+#### Project: Scipher RA - Responder vs Non-responders to TNF drugs
+
+## Description
+Co-expression Networks have to be build separately for each condition before their are compared. For that, we need to create four networks. 
+
+The data has to be split in 4 data sets for the co-expression networks:
+
+ - Responders: 3 and 6 m
+ - Non responders: 3 and 6 m
+
+```{r, message=FALSE}
+require(dplyr)
+require(magrittr)
+require(data.table)
+```
+
+
+```{r}
+metadata_RNA = fread("~/Desktop/PostDoc/00_Projects/RA/00_Data/0911/Processed/Meta_RNA_Cleaned.csv")
+
+Responder_3m = metadata_RNA %>% filter(acr50_3m == "responder")
+Responder_6m = metadata_RNA %>% filter(acr50_6m == "responder")
+
+NResponder_3m = metadata_RNA %>% filter(acr50_3m == "nonresponder")
+NResponder_6m = metadata_RNA %>% filter(acr50_6m == "nonresponder")
+
+R3 = Responder_3m[, -c(1:52)] %>% t %>% as.data.frame() 
+R6 = Responder_6m[, -c(1:52)] %>% t %>% as.data.frame() 
+ 
+nR3 = NResponder_3m[, -c(1:52)] %>% t %>% as.data.frame() 
+nR6 = NResponder_6m[, -c(1:52)] %>% t%>% as.data.frame() 
+```
+
+
+```{r}
+R3 %>% fwrite(., "../data/out/Responder_3m.csv", row.names = TRUE)
+R6 %>%  fwrite(., "../data/out/Responder_6m.csv", row.names = TRUE)
+
+nR3 %>% fwrite(., "../data/out/NonResponder_3m.csv", row.names = TRUE)
+nR6 %>%  fwrite(., "../data/out/NonResponder_6m.csv", row.names = TRUE)
+```
+
+
+Next run the following
+```
+# 
+R CMD BATCH --vanilla '--args  N=1000 save="../data/out/wTO/Responder_3m.csv" file="../data/out/Responder_3m.csv"' ../code/99_Calls_wTO.R ../code/log/Responder_3m.out &
+#   
+R CMD BATCH --vanilla '--args  N=1000 save="../data/out/wTO/Responder_6m.csv" file="../data/out/Responder_6m.csv"' ../code/99_Calls_wTO.R ../code/log/Responder_6m.out &
+#
+R CMD BATCH --vanilla '--args  N=1000 save="../data/out/wTO/NonResponder_3m.csv" file="../data/out/NonResponder_3m.csv"' ../code/99_Calls_wTO.R ../code/log/NonResponder_3m.out &
+#
+R CMD BATCH --vanilla '--args  N=1000 save="../data/out/wTO/NonResponder_6m.csv" file="../data/out/NonResponder_6m.csv"' ../code/99_Calls_wTO.R ../code/log/NonResponder_6m.out &
+```
+## Session Info
+```{r}
+sessioninfo::session_info()
+```

@@ -1,0 +1,245 @@
+---
+title: "Pre-process"
+author: "Joaquim Aguirre-Plans"
+date: '2023-02-24'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+### Description
+
+Pre-process GSE193677 data before creating gene co-expression networks.
+
+```{r, message=FALSE}
+packrat::init("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR")
+```
+
+```{r, message=FALSE}
+library(data.table)
+library(dplyr)
+library(ggplot2)
+require(magrittr)
+library(tidyr)
+library(igraph)
+set.seed(1510)
+`%ni%` <- Negate(`%in%`)
+```
+
+
+### Define variables
+
+```{r define_files}
+# Define type of counts used
+type_counts = "reads" # tpm, reads
+
+# Define working directories
+geo_id = "GSE193677"
+geo_dir = "/work/ccnr/j.aguirreplans/Databases/GEO"
+geo_id_dir = paste(geo_dir, "/", geo_id, sep="")
+raw_data_dir = paste(geo_id_dir, "/raw", sep="")
+output_dir = paste(geo_id_dir, "/out", sep="")
+
+# Define the input files
+raw_counts_processed_file = paste(output_dir, '/GSE193677_MSCCR_Biopsy_counts_processed.txt', sep='')
+metadata_file = paste(output_dir, '/metadata_simple.txt', sep='')
+output_dir = paste(output_dir, type_counts, sep='/')
+dir.create(output_dir, showWarnings = FALSE)
+```
+
+
+### Read files
+
+```{r}
+RNAseq = fread(raw_counts_processed_file)
+```
+
+The GEO dataframe contains `r as.integer(ncol(RNAseq)-1)` columns (samples) and `r nrow(RNAseq)` rows (genes).
+
+```{r}
+head(RNAseq[1:10,1:5])
+```
+
+```{r}
+metadata_df = fread(metadata_file)
+head(metadata_df)
+```
+
+
+### Prepare gene information
+
+We load HGNC file:
+
+```{r}
+gene_annotations_dir = '/work/ccnr/j.aguirreplans/data/gene_annotations/data/out'
+gene_category_file = paste(gene_annotations_dir, 'hgnc_category_set_2022-01-01.txt', sep='/')
+gene_category_df = fread(gene_category_file)
+gene_category_df$HGNC_Symbol = toupper(gene_category_df$HGNC_Symbol)
+head(gene_category_df)
+```
+
+We use this dataframe to map gene category, and we only keep genes that are in this dataframe:
+
+```{r}
+dim(RNAseq)
+genes_with_category = RNAseq$Gene[RNAseq$Gene %in% gene_category_df$HGNC_Symbol]
+genes_dataset_df = gene_category_df %>% filter(HGNC_Symbol %in% genes_with_category)
+RNAseq %<>% filter(Gene %in% genes_with_category)
+dim(RNAseq)
+```
+
+The dataset contains `r as.integer(ncol(RNAseq)-1)` case IDs and `r nrow(RNAseq)` genes with category.
+
+It contains the following number of genes for each category:
+
+```{r}
+table(genes_dataset_df$HGNC_category)
+round(prop.table(table(genes_dataset_df$HGNC_category))*100,2)
+```
+
+
+## Filter genes with low counts
+
+We filter the genes that have low expression in all samples, keeping the ones that meet these rules:
+
+In the case of TPM:
+
+* Sum of the expression of all samples above 0.
+* Mean of the expression of all samples above 1.
+* Median of the expression of all samples above 1.
+* Standard deviation of all samples above 0.
+* Less than half of the samples with empty counts (0s).
+
+In the case of reads:
+
+* Sum of the expression of all samples above 0.
+* Mean of the expression of all samples above 5.
+* Median of the expression of all samples above 5.
+* Standard deviation of all samples above 0.
+* Less than half of the samples with empty counts (0s).
+
+```{r}
+# We separate samples depending on sample type
+filter_low_counts_dir = paste(output_dir, 'filter_genes_low_counts', sep='/')
+dir.create(filter_low_counts_dir, showWarnings = FALSE)
+samples_selected = unique(metadata_df$sample_id)
+RNAseq_selected = RNAseq %>% select(c("Gene", all_of(samples_selected)))
+# We calculate the number of times that a gene has 0 counts
+info_df = data.frame(Gene=RNAseq_selected$Gene, sum=rowSums(RNAseq_selected[,-1]))
+info_df$sd = apply(RNAseq_selected[,-1], 1, sd)
+info_df$mean = rowMeans(RNAseq_selected[,-1])
+info_df$median = apply(RNAseq_selected[,-1], 1, median)
+info_df$sum_zero_counts = as.numeric(apply(RNAseq_selected[,-1], 1, function(i) sum(i == 0) )) # Number of times that the counts are equal to 0
+# We keep the genes following all criteria
+if(type_counts == "tpm"){
+  info_filt_df = info_df[(info_df$sum > 0) & (info_df$mean > 1) & (info_df$median > 1) & (info_df$sd > 0) & (info_df$sum_zero_counts < dim(RNAseq_selected[, -1])[2]/2) ,]
+} else if(type_counts == "reads"){
+  info_filt_df = info_df[(info_df$sum > 0) & (info_df$mean > 5) & (info_df$median > 5) & (info_df$sd > 0) & (info_df$sum_zero_counts < dim(RNAseq_selected[, -1])[2]/2) ,]
+} else {
+  stop("Unknown type of data")
+}
+# We filter the gene expression
+RNAseq_filt_low_counts = RNAseq_selected %>% filter(Gene %in% info_filt_df$Gene)
+# We write final file
+rnaseq_final_file = paste(filter_low_counts_dir, '/rnaseq_', geo_id, '.txt', sep='')
+fwrite(RNAseq_filt_low_counts, rnaseq_final_file, sep='\t')
+print(paste("Number of columns (samples):", as.integer(ncol(RNAseq_filt_low_counts)-1), "Number of rows (genes):", nrow(RNAseq_filt_low_counts)))
+# Write the information about the selected genes of the dataset in a separate file
+genes_dataset_df$enough_counts = ifelse(genes_dataset_df$HGNC_Symbol %in% info_filt_df$Gene, TRUE, FALSE)
+genes_dataset_file = paste(filter_low_counts_dir, '/rnaseq_gene_info_', geo_id, '.csv', sep='')
+fwrite(genes_dataset_df, genes_dataset_file)
+# Check the percentage of genes in each category after filtering by counts
+genes_dataset_filtered_df = genes_dataset_df %>% filter(HGNC_Symbol %in% info_filt_df$Gene) %>% unique
+table(genes_dataset_filtered_df$HGNC_category)
+round(prop.table(table(genes_dataset_filtered_df$HGNC_category))*100,2)
+```
+
+## Prepare disease genes information dataset
+
+Read the disease-gene associations dataset:
+
+```{r}
+gene_associations_dir = '/work/ccnr/j.aguirreplans/data/gene_associations/data/out'
+disease_genes_file = paste(gene_associations_dir, 'GDA_Filtered_04042022.csv', sep='/')
+GDA = fread(disease_genes_file) %>% unique()
+GDA$HGNC_Symbol = toupper(GDA$HGNC_Symbol)
+head(GDA)
+```
+
+There are `r nrow(GDA)` disease-gene associations (`r length(unique(GDA$NewName))` diseases, `r length(unique(GDA$HGNC_Symbol))` genes)
+
+Prepare the disease-gene associations for the GEO dataset: 
+
+```{r}
+disease_genes_info_file = paste("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/disease_genes/disease_genes_info_2022_", geo_id, ".csv", sep="")
+
+GDA[is.na(GDA)]<-0
+GDA$NewName = tolower(GDA$NewName)
+GDA$DescriptorName = tolower(GDA$DescriptorName)
+GDA$MESHID = toupper(GDA$MESHID)
+GDA$HGNC_Symbol = toupper(GDA$HGNC_Symbol)
+GDA %<>% 
+  filter(Strong > 0 | 
+           Weak > 0 |
+           Incompatible > 0) %>%
+  mutate(DiseaseName = NewName) %>%
+  filter(DescriptorName %ni% c("behavioral disciplines and activities")) %>%
+  mutate(MESHID_remove = stringr::str_detect(TreeNumber, pattern = "C22|C25|F04")) %>%
+  mutate(MESHID_remove = ifelse(TreeNumber == "F01", TRUE,MESHID_remove)) %>%
+  filter(!(MESHID_remove)) %>%
+  select(DiseaseName, HGNC_Symbol, DescriptorName) %>% 
+  unique() %>% 
+  mutate(gene_in_dataset = ifelse(HGNC_Symbol %in% RNAseq_selected$Gene, TRUE, FALSE))
+
+# Make columns without special characters  
+GDA$DiseaseName.no.sp.char <- gsub(' ', '.', gsub(', ', '.', gsub('-', '.', gsub('[\\(\\)]', '', GDA$DiseaseName))))
+GDA$DescriptorName.no.sp.char <- gsub(' ', '.', gsub(', ', '.', gsub('-', '.', gsub('[\\(\\)]', '', GDA$DescriptorName))))
+
+# Write output file
+GDA %>% fwrite(disease_genes_info_file)
+
+head(GDA)
+```
+
+There are `r nrow(GDA)` disease-gene associations (`r length(unique(GDA$DiseaseName))` diseases, `r length(unique(GDA$HGNC_Symbol))` genes), and `r nrow((GDA %>% filter(gene_in_dataset == TRUE)))` disease-gene associations in the GEO dataset (`r length(unique((GDA %>% filter(gene_in_dataset == TRUE))$DiseaseName))` diseases, `r length(unique((GDA %>% filter(gene_in_dataset == TRUE))$HGNC_Symbol))` genes).
+
+## Prepare essential genes dataset
+
+Prepare the essential genes of the GEO dataset:
+
+```{r}
+# Read the essential genes file
+essential_genes_dir = '/work/ccnr/j.aguirreplans/Databases/OGEE'
+essential_genes_original_file = paste(essential_genes_dir, 'OGEE_esential_genes_20190416.txt', sep='/')
+# Filter by human genes
+essential_genes_df = fread(essential_genes_original_file, header=TRUE) %>% rename("taxID"="#taxID")
+head(essential_genes_df)
+```
+
+```{r}
+# Read the gene annotations dictionary
+gene_annotations_dir = '/work/ccnr/j.aguirreplans/data/gene_annotations/data/out'
+gene_dict_file = paste(gene_annotations_dir, 'multiple_hgnc_dict_set_2022-01-01.txt', sep='/')
+gene_dict_df = fread(gene_dict_file) %>% unique()
+gene_dict_df = gene_dict_df[!((gene_dict_df$HGNC_Symbol=="")|(gene_dict_df$alias=="")),]
+gene_dict_df$HGNC_Symbol = toupper(gene_dict_df$HGNC_Symbol)
+gene_dict_df$alias = toupper(gene_dict_df$alias)
+gene_dict_df %<>% unique()
+head(gene_dict_df)
+```
+
+```{r}
+# Map ENSEMBL IDs to HGNC symbols
+essential_genes_df = essential_genes_df %>% filter((taxID == 9606) & (essential=="E"))
+essential_genes_df = essential_genes_df %>% inner_join(gene_dict_df, by=c("locus"="alias")) %>% select(taxID, sciName, HGNC_Symbol) %>% unique()
+essential_genes_df$gene_in_dataset = ifelse(essential_genes_df$HGNC_Symbol %in% RNAseq_selected$Gene, TRUE, FALSE)
+head(essential_genes_df)
+essential_genes_geo_file = paste("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/essential_genes/OGEE_essential_genes_", geo_id, ".csv", sep="")
+essential_genes_df %>% fwrite(essential_genes_geo_file)
+```
+
+There are `r nrow(essential_genes_df)` essential genes, `r nrow((essential_genes_df %>% filter(gene_in_dataset == TRUE)))` in the GEO dataset.
+
