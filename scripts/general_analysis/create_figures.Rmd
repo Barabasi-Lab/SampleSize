@@ -55,6 +55,7 @@ name2color <- c(
   "tcga:tcga-luad" = "#56B4E9",
   "tcga:tcga-luad-tumor" = "#56B4E9", # #D55E00
   "TCGA: Breast cancer" = "#0072B2",
+  "TCGA: Breast c." = "#0072B2",
   "tcga:tcga-brca_female" = "#0072B2",
   "tcga:tcga-brca-tumor_female" = "#0072B2",
   "breast neoplasms"="#0072B2", 
@@ -71,7 +72,9 @@ name2color <- c(
   "asthma"="#d9f365", 
   "thyroid neoplasms"="#0072B2",
   "tcga" = "#0072B2",
+  "TCGA" = "#0072B2",
   "gtex" = "#00BA37",
+  "GTEx" = "#00BA37",
   "scipher" = "#D55E00",
   #"Analytical model"="#e3f705",
   "Analytical model"="#cc68f7",
@@ -558,14 +561,14 @@ scaling_relation_plot_lessdatasets = scaling_relation_lessdatasets_df %>%
   ggplot(aes(x=log(size), y=log(Fn), col=r2labels)) +
   geom_point(alpha=0.9, size=3) +
   #geom_abline(aes(intercept=intercept, slope=slope), col="#cc68f7", size=1) +
-  geom_abline(aes(intercept=intercept, slope=slope, col=r2labels), size=1) +
+  geom_abline(aes(intercept=intercept, slope=slope, col=r2labels), size=1, key_glyph = "smooth") +
   theme_linedraw() +
   xlab("log(n)") +
   ylab(bquote(bold(log((S[n]-S[n-1])/S[n-1])))) +
-  scale_color_manual(guide = 'legend', values=as.vector(name2color[levels(factor(scaling_relation_lessdatasets_df$type_dataset))])) +
+  scale_color_manual(guide = "legend", values=as.vector(name2color[levels(factor(scaling_relation_lessdatasets_df$type_dataset))])) +
   #scale_colour_identity(guide = 'legend', labels=levels(factor(scaling_relation_lessdatasets_df$r2labels))) +
-  guides(col=guide_legend(title=bquote(bold(.('Power law') ~ R^2)))) +
-  theme(aspect.ratio=1, 
+  guides(col = guide_legend(title=bquote(bold(.('Power law') ~ R^2)))) +
+  theme(aspect.ratio = 1, 
         plot.title =  element_text(size = 20, face="bold"), 
         axis.title = element_text(size = 17, face="bold"), 
         axis.text = element_text(size = 16), 
@@ -573,10 +576,11 @@ scaling_relation_plot_lessdatasets = scaling_relation_lessdatasets_df %>%
         panel.grid.minor = element_blank(),
         text = element_text(family = "Helvetica"),
         #legend.position="none") +
-        legend.position = c(0.64, 0.85),
+        legend.position = c(0.64, 0.86),
         legend.text = element_text(size = 16), 
-        legend.title=element_text(size=16, face="bold"),
-        legend.background = element_rect(linewidth=0.2, linetype="solid", colour ="black"))
+        legend.title = element_text(size=16, face="bold")
+        #legend.background = element_rect(linewidth=0.2, linetype="solid", colour ="black"))
+        )
   #geom_label_repel(aes(label=geom_text_repel_label),
                    #col="#cc68f7",
   # geom_label_repel(aes(col=rgb_col, label=geom_text_repel_label),
@@ -685,15 +689,15 @@ scaling_relation_plot_brcancer <- scaling_relation_brcancer_df %>%
 ```
 
 ```{r}
-layout <- "AB"
-
-((scaling_relation_plot_breast + 
-    theme(plot.margin = margin(0.6, 0.1, 0.6, 0.6, "cm"))) +
-  (scaling_relation_plot_brcancer + 
-     theme(plot.margin = margin(0.6, 0.6, 0.6, 0.1, "cm")))) +
-  xlab("log(n)") +
-  plot_layout(design = layout) &
-  theme(element_text(face = 'bold', size = 17))
+# layout <- "AB"
+# 
+# ((scaling_relation_plot_breast + 
+#     theme(plot.margin = margin(0.6, 0.1, 0.6, 0.6, "cm"))) +
+#   (scaling_relation_plot_brcancer + 
+#      theme(plot.margin = margin(0.6, 0.6, 0.6, 0.1, "cm")))) +
+#   xlab("log(n)") +
+#   plot_layout(design = layout) &
+#   theme(element_text(face = 'bold', size = 17))
 ```
 
 #### Regression plot
@@ -1014,9 +1018,9 @@ prediction_plot_lessdatasets_df = results_selected_norm_df %>%
   dplyr::filter((type_dataset %in% datasets_selected) & (model == model_selected)) %>%
   dplyr::select(size, rep, type_dataset, num_edges, model_result) %>%
   mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue_female", "GTEx: Breast")) %>%
-  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca_female", "TCGA: Breast cancer")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca_female", "TCGA: Breast c.")) %>%
   inner_join( (name2color %>% as.data.frame() %>% dplyr::rename("rgb_col"=".") %>% tibble::rownames_to_column("type_dataset")), by=c("type_dataset") ) %>%
-  mutate(geom_text_repel_label=dplyr::if_else(type_dataset == "R. arthritis" & size == 240 & rep == 1, "R. arthritis", dplyr::if_else(type_dataset == "GTEx: Whole blood" & size == 700 & rep == 1, "GTEx: Whole blood", dplyr::if_else(type_dataset == "GTEx: Lung" & size == 560 & rep == 1, "GTEx: Lung", dplyr::if_else(type_dataset == "GTEx: Breast" & size == 140 & rep == 1, "GTEx: Breast", dplyr::if_else(type_dataset == "TCGA: Lung cancer" & size == 460 & rep == 1, "TCGA: Lung cancer", dplyr::if_else(type_dataset == "TCGA: Breast cancer" & size == 1000 & rep == 1, "TCGA: Breast cancer", "")))))))
+  mutate(geom_text_repel_label=dplyr::if_else(type_dataset == "R. arthritis" & size == 240 & rep == 1, "R. arthritis", dplyr::if_else(type_dataset == "GTEx: Whole blood" & size == 700 & rep == 1, "GTEx: Whole blood", dplyr::if_else(type_dataset == "GTEx: Lung" & size == 560 & rep == 1, "GTEx: Lung", dplyr::if_else(type_dataset == "GTEx: Breast" & size == 140 & rep == 1, "GTEx: Breast", dplyr::if_else(type_dataset == "TCGA: Lung cancer" & size == 460 & rep == 1, "TCGA: Lung cancer", dplyr::if_else(type_dataset == "TCGA: Breast c." & size == 1000 & rep == 1, "TCGA: Breast c.", "")))))))
 
 # Plot with labels
 prediction_plot_lessdatasets = prediction_plot_lessdatasets_df %>%
@@ -1026,28 +1030,34 @@ prediction_plot_lessdatasets = prediction_plot_lessdatasets_df %>%
   geom_line(aes(x=log10(size), y=model_result, col=rgb_col), size=1) +
   #scale_x_continuous(trans = scales::log10_trans()) +
   #scale_color_manual(values = as.vector(name2color[levels(factor(prediction_plot_lessdatasets_df$type_dataset))])) + # Plot using the dictionary
-  scale_colour_identity() +
+  #scale_colour_identity() +
+  scale_colour_identity(labels = unique(prediction_plot_lessdatasets_df$type_dataset), breaks = unique(prediction_plot_lessdatasets_df$rgb_col), guide = "legend") +
   theme_linedraw() +
   xlab("Num. samples (Log10)") +
   ylab("Frac. significant correlations") +
+  guides(col=guide_legend(title = NULL)) +
   theme(aspect.ratio=1, 
         plot.title =  element_text(size = 20, face="bold"), 
         axis.title = element_text(size = 17, face="bold"), 
         axis.text = element_text(size = 16), 
         panel.grid.major=element_blank(), 
         panel.grid.minor = element_blank(),
-        text = element_text(family = "Helvetica"),
-        legend.position="none") +
-  geom_label_repel(aes(col=rgb_col, label=geom_text_repel_label),
-                   fill="white",
-                   box.padding = 0.5, max.overlaps = Inf,
-                   label.size = 0.75, 
-                   size = 5,
-                   alpha = 0.9, 
-                   label.padding=0.25, 
-                   fontface = "bold",
-                   na.rm=TRUE,
-                   seed = 1234)
+        legend.position = c(0.28, 0.92),
+        legend.text = element_text(size = 16), 
+        legend.title = element_text(size = 16, face="bold"),
+        #legend.position="none"),
+        legend.background = element_rect(fill = 'transparent', color = "transparent"),
+        text = element_text(family = "Helvetica")) #+
+  # geom_label_repel(aes(col=rgb_col, label=geom_text_repel_label),
+  #                  fill="white",
+  #                  box.padding = 0.5, max.overlaps = Inf,
+  #                  label.size = NA, 
+  #                  size = 5,
+  #                  alpha = 0.9, 
+  #                  label.padding=0.25, 
+  #                  fontface = "bold",
+  #                  na.rm=TRUE,
+  #                  seed = 1234)
 
 plot_file = paste(plots_dir, "prediction_pearson_pval_0.05_lessdatasets.png", sep="/")
 print(prediction_plot_lessdatasets)
@@ -1446,7 +1456,9 @@ goodnessfit_plot_lessdatasets = goodnessfit_lessdatasets_df %>%
         legend.position = c(0.64, 0.15),
         legend.text = element_text(size = 16), 
         legend.title=element_text(size=16, face="bold"),
-        legend.background = element_rect(linewidth=0.2, linetype="solid", colour ="black"))
+        #legend.background = element_rect(linewidth=0.2, linetype="solid", colour ="black")
+        legend.background = element_rect(fill = "transparent", color = "transparent")
+        )
   # geom_label_repel(aes(x=size, y=model_result, col=rgb_col, label=geom_text_repel_label),
   #                  fill="white",
   #                  box.padding = 0.5, max.overlaps = Inf,
@@ -1746,6 +1758,9 @@ datasets_selected <- c("scipher:scipher.sample.per.patient.baseline",
 sample_size_vs_a_plot_lessdatasets_df = sample_size_vs_a_df %>% 
   filter(type_correlation == type_correlation_selected) %>% 
   filter(dataset_name %in% datasets_selected) %>%
+  mutate(dataset = replace(dataset, dataset == "scipher", "R. arthritis"),
+         dataset = replace(dataset, dataset == "gtex", "GTEx"),
+         dataset = replace(dataset, dataset == "tcga", "TCGA")) %>%
   mutate(dataset_name = 
            replace(dataset_name, 
                    dataset_name == "gtex:breast.mammary.tissue_female", 
@@ -1786,26 +1801,27 @@ lm_cor_result_avsfr <- paste("R² =",
 # Make scatter plot
 a_vs_fraction_sig_correlations_lessdatasets_plot <- sample_size_vs_a_plot_lessdatasets_df %>%
     ggplot(aes(x=a, y=num_edges_from_statistical_corrected_norm)) + 
-    geom_point(aes(col=rgb_col), show.legend = FALSE) +
-    scale_colour_identity() +
+    geom_point(aes(col=rgb_col), alpha = 0.6, size = 3, show.legend = TRUE) +
+    #scale_colour_identity() +
+    scale_colour_identity(labels = unique(sample_size_vs_a_plot_lessdatasets_df$dataset), breaks = unique(sample_size_vs_a_plot_lessdatasets_df$rgb_col), guide = "legend") +
     geom_label_repel(aes(col = rgb_col, label = geom_text_repel_label),
                      fill="white",
                      box.padding = 0.5, max.overlaps = Inf,
                      label.size = 0.75, 
                      size = 5,
                      alpha = 0.6, 
-                     label.padding=0.25, 
+                     label.padding = 0.25, 
                      fontface = "bold",
                      na.rm = TRUE,
+                     show.legend = FALSE,
+                     max.iter = 1e5,
                      seed = 5555) +
-    new_scale_color() +
     geom_abline(aes(slope = slope_avsfr,
-                    intercept = intercept_avsfr,
-                    col = lm_cor_result_avsfr),
-              linetype = "dashed", 
-              show.legend = FALSE) +
-  scale_color_manual(values = c("gray50")) +
-  annotate("text", x = 2.00, y = 0.5, label = lm_cor_result_avsfr, size = 5) +
+                    intercept = intercept_avsfr),
+                linetype = "dashed", 
+                col = "gray50",
+                show.legend = FALSE) +
+  annotate("text", x = 2.00, y = 0.45, label = lm_cor_result_avsfr, size = 5) +
   xlab(expression(alpha)) +
   ylab("Frac. correlations above 0.2") +
   theme_linedraw() +
@@ -1816,10 +1832,11 @@ a_vs_fraction_sig_correlations_lessdatasets_plot <- sample_size_vs_a_plot_lessda
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         text = element_text(family = "Helvetica"),
-        legend.position="none")
-        #legend.position = c(0.70, 0.25),
-        #legend.text = element_text(size = 14), 
-        #legend.title=element_blank())
+        #legend.position="none")
+        legend.position = c(0.2, 0.9),
+        legend.background = element_rect(fill = 'transparent', color = "transparent"),
+        legend.text = element_text(size = 16), 
+        legend.title=element_blank())
 
 print(a_vs_fraction_sig_correlations_lessdatasets_plot)
 plot_file <- paste(plots_dir,
@@ -2284,8 +2301,8 @@ for (x in 1:length(parameters)){
   parameter = parameters[x]
   if (parameter == "cv"){
     cut <- cv_cut
-    x_legend <- 1.55
-    y_legend <- 0.45
+    x_legend <- 2
+    y_legend <- 0.38
   } else if (parameter == "sd"){
     cut <- sd_cut
     x_legend <- 1.585
@@ -2321,15 +2338,16 @@ for (x in 1:length(parameters)){
                                 "_cut", 
                                 sep = "")]], 
                col = rgb_col)) + 
-    geom_point() +
+    geom_point(alpha = 0.6, size = 3) +
     scale_colour_identity() +
     geom_label_repel(aes(col=rgb_col, label=geom_text_repel_label),
                      fill="white",
-                     box.padding = 0.5, max.overlaps = Inf,
+                     max.iter = 1e6,
                      label.size = 0.75, 
                      size = 5,
                      alpha = 0.6, 
-                     label.padding=0.25, 
+                     box.padding = 0.5,
+                     label.padding = 0.25, 
                      fontface = "bold",
                      na.rm=TRUE,
                      seed = 1234) +
@@ -2576,17 +2594,17 @@ a_vs_ss_plot <- sd_genes_vs_ss_df %>%
     ggplot(aes(x = log10(N_opt), 
                y = log10(a), 
                col = rgb_col)) + 
-    geom_point() +
+    geom_point(alpha = 0.6, size = 3) +
     scale_colour_identity() +
     geom_label_repel(aes(col = rgb_col, 
                          label = geom_text_repel_label),
                      fill = "white",
-                     box.padding = 0.5, 
-                     max.overlaps = Inf,
+                     box.padding = 0.5,
+                     max.iter = 1e5,
                      label.size = 0.75, 
                      size = 5,
                      alpha = 0.6, 
-                     label.padding=0.25, 
+                     label.padding = 0.25, 
                      fontface = "bold",
                      na.rm = TRUE,
                      seed = 1234) +
@@ -2645,13 +2663,13 @@ a_vs_ss_lin_lin_plot <- sd_genes_vs_ss_df %>%
     ggplot(aes(x = N_opt, 
                y = a, 
                col = rgb_col)) + 
-    geom_point() +
+    geom_point(alpha = 0.6, size = 3) +
     scale_colour_identity() +
     geom_label_repel(aes(col = rgb_col, 
                          label = geom_text_repel_label),
                      fill = "white",
                      box.padding = 0.5, 
-                     max.overlaps = Inf,
+                     max.iter = 1e5,
                      label.size = 0.75, 
                      size = 5,
                      alpha = 0.6, 
@@ -2704,7 +2722,7 @@ a_vs_ss_log_lin_plot <- sd_genes_vs_ss_df %>%
     ggplot(aes(x = N_opt, 
                y = log10(a), 
                col = rgb_col)) + 
-    geom_point() +
+    geom_point(alpha = 0.6, size = 3) +
     scale_colour_identity() +
     geom_label_repel(aes(col = rgb_col, 
                          label = geom_text_repel_label),
@@ -2764,13 +2782,13 @@ a_vs_ss_lin_log_plot <- sd_genes_vs_ss_df %>%
     ggplot(aes(x = log10(N_opt), 
                y = a, 
                col = rgb_col)) + 
-    geom_point() +
+    geom_point(alpha = 0.6, size = 3) +
     scale_colour_identity() +
     geom_label_repel(aes(col = rgb_col, 
                          label = geom_text_repel_label),
                      fill = "white",
                      box.padding = 0.5, 
-                     max.overlaps = Inf,
+                     max.iter = 1e5,
                      label.size = 0.75, 
                      size = 5,
                      alpha = 0.6, 
@@ -2867,7 +2885,7 @@ cv_vs_ss_plot <- sd_genes_vs_ss_df %>%
     ggplot(aes(x = N_opt, 
                y = fraction_genes_above_cv_cut, 
                col = rgb_col)) + 
-    geom_point() +
+    geom_point(alpha = 0.6, size = 3) +
     scale_colour_identity() +
     geom_label_repel(aes(col = rgb_col, 
                          label = geom_text_repel_label),
@@ -2938,13 +2956,14 @@ sd_vs_ss_plot <- sd_genes_vs_ss_df %>%
     ggplot(aes(x = N_opt, 
                y = fraction_genes_above_sd_cut, 
                col = rgb_col)) + 
-    geom_point() +
+    geom_point(alpha = 0.6, size = 3) +
     scale_colour_identity() +
     geom_label_repel(aes(col = rgb_col, 
                          label = geom_text_repel_label),
                      fill = "white",
                      box.padding = 0.5, 
-                     max.overlaps = Inf,
+                     #max.overlaps = Inf,
+                     max.iter = 1e5,
                      label.size = 0.75, 
                      size = 5,
                      alpha = 0.6, 
