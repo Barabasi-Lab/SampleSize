@@ -19,8 +19,15 @@ scripts/.RData
 scripts/.Rhistory
 scripts/SampleSizeShiny/rsconnect
 
+# Work READMEs
+README
+README_TCGA
+
 # The data that I am using right now
 data/
+
+# Potential R plots automatically generated from running notebooks
+Rplots.pdf
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
