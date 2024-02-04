@@ -1,5 +1,9 @@
 # Enhancing the accuracy of Network Medicine through understanding the impact of sample size in gene co-expression networks
 
+## Authors
+
+Joaquim Aguirre-Plans, Bingsheng Chen, Susan Dina Ghiassian, Alex Jones, Viatcheslav R. Akmaev, Alif Saleh, Deisy Morselli Gysi and Albert-Laszlo Barabasi.
+
 ## Description
 
 This repository contains the scripts used to analyze the impact of sample size on gene co-expression networks. We used the following datasets:
@@ -23,7 +27,8 @@ We also created summary tables and figures to illustrate the results.
 
 ## Table of contents
 
-1. [Code](#code)
+* [Description](#description)
+* [Code](#code)
     1. [Extract the gene expression data](#1-extract-the-gene-expression-data)
     2. [Process the gene expression datasets](#2-process-the-gene-expression-datasets)
     3. [Bootstrapping](#3-bootstrapping)
@@ -269,72 +274,157 @@ scripts/gene_coexpression_networks/analyze_gene_coexpression_networks_cluster.py
 
 => folder: `parse_results`
 
-1. Run: "parse_coexpression_analysis_results.Rmd"
+* **Parse co-expression analysis results**: First, we executed the following Rmarkdown notebook to parse the results of the analyses and create summary tables:
 
-2. Run: "server_example.R"
+```
+parse_coexpression_analysis_results.Rmd
+```
 
-3. Run: "calculate_rnaseq_datasets_variation.Rmd"
+* **Server example**: Then, we executed the following R script that creates summary tables that can be used both for the analysis of results and the Shiny app:
 
-4???? Is necessary?. Run: "calculate_convergence_correlation_types.Rmd"
+```
+Rscript server_example.R
+```
 
+* **RNAseq dataset variation**: We calculated the variation of the gene expression datasets across different conditions. To do it, we executed the following Rmarkdown notebook:
+
+```
+calculate_rnaseq_datasets_variation.Rmd
+```
+
+* **Calculate convergence correlation types**: We calculated the convergence of the correlation types across different sample sizes. To do it, we executed the following Rmarkdown notebook:
+
+```
+calculate_convergence_correlation_types.Rmd
+```
 
 ### 7. Differential co-expression analysis
 
-==> folder: differential_coexpression
+=> folder: `scripts/differential_coexpression`
 
 #### Calculate differential co-expression analysis
 
-Requires a lot of computational memory: 100000-120000 MB (150000 for a couple of them).
-
-Execution:
+We calculated the differential co-expression between gene co-expression networks of different conditions. We used the following R script:
 
 ```
-calculate_differentially_coexpressed_genes.R -d <coexpression_network_file_D> -n <coexpression_network_file_N> -l <output_edges_file> -v <output_nodes_file> -t <threshold> -s <stretch_normalization> -f <filter_by_common_nodes>
+scripts/differential_coexpression/calculate_differentially_coexpressed_genes.R -d <coexpression_network_file_D> -n <coexpression_network_file_N> -l <output_edges_file> -v <output_nodes_file> -t <threshold> -s <stretch_normalization> -f <filter_by_common_nodes>
 ```
+
+Where:
+* `coexpression_network_file_D`: file with the gene co-expression network of the disease condition.
+* `coexpression_network_file_N`: file with the gene co-expression network of the normal condition.
+* `output_edges_file`: file to save the differentially co-expressed edges.
+* `output_nodes_file`: file to save the differentially co-expressed nodes.
+* `threshold`: p-value threshold to consider a link or node as differentially co-expressed.
+* `stretch_normalization`: if TRUE, uses stretch normalization method minmax.
+* `filter_by_common_nodes`: if TRUE, filters the networks by keeping the common nodes between the networks.
+
+Here we show an example of execution with the GTEx dataset for sample size 100:
+
+```
+Rscript scripts/differential_coexpression/calculate_differentially_coexpressed_genes.R -d /path/to/TCGA/networks/TCGA-BRCA/pearson_tcga_TCGA-BRCA_size_440_rep_5.net -n /path/to/TCGA/networks/TCGA-Breast/networks/pearson_RNAseq_samples_Breast.Mammary.Tissue_size_440_rep_5.net -l /path/to/TCGA/differential_coexpression_analysis/TCGA-BRCA_TCGA-Breast/diffanalysis_edges_pearson_tcga_TCGA-BRCA_size_440_rep_5.net___pearson_RNAseq_samples_Breast.Mammary.Tissue_size_440_rep_5.net_pval_0.05.txt -v/path/to/TCGA/differential_coexpression_analysis/TCGA-BRCA_Breast.Mammary.Tissue/diffanalysis_nodes_pearson_tcga_TCGA-BRCA_size_440_rep_5.net___pearson_RNAseq_samples_Breast.Mammary.Tissue_size_440_rep_5.net_pval_0.05.txt -t 0.05 -s -f 
+```
+
+To facilitate the calculations, we ran them in a computational cluster using `slurm`. We used the following script to automatize the submission of the jobs:
+
+```
+scripts/differential_coexpression/calculate_differentially_coexpressed_genes_cluster.py -d <networks_dir_D> -n <networks_dir_N> -o <output_dir> -p <pval_adj_cutoff> -s <stretch_normalization> -f <filter_by_common_nodes>
+```
+
 
 #### Analyze the results from the differential co-expression analysis
+
+We analyzed the results from the differential co-expression analysis executing the following R script:
 
 ```
 Rscript analyze_differentially_coexpressed_genes.R -a <input_dir> -b <name_disease> -c <name_normal> -d <disease_gene_associations_file> -e <disease_name_in_associations_file> -f <ppi_file> -g <ppi_distances_file> -i <plots_dir> -j <tables_dir> -k <pval_threshold> -l <pval_correction> -m <nodes_to_follow_file> -n <drug_targets_file>
 ```
 
+Where:
+* `input_dir`: directory with the results of the differential co-expression analysis.
+* `name_disease`: name of the disease condition.
+* `name_normal`: name of the normal condition.
+* `disease_gene_associations_file`: file with the disease gene associations.
+* `disease_name_in_associations_file`: name of the disease in the disease gene associations file.
+* `ppi_file`: file with the protein-protein interaction network.
+* `ppi_distances_file`: file with the distances of the protein-protein interaction network.
+* `plots_dir`: directory to save the plots of the analysis.
+* `tables_dir`: directory to save the tables of the analysis.
+* `pval_threshold`: p-value threshold to consider a link or node as differentially co-expressed.
+* `pval_correction`: method to correct the p-values of the differential co-expression analysis.
+* `nodes_to_follow_file`: file with the nodes to follow in the analysis.
+* `drug_targets_file`: file with the drug targets.
+
+Here we show an example of execution with the GTEx dataset for sample size 100:
+
+```
+Rscript scripts/differential_coexpression/analyze_differentially_coexpressed_genes.R -a /path/to/TCGA/differential_coexpression_analysis/TCGA-BRCA_TCGA-Breast/ -b TCGA-BRCA -c TCGA-Breast -d /path/to/data/disease_genes/disease_genes.txt -e Liver -f /path/to/data/ppi/ppi_network.txt -g /path/to/data/ppi/ppi_distances.txt -i /path/to/data/plots/ -j /path/to/data/tables/ -k 0.05 -l bonferroni -m /path/to/data/nodes_to_follow/TCGA-BRCA_genes_to_follow.txt -n /path/to/data/drug_targets/drug_targets.txt
+```
+
+To facilitate the calculations, we ran them in a computational cluster using `slurm`. We used the following script to automatize the submission of the jobs:
+
+```
+scripts/differential_coexpression/analyze_differentially_coexpressed_genes_cluster.py -i <input_dir> -b <name_disease> -c <name_normal> -d <disease_gene_associations_file> -e <disease_name_in_associations_file> -f <ppi_file> -g <plots_dir> -h <tables_dir> -i <pval_adj_cutoff> -j <pval_correction_field> -k <nodes_to_follow_file>
+```
+
+
 ### 8. Analyze the gene co-expression variation in individual links
 
-==> folder: analyze_coexpression_variation
+=> folder: `scripts/analyze_coexpression_variation`
 
 #### Analysis of gene co-expression variation across five links
 
 We illustrate the variation in correlation values of five randomly selected links with different correlation strengths from GTEx whole blood networks across five replicates of the same sample size (Figure 3B).
 
-Execution:
+To do it, we executed the following R script:
 
 ```
 Rscript analysis_specific_edges.R -n <networks_dir> -o <output_file> -m <method> -l <num_links_selected>
 ```
 
+Where:
+* `networks_dir`: directory with the gene co-expression networks.
+* `output_file`: file to save the results of the analysis.
+* `method`: method used to calculate the gene co-expression network.
+* `num_links_selected`: number of links to be selected.
+
+
 #### Analysis of standard deviation of links across repetitions of each sample size
 
-First, we merge the consensus networks from different sample sizes into a unique file. This operation requires a lot of computational memory:
+We analyzed the standard deviation of the repetitions across sample size using a half violin plot (Figure 3C).
+
+To do it, we first merge the consensus networks from different sample sizes into a unique file. This operation requires a lot of computational memory, so we used a computational cluster to run the command:
 
 ```
 Rscript merge_networks.R -n <networks_dir> -m <method> -o <output_dataframe> -s <step> -r <max_rep>
 ```
 
-Then, we read the file and plot the standard deviation of the repetitions across  sample size using a half violin plot (Figure 3C):
+Where:
+* `networks_dir`: directory with the gene co-expression networks.
+* `method`: method used to calculate the gene co-expression network.
+* `output_dataframe`: file to save the results of the analysis.
+* `step`: step to increase the sample size.
+* `max_rep`: maximum number of repetitions.
+
+Then, we read the output file and plot the standard deviation of the repetitions across different sample sizes using the following R script:
 
 ```
 Rscript analysis_sd_coexpression_weight.R -n <networks_file> -t <output_sd_table_file> -p <output_sd_plot_file>
 ```
 
+Where:
+* `networks_file`: file with the gene co-expression networks.
+* `output_sd_table_file`: file to save the results of the analysis.
+* `output_sd_plot_file`: file to save the plot of the analysis.
+
+
 ### 9. Analyze the gene co-expression of protein-protein interactions
 
-==> folder: analyze_coexpression_ppi
+=> folder: `analyze_coexpression_ppi`
 
-We analyze the influence of sample size on protein-protein interaction co-expression.
+We analyzed the influence of sample size on protein-protein interaction co-expression. The protein-protein interactions network was extracted from Gysi et al., PNAS (2023) (https://doi.org/10.1073/pnas.2301342120).
 
-The protein-protein interactions network was extracted from Gysi et al., PNAS (2023) (https://doi.org/10.1073/pnas.2301342120).
-
-We have to run the following notebook:
+To do it, we have to executed the following notebook:
 
 ```
 compare_coexpression_to_ppi.Rmd
@@ -342,10 +432,24 @@ compare_coexpression_to_ppi.Rmd
 
 ###  10. Create the figures
 
-==> folder: general_analysis
+=> folder: `general_analysis`
 
-We have to run the following notebook:
+To create the figures of the manuscript and supplementary material, plus some additional figures that complemented the analysis, we executed the following Rmarkdown notebook:
 
 ```
 create_figures.Rmd
 ```
+
+
+## Acknowledgments
+
+* We thank the authors of the Gysi et al., PNAS (2023) paper for making the protein-protein interaction network available.
+
+* We thank the authors of the GTEx and TCGA projects for making the gene expression datasets available.
+
+* We thank the authors of the Rheumatoid Arthritis dataset for making the gene expression dataset available.
+
+* We thank the authors of the different R and python libraries that we used in the analysis.
+
+
+
