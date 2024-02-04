@@ -24,6 +24,7 @@ data/
 
 # Potential R plots automatically generated from running notebooks
 Rplots.pdf
+scripts/Rplots.pdf
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
