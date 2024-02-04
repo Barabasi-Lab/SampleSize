@@ -3803,7 +3803,7 @@ plot_file = paste(diffcoexp_plots_dir, "/codina_stability_results.png", sep="")
 ggsave(
   plot_file,
   dpi = 1200,
-  width = 10000,
+  width = 11000,
   #height = 12000,
   height = 17500,
   units = c("px")
