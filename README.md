@@ -196,7 +196,7 @@ Here we show an example of execution with the GTEx dataset for sample size 100 a
 Rscript scripts/gene_coexpression_networks/create_gene_coexpression_network_from_samples_list.R -s /path/to/GTEx/sampling_with_repetition/Liver/RNAseq_samples_Liver_size_100_rep_1.txt -f /path/to/GTEx/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Liver.gct -o /path/to/Databases/GTEx/networks/Liver/pearson_100_1.net -m pearson -n 100 -d 0.05 -p 6 -t signed -e pearson -a 0 -c bonferroni
 ```
 
-This execution is done for all datasets at all sample sizes and repetitions. To facilitate the calculations, we ran them in a computational cluster using `slurm`. We used the following script to automatize the s ubmission of the jobs:
+This execution is done for all datasets at all sample sizes and repetitions. To facilitate the calculations, we ran them in a computational cluster using `slurm`. We used the following script to automatize the submission of the jobs:
 
 ```
 scripts/gene_coexpression_networks/create_gene_coexpression_network_from_samples_cluster.py -i <input_dir> -o <output_dir> -r <rnaseq_file> -m <metric>
@@ -233,22 +233,41 @@ scripts/gene_coexpression_networks/create_consensus_gene_coexpression_network_cl
 
 ### 5. Analyze the gene co-expression networks
 
-==> folder: gene_coexpression_networks
+=> folder: `gene_coexpression_networks`
 
 Execution:
 
 ```
-Rscript analyze_coexpression_network_by_significant_edges.R -c <coexpression_network_file> -o <output_results_dir> -s <output_subgraphs_dir> -f <file_name> -t <threshold> -p <ppi_file> -d <disease_genes_file> -e <essential_genes_file> -g <genes_dataset_file>
+Rscript scripts/gene_coexpression_networks/analyze_coexpression_network_by_significant_edges.R -c <coexpression_network_file> -o <output_results_dir> -s <output_subgraphs_dir> -f <file_name> -t <threshold> -p <ppi_file> -d <disease_genes_file> -e <essential_genes_file> -g <genes_dataset_file>
 ```
 
-This is done for all datasets.
+Where:
+* `coexpression_network_file`: file with the gene co-expression network.
+* `output_results_dir`: directory to save the results of the analysis.
+* `output_subgraphs_dir`: directory to save the subgraphs of the gene co-expression network.
+* `file_name`: name of the file to save the results of the analysis.
+* `threshold`: p-value threshold to consider a link as significant.
+* `ppi_file`: file with the protein-protein interaction network.
+* `disease_genes_file`: file with the disease genes.
+* `essential_genes_file`: file with the essential genes.
+* `genes_dataset_file`: file with the genes of the gene expression dataset.
 
-To facilitate the calculations, we ran them in a computational cluster.
+Here we show an example of execution with the GTEx dataset for sample size 100:
+
+```
+Rscript scripts/gene_coexpression_networks/analyze_coexpression_network_by_significant_edges.R -c /path/to/Databases/GTEx/networks/Liver/pearson_100_1.net -o /path/to/Databases/GTEx/analysis/Liver/ -s /path/to/Databases/GTEx/networks/Liver/subgraphs/ -f pearson_100 -t 0.05 -p /path/to/data/ppi/ppi_network.txt -d /path/to/data/disease_genes/disease_genes.txt -e /path/to/data/essential_genes/essential_genes.txt -g /path/to/Databases/GTEx/genes/gtex_genes.txt
+```
+
+This execution is done for all datasets at all sample sizes and repetitions. To facilitate the calculations, we ran them in a computational cluster using `slurm`. We used the following script to automatize the submission of the jobs:
+
+```
+scripts/gene_coexpression_networks/analyze_gene_coexpression_networks_cluster.py -i <input_dir> -p <ppi_file> -d <disease_genes_file> -e <essential_genes_file> -g <genes_dataset_file> -o <output_analysis_dir> -n <output_networks_dir>
+```
 
 
 ### 6. Parse the results of the analyses and create summary tables
 
-==> folder: parse_results
+=> folder: `parse_results`
 
 1. Run: "parse_coexpression_analysis_results.Rmd"
 
