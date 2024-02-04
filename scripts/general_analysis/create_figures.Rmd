@@ -1281,7 +1281,8 @@ scaling_relation_plot_comparison = scaling_relation_comparison_df %>%
         legend.position = c(0.64, 0.85),
         legend.text = element_text(size = 16), 
         legend.title=element_text(size=16, face="bold"),
-        legend.background = element_rect(linewidth=0.2, linetype="solid", colour ="black"))
+        legend.background = element_rect(fill = 'transparent', color = "transparent"))
+        #legend.background = element_rect(linewidth=0.2, linetype="solid", colour ="black"))
 
 plot_file = paste(plots_dir, "/comparison_pl_ed_pearson_pval_0.05_", dataset_selected, ".png", sep="")
 ggsave(
@@ -2331,7 +2332,7 @@ for (x in 1:length(parameters)){
                          "\ncorr. =", 
                          round(a_vs_par_cor, 3))
   
-  param_vs_a_plot_lessdatasets = sd_genes_vs_a_filtered %>%
+  scatter_plots_lessdatasets[[x]] <- sd_genes_vs_a_filtered %>%
     ggplot(aes(x = a, 
                y = .data[[paste("fraction_genes_above_", 
                                 parameter, 
@@ -2351,13 +2352,11 @@ for (x in 1:length(parameters)){
                      fontface = "bold",
                      na.rm=TRUE,
                      seed = 1234) +
-    new_scale_color() +
     geom_abline(aes(slope = coef(lm_summary_avspar[[x]])[2],
-                    intercept = coef(lm_summary_avspar[[x]])[1],
-                    col = lm_cor_result_avspar[[x]]),
+                  intercept = coef(lm_summary_avspar[[x]])[1]),
+              col = "gray50",
               linetype = "dashed", 
               show.legend = FALSE) +
-    scale_color_manual(values = c("gray50")) +
     annotate("text", x = x_legend, y = y_legend, label = lm_cor_result_avspar[[x]], size = 5) +
     xlab(expression(alpha)) +
     ylab(paste("Frac. genes with ", 
@@ -2382,13 +2381,13 @@ for (x in 1:length(parameters)){
                     sep = "")
   ggsave(
     plot_file,
+    plot = scatter_plots_lessdatasets[[x]],
     dpi = 1200,
     width = 6000,
     #height = 6000,
     units = c("px")
   )
-  print(param_vs_a_plot_lessdatasets)
-  scatter_plots_lessdatasets[[x]] = param_vs_a_plot_lessdatasets
+  print(scatter_plots_lessdatasets[[x]])
 }
 ```
 
@@ -2403,8 +2402,18 @@ DFG
 ((distribution_plots_lessdatasets[[2]] + labs(tag = 'A')) +
   (distribution_plots_lessdatasets[[1]] + labs(tag = 'B')) +
   (distribution_plots_lessdatasets[[3]] + labs(tag = 'C')) +
-  (scatter_plots_lessdatasets[[2]] + labs(tag = 'D')) +
-  (scatter_plots_lessdatasets[[1]] + labs(tag = 'E')) +
+  ((scatter_plots_lessdatasets[[2]] + 
+    geom_abline(aes(slope = coef(lm_summary_avspar[[2]])[2],
+                  intercept = coef(lm_summary_avspar[[2]])[1]),
+              col = "gray50",
+              linetype = "dashed", 
+              show.legend = FALSE)) + labs(tag = 'D')) +
+  ((scatter_plots_lessdatasets[[1]]  + 
+    geom_abline(aes(slope = coef(lm_summary_avspar[[1]])[2],
+                  intercept = coef(lm_summary_avspar[[1]])[1]),
+              col = "gray50",
+              linetype = "dashed", 
+              show.legend = FALSE)) + labs(tag = 'E')) +
   (scatter_plots_lessdatasets[[3]] + labs(tag = 'F'))) +
   plot_layout(design = layout) &
   theme(plot.tag = element_text(face = 'bold', size = 17),
@@ -2415,9 +2424,9 @@ plot_file = paste(plots_dir, "/cv_results_SI.png", sep="")
 ggsave(
   plot_file,
   dpi = 1200,
-  width = 16500,
+  width = 17500,
   #height = 12500,
-  height = 11500,
+  height = 12000,
   units = c("px")
 )
 
@@ -2855,7 +2864,7 @@ plot_file = paste(plots_dir, "/ss_vs_a_all_combinations.png", sep="")
 ggsave(
   plot_file,
   dpi = 1200,
-  width = 11000,
+  width = 12000,
   height = 11000,
   units = c("px")
 )
@@ -3056,7 +3065,7 @@ EFG
        theme(plot.tag.position = c(.04, 1.04),
              plot.margin = margin(0.6, 0.6, 0.6, 0.6, "cm"))
      ) +
-    (a_vs_ss_plot +
+    (a_vs_ss_lin_log_plot +
        labs(tag='G')
      ) +
     theme(plot.tag.position  = c(.04, 1.04),
