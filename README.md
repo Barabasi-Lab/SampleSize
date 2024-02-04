@@ -1,83 +1,98 @@
-# Sample size value of gene expression data in Network Medicine
+# Enhancing the accuracy of Network Medicine through understanding the impact of sample size in gene co-expression networks
+
+## Description
+
+This repository contains the scripts used to analyze the impact of sample size on gene co-expression networks. We used the following datasets:
+
+* GTEx
+* TCGA
+* Rheumatoid Arthritis dataset
+
+We created the gene co-expression networks using **Pearson correlation** and employed **bootstrapping** to generate gene co-expression networks of different sample sizes. We also calculated the **consensus networks** between the 5 replicate genes co-expression networks from each sample size and condition.
+
+We made the following gene co-expression network analyses:
+
+* **Link discovery rate analysis**: We analyzed the link discovery rate of gene expression datasets across gene co-expression networks of different sample sizes.
+* **Power-law model fitting**: We fitted the gene co-expression networks of each dataset to a power-law model that describes the rate of discovery of statistically significant links across sample size.
+* **Co-expression variation analysis**: We analyzed the variation in co-expression values across different network repetitions and sample sizes.
+* **Differential co-expression analysis**: We calculated the differential co-expression between disease and normal gene co-expression networks.
+* **Protein-protein interaction co-expression analysis**: We analyzed the influence of sample size on protein-protein interaction co-expression.
+
+We also created summary tables and figures to illustrate the results.
 
 
-## Introduction
+## Table of contents
 
-The scripts folder contains the scripts necessary to run the analysis.
+1. [Code](#code)
+    1. [Extract the gene expression data](#1-extract-the-gene-expression-data)
+    2. [Process the gene expression datasets](#2-process-the-gene-expression-datasets)
+    3. [Bootstrapping](#3-bootstrapping)
+    4. [Create the gene co-expression networks](#4-create-the-gene-co-expression-networks)
+    5. [Analyze the gene co-expression networks](#5-analyze-the-gene-co-expression-networks)
+    6. [Parse the results of the analyses and create summary tables](#6-parse-the-results)
+    7. [Differential co-expression analysis](#7-differential-co-expression-analysis)
+    8. [Analyze the gene co-expression variation in individual links](#8-analyze-the-gene-co-expression-variation-in-individual-links)
+    9. [Analyze the gene co-expression of protein-protein interactions](#9-analyze-the-gene-co-expression-of-protein-protein-interactions)
+    10. [Create the figures](#10-create-the-figures)
+
 
 ## Code
 
 ### 1. Extract the gene expression data
 
-==> folder: extract_data
+=> folder: `scripts/extract_data`
 
 This is a detailed explanation on how to extract the datasets used in the analysis.
 
 #### 1.1. GTEx
 
-Notebook to run:
+The data is downloaded from the GTEx portal (https://gtexportal.org/home/).
+
+We downloaded the datasets from v8 release:
+
+* **Gene expression reads**: GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_reads.gct
+* **Sample information**: GTEx/v8/GTEx_Analysis_v8_Annotations_SampleAttributesDS.txt
+* **Subject information**: GTEx/v8/GTEx_Analysis_v8_Annotations_SubjectPhenotypesDS.txt
+
+We executed the following notebook to analyze the data and prepare it for the analysis:
 
 ```
-GTEx_analysis_for_coexpr.Rmd
-```
-
-#### 1.2. GEO GSE193677
-
-Notebook to run:
-
-```
-GEO_data_extraction_GSE193677.Rmd
+scripts/extract_data/GTEx_analysis_for_coexpr.Rmd
 ```
 
 #### 1.3. TCGA
 
 ##### 1.3.1. Download the GDC-Client App
 
-Instructions on how to download the dataset: https://www.youtube.com/watch?v=GDxj8DrkZok 
+We downloaded the GDC-CLIENT app (Ubuntu - Client), necessary to download the dataset, at the following website: https://gdc.cancer.gov/access-data/gdc-data-transfer-tool
 
-* Download GDC-CLIENT app (Ubuntu - Client) at the following website:
-
-https://gdc.cancer.gov/access-data/gdc-data-transfer-tool
-
-* Transfer to the Discovery cluster:
-
-scp gdc-client_v1.6.1_Ubuntu_x64.zip discovery:/path/to/Databases/TCGA
-
-* Unzip:
-
-cd /path/to/Databases/TCGA
-unzip gdc-client_v1.6.1_Ubuntu_x64.zip
+This video was also useful to get to know how to download the data: https://www.youtube.com/watch?v=GDxj8DrkZok 
 
 ##### 1.3.2. Use the GenomicDataCommons R package to download the metadata and manifest
 
-Run the Rmarkdown script: `create_TCGA_manifest.Rmd`.
+To download the TCGA dataset, we need to define the the parameters that we want to download and create a manifest file that will be used by the GDC-CLIENT app to download the dataset.
 
-The script will generate:
+To analyze the data from TCGA, decide which parameters we wanted to use and create the manifest file, we used the GenomicDataCommons R package.
+
+The whole process is detailed in the following Rmarkdown script: 
+
+```
+create_TCGA_manifest.Rmd
+```
+
+The script will generate the following files:
 * Manifest file: `gdc_manifest.2022-11-18.txt`
 * Metadata file: `metadata.txt`
 
 ##### 1.3.3. Download the dataset
 
-To download the dataset, we use a computational cluster.
-
-* We create a file download.sh:
+To download the dataset, we executed the following command:
 
 ```
-#!/bin/bash
-#SBATCH --mem=50000
-#SBATCH -p short
-#SBATCH --time=24:00:00
-#SBATCH --constraint="[cascadelake|zen2]"
-#SBATCH -o /path/to/Databases/TCGA/scripts/download.out
-#SBATCH -e /path/to/Databases/TCGA/scripts/download.err
-/path/to/Databases/TCGA/scripts/gdc-client download -m /path/to/Databases/TCGA/2022-11-18-Dataset/TCGA/raw/additional/gdc_manifest.2022-11-18.txt -d /path/to/Databases/TCGA/2022-11-18-Dataset/TCGA/raw/data
+gdc-client download -m /path/to/Databases/TCGA/2022-11-18-Dataset/TCGA/raw/additional/gdc_manifest.2022-11-18.txt -d /path/to/Databases/TCGA/2022-11-18-Dataset/TCGA/raw/data
 ```
 
-* We run the download.sh file:
-
-```
-sbatch /path/to/Databases/TCGA/scripts/download.sh
-```
+The process of downloading the dataset requires a lot of computational memory, so we used a computational cluster to run the command.
 
 ##### 1.3.4. Compile the dataset
 
