@@ -96,114 +96,140 @@ The process of downloading the dataset requires a lot of computational memory, s
 
 ##### 1.3.4. Compile the dataset
 
-To compile the scattered TCGA expression files into a unique file we use the following script:
+The TCGA downloaded dataset is scattered in many files. To compile it into a unique file, we executed the following command:
 
 ```
-python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/compile_tcga.py -d /path/to/Databases/TCGA/2022-11-18-Dataset/TCGA/raw/data -o /path/to/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/TCGA_reads.csv -t unstranded
+python scripts/extract_data/compile_tcga.py -d /path/to/Databases/TCGA/2022-11-18-Dataset/TCGA/raw/data -o /path/to/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/TCGA_reads.csv -t unstranded
 ```
 
-We can use a computational cluster to run the script, because it requires a lot of memory.
+The process of compiling the dataset requires a lot of computational memory, so we used a computational cluster to run the command.
 
 ##### 1.3.5. Analyze and prepare the dataset
 
-We run the following notebook to analyze and prepare the dataset:
+We executed the following notebook to analyze the data and prepare it for the analysis:
 
 ```
-TCGA_preparation.Rmd
+scripts/extract_data/TCGA_preparation.Rmd
 ```
+
 
 ### 2. Process the gene expression datasets
 
-==> folder: process_gene_expression
+=> folder: `scripts/process_gene_expression`
 
-Notebooks to run:
+The gene expression datasets need to be pre-processed to prepare them for the generation of gene co-expression networks. We have to transform the gene identifiers to HGNC names, filter out the genes with low expression counts, and format the data into a matrix with genes in rows and samples in columns. To do this, we have to run the following Rmarkdown notebooks:
 
 * For GTEx:
 
 ```
-GTEx_preprocessing_for_coexpr.Rmd
+scripts/process_gene_expression/GTEx_preprocessing_for_coexpr.Rmd
 ```
 
-* For GEO GSE193677:
+* For the Rheumatoid Arthritis dataset:
 
 ```
-GEO_preprocessing_for_coexpr_GSE193677.Rmd
-```
-
-* For Rheumatoid Arthritis dataset:
-
-```
-scipher_preprocessing.Rmd
+scripts/process_gene_expression/scipher_preprocessing.Rmd
 ```
 
 * For TCGA:
 
 ```
-TCGA_preprocessing_for_coexpr.Rmd
+scripts/process_gene_expression/TCGA_preprocessing_for_coexpr.Rmd
 ```
 
 ### 3. Bootstrapping
 
-==> folder: bootstrapping
+=> folder: `scripts/bootstrapping`
 
-We create groups of samples of different sizes using random sampling with replacement, starting from size 20 and increasing the size by 20 until reaching the maximum number of samples in the dataset.
-
-For this, we have to run a R markdown notebook for each dataset.
+We create groups of samples of different sizes using random sampling with replacement, starting from size 20 and increasing the size by 20 until reaching the maximum number of samples in the dataset. For this, we have to run a R markdown notebook for each dataset:
 
 * For GTEx:
 
 ```
-GTEx_subsampling.Rmd
-```
-
-* For GEO GSE193677
-
-```
-GEO_subsampling_GSE193677.Rmd
+scripts/bootstrapping/GTEx_subsampling.Rmd
 ```
 
 * For Rheumatoid Arthritis dataset:
 
 ```
-scipher_subsampling.Rmd
+scripts/bootstrapping/scipher_subsampling.Rmd
 ```
 
 * For TCGA:
 
 ```
-TCGA_subsampling.Rmd
+scripts/bootstrapping/TCGA_subsampling.Rmd
 ```
 
 
 ### 4. Create the gene co-expression networks
 
-==> folder: gene_coexpression_networks
+=> folder: `scripts/gene_coexpression_networks`
 
-#### Individual co-expression networks
+Here, we describe the process to create the gene co-expression networks using the bootstrapped datasets.
 
-Execution:
+#### Individual gene co-expression networks
+
+We calculate the gene co-expression networks using the bootstrapped datasets. To do it, we ran the following command for each subsampled dataset:
 
 ```
-Rscript create_gene_coexpression_network_from_samples_list.R -s <samples_file> -f <rnaseq_file> -o <output_file> -m <metric> -n <wto_n> -d <wto_delta> -p 6 -t signed -e pearson -a 0 -c bonferroni
+Rscript scripts/gene_coexpression_networks/create_gene_coexpression_network_from_samples_list.R -s <samples_file> -f <rnaseq_file> -o <output_file> -m <metric> -n <wto_n> -d <wto_delta> -p <wgcna_power> -t <wgcna_type> -e <mi_estimator> -a <aracne_eps> -c <correction_method>
 ```
 
-This is done for all datasets.
+Where:
+* `samples_file`: file with the list of samples to be used in the analysis.
+* `rnaseq_file`: file with the gene expression data.
+* `output_file`: file to save the gene co-expression network.
+* `metric`: metric to calculate the co-expression of pairs of genes (e.g., pearson, spearman, mutual_information, wto, wgcna, aracne).
+* `wto_n`: Number of wTO bootstrap repetitions to calculate the p-value in wto method.
+* `wto_delta`: Value that defines the interval of confidence from which the p-values of the bootstrap repetitions are calculated in wto method.
+* `wgcna_power`: Power parameter to calculate the adjacency matrix in wgcna method.
+* `wgcna_type`: Type of adjacency matrix to calculate in wgcna method.
+* `mi_estimator`: Estimator to calculate the mutual information in mutual_information method.
+* `aracne_eps`: Epsilon parameter to calculate the mutual information in aracne method.
+* `correction_method`: Method to correct the p-values of the co-expression values (e.g., bonferroni, fdr).
 
-To facilitate the calculations, we ran them in a computational cluster.
+By default, we use as metrix `pearson` and as correction_method `bonferroni`.
+Here we show an example of execution with the GTEx dataset for sample size 100 and repetition 1:
+
+```
+Rscript scripts/gene_coexpression_networks/create_gene_coexpression_network_from_samples_list.R -s /path/to/GTEx/sampling_with_repetition/Liver/RNAseq_samples_Liver_size_100_rep_1.txt -f /path/to/GTEx/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Liver.gct -o /path/to/Databases/GTEx/networks/Liver/pearson_100_1.net -m pearson -n 100 -d 0.05 -p 6 -t signed -e pearson -a 0 -c bonferroni
+```
+
+This execution is done for all datasets at all sample sizes and repetitions. To facilitate the calculations, we ran them in a computational cluster using `slurm`. We used the following script to automatize the s ubmission of the jobs:
+
+```
+scripts/gene_coexpression_networks/create_gene_coexpression_network_from_samples_cluster.py -i <input_dir> -o <output_dir> -r <rnaseq_file> -m <metric>
+```
+
 
 #### Consensus co-expression networks
 
-Then, we calculated the consensus networks between the 5 replicate genes co-expression networks from each sample size and condition.
-
-Execution:
+We calculated the consensus networks between the 5 replicate genes co-expression networks from each sample size and condition. To do it, we ran the following command for each dataset:
 
 ```
-Rscript create_consensus_gene_coexpression_network.R -l <list_coexpression_networks_file> -n <consensus_network_file> -t <threshold> -m <method>
+Rscript scripts/gene_coexpression_networks/create_consensus_gene_coexpression_network.R -l <list_coexpression_networks_file> -n <consensus_network_file> -t <threshold> -m <method>
 ```
 
-This is done for all datasets.
+Where:
 
-To facilitate the calculations, we ran them in a computational cluster.
+* `list_coexpression_networks_file`: file with the list of gene co-expression networks to be used in the analysis.
+* `consensus_network_file`: file to save the consensus gene co-expression network.
+* `threshold`: p-value threshold to consider a link as significant.
+* `method`: method used to calculate the gene co-expression network.
+
+Here we show an example of execution with the GTEx dataset for sample size 100:
+
+```
+Rscript scripts/gene_coexpression_networks/create_consensus_gene_coexpression_network.R -l /path/to/Databases/GTEx/networks/Liver/network_replicates_pearson_size_100.txt -n /path/to/Databases/GTEx/networks/Liver/consensus/consensus_pearson_100.net -t 0.05 -m pearson
+```
+
+This execution is done for all datasets at all sample sizes. To facilitate the calculations, we ran them in a computational cluster using `slurm`. We used the following script to automatize the submission of the jobs:
+
+```
+scripts/gene_coexpression_networks/create_consensus_gene_coexpression_network_cluster.py -n <networks_dir> -m <method> -t <threshold>
+```
+
 
 ### 5. Analyze the gene co-expression networks
 
