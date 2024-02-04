@@ -22,7 +22,7 @@ option_list = list(
   make_option(c("-d", "--wto_delta"), type="double", default=0.05,
               help="Value that defines the interval of confidence from which the p-values of the bootstrap repetitions are calculated [default= %default]", metavar="double"),
   make_option(c("-p", "--wgcna_power"), type="integer", default=6, 
-              help="Number of wTO bootstrap repetitions to calculate the p-value [default= %default]", metavar="integer"),
+              help="Power parameter to calculate the adjacency matrix in wgcna method. [default= %default]", metavar="integer"),
   make_option(c("-t", "--wgcna_type"), type="character", default="signed", 
               help="Type of network to create with WGCNA [default= %default]", metavar="character"),
   make_option(c("-e", "--mi_estimator"), type="character", default="pearson", 
