@@ -1765,26 +1765,3 @@ $ kill -9 45745
 Finally, I can remove the folder:
 
 $ rm -r .vscode-server/
-
-
-#############
-UPDATE GITHUB
-#############
-
-# I don't know why it only works in the login node, not in the other ones
-# Go to the folder
-cd /home/j.aguirreplans/Projects/Scipher/SampleSize
-
-# To add new changes:
-git add --all .
-git commit -m "Calculate networks for Scipher"
-git push origin master
-
-# To pull changes from the repository:
-git pull origin
-
-# Get personal token to authentificate for 2 factor authentification (in case it has expired):
-Go to Github > Settings > Developer Settings > Personal access tokens
-Token: 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
-
-
