@@ -3,7 +3,7 @@ library(dplyr)
 library(ggplot2)
 library(stats)
 #shiny::runApp('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny')
-#shiny::runApp('/Users/j.aguirreplans/Dropbox (CCNR)/Biology/Quim/Scipher/SampleSize/scripts/SampleSizeShiny')
+#shiny::runApp('/Users/j.aguirreplans/WORK/Postdoc/Projects/Scipher/SampleSize/scripts/SampleSizeShiny')
 options(bitmapType='cairo') # Only for RStudio webserver if I want to save a plot
 
 #------------------#
