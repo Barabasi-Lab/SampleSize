@@ -15,11 +15,11 @@ library(data.table)
 
 ui <- navbarPage(
   title = "MTCARS",
-  selected = "Signature Visualization",
+  selected = "Power-law scaling relationship",
   collapsible = TRUE,
   theme = bslib::bs_theme(),
   tabPanel(
-    title = "Signature Visualization",
+    title = "Power-law scaling relationship",
     grid_container(
       layout = c(
         "sig_settings sig_viz"
@@ -36,75 +36,81 @@ ui <- navbarPage(
         area = "sig_settings",
         card_header("Settings"),
         card_body_fill(
-          div(style = "overflow-y: auto;",
-              verbatimTextOutput(outputId = "input_cars"),
+          div(
+            style = "overflow-y: auto;",
+            verbatimTextOutput(outputId = "input_cars"),
+            shinyWidgets::pickerInput(
+              inputId = "input_cars",
+              label = "Select cars:",
+              choices = c("Mazda RX4", "Mazda RX4 Wag", "Datsun 710"),
+              options = list(
+                `actions-box` = TRUE,
+                size = 10,
+                `selected-text-format` = "count > 1",
+                container = "body"
+              ),
+              selected = "Mazda RX4",
+              multiple = TRUE
+            ),
+            shinyWidgets::materialSwitch(
+              inputId = "input_filter",
+              label = "Filter signatures:",
+              status = "primary"
+            ),
+            conditionalPanel(
+              condition = "input.input_filter == true",
+              style = "margin-bottom: 20px;", # Add margin-bottom style here
+              verbatimTextOutput(outputId = "input_carb"),
               shinyWidgets::pickerInput(
-                inputId = "input_cars",
-                label = "Select cars:",
-                choices = c("Mazda RX4", "Mazda RX4 Wag", "Datsun 710"),
+                inputId = "input_carb",
+                label = "Filter by carb:",
+                choices = unique(mtcars$carb),
                 options = list(
                   `actions-box` = TRUE,
                   size = 10,
-                  `selected-text-format` = "count > 1",
-                  container = "body"
+                  `selected-text-format` = "count > 1"
                 ),
-                selected = "Mazda RX4",
+                selected = unique(mtcars$carb),
                 multiple = TRUE
               ),
-              shinyWidgets::materialSwitch(inputId = "input_filter",
-                                           label = "Filter signatures:",
-                                           status = "primary"),
-              conditionalPanel(
-                condition = "input.input_filter == true",
-                style = "margin-bottom: 20px;", # Add margin-bottom style here
-                verbatimTextOutput(outputId = "input_carb"),
-                shinyWidgets::pickerInput(inputId = "input_carb",
-                                          label = "Filter by carb:",
-                                          choices = unique(mtcars$carb),
-                                          options = list(
-                                            `actions-box` = TRUE,
-                                            size = 10,
-                                            `selected-text-format` = "count > 1"
-                                          ),
-                                          selected = unique(mtcars$carb),
-                                          multiple = TRUE),
-                verbatimTextOutput(outputId = "input_gear"),
-                shinyWidgets::pickerInput(inputId = "input_gear",
-                                          label = "Filter by gear:",
-                                          choices = unique(mtcars$gear),
-                                          options = list(
-                                            `actions-box` = TRUE,
-                                            size = 10,
-                                            `selected-text-format` = "count > 1"
-                                          ),
-                                          selected = unique(mtcars$gear),
-                                          multiple = TRUE),
-                verbatimTextOutput(outputId = "pert_itime"),
-                shinyWidgets::pickerInput(inputId = "pert_itime",
-                                          label = "Filter by exposure time:",
-                                          choices = list(
-                                            "6 h" = "6 h",
-                                            "24 h" = "24 h"
-                                          ),
-                                          options = list(
-                                            `actions-box` = TRUE,
-                                            size = 10,
-                                            `selected-text-format` = "count > 1"
-                                          ),
-                                          multiple = TRUE),
-                sliderInput(inputId = "input_mpg_cutoff",
-                            label = "Filter by mpg value:",
-                            value = 20,
-                            min = 10,
-                            max = 34),
-                sliderInput(inputId = "ctl_sim_cutoff",
-                            label = "Filter by control similarity:",
-                            value = 0.51,
-                            min = 0,
-                            max = 1),
-                actionButton(inputId = "filter_action",
-                             label = "Filter"),
-              ),
+              verbatimTextOutput(outputId = "input_gear"),
+              shinyWidgets::pickerInput(
+                inputId = "input_gear",
+                label = "Filter by gear:",
+                choices = unique(mtcars$gear),
+                options = list(
+                  `actions-box` = TRUE,
+                  size = 10,
+                  `selected-text-format` = "count > 1"
+                ),
+                selected = unique(mtcars$gear),
+                multiple = TRUE),
+              verbatimTextOutput(outputId = "pert_itime"),
+              shinyWidgets::pickerInput(inputId = "pert_itime",
+                                        label = "Filter by exposure time:",
+                                        choices = list(
+                                          "6 h" = "6 h",
+                                          "24 h" = "24 h"
+                                        ),
+                                        options = list(
+                                          `actions-box` = TRUE,
+                                          size = 10,
+                                          `selected-text-format` = "count > 1"
+                                        ),
+                                        multiple = TRUE),
+              sliderInput(inputId = "input_mpg_cutoff",
+                          label = "Filter by mpg value:",
+                          value = 20,
+                          min = 10,
+                          max = 34),
+              sliderInput(inputId = "ctl_sim_cutoff",
+                          label = "Filter by control similarity:",
+                          value = 0.51,
+                          min = 0,
+                          max = 1),
+              actionButton(inputId = "filter_action",
+                            label = "Filter"),
+            ),
               shinyWidgets::materialSwitch(inputId = "input_merge",
                                            label = "Merge signatures:",
                                            status = "primary"),
@@ -130,7 +136,115 @@ ui <- navbarPage(
                 ),
                 actionButton(inputId = "merge_action",
                              label = "Merge"),
+            ),
+
+
+            checkboxGroupInput(
+              "dataset_input",
+              label = "Dataset",
+              c("GTEx" = "gtex",
+                "TCGA" = "tcga",
+                "R. arthritis" = "scipher"
               ),
+              selected = "gtex"
+            ),
+            conditionalPanel(
+              condition = "input.dataset_input.includes('gtex')",
+              verbatimTextOutput(outputId = "type_dataset_gtex"),
+              shinyWidgets::pickerInput(
+                inputId = "type_dataset_gtex",
+                label = "GTEx tissue:",
+                choices = list(
+                  "Breast" = "gtex:breast.mammary.tissue",
+                  "Breast (female)" = "gtex:breast.mammary.tissue_female",
+                  "Lung" = "gtex:lung",
+                  "Skin" = "gtex:skin.sun.exposed.lower.leg",
+                  "Thyroid" = "gtex:thyroid",
+                  "Whole blood" = "gtex:whole.blood"
+                ),
+                options = list(
+                  `actions-box` = TRUE,
+                  size = 10,
+                  `selected-text-format` = "count > 1"
+                ),
+                selected = "gtex:breast.mammary.tissue_female",
+                multiple = TRUE
+              ),
+              # verbatimTextOutput(outputId = "sex_gtex"),
+              # shinyWidgets::pickerInput(
+              #   inputId = "sex_gtex",
+              #   label = "GTEx sex:",
+              #   choices = c("female", "male", "both"),
+              #   options = list(
+              #     `actions-box` = TRUE,
+              #     size = 10,
+              #     `selected-text-format` = "count > 1"
+              #   ),
+              #   selected = "both",
+              #   multiple = TRUE
+              # ),
+            ),
+            conditionalPanel(
+              condition = "input.dataset_input.includes('tcga')",
+              verbatimTextOutput(outputId = "type_dataset_tcga"),
+              shinyWidgets::pickerInput(
+                inputId = "type_dataset_tcga",
+                label = "TCGA subset:",
+                choices = list(
+                  "BRCA (Breast cancer)" = "tcga:tcga-brca_female",
+                  "BRCA.LumA (Breast Luminal A cancer)" = "tcga:brca.luma",
+                  "BRCA.LumB (Breast Luminal B cancer)" = "tcga:brca.lumb",
+                  "KIRC (Kidney renal clear cell cancer)" = "tcga:tcga-kirc",
+                  "KIRP (Kidney renal papillary cell cancer)" = "tcga:tcga-kirp",
+                  "LUAD (Lung adenocarcinoma)" = "tcga:tcga-luad",
+                  "LUSC (Lung squamous cell carcinoma)" = "tcga:tcga-lusc",
+                  "THCA (Thyroid carcinoma)" = "tcga:tcga-thca",
+                  "Breast tissue" = "tcga:breast_female",
+                  "Kidney tissue" = "tcga:kidney",
+                  "Lung cancer" = "tcga:tcga-luad"
+                ),
+                options = list(
+                  `actions-box` = TRUE,
+                  size = 10,
+                  `selected-text-format` = "count > 1"
+                ),
+                selected = "tcga:tcga-brca_female",
+                multiple = TRUE
+              ),
+              # verbatimTextOutput(outputId = "type_tissue_tcga"),
+              # shinyWidgets::pickerInput(
+              #   inputId = "type_tissue_tcga",
+              #   label = "TCGA tissue type:",
+              #   choices = list("Tumor" = "tumor", "Tissue" = "normal"),
+              #   options = list(
+              #     `actions-box` = TRUE,
+              #     size = 10,
+              #     `selected-text-format` = "count > 1"
+              #   ),
+              #   selected = "tumor",
+              #   multiple = TRUE),
+            ),
+            conditionalPanel(
+              condition = "input.dataset_input.includes('scipher')",
+              verbatimTextOutput(outputId = "type_dataset_scipher"),
+              shinyWidgets::pickerInput(
+                inputId = "type_dataset_scipher",
+                label = "R. Arthritis subset:",
+                choices = list(
+                  "1 sample/patient at baseline" = "scipher:scipher.sample.per.patient.baseline",
+                  "Complete dataset" = "scipher:scipher.complete.dataset"
+                ),
+                options = list(
+                  `actions-box` = TRUE,
+                  size = 10,
+                  `selected-text-format` = "count > 1"
+                ),
+                selected = "scipher:scipher.sample.per.patient.baseline",
+                multiple = TRUE
+              ),
+            ),
+
+
           ),
         )
       ),
@@ -188,6 +302,9 @@ sd_genes_df <- fread(sd_genes_file)
 input_dir <- file.path(data_dir, "example_pearson_pval_0.05")
 topology_results_file <- paste(input_dir, "topology_results_pearson_pval_0.05.txt", sep = "/")
 results_selected_df <- fread(topology_results_file)
+gtex_datasets <- results_selected_df %>% filter(dataset == "gtex") %>% pull(type_dataset) %>% unique() # Get GTEx datasets
+tcga_datasets <- results_selected_df %>% filter(dataset == "tcga") %>% pull(type_dataset) %>% unique() # Get TCGA datasets
+scipher_datasets <- results_selected_df %>% filter(dataset == "scipher") %>% pull(type_dataset) %>% unique() # Get scipher datasets
 topology_results_by_size_file <- paste(input_dir, "topology_results_mean_pearson_pval_0.05.txt", sep = "/")
 topology_results_selected_by_size_df <- fread(topology_results_by_size_file)
 predictions_file <- paste(input_dir, "predictions_pearson_pval_0.05.txt", sep='/')
@@ -214,12 +331,22 @@ topology_results_selected_analytical_norm_df <- fread(analytical_results_file)
 
 # Create dictionary of dataset names
 name_dict <- c(
-  "scipher:scipher.sample.per.patient.baseline" = "R. arthritis",
+  "gtex" = "GTEx",
+  "tcga" = "TCGA",
+  "scipher" = "R. arthritis",
   "gtex:whole.blood" = "GTEx: Whole blood",
   "gtex:lung" = "GTEx: Lung",
-  "gtex:breast.mammary.tissue_female" = "GTEx: Breast",
+  "gtex:breast.mammary.tissue" = "GTEx: Breast",
+  "gtex:breast.mammary.tissue_female" = "GTEx: Breast (Female)",
+  "tcga:tcga-brca.luma" = "TCGA: Breast cancer (Luminal A)",
+  "tcga:tcga-brca.lumb" = "TCGA: Breast cancer (Luminal B)",
+  "tcga:breast_female" = "TCGA: Breast tissue (Female)",
+  "tcga:kidney" = "TCGA: Kidney tissue",
+  "tcga:kidney" = "TCGA: Kidney tissue",
   "tcga:tcga-luad" = "TCGA: Lung cancer",
-  "tcga:tcga-brca_female" = "TCGA: Breast cancer"
+  "tcga:tcga-brca_female" = "TCGA: Breast cancer (Female)",
+  "scipher:scipher.complete.dataset" = "R. arthritis (all samples)",
+  "scipher:scipher.sample.per.patient.baseline" = "R. arthritis (sample/patient)"
 )
 
 # Create a dictionary name to color
@@ -316,12 +443,11 @@ for (dataset_selected in datasets_selected){
 }
 
 # Create scaling relation summary table
-scaling_relation_summary_df <- scaling_relation_df %>% 
-  dplyr::select(type_dataset, adj.r.squared) %>% 
-  unique() %>% 
+scaling_relation_summary_df <- scaling_relation_df %>%
+  dplyr::select(type_dataset, adj.r.squared) %>%
+  unique() %>%
   arrange(factor(type_dataset, levels = datasets_selected)) %>%
-  mutate(type_dataset = dplyr::recode(type_dataset, !!!name_dict)) %>%
-  rename("R**2" = "adj.r.squared") %>%
+  rename("R**2 (scaling)" = "adj.r.squared") %>%
   mutate_if(is.numeric, ~sprintf("%.2f",.))
 
 # Show all information for model selected
@@ -344,48 +470,52 @@ analytical_model_summary_df <-
            remove = FALSE) %>%
   mutate(sex = if_else(is.na(sex), "", sex))
 
-analytical_model_summary_df$dataset_name = 
+analytical_model_summary_df$dataset_name <-
   ifelse(!(analytical_model_summary_df$subclassification == ""),
-         paste(analytical_model_summary_df$dataset_name, 
-               analytical_model_summary_df$subclassification, 
-               sep = "-"), 
+         paste(analytical_model_summary_df$dataset_name,
+               analytical_model_summary_df$subclassification,
+               sep = "-"),
          analytical_model_summary_df$dataset_name)
-analytical_model_summary_df$dataset_name = 
+analytical_model_summary_df$dataset_name <-
   ifelse(!(analytical_model_summary_df$sex == ""),
-         paste(analytical_model_summary_df$dataset_name, 
-               analytical_model_summary_df$sex, 
+         paste(analytical_model_summary_df$dataset_name,
+               analytical_model_summary_df$sex,
                sep = "_"), 
          analytical_model_summary_df$dataset_name)
 
-analytical_model_summary_df %>% 
-  dplyr::select(type_dataset, model, a, b, L, L_vs_total, adj.r.squared, relative.error.mean) %>% 
-  filter((type_dataset %in% datasets_selected) & (model == model_selected)) %>% unique() %>%
-  arrange(factor(type_dataset, levels = datasets_selected, datasets_selected))
-
 # Show all information for logarithmic
-log_model_summary_df <- analytical_model_summary_df %>% 
-  dplyr::select(type_dataset, model, a, b, L, L_vs_total, adj.r.squared, relative.error.mean) %>% 
+log_model_summary_df <- analytical_model_summary_df %>%
+  dplyr::select(dataset, type_dataset, model, a, b, L, L_vs_total, adj.r.squared, relative.error.mean) %>% 
   filter((type_dataset %in% datasets_selected) & (model == "Logarithmic")) %>% unique() %>% 
   dplyr::select(type_dataset, adj.r.squared, relative.error.mean) %>% 
-  rename("R**2" = "adj.r.squared", "epsilon" = "relative.error.mean") %>%
+  rename("R**2 (Log)" = "adj.r.squared", "epsilon (Log)" = "relative.error.mean") %>%
   arrange(factor(type_dataset, levels = datasets_selected)) %>%
   mutate_if(is.numeric, ~sprintf("%.2f",.))
-print(log_model_summary_df)
+#print(log_model_summary_df)
 
 # Create table for figure
-power_law_summary_df <- analytical_model_summary_df %>% 
-  dplyr::select(type_dataset, model, a, adj.r.squared, relative.error.mean) %>% 
+power_law_summary_df <- analytical_model_summary_df %>%
+  dplyr::select(dataset, type_dataset, model, a, adj.r.squared, relative.error.mean) %>% 
   filter((type_dataset %in% datasets_selected) & (model == model_selected)) %>%
   dplyr::select(-model) %>%
   arrange(factor(type_dataset, levels = datasets_selected)) %>%
-  mutate(type_dataset = dplyr::recode(type_dataset, !!!name_dict)) %>%
-  rename("alpha"="a", "R**2" = "adj.r.squared", "epsilon" = "relative.error.mean") %>%
+  rename("alpha (model)"="a", "R**2 (model)" = "adj.r.squared", "epsilon (model)" = "relative.error.mean") %>%
   unique() %>% 
   mutate_if(is.numeric, ~sprintf("%.2f",.))
-print(power_law_summary_df)
+#print(power_law_summary_df)
 
 # Bind power law with logarithm results
-figure_summary_table <- cbind(scaling_relation_summary_df, (power_law_summary_df %>% select(-type_dataset)), (log_model_summary_df %>% select(-type_dataset)))
+figure_summary_table <- cbind(
+  scaling_relation_summary_df,
+  (power_law_summary_df %>% dplyr::select(-type_dataset)),
+  (log_model_summary_df %>% dplyr::select(-type_dataset))
+)
+figure_summary_table <- scaling_relation_summary_df %>%
+  full_join(power_law_summary_df, by = "type_dataset") %>%
+  full_join(log_model_summary_df, by = "type_dataset") %>%
+  dplyr::select("dataset", "type_dataset", "R**2 (scaling)", "alpha (model)", "R**2 (model)", "epsilon (model)", "R**2 (Log)", "epsilon (Log)") %>%
+  arrange(dataset, type_dataset)
+print(figure_summary_table)
 
 
 
@@ -397,41 +527,55 @@ mtcars_mod <- mtcars %>%
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
 
-  #freezeReactiveValue(input, "input_cars")
-  shinyWidgets::updatePickerInput(session,
-                                  inputId = "input_cars",
-                                  label = "Select cars:",
-                                  choices = unique(mtcars_mod$car),
-                                  selected = unique(mtcars_mod$car),
-                                  options = list(
-                                    `actions-box` = TRUE,
-                                    size = 10,
-                                    `selected-text-format` = "count > 1"
-                                  ))
-  
+  # shinyWidgets::updatePickerInput(session,
+  #                                 inputId = "input_cars",
+  #                                 label = "Select cars:",
+  #                                 choices = unique(mtcars_mod$car),
+  #                                 selected = unique(mtcars_mod$car),
+  #                                 options = list(
+  #                                   `actions-box` = TRUE,
+  #                                   size = 10,
+  #                                   `selected-text-format` = "count > 1"
+  #                                 ))
+
   process_inputs <- reactive({
-    mtcars_mod_filt <- mtcars_mod %>%
-      filter(car %in% input$input_cars)
-    if (input$input_filter) {
-      input$filter_action
-      isolate({
-        mtcars_mod_filt <- mtcars_mod_filt %>%
-          filter((carb %in% input$input_carb) &
-                   (gear %in% input$input_gear) &
-                   (mpg > input$input_mpg_cutoff)
-          )
-      })
-    }
-    if (input$input_merge) {
-      input$merge_action
-      isolate({
-        mtcars_mod_filt <- mtcars_mod_filt %>%
-          group_by_at(input$merge_cond) %>%
-          summarize(mpg = median(mpg)) %>%
-          unite(car, all_of(input$merge_cond), sep = "|")
-      })
-    }
-    return(mtcars_mod_filt)
+
+    # Get selected datasets
+    selected_dataset_types <- c(
+      input$type_dataset_gtex,
+      input$type_dataset_tcga,
+      input$type_dataset_scipher
+    )
+    print(selected_dataset_types)
+
+    # Filter summary table by dataset
+    figure_summary_table_filt <- figure_summary_table %>%
+      filter((dataset %in% input$dataset_input) & (type_dataset %in% selected_dataset_types)) %>%
+      mutate(type_dataset = dplyr::recode(type_dataset, !!!name_dict),
+             dataset = dplyr::recode(dataset, !!!name_dict))
+
+    # mtcars_mod_filt <- mtcars_mod %>%
+    #   filter(car %in% input$input_cars)
+    # if (input$input_filter) {
+    #   input$filter_action
+    #   isolate({
+    #     mtcars_mod_filt <- mtcars_mod_filt %>%
+    #       filter((carb %in% input$input_carb) &
+    #                (gear %in% input$input_gear) &
+    #                (mpg > input$input_mpg_cutoff)
+    #       )
+    #   })
+    # }
+    # if (input$input_merge) {
+    #   input$merge_action
+    #   isolate({
+    #     mtcars_mod_filt <- mtcars_mod_filt %>%
+    #       group_by_at(input$merge_cond) %>%
+    #       summarize(mpg = median(mpg)) %>%
+    #       unite(car, all_of(input$merge_cond), sep = "|")
+    #   })
+    # }
+    return(figure_summary_table_filt)
   })
   
   # Observe changes in input_cars and update input_gear and input_carb choices
@@ -476,15 +620,15 @@ server <- function(input, output, session) {
   })
   
   output$sigTable <- DT::renderDataTable({
-    mtcars_mod_filt <- process_inputs()
-    mtcars_mod_filt
+    figure_summary_table_filt <- process_inputs()
+    figure_summary_table_filt
   })
 
   output$sigHeatmap <- renderPlot({
-    mtcars_mod_filt <- process_inputs()
-    mtcars_mod_filt %>%
-      ggplot(aes(x = mpg)) +
-      geom_histogram(aes(fill = car))
+    # mtcars_mod_filt <- process_inputs()
+    # mtcars_mod_filt %>%
+    #   ggplot(aes(x = mpg)) +
+    #   geom_histogram(aes(fill = car))
   })
   
 }
