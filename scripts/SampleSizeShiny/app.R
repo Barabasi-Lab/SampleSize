@@ -14,7 +14,7 @@ library(data.table)
 
 
 ui <- navbarPage(
-  title = "MTCARS",
+  title = "SAMPLE SIZE",
   selected = "Power-law scaling relationship",
   collapsible = TRUE,
   theme = bslib::bs_theme(),
@@ -255,7 +255,7 @@ ui <- navbarPage(
             id = "sig_viz_type",
             tabPanel(
               title = "Information",
-              DTOutput(outputId = "sigTable", width = "100%")
+              DTOutput(outputId = "summaryTable", width = "100%")
             ),
             tabPanel(
               title = "Plot",
@@ -272,7 +272,7 @@ ui <- navbarPage(
                 gap_size = "10px",
                 grid_card_plot(
                   area = "sig_heatmap_area",
-                  outputId = "sigHeatmap"
+                  outputId = "scalingPlot"
                 )
               )
             )
@@ -342,7 +342,6 @@ name_dict <- c(
   "tcga:tcga-brca.lumb" = "TCGA: Breast cancer (Luminal B)",
   "tcga:breast_female" = "TCGA: Breast tissue (Female)",
   "tcga:kidney" = "TCGA: Kidney tissue",
-  "tcga:kidney" = "TCGA: Kidney tissue",
   "tcga:tcga-luad" = "TCGA: Lung cancer",
   "tcga:tcga-brca_female" = "TCGA: Breast cancer (Female)",
   "scipher:scipher.complete.dataset" = "R. arthritis (all samples)",
@@ -350,15 +349,19 @@ name_dict <- c(
 )
 
 # Create a dictionary name to color
-name2color <- c(
+color_dict <- c(
   "TCGA: Lung cancer" = "#56B4E9",
   "tcga:tcga-luad" = "#56B4E9",
-  "tcga:tcga-luad-tumor" = "#56B4E9", # #D55E00
   "TCGA: Breast cancer" = "#0072B2",
-  "TCGA: Breast c." = "#0072B2",
   "tcga:tcga-brca_female" = "#0072B2",
-  "tcga:tcga-brca-tumor_female" = "#0072B2",
-  "breast neoplasms"="#0072B2", 
+  "breast neoplasms" = "#0072B2",
+  "tcga:tcga-brca.luma" = "#00b2a0",
+  "TCGA: Breast cancer (Luminal A)" = "#00b2a0",
+  "tcga:tcga-brca.lumb" = "#74f6ff",
+  "TCGA: Breast cancer (Luminal B)" = "#74f6ff",
+  "TCGA: Breast" = "#0072B",
+  "TCGA: Kidney tissue" = "#009E73",
+  "tcga:kidney" = "#009E73",
   "GTEx: Whole blood" = "#65F3BF",
   "gtex:whole.blood" = "#65F3BF",
   "GTEx: Lung" = "#24D157",
@@ -368,19 +371,18 @@ name2color <- c(
   "gtex:breast.mammary.tissue_female" = "#00BA37",
   "R. arthritis" = "#D55E00", #E69F00
   "scipher:scipher.sample.per.patient.baseline" = "#D55E00",
-  "arthritis rheumatoid"="#D55E00", 
-  "asthma"="#d9f365", 
-  "thyroid neoplasms"="#0072B2",
+  "arthritis rheumatoid" = "#D55E00",
+  "asthma" = "#d9f365",
+  "thyroid neoplasms" = "#0072B2",
   "tcga" = "#0072B2",
   "TCGA" = "#0072B2",
   "gtex" = "#00BA37",
   "GTEx" = "#00BA37",
   "scipher" = "#D55E00",
-  #"Analytical model"="#e3f705",
-  "Analytical model"="#cc68f7",
-  "Power law"="#cc68f7",
-  "Logarithm"="#09b863",
-  "Exponential decay"="#09b863",
+  "Analytical model" = "#cc68f7",
+  "Power law" = "#cc68f7",
+  "Logarithm" = "#09b863",
+  "Exponential decay" = "#09b863",
   "\u2265 0.2" = "#F8766D",
   "\u2265 0.4" = "#7CAE00",
   "\u2265 0.6" = "#00BFC4",
@@ -491,7 +493,6 @@ log_model_summary_df <- analytical_model_summary_df %>%
   rename("R**2 (Log)" = "adj.r.squared", "epsilon (Log)" = "relative.error.mean") %>%
   arrange(factor(type_dataset, levels = datasets_selected)) %>%
   mutate_if(is.numeric, ~sprintf("%.2f",.))
-#print(log_model_summary_df)
 
 # Create table for figure
 power_law_summary_df <- analytical_model_summary_df %>%
@@ -502,7 +503,6 @@ power_law_summary_df <- analytical_model_summary_df %>%
   rename("alpha (model)"="a", "R**2 (model)" = "adj.r.squared", "epsilon (model)" = "relative.error.mean") %>%
   unique() %>% 
   mutate_if(is.numeric, ~sprintf("%.2f",.))
-#print(power_law_summary_df)
 
 # Bind power law with logarithm results
 figure_summary_table <- cbind(
@@ -515,8 +515,42 @@ figure_summary_table <- scaling_relation_summary_df %>%
   full_join(log_model_summary_df, by = "type_dataset") %>%
   dplyr::select("dataset", "type_dataset", "R**2 (scaling)", "alpha (model)", "R**2 (model)", "epsilon (model)", "R**2 (Log)", "epsilon (Log)") %>%
   arrange(dataset, type_dataset)
-print(figure_summary_table)
 
+# Join model results with the mean of the empirical results
+predicted_results_mean_df <-
+  rbind((topology_results_selected_by_size_df %>%
+           dplyr::select("type_dataset", "size", "mean") %>%
+           unique() %>%
+           rename("model_result" = "mean") %>%
+           mutate(model = "Mean")),
+        (predicted_results_df %>%
+           dplyr::select(type_dataset, size, model_result, model) %>%
+           unique()
+         %>% mutate_at(c("model_result"), as.numeric))) %>%
+  filter(type_dataset %in% datasets_selected) %>%
+  filter(model == model_selected) %>%
+  inner_join((analytical_model_summary_df %>% 
+                dplyr::select("type_dataset", "model", "adj.r.squared")),
+             by = c("type_dataset", "model")) %>%
+  mutate_at(c('adj.r.squared'), ~sprintf("%.2f",.)) %>%
+  mutate_at(c('adj.r.squared'), as.character)
+
+# Join predicted results with empirical results
+goodnessfit_df <- results_selected_df %>% 
+  dplyr::select(dataset, type_dataset, size, rep, num_edges) %>%
+  right_join(predicted_results_mean_df, by = c("type_dataset", "size")) %>%
+  filter(type_dataset %in% datasets_selected) %>%
+  filter(
+    size <= max(
+      (results_selected_df %>% filter(type_dataset %in% datasets_selected))$size
+    )
+  ) %>%
+  filter(
+    size >= min(
+      (results_selected_df %>% filter(type_dataset %in% datasets_selected))$size
+    )
+  ) %>%
+  filter(!(is.na(num_edges)))
 
 
 # Read mtcars data
@@ -550,9 +584,62 @@ server <- function(input, output, session) {
 
     # Filter summary table by dataset
     figure_summary_table_filt <- figure_summary_table %>%
-      filter((dataset %in% input$dataset_input) & (type_dataset %in% selected_dataset_types)) %>%
+      filter(
+        (dataset %in% input$dataset_input) &
+        (type_dataset %in% selected_dataset_types)
+      ) %>%
+      # Rename dataset and type_dataset to human readable names
       mutate(type_dataset = dplyr::recode(type_dataset, !!!name_dict),
              dataset = dplyr::recode(dataset, !!!name_dict))
+    
+    # Filter goodnessfit table by dataset
+    goodnessfit_filt <- goodnessfit_df %>%
+      filter(
+        (dataset %in% input$dataset_input) &
+        (type_dataset %in% selected_dataset_types)
+      ) %>%
+      # Include color codes for each dataset
+      left_join(
+        (color_dict %>%
+          as.data.frame() %>%
+          dplyr::rename("rgb_col" = ".") %>%
+          tibble::rownames_to_column("type_dataset")
+        ), by = c("type_dataset")
+      ) %>%
+      # Rename dataset and type_dataset to human readable names
+      mutate(type_dataset = dplyr::recode(type_dataset, !!!name_dict),
+             dataset = dplyr::recode(dataset, !!!name_dict))
+    print(goodnessfit_filt)
+
+    # Create plot based on goodnessfit table
+    goodnessfit_plot <- goodnessfit_filt %>%
+      ggplot(aes(x = size, y = num_edges, col = type_dataset)) +
+      geom_point(alpha = 0.6, size = 3) +
+      geom_line(aes(x = size, y = model_result, col = type_dataset), size = 1) +
+      scale_color_manual(
+        guide = "legend",
+        values = as.vector(color_dict[levels(factor(goodnessfit_filt$type_dataset))])
+      ) +
+      theme_linedraw() +
+      xlab("Num. samples") +
+      ylab("Frac. significant correlations") +
+      guides(col = guide_legend(title = bquote(bold(.("Analytical model") ~ R^2)))) +
+      theme(
+        aspect.ratio = 1,
+        plot.title =  element_text(size = 20, face = "bold"),
+        axis.title = element_text(size = 17, face = "bold"),
+        axis.text = element_text(size = 16),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        text = element_text(family = "Helvetica"),
+        legend.position = c(0.64, 0.15),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 16, face = "bold"),
+        legend.background = element_rect(
+          fill = "transparent",
+          color = "transparent"
+        )
+      )
 
     # mtcars_mod_filt <- mtcars_mod %>%
     #   filter(car %in% input$input_cars)
@@ -575,9 +662,14 @@ server <- function(input, output, session) {
     #       unite(car, all_of(input$merge_cond), sep = "|")
     #   })
     # }
-    return(figure_summary_table_filt)
+    return(
+      list(
+        "summary_table" = figure_summary_table_filt,
+        "goodnessfit_plot" = goodnessfit_plot
+      )
+    )
   })
-  
+
   # Observe changes in input_cars and update input_gear and input_carb choices
   observeEvent(input$input_cars, {
     selected_cars <- input$input_cars
@@ -603,7 +695,7 @@ server <- function(input, output, session) {
         `selected-text-format` = "count > 1"
       )
     )
-    
+
     # Update input_carb choices and retain previous selections
     shinyWidgets::updatePickerInput(
       session,
@@ -618,19 +710,17 @@ server <- function(input, output, session) {
       )
     )
   })
-  
-  output$sigTable <- DT::renderDataTable({
-    figure_summary_table_filt <- process_inputs()
-    figure_summary_table_filt
+
+  output$summaryTable <- DT::renderDataTable({
+    results <- process_inputs()
+    results$summary_table
   })
 
-  output$sigHeatmap <- renderPlot({
-    # mtcars_mod_filt <- process_inputs()
-    # mtcars_mod_filt %>%
-    #   ggplot(aes(x = mpg)) +
-    #   geom_histogram(aes(fill = car))
+  output$scalingPlot <- renderPlot({
+    results <- process_inputs()
+    results$goodnessfit_plot
   })
-  
+
 }
 
 # Run the application 
