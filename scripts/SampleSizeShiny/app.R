@@ -243,6 +243,17 @@ ui <- navbarPage(
                 multiple = TRUE
               ),
             ),
+            # Add select input for type of plot
+            selectInput(
+              inputId = "plot_type",
+              label = "Plot type:",
+              choices = c(
+                "Num. edges vs. sample size",
+                "Power law",
+                "Model prediction"
+              ),
+              selected = "Num. edges vs. sample size"
+            )
 
 
           ),
@@ -302,6 +313,7 @@ sd_genes_df <- fread(sd_genes_file)
 input_dir <- file.path(data_dir, "example_pearson_pval_0.05")
 topology_results_file <- paste(input_dir, "topology_results_pearson_pval_0.05.txt", sep = "/")
 results_selected_df <- fread(topology_results_file)
+dataset_to_type_df <- results_selected_df %>% dplyr::select(dataset, type_dataset) %>% unique()
 gtex_datasets <- results_selected_df %>% filter(dataset == "gtex") %>% pull(type_dataset) %>% unique() # Get GTEx datasets
 tcga_datasets <- results_selected_df %>% filter(dataset == "tcga") %>% pull(type_dataset) %>% unique() # Get TCGA datasets
 scipher_datasets <- results_selected_df %>% filter(dataset == "scipher") %>% pull(type_dataset) %>% unique() # Get scipher datasets
@@ -557,6 +569,24 @@ goodnessfit_df <- results_selected_df %>%
   ) %>%
   filter(!(is.na(num_edges)))
 
+# Join predicted results with empirical results
+model_prediction_df <- results_selected_norm_df %>%
+  dplyr::select("type_dataset", "size", "rep", "num_edges") %>%
+  # Include predictions from model
+  dplyr::right_join(
+    (predicted_results_norm_df %>%
+      dplyr::select(type_dataset, model, model_result, size) %>%
+      mutate_at(c('model_result'), as.numeric) %>%
+      unique()
+    ), by=c("type_dataset", "size")) %>%
+  dplyr::filter(
+    (type_dataset %in% datasets_selected) &
+    (model == model_selected)
+  ) %>%
+  # Add column dataset
+  mutate(dataset = recode(type_dataset, !!!setNames(dataset_to_type$dataset, dataset_to_type$type_dataset))) %>%
+  dplyr::select(dataset, type_dataset, size, rep, num_edges, model_result)
+
 # Read mtcars data
 mtcars_mod <- mtcars %>% 
   mutate(car = row.names(mtcars)) %>%
@@ -616,34 +646,87 @@ server <- function(input, output, session) {
              # Create new column that pastes type_dataset and adj.r.squared
              r2labels = paste(type_dataset, ": ", adj.r.squared, sep = ""))
 
-    # Create plot based on goodnessfit table
-    goodnessfit_plot <- goodnessfit_filt %>%
-      ggplot(aes(x = size, y = num_edges, col = r2labels)) +
-      geom_point(alpha = 0.6, size = 3) +
-      geom_line(aes(x = size, y = model_result, col = r2labels), size = 1) +
-      scale_color_manual(
-        guide = "legend",
-        values = setNames(goodnessfit_filt$rgb_col, goodnessfit_filt$r2labels)
-      ) +
-      theme_linedraw() +
-      xlab("Num. samples") +
-      ylab("Frac. significant correlations") +
-      guides(col = guide_legend(title = bquote(bold(.("Analytical model") ~ R^2)))) +
-      theme(
-        aspect.ratio = 1,
-        plot.title =  element_text(size = 20, face = "bold"),
-        axis.title = element_text(size = 17, face = "bold"),
-        axis.text = element_text(size = 16),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        text = element_text(family = "Helvetica"),
-        legend.text = element_text(size = 16),
-        legend.title = element_text(size = 16, face = "bold"),
-        legend.background = element_rect(
-          fill = "transparent",
-          color = "transparent"
+    # Filter model prediction table by dataset
+    model_prediction_filt <- model_prediction_df %>%
+      filter(
+        (dataset %in% input$dataset_input) &
+        (type_dataset %in% selected_dataset_types)
+      ) %>%
+      # Include color codes for each dataset
+      left_join(
+        (color_dict %>%
+          as.data.frame() %>%
+          dplyr::rename("rgb_col" = ".") %>%
+          tibble::rownames_to_column("type_dataset")
+        ), by = c("type_dataset")
+      ) %>%
+      # Rename dataset and type_dataset to human readable names
+      mutate(type_dataset = dplyr::recode(type_dataset, !!!name_dict),
+             dataset = dplyr::recode(dataset, !!!name_dict))
+
+    if (input$plot_type == "Num. edges vs. sample size") {
+
+      # Create plot based on goodnessfit table
+      scaling_plot <- goodnessfit_filt %>%
+        ggplot(aes(x = size, y = num_edges, col = r2labels)) +
+        geom_point(alpha = 0.6, size = 3) +
+        geom_line(aes(x = size, y = model_result, col = r2labels), size = 1) +
+        scale_color_manual(
+          guide = "legend",
+          values = setNames(goodnessfit_filt$rgb_col, goodnessfit_filt$r2labels)
+        ) +
+        theme_linedraw() +
+        xlab("Num. samples") +
+        ylab("Num. significant correlations") +
+        guides(col = guide_legend(title = bquote(bold(.("Analytical model") ~ R^2)))) +
+        theme(
+          aspect.ratio = 1,
+          plot.title =  element_text(size = 20, face = "bold"),
+          axis.title = element_text(size = 17, face = "bold"),
+          axis.text = element_text(size = 16),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          text = element_text(family = "Helvetica"),
+          legend.text = element_text(size = 16),
+          legend.title = element_text(size = 16, face = "bold"),
+          legend.background = element_rect(
+            fill = "transparent",
+            color = "transparent"
+          )
         )
-      )
+
+    } else if (input$plot_type == "Model prediction") {
+
+      # Create plot based on model prediction table
+      scaling_plot <- model_prediction_filt %>%
+        ggplot(aes(x = size, y = num_edges, col = type_dataset)) +
+        geom_point(alpha = 0.6, size = 3) +
+        geom_line(aes(x = size, y = model_result, col = type_dataset), size = 1) +
+        scale_color_manual(
+          guide = "legend",
+          values = setNames(model_prediction_filt$rgb_col, model_prediction_filt$type_dataset)
+        ) +
+        theme_linedraw() +
+        xlab("Num. samples") +
+        ylab("Frac. significant correlations") +
+        guides(col = guide_legend(title = "Dataset")) +
+        theme(
+          aspect.ratio = 1,
+          plot.title =  element_text(size = 20, face = "bold"),
+          axis.title = element_text(size = 17, face = "bold"),
+          axis.text = element_text(size = 16),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          text = element_text(family = "Helvetica"),
+          legend.text = element_text(size = 16),
+          legend.title = element_text(size = 16, face = "bold"),
+          legend.background = element_rect(
+            fill = "transparent",
+            color = "transparent"
+          )
+        )
+
+    }
 
     # mtcars_mod_filt <- mtcars_mod %>%
     #   filter(car %in% input$input_cars)
@@ -669,7 +752,7 @@ server <- function(input, output, session) {
     return(
       list(
         "summary_table" = figure_summary_table_filt,
-        "goodnessfit_plot" = goodnessfit_plot
+        "scaling_plot" = scaling_plot
       )
     )
   })
@@ -722,7 +805,7 @@ server <- function(input, output, session) {
 
   output$scalingPlot <- renderPlot({
     results <- process_inputs()
-    results$goodnessfit_plot
+    results$scaling_plot
   })
 
 }
