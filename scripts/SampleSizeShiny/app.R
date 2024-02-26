@@ -353,23 +353,28 @@ color_dict <- c(
   "TCGA: Lung cancer" = "#56B4E9",
   "tcga:tcga-luad" = "#56B4E9",
   "TCGA: Breast cancer" = "#0072B2",
+  "TCGA: Breast cancer (Female)" = "#0072B2",
   "tcga:tcga-brca_female" = "#0072B2",
   "breast neoplasms" = "#0072B2",
   "tcga:tcga-brca.luma" = "#00b2a0",
   "TCGA: Breast cancer (Luminal A)" = "#00b2a0",
   "tcga:tcga-brca.lumb" = "#74f6ff",
   "TCGA: Breast cancer (Luminal B)" = "#74f6ff",
-  "TCGA: Breast" = "#0072B",
+  "TCGA: Breast tissue" = "#0072B2",
+  "TCGA: Breast tissue (Female)" = "#0072B2",
   "TCGA: Kidney tissue" = "#009E73",
   "tcga:kidney" = "#009E73",
   "GTEx: Whole blood" = "#65F3BF",
   "gtex:whole.blood" = "#65F3BF",
   "GTEx: Lung" = "#24D157",
   "gtex:lung" = "#24D157",
-  "GTEx: Breast" = "#00BA37", #44AA99
+  "GTEx: Breast" = "#00BA37",
+  "GTEx: Breast (Female)" = "#00BA37",
   "gtex:breast.mammary.tissue" = "#00BA37",
   "gtex:breast.mammary.tissue_female" = "#00BA37",
   "R. arthritis" = "#D55E00", #E69F00
+  "R. arthritis (all samples)" = "#D55E00", #E69F00
+  "R. arthritis (sample/patient)" = "#D55E00", #E69F00
   "scipher:scipher.sample.per.patient.baseline" = "#D55E00",
   "arthritis rheumatoid" = "#D55E00",
   "asthma" = "#d9f365",
@@ -552,7 +557,6 @@ goodnessfit_df <- results_selected_df %>%
   ) %>%
   filter(!(is.na(num_edges)))
 
-
 # Read mtcars data
 mtcars_mod <- mtcars %>% 
   mutate(car = row.names(mtcars)) %>%
@@ -608,17 +612,18 @@ server <- function(input, output, session) {
       ) %>%
       # Rename dataset and type_dataset to human readable names
       mutate(type_dataset = dplyr::recode(type_dataset, !!!name_dict),
-             dataset = dplyr::recode(dataset, !!!name_dict))
-    print(goodnessfit_filt)
+             dataset = dplyr::recode(dataset, !!!name_dict),
+             # Create new column that pastes type_dataset and adj.r.squared
+             r2labels = paste(type_dataset, ": ", adj.r.squared, sep = ""))
 
     # Create plot based on goodnessfit table
     goodnessfit_plot <- goodnessfit_filt %>%
-      ggplot(aes(x = size, y = num_edges, col = type_dataset)) +
+      ggplot(aes(x = size, y = num_edges, col = r2labels)) +
       geom_point(alpha = 0.6, size = 3) +
-      geom_line(aes(x = size, y = model_result, col = type_dataset), size = 1) +
+      geom_line(aes(x = size, y = model_result, col = r2labels), size = 1) +
       scale_color_manual(
         guide = "legend",
-        values = as.vector(color_dict[levels(factor(goodnessfit_filt$type_dataset))])
+        values = setNames(goodnessfit_filt$rgb_col, goodnessfit_filt$r2labels)
       ) +
       theme_linedraw() +
       xlab("Num. samples") +
@@ -632,7 +637,6 @@ server <- function(input, output, session) {
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         text = element_text(family = "Helvetica"),
-        legend.position = c(0.64, 0.15),
         legend.text = element_text(size = 16),
         legend.title = element_text(size = 16, face = "bold"),
         legend.background = element_rect(
