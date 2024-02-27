@@ -248,11 +248,11 @@ ui <- navbarPage(
               inputId = "plot_type",
               label = "Plot type:",
               choices = c(
-                "Num. edges vs. sample size",
-                "Power law",
+                "Corr. vs. size",
+                "Scaling rel.",
                 "Model prediction"
               ),
-              selected = "Num. edges vs. sample size"
+              selected = "Corr. vs. size"
             )
 
 
@@ -433,34 +433,6 @@ color_dict <- c(
 datasets_selected <- unique(topology_results_selected_by_size_df$type_dataset)
 model_selected <- "Stretched exponential (by linear fit)"
 
-# Calculate data from scaling relationship
-cols <- c("size", "S", "type_dataset", "S_lag1", "Fn", "slope", "intercept", "adj.r.squared")
-
-scaling_relation_df <- data.frame(matrix(ncol = length(cols),
-                                        nrow = 0,
-                                        dimnames = list(NULL, cols)))
-
-for (dataset_selected in datasets_selected){
-  scaling_relation_filt <- topology_results_selected_by_size_df %>% 
-    filter(type_dataset == dataset_selected) %>%
-    select(size, mean, type_dataset) %>%
-    unique() %>%
-    rename("S"="mean") %>%
-    arrange(size) %>%
-    mutate(S_lag1 = if_else(size == min(size), 0, lag(S))) %>%
-    mutate(Fn = ((S - S_lag1)/S_lag1)) %>%
-    filter((!(is.infinite(Fn))) & (Fn > 0))
-  lm_summary <- summary(lm(log(scaling_relation_filt$Fn) ~ log(scaling_relation_filt$size)))
-  slope <- coef(lm_summary)[2]
-  intercept <- coef(lm_summary)[1]
-  adj.r.squared <- lm_summary$adj.r.squared
-  scaling_relation_df <- rbind(scaling_relation_df, 
-                              cbind(scaling_relation_filt, 
-                                    data.frame(slope = slope, 
-                                               intercept = intercept, 
-                                               adj.r.squared = adj.r.squared)))
-}
-
 # Create scaling relation summary table
 scaling_relation_summary_df <- scaling_relation_df %>%
   dplyr::select(type_dataset, adj.r.squared) %>%
@@ -584,8 +556,46 @@ model_prediction_df <- results_selected_norm_df %>%
     (model == model_selected)
   ) %>%
   # Add column dataset
-  mutate(dataset = recode(type_dataset, !!!setNames(dataset_to_type$dataset, dataset_to_type$type_dataset))) %>%
+  dplyr::left_join(dataset_to_type_df, by = c("type_dataset")) %>%
   dplyr::select(dataset, type_dataset, size, rep, num_edges, model_result)
+
+# Calculate scaling relationship
+cols <- c("size", "S", "type_dataset", "S_lag1", "Fn", "slope", "intercept",
+          "adj.r.squared")
+scaling_relation_df <- data.frame(
+  matrix(ncol = length(cols), nrow = 0, dimnames = list(NULL, cols))
+)
+for (dataset_selected in datasets_selected) {
+  scaling_relation_filt <- topology_results_selected_by_size_df %>%
+    filter(type_dataset == dataset_selected) %>%
+    dplyr::select(size, mean, type_dataset) %>%
+    unique() %>%
+    dplyr::rename("S" = "mean") %>%
+    arrange(size) %>%
+    mutate(S_lag1 = if_else(size == min(size), 0, lag(S))) %>%
+    mutate(Fn = ((S - S_lag1) / S_lag1)) %>%
+    filter((!(is.infinite(Fn))) & (Fn > 0))
+  lm_summary <- summary(lm(log(scaling_relation_filt$Fn)~log(scaling_relation_filt$size)))
+  slope <- coef(lm_summary)[2]
+  intercept <- coef(lm_summary)[1]
+  adj_r_squared <- lm_summary$adj.r.squared
+  scaling_relation_df <- rbind(
+    scaling_relation_df,
+    cbind(
+      scaling_relation_filt,
+      data.frame(
+        slope = slope,
+        intercept = intercept,
+        adj.r.squared = adj_r_squared
+      )
+    )
+  )
+}
+scaling_relation_df <- scaling_relation_df %>%
+  left_join(dataset_to_type_df, by = c("type_dataset")) %>%
+  filter(Fn > 0) %>%
+  mutate_at(c('adj.r.squared'), ~sprintf("%.2f",.)) %>%
+  mutate_at(c('adj.r.squared'), as.character)
 
 # Read mtcars data
 mtcars_mod <- mtcars %>% 
@@ -625,9 +635,29 @@ server <- function(input, output, session) {
       # Rename dataset and type_dataset to human readable names
       mutate(type_dataset = dplyr::recode(type_dataset, !!!name_dict),
              dataset = dplyr::recode(dataset, !!!name_dict))
-    
+
     # Filter goodnessfit table by dataset
     goodnessfit_filt <- goodnessfit_df %>%
+      filter(
+        (dataset %in% input$dataset_input) &
+        (type_dataset %in% selected_dataset_types)
+      ) %>%
+      # Include color codes for each dataset
+      left_join(
+        (color_dict %>%
+          as.data.frame() %>%
+          dplyr::rename("rgb_col" = ".") %>%
+          tibble::rownames_to_column("type_dataset")
+        ), by = c("type_dataset")
+      ) %>%
+      # Rename dataset and type_dataset to human readable names
+      mutate(type_dataset = dplyr::recode(type_dataset, !!!name_dict),
+             dataset = dplyr::recode(dataset, !!!name_dict),
+             # Create new column that pastes type_dataset and adj.r.squared
+             r2labels = paste(type_dataset, ": ", adj.r.squared, sep = ""))
+
+    # Filter scaling relation table by dataset
+    scaling_relation_filt <- scaling_relation_df %>%
       filter(
         (dataset %in% input$dataset_input) &
         (type_dataset %in% selected_dataset_types)
@@ -664,13 +694,13 @@ server <- function(input, output, session) {
       mutate(type_dataset = dplyr::recode(type_dataset, !!!name_dict),
              dataset = dplyr::recode(dataset, !!!name_dict))
 
-    if (input$plot_type == "Num. edges vs. sample size") {
+    if (input$plot_type == "Corr. vs. size") {
 
       # Create plot based on goodnessfit table
       scaling_plot <- goodnessfit_filt %>%
         ggplot(aes(x = size, y = num_edges, col = r2labels)) +
         geom_point(alpha = 0.6, size = 3) +
-        geom_line(aes(x = size, y = model_result, col = r2labels), size = 1) +
+        geom_line(aes(x = size, y = model_result, col = r2labels), linewidth = 1) +
         scale_color_manual(
           guide = "legend",
           values = setNames(goodnessfit_filt$rgb_col, goodnessfit_filt$r2labels)
@@ -695,13 +725,43 @@ server <- function(input, output, session) {
           )
         )
 
+    } else if (input$plot_type == "Scaling rel.") {
+
+      scaling_plot <- scaling_relation_filt %>%
+        ggplot(aes(x = log(size), y = log(Fn), col = r2labels)) +
+        geom_point(alpha = 0.9, size = 3) +
+        geom_abline(aes(intercept = intercept, slope = slope, col = r2labels), size = 1, key_glyph = "smooth") +
+        theme_linedraw() +
+        xlab("log(n)") +
+        ylab(bquote(bold(log((S[n]-S[n-1])/S[n-1])))) +
+        scale_color_manual(
+          guide = "legend",
+          values = setNames(scaling_relation_filt$rgb_col, scaling_relation_filt$r2labels)
+        ) +
+        guides(col = guide_legend(title = bquote(bold(.("Power law") ~ R^2)))) +
+        theme(
+          aspect.ratio = 1,
+          plot.title =  element_text(size = 20, face = "bold"),
+          axis.title = element_text(size = 17, face = "bold"),
+          axis.text = element_text(size = 16),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          text = element_text(family = "Helvetica"),
+          legend.text = element_text(size = 16),
+          legend.title = element_text(size = 16, face = "bold"),
+          legend.background = element_rect(
+            fill = "transparent",
+            color = "transparent"
+          )
+        )
+
     } else if (input$plot_type == "Model prediction") {
 
       # Create plot based on model prediction table
       scaling_plot <- model_prediction_filt %>%
         ggplot(aes(x = size, y = num_edges, col = type_dataset)) +
         geom_point(alpha = 0.6, size = 3) +
-        geom_line(aes(x = size, y = model_result, col = type_dataset), size = 1) +
+        geom_line(aes(x = size, y = model_result, col = type_dataset), linewidth = 1) +
         scale_color_manual(
           guide = "legend",
           values = setNames(model_prediction_filt$rgb_col, model_prediction_filt$type_dataset)
