@@ -22,7 +22,7 @@ ui <- navbarPage(
     title = "Power-law scaling relationship",
     grid_container(
       layout = c(
-        "sig_settings sig_viz"
+        "power_law_settings power_law_viz"
       ),
       row_sizes = c(
         "1fr"
@@ -33,7 +33,7 @@ ui <- navbarPage(
       ),
       gap_size = "10px",
       grid_card(
-        area = "sig_settings",
+        area = "power_law_settings",
         card_header("Settings"),
         card_body_fill(
           div(
@@ -260,19 +260,19 @@ ui <- navbarPage(
         )
       ),
       grid_card(
-        area = "sig_viz",
+        area = "power_law_viz",
         card_body_fill(
           tabsetPanel(
-            id = "sig_viz_type",
+            id = "power_law_tabset",
             tabPanel(
-              title = "Information",
+              title = "Summary table",
               DTOutput(outputId = "summaryTable", width = "100%")
             ),
             tabPanel(
-              title = "Plot",
+              title = "Corr. vs  size plots",
               grid_container(
                 layout = c(
-                  "sig_heatmap_area"
+                  "corr_vs_size_area"
                 ),
                 row_sizes = c(
                   "1fr"
@@ -282,8 +282,27 @@ ui <- navbarPage(
                 ),
                 gap_size = "10px",
                 grid_card_plot(
-                  area = "sig_heatmap_area",
+                  area = "corr_vs_size_area",
                   outputId = "scalingPlot"
+                )
+              )
+            ),
+            tabPanel(
+              title = "Discovery rate plots",
+              grid_container(
+                layout = c(
+                  "discovery_rate_area"
+                ),
+                row_sizes = c(
+                  "1fr"
+                ),
+                col_sizes = c(
+                  "1fr"
+                ),
+                gap_size = "10px",
+                grid_card_plot(
+                  area = "discovery_rate_area",
+                  outputId = "discoveryRatePlot"
                 )
               )
             )
@@ -433,14 +452,6 @@ color_dict <- c(
 datasets_selected <- unique(topology_results_selected_by_size_df$type_dataset)
 model_selected <- "Stretched exponential (by linear fit)"
 
-# Create scaling relation summary table
-scaling_relation_summary_df <- scaling_relation_df %>%
-  dplyr::select(type_dataset, adj.r.squared) %>%
-  unique() %>%
-  arrange(factor(type_dataset, levels = datasets_selected)) %>%
-  rename("R**2 (scaling)" = "adj.r.squared") %>%
-  mutate_if(is.numeric, ~sprintf("%.2f",.))
-
 # Show all information for model selected
 analytical_model_summary_df <- analytical_model_summary_df %>% 
   inner_join((results_selected_norm_df %>%
@@ -492,18 +503,6 @@ power_law_summary_df <- analytical_model_summary_df %>%
   rename("alpha (model)"="a", "R**2 (model)" = "adj.r.squared", "epsilon (model)" = "relative.error.mean") %>%
   unique() %>% 
   mutate_if(is.numeric, ~sprintf("%.2f",.))
-
-# Bind power law with logarithm results
-figure_summary_table <- cbind(
-  scaling_relation_summary_df,
-  (power_law_summary_df %>% dplyr::select(-type_dataset)),
-  (log_model_summary_df %>% dplyr::select(-type_dataset))
-)
-figure_summary_table <- scaling_relation_summary_df %>%
-  full_join(power_law_summary_df, by = "type_dataset") %>%
-  full_join(log_model_summary_df, by = "type_dataset") %>%
-  dplyr::select("dataset", "type_dataset", "R**2 (scaling)", "alpha (model)", "R**2 (model)", "epsilon (model)", "R**2 (Log)", "epsilon (Log)") %>%
-  arrange(dataset, type_dataset)
 
 # Join model results with the mean of the empirical results
 predicted_results_mean_df <-
@@ -596,6 +595,30 @@ scaling_relation_df <- scaling_relation_df %>%
   filter(Fn > 0) %>%
   mutate_at(c('adj.r.squared'), ~sprintf("%.2f",.)) %>%
   mutate_at(c('adj.r.squared'), as.character)
+
+# Create scaling relation summary table
+scaling_relation_summary_df <- scaling_relation_df %>%
+  dplyr::select(type_dataset, adj.r.squared) %>%
+  unique() %>%
+  arrange(factor(type_dataset, levels = datasets_selected)) %>%
+  rename("R**2 (scaling)" = "adj.r.squared") %>%
+  mutate_if(is.numeric, ~sprintf("%.2f",.))
+
+# Bind power law with logarithm results
+figure_summary_table <- cbind(
+  scaling_relation_summary_df,
+  (power_law_summary_df %>% dplyr::select(-type_dataset)),
+  (log_model_summary_df %>% dplyr::select(-type_dataset))
+)
+figure_summary_table <- scaling_relation_summary_df %>%
+  full_join(power_law_summary_df, by = "type_dataset") %>%
+  full_join(log_model_summary_df, by = "type_dataset") %>%
+  dplyr::select("dataset", "type_dataset", "R**2 (scaling)", "alpha (model)", "R**2 (model)", "epsilon (model)", "R**2 (Log)", "epsilon (Log)") %>%
+  arrange(dataset, type_dataset)
+
+# Read discovery rate results
+a_vs_fraction_corr_file <- paste(input_dir, "a_vs_fraction_sig_correlations_pearson_pval_0.05.txt", sep = "/")
+sample_size_vs_a_df <- fread(a_vs_fraction_corr_file)
 
 # Read mtcars data
 mtcars_mod <- mtcars %>% 
@@ -694,6 +717,53 @@ server <- function(input, output, session) {
       mutate(type_dataset = dplyr::recode(type_dataset, !!!name_dict),
              dataset = dplyr::recode(dataset, !!!name_dict))
 
+    # Filter sample size vs. a table by dataset
+    type_correlation_selected <- "weak"
+    sample_size_vs_a_filt <- sample_size_vs_a_df %>% 
+      filter(
+        (dataset %in% input$dataset_input) &
+        (type_dataset %in% selected_dataset_types)
+      ) %>%
+      # Filter by correlation type
+      filter(type_correlation == type_correlation_selected) %>%
+      # Include color codes for each dataset
+      left_join(
+        (color_dict %>%
+          as.data.frame() %>%
+          dplyr::rename("rgb_col" = ".") %>%
+          tibble::rownames_to_column("type_dataset")
+        ), by = c("type_dataset")
+      ) %>%
+      # Rename dataset and type_dataset to human readable names
+      mutate(type_dataset = dplyr::recode(type_dataset, !!!name_dict),
+             dataset = dplyr::recode(dataset, !!!name_dict))
+
+    # Calculate correlation and regression between sample size and a
+    ss_vs_a_cor <- cor(
+      sample_size_vs_a_filt$a,
+      sample_size_vs_a_filt$num_edges_from_statistical_corrected_norm
+    )
+    ss_vs_a_lm <- summary(
+      lm(
+        sample_size_vs_a_filt$num_edges_from_statistical_corrected_norm ~
+        sample_size_vs_a_filt$a
+      )
+    )
+
+    ss_vs_a_slope <- coef(ss_vs_a_lm)[2]
+    ss_vs_a_intercept <- coef(ss_vs_a_lm)[1]
+    ss_vs_a_adj_r_squared <- ss_vs_a_lm$adj.r.squared
+    ss_vs_a_cor_lm <- paste(
+      "R² =",
+      round(ss_vs_a_adj_r_squared, 3),
+      "\ncorr. =",
+      round(ss_vs_a_cor, 3)
+    )
+
+    # Initialize the plot variable as NULL
+    scaling_plot <- NULL
+    discovery_rate_plot <- NULL
+
     if (input$plot_type == "Corr. vs. size") {
 
       # Create plot based on goodnessfit table
@@ -786,6 +856,45 @@ server <- function(input, output, session) {
           )
         )
 
+    } else if (input$plot_type == "Corr. vs. rate") {
+
+      discovery_rate_plot <- sample_size_vs_a_filt %>%
+        ggplot(aes(x = a, y = num_edges_from_statistical_corrected_norm)) +
+          geom_point(
+            aes(col = type_dataset),
+            alpha = 0.6,
+            size = 3,
+            show.legend = TRUE
+          ) +
+          scale_color_manual(
+            guide = "legend",
+            values = setNames(sample_size_vs_a_filt$rgb_col, sample_size_vs_a_filt$type_dataset)
+          ) +
+          geom_abline(aes(slope = ss_vs_a_slope,
+                          intercept = ss_vs_a_intercept),
+                      linetype = "dashed", 
+                      col = "gray50",
+                      show.legend = FALSE) +
+        annotate("text", x = 2.00, y = 0.45, label = ss_vs_a_cor_lm, size = 5) +
+        xlab(expression(alpha)) +
+        ylab("Frac. correlations above 0.2") +
+        theme_linedraw() +
+        theme(
+          aspect.ratio = 1,
+          plot.title =  element_text(size = 20, face = "bold"),
+          axis.title = element_text(size = 17, face = "bold"),
+          axis.text = element_text(size = 16),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          text = element_text(family = "Helvetica"),
+          legend.text = element_text(size = 16),
+          legend.title = element_blank(),
+          legend.background = element_rect(
+            fill = "transparent",
+            color = "transparent"
+          )
+        )
+
     }
 
     # mtcars_mod_filt <- mtcars_mod %>%
@@ -812,7 +921,8 @@ server <- function(input, output, session) {
     return(
       list(
         "summary_table" = figure_summary_table_filt,
-        "scaling_plot" = scaling_plot
+        "scaling_plot" = scaling_plot,
+        "discovery_rate_plot" = discovery_rate_plot
       )
     )
   })
@@ -858,17 +968,64 @@ server <- function(input, output, session) {
     )
   })
 
+  # Initialize a reactive value to store the current tab
+  current_tab <- reactiveVal()
+
+  # Update 'current_tab' whenever 'power_law_tabset' changes
+  observeEvent(input$power_law_tabset, {
+    current_tab(input$power_law_tabset)
+  })
+
+  # Initialize reactive values to store the last selected 'plot_type' for each tab
+  last_plot_type <- reactiveValues(
+    discovery = "Corr. vs. rate",
+    scaling = "Corr. vs. size"
+  )
+
+  # Update 'last_plot_type' whenever 'plot_type' changes
+  observeEvent(input$plot_type, {
+    if (input$power_law_tabset == "Discovery rate plots") {
+      last_plot_type$discovery <- input$plot_type
+    } else {
+      last_plot_type$scaling <- input$plot_type
+    }
+  })
+
+  # Update 'plot_type' when switching tabs
+  observeEvent(input$power_law_tabset, {
+    if (input$power_law_tabset == "Discovery rate plots") {
+      updateSelectInput(
+        session,
+        "plot_type",
+        choices = c("Corr. vs. rate", "CV vs. rate", "Rate vs. size"),
+        selected = last_plot_type$discovery
+      )
+    } else {
+      updateSelectInput(
+        session,
+        "plot_type",
+        choices = c("Corr. vs. size", "Scaling rel.", "Model prediction"),
+        selected = last_plot_type$scaling
+      )
+    }
+  })
+
   output$summaryTable <- DT::renderDataTable({
     results <- process_inputs()
     results$summary_table
   })
 
-  output$scalingPlot <- renderPlot({
+  output$scalingPlot <- renderCachedPlot({
     results <- process_inputs()
     results$scaling_plot
-  })
+  }, cacheKeyExpr = { list(current_tab(), input$plot_type, input$dataset_input, input$type_dataset_gtex, input$type_dataset_tcga, input$type_dataset_scipher) })  # Include all relevant inputs
+
+  output$discoveryRatePlot  <- renderCachedPlot({
+    results <- process_inputs()
+    results$discovery_rate_plot
+  }, cacheKeyExpr = { list(current_tab(), input$plot_type, input$dataset_input, input$type_dataset_gtex, input$type_dataset_tcga, input$type_dataset_scipher) })  # Include all relevant inputs
 
 }
 
-# Run the application 
+# Run the application
 shinyApp(ui = ui, server = server)
