@@ -8,6 +8,7 @@ library(dplyr)
 library(tidyr)
 library(DT)
 library(data.table)
+require(ggrepel)
 
 #shiny::runApp('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/app.R')
 #shiny::runApp('/Users/j.aguirreplans/WORK/Postdoc/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/app.R')
@@ -369,12 +370,16 @@ name_dict <- c(
   "gtex:lung" = "GTEx: Lung",
   "gtex:breast.mammary.tissue" = "GTEx: Breast",
   "gtex:breast.mammary.tissue_female" = "GTEx: Breast (Female)",
-  "tcga:tcga-brca.luma" = "TCGA: Breast cancer (Luminal A)",
-  "tcga:tcga-brca.lumb" = "TCGA: Breast cancer (Luminal B)",
+  "gtex:skin.sun.exposed.lower.leg" = "GTEx: Skin",
+  "gtex:thyroid" = "GTEx: Thyroid",
+  "tcga:brca.luma" = "TCGA: Breast cancer (Luminal A)",
+  "tcga:brca.lumb" = "TCGA: Breast cancer (Luminal B)",
   "tcga:breast_female" = "TCGA: Breast tissue (Female)",
   "tcga:kidney" = "TCGA: Kidney tissue",
-  "tcga:tcga-luad" = "TCGA: Lung cancer",
+  "tcga:tcga-luad" = "TCGA: Lung Adenocarcinoma",
+  "tcga:tcga-lusc" = "TCGA: Lung Squamous Cell Cancer",
   "tcga:tcga-brca_female" = "TCGA: Breast cancer (Female)",
+  "tcga:tcga-thca" = "TCGA: Thyroid cancer",
   "scipher:scipher.complete.dataset" = "R. arthritis (all samples)",
   "scipher:scipher.sample.per.patient.baseline" = "R. arthritis (sample/patient)"
 )
@@ -719,10 +724,9 @@ server <- function(input, output, session) {
 
     # Filter sample size vs. a table by dataset
     type_correlation_selected <- "weak"
-    sample_size_vs_a_filt <- sample_size_vs_a_df %>% 
+    sample_size_vs_a_filt <- sample_size_vs_a_df %>%
       filter(
-        (dataset %in% input$dataset_input) &
-        (type_dataset %in% selected_dataset_types)
+        dataset %in% c("gtex", "tcga", "scipher")
       ) %>%
       # Filter by correlation type
       filter(type_correlation == type_correlation_selected) %>%
@@ -732,11 +736,20 @@ server <- function(input, output, session) {
           as.data.frame() %>%
           dplyr::rename("rgb_col" = ".") %>%
           tibble::rownames_to_column("type_dataset")
-        ), by = c("type_dataset")
+        ), by = c("dataset" = "type_dataset")
       ) %>%
+      # Create geom_text_repel_label
       # Rename dataset and type_dataset to human readable names
-      mutate(type_dataset = dplyr::recode(type_dataset, !!!name_dict),
-             dataset = dplyr::recode(dataset, !!!name_dict))
+      mutate(
+        geom_text_repel_label = ifelse(
+          (dataset %in% input$dataset_input) & (type_dataset %in% selected_dataset_types),
+          type_dataset,
+          ""
+        ),
+        type_dataset = dplyr::recode(type_dataset, !!!name_dict),
+        dataset = dplyr::recode(dataset, !!!name_dict),
+        geom_text_repel_label = dplyr::recode(geom_text_repel_label, !!!name_dict)
+      )
 
     # Calculate correlation and regression between sample size and a
     ss_vs_a_cor <- cor(
@@ -858,21 +871,37 @@ server <- function(input, output, session) {
 
     } else if (input$plot_type == "Corr. vs. rate") {
 
+      print(sample_size_vs_a_filt)
+      print(unique(sample_size_vs_a_filt$geom_text_repel_label))
       discovery_rate_plot <- sample_size_vs_a_filt %>%
         ggplot(aes(x = a, y = num_edges_from_statistical_corrected_norm)) +
           geom_point(
-            aes(col = type_dataset),
+            aes(col = dataset),
             alpha = 0.6,
             size = 3,
             show.legend = TRUE
           ) +
           scale_color_manual(
             guide = "legend",
-            values = setNames(sample_size_vs_a_filt$rgb_col, sample_size_vs_a_filt$type_dataset)
+            values = setNames(sample_size_vs_a_filt$rgb_col, sample_size_vs_a_filt$dataset)
+          ) +
+          geom_label_repel(
+            aes(col = dataset, label = geom_text_repel_label),
+            fill="white",
+            box.padding = 0.5, max.overlaps = Inf,
+            label.size = 0.75,
+            size = 5,
+            alpha = 0.6,
+            label.padding = 0.25,
+            fontface = "bold",
+            na.rm = TRUE,
+            show.legend = FALSE,
+            max.iter = 1e5,
+            seed = 5555
           ) +
           geom_abline(aes(slope = ss_vs_a_slope,
                           intercept = ss_vs_a_intercept),
-                      linetype = "dashed", 
+                      linetype = "dashed",
                       col = "gray50",
                       show.legend = FALSE) +
         annotate("text", x = 2.00, y = 0.45, label = ss_vs_a_cor_lm, size = 5) +
