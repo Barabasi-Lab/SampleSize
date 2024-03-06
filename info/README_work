@@ -1552,21 +1552,6 @@ shiny::runApp(SampleSizeShiny)
 or
 shiny::runApp('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny')
 
-Deploy Shiny app:
------------------
-
-STEP 1 - INSTALL RSCONNECT
-install.packages('rsconnect')
-
-STEP 2 - AUTHORIZE ACCOUNT
-rsconnect::setAccountInfo(name='joaquimaguirreplans',
-			  token='4DC11654508D7B2460595CBBB4C28FA4',
-			  secret='1PW1nxzeiXCoWMwLDV7al1iT/QSwgdTMHTilLlII')
-
-STEP 3 - DEPLOY
-library(rsconnect)
-rsconnect::deployApp('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny')
-
 
 ###################################
 ANALYSIS USING RA DATASET FROM ENZO
@@ -1765,26 +1750,3 @@ $ kill -9 45745
 Finally, I can remove the folder:
 
 $ rm -r .vscode-server/
-
-
-#############
-UPDATE GITHUB
-#############
-
-# I don't know why it only works in the login node, not in the other ones
-# Go to the folder
-cd /home/j.aguirreplans/Projects/Scipher/SampleSize
-
-# To add new changes:
-git add --all .
-git commit -m "Calculate networks for Scipher"
-git push origin master
-
-# To pull changes from the repository:
-git pull origin
-
-# Get personal token to authentificate for 2 factor authentification (in case it has expired):
-Go to Github > Settings > Developer Settings > Personal access tokens
-Token: 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
-
-

@@ -7,7 +7,7 @@ ui <- fluidPage(
   shinyjs::useShinyjs(),
   
   # Application title
-  titlePanel("Sample size value in Network Medicine"),
+  titlePanel("Sample size impact in Gene Co-expression Networks"),
   
   # Define navigation bar
   navbarPage("",
