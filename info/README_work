@@ -1552,21 +1552,6 @@ shiny::runApp(SampleSizeShiny)
 or
 shiny::runApp('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny')
 
-Deploy Shiny app:
------------------
-
-STEP 1 - INSTALL RSCONNECT
-install.packages('rsconnect')
-
-STEP 2 - AUTHORIZE ACCOUNT
-rsconnect::setAccountInfo(name='joaquimaguirreplans',
-			  token='4DC11654508D7B2460595CBBB4C28FA4',
-			  secret='1PW1nxzeiXCoWMwLDV7al1iT/QSwgdTMHTilLlII')
-
-STEP 3 - DEPLOY
-library(rsconnect)
-rsconnect::deployApp('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny')
-
 
 ###################################
 ANALYSIS USING RA DATASET FROM ENZO
