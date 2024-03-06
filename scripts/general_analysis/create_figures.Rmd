@@ -1444,7 +1444,7 @@ goodnessfit_plot_lessdatasets = goodnessfit_lessdatasets_df %>%
   scale_color_manual(guide = 'legend', values=as.vector(name2color[levels(factor(goodnessfit_lessdatasets_df$type_dataset))])) +
   theme_linedraw() +
   xlab("Num. samples") +
-  ylab("Frac. significant correlations") +
+  ylab("Num. significant correlations") +
   guides(col=guide_legend(title=bquote(bold(.('Analytical model') ~ R^2)))) +
   theme(aspect.ratio=1, 
         plot.title =  element_text(size = 20, face="bold"), 
