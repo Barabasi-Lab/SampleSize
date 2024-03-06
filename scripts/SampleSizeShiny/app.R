@@ -652,7 +652,6 @@ server <- function(input, output, session) {
       input$type_dataset_tcga,
       input$type_dataset_scipher
     )
-    print(selected_dataset_types)
 
     # Filter summary table by dataset
     figure_summary_table_filt <- figure_summary_table %>%
@@ -871,8 +870,6 @@ server <- function(input, output, session) {
 
     } else if (input$plot_type == "Corr. vs. rate") {
 
-      print(sample_size_vs_a_filt)
-      print(unique(sample_size_vs_a_filt$geom_text_repel_label))
       discovery_rate_plot <- sample_size_vs_a_filt %>%
         ggplot(aes(x = a, y = num_edges_from_statistical_corrected_norm)) +
           geom_point(
