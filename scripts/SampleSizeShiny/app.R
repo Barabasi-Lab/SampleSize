@@ -39,107 +39,6 @@ ui <- navbarPage(
         card_body_fill(
           div(
             style = "overflow-y: auto;",
-            verbatimTextOutput(outputId = "input_cars"),
-            shinyWidgets::pickerInput(
-              inputId = "input_cars",
-              label = "Select cars:",
-              choices = c("Mazda RX4", "Mazda RX4 Wag", "Datsun 710"),
-              options = list(
-                `actions-box` = TRUE,
-                size = 10,
-                `selected-text-format` = "count > 1",
-                container = "body"
-              ),
-              selected = "Mazda RX4",
-              multiple = TRUE
-            ),
-            shinyWidgets::materialSwitch(
-              inputId = "input_filter",
-              label = "Filter signatures:",
-              status = "primary"
-            ),
-            conditionalPanel(
-              condition = "input.input_filter == true",
-              style = "margin-bottom: 20px;", # Add margin-bottom style here
-              verbatimTextOutput(outputId = "input_carb"),
-              shinyWidgets::pickerInput(
-                inputId = "input_carb",
-                label = "Filter by carb:",
-                choices = unique(mtcars$carb),
-                options = list(
-                  `actions-box` = TRUE,
-                  size = 10,
-                  `selected-text-format` = "count > 1"
-                ),
-                selected = unique(mtcars$carb),
-                multiple = TRUE
-              ),
-              verbatimTextOutput(outputId = "input_gear"),
-              shinyWidgets::pickerInput(
-                inputId = "input_gear",
-                label = "Filter by gear:",
-                choices = unique(mtcars$gear),
-                options = list(
-                  `actions-box` = TRUE,
-                  size = 10,
-                  `selected-text-format` = "count > 1"
-                ),
-                selected = unique(mtcars$gear),
-                multiple = TRUE),
-              verbatimTextOutput(outputId = "pert_itime"),
-              shinyWidgets::pickerInput(inputId = "pert_itime",
-                                        label = "Filter by exposure time:",
-                                        choices = list(
-                                          "6 h" = "6 h",
-                                          "24 h" = "24 h"
-                                        ),
-                                        options = list(
-                                          `actions-box` = TRUE,
-                                          size = 10,
-                                          `selected-text-format` = "count > 1"
-                                        ),
-                                        multiple = TRUE),
-              sliderInput(inputId = "input_mpg_cutoff",
-                          label = "Filter by mpg value:",
-                          value = 20,
-                          min = 10,
-                          max = 34),
-              sliderInput(inputId = "ctl_sim_cutoff",
-                          label = "Filter by control similarity:",
-                          value = 0.51,
-                          min = 0,
-                          max = 1),
-              actionButton(inputId = "filter_action",
-                            label = "Filter"),
-            ),
-              shinyWidgets::materialSwitch(inputId = "input_merge",
-                                           label = "Merge signatures:",
-                                           status = "primary"),
-              conditionalPanel(
-                condition = "input.input_merge == true",
-                verbatimTextOutput(outputId = "merge_cond"),
-                shinyWidgets::pickerInput(inputId = "merge_cond",
-                                          label = "Merge by same:",
-                                          choices = c("carb", "gear"),
-                                          options = list(
-                                            `actions-box` = TRUE,
-                                            size = 10,
-                                            `selected-text-format` = "count > 1"
-                                          ),
-                                          selected = c("carb", "gear"),
-                                          multiple = TRUE),
-                selectInput(inputId = "merge_method",
-                            label = "Method:", 
-                            choices = list("DGES" = "dges",
-                                           "DGES & TAS" = "dges.tas",
-                                           "Spearman" = "corr"),
-                            selected = "dges"
-                ),
-                actionButton(inputId = "merge_action",
-                             label = "Merge"),
-            ),
-
-
             checkboxGroupInput(
               "dataset_input",
               label = "Dataset",
@@ -349,6 +248,8 @@ analytical_regression_results_file <- paste(input_dir, 'analytical_model_regress
 stretched_exponential_regression_df <- fread(analytical_regression_results_file)
 theoretical_sample_size_file <- paste(input_dir, 'theoretical_sample_size_for_correlations_of_datasets.txt', sep = "/") # from => calculate_convergence_correlation_types.Rmd
 sample_size_correlation_df <- fread(theoretical_sample_size_file)
+a_vs_fraction_corr_file <- paste(input_dir, "a_vs_fraction_sig_correlations_pearson_pval_0.05.txt", sep = "/")
+a_vs_fraction_corr_df <- fread(a_vs_fraction_corr_file)
 
 # Read normalized data
 topology_type_normalization <- "divide.L"
@@ -621,28 +522,43 @@ figure_summary_table <- scaling_relation_summary_df %>%
   dplyr::select("dataset", "type_dataset", "R**2 (scaling)", "alpha (model)", "R**2 (model)", "epsilon (model)", "R**2 (Log)", "epsilon (Log)") %>%
   arrange(dataset, type_dataset)
 
-# Read discovery rate results
-a_vs_fraction_corr_file <- paste(input_dir, "a_vs_fraction_sig_correlations_pearson_pval_0.05.txt", sep = "/")
-sample_size_vs_a_df <- fread(a_vs_fraction_corr_file)
-
-# Read mtcars data
-mtcars_mod <- mtcars %>% 
-  mutate(car = row.names(mtcars)) %>%
-  dplyr::select(car, carb, gear, mpg)
+# Calculate number of genes above certain SD, mean and CV cut-offs
+sd_cut <- 10
+mean_cut <- 10
+cv_cut <- 50
+sd_genes_vs_a_df <- sd_genes_df %>%
+  dplyr::select(-type_dataset) %>%
+  filter(type_counts == "reads") %>%
+  group_by(dataset,
+           dataset_name,
+           type_counts,
+           sex,
+           subclassification) %>%
+  summarize(num_genes_above_sd_cut = length(sd[sd >= sd_cut]),
+            num_genes_above_mean_cut = length(mean[mean >= mean_cut]),
+            num_genes_above_cv_cut = length(cv[cv >= cv_cut]),
+            num_genes = n()) %>%
+  ungroup() %>%
+  mutate(fraction_genes_above_sd_cut = num_genes_above_sd_cut / num_genes,
+         fraction_genes_above_mean_cut = num_genes_above_mean_cut / num_genes,
+         fraction_genes_above_cv_cut = num_genes_above_cv_cut / num_genes) %>%
+  inner_join(a_vs_fraction_corr_df,
+             by = c("dataset_name", "dataset", "sex", "subclassification")) %>%
+  dplyr::select(
+    !c(
+      "type_correlation",
+      "correlation",
+      "sample_size_statistical",
+      "sample_size_statistical_corrected",
+      "num_edges_from_statistical_corrected",
+      "num_edges_from_statistical_corrected_norm"
+    )
+  ) %>%
+  unique() %>%
+  as.data.frame()
 
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
-
-  # shinyWidgets::updatePickerInput(session,
-  #                                 inputId = "input_cars",
-  #                                 label = "Select cars:",
-  #                                 choices = unique(mtcars_mod$car),
-  #                                 selected = unique(mtcars_mod$car),
-  #                                 options = list(
-  #                                   `actions-box` = TRUE,
-  #                                   size = 10,
-  #                                   `selected-text-format` = "count > 1"
-  #                                 ))
 
   process_inputs <- reactive({
 
@@ -723,7 +639,7 @@ server <- function(input, output, session) {
 
     # Filter sample size vs. a table by dataset
     type_correlation_selected <- "weak"
-    sample_size_vs_a_filt <- sample_size_vs_a_df %>%
+    a_vs_fraction_corr_filt <- a_vs_fraction_corr_df %>%
       filter(
         dataset %in% c("gtex", "tcga", "scipher")
       ) %>%
@@ -752,13 +668,13 @@ server <- function(input, output, session) {
 
     # Calculate correlation and regression between sample size and a
     ss_vs_a_cor <- cor(
-      sample_size_vs_a_filt$a,
-      sample_size_vs_a_filt$num_edges_from_statistical_corrected_norm
+      a_vs_fraction_corr_filt$a,
+      a_vs_fraction_corr_filt$num_edges_from_statistical_corrected_norm
     )
     ss_vs_a_lm <- summary(
       lm(
-        sample_size_vs_a_filt$num_edges_from_statistical_corrected_norm ~
-        sample_size_vs_a_filt$a
+        a_vs_fraction_corr_filt$num_edges_from_statistical_corrected_norm ~
+        a_vs_fraction_corr_filt$a
       )
     )
 
@@ -770,6 +686,62 @@ server <- function(input, output, session) {
       round(ss_vs_a_adj_r_squared, 3),
       "\ncorr. =",
       round(ss_vs_a_cor, 3)
+    )
+
+    # Filter sd / cv / mean gene expression vs. a table by dataset
+    variance_metric <- switch(input$plot_type,
+                              "SD vs. rate" = "sd",
+                              "Mean vs. rate" = "mean",
+                              "cv")
+    variance_metric_cut <- switch(input$plot_type,
+                                  "SD vs. rate" = sd_cut,
+                                  "Mean vs. rate" = mean_cut,
+                                  cv_cut)
+    sd_genes_vs_a_filt <- sd_genes_vs_a_df %>%
+      filter(
+        dataset %in% c("gtex", "tcga", "scipher")
+      ) %>%
+      # Include color codes for each dataset
+      left_join(
+        (color_dict %>%
+          as.data.frame() %>%
+          dplyr::rename("rgb_col" = ".") %>%
+          tibble::rownames_to_column("type_dataset")
+        ), by = c("dataset" = "type_dataset")
+      ) %>%
+      # Create geom_text_repel_label
+      # Rename dataset and type_dataset to human readable names
+      mutate(
+        geom_text_repel_label = ifelse(
+          (dataset %in% input$dataset_input) & (type_dataset %in% selected_dataset_types),
+          type_dataset,
+          ""
+        ),
+        type_dataset = dplyr::recode(type_dataset, !!!name_dict),
+        dataset = dplyr::recode(dataset, !!!name_dict),
+        geom_text_repel_label = dplyr::recode(geom_text_repel_label, !!!name_dict)
+      )
+
+    # Calculate correlation and regression between sd/cv/mean expression and a
+    sd_genes_vs_a_cor <- cor(
+      sd_genes_vs_a_filt$a,
+      sd_genes_vs_a_filt[[paste("fraction_genes_above_", variance_metric, "_cut", sep = "")]]
+    )
+    sd_genes_vs_a_lm <- summary(
+      lm(
+        sd_genes_vs_a_filt[[paste("fraction_genes_above_", variance_metric, "_cut", sep = "")]] ~
+        sd_genes_vs_a_filt$a
+      )
+    )
+
+    sd_genes_vs_a_slope <- coef(sd_genes_vs_a_lm)[2]
+    sd_genes_vs_a_intercept <- coef(sd_genes_vs_a_lm)[1]
+    sd_genes_vs_a_adj_r_squared <- sd_genes_vs_a_lm$adj.r.squared
+    sd_genes_vs_a_cor_lm <- paste(
+      "R² =",
+      round(sd_genes_vs_a_adj_r_squared, 3),
+      "\ncorr. =",
+      round(sd_genes_vs_a_cor, 3)
     )
 
     # Initialize the plot variable as NULL
@@ -870,7 +842,7 @@ server <- function(input, output, session) {
 
     } else if (input$plot_type == "Corr. vs. rate") {
 
-      discovery_rate_plot <- sample_size_vs_a_filt %>%
+      discovery_rate_plot <- a_vs_fraction_corr_filt %>%
         ggplot(aes(x = a, y = num_edges_from_statistical_corrected_norm)) +
           geom_point(
             aes(col = dataset),
@@ -880,7 +852,7 @@ server <- function(input, output, session) {
           ) +
           scale_color_manual(
             guide = "legend",
-            values = setNames(sample_size_vs_a_filt$rgb_col, sample_size_vs_a_filt$dataset)
+            values = setNames(a_vs_fraction_corr_filt$rgb_col, a_vs_fraction_corr_filt$dataset)
           ) +
           geom_label_repel(
             aes(col = dataset, label = geom_text_repel_label),
@@ -921,75 +893,77 @@ server <- function(input, output, session) {
           )
         )
 
+    } else if (input$plot_type %in% c("CV vs. rate", "SD vs. rate", "Mean vs. rate")) {
+
+      x_annotation <- switch(input$plot_type,
+                             "CV vs. rate" = 2,
+                             1.585)
+      y_annotation <- switch(input$plot_type,
+                             "SD vs. rate" = 0.938,
+                             "Mean vs. rate" = 0.968,
+                             0.38)
+
+      discovery_rate_plot <- sd_genes_vs_a_filt %>%
+        ggplot(aes(x = a, y = .data[[paste("fraction_genes_above_",
+                                variance_metric,
+                                "_cut",
+                                sep = "")]])) +
+          geom_point(
+            aes(col = dataset),
+            alpha = 0.6,
+            size = 3,
+            show.legend = TRUE
+          ) +
+          scale_color_manual(
+            guide = "legend",
+            values = setNames(sd_genes_vs_a_filt$rgb_col, sd_genes_vs_a_filt$dataset)
+          ) +
+          geom_label_repel(
+            aes(col = dataset, label = geom_text_repel_label),
+            fill="white",
+            box.padding = 0.5, max.overlaps = Inf,
+            label.size = 0.75,
+            size = 5,
+            alpha = 0.6,
+            label.padding = 0.25,
+            fontface = "bold",
+            na.rm = TRUE,
+            show.legend = FALSE,
+            max.iter = 1e5,
+            seed = 5555
+          ) +
+          geom_abline(aes(slope = sd_genes_vs_a_slope,
+                          intercept = sd_genes_vs_a_intercept),
+                      linetype = "dashed",
+                      col = "gray50",
+                      show.legend = FALSE) +
+        annotate("text", x = x_annotation, y = y_annotation, label = sd_genes_vs_a_cor_lm, size = 5) +
+        xlab(expression(alpha)) +
+        ylab(paste("Frac. genes with ", variance_metric, " above ", variance_metric_cut, sep = "")) +
+        theme_linedraw() +
+        theme(
+          aspect.ratio = 1,
+          plot.title =  element_text(size = 20, face = "bold"),
+          axis.title = element_text(size = 17, face = "bold"),
+          axis.text = element_text(size = 16),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          text = element_text(family = "Helvetica"),
+          legend.text = element_text(size = 16),
+          legend.title = element_blank(),
+          legend.background = element_rect(
+            fill = "transparent",
+            color = "transparent"
+          )
+        )
+
     }
 
-    # mtcars_mod_filt <- mtcars_mod %>%
-    #   filter(car %in% input$input_cars)
-    # if (input$input_filter) {
-    #   input$filter_action
-    #   isolate({
-    #     mtcars_mod_filt <- mtcars_mod_filt %>%
-    #       filter((carb %in% input$input_carb) &
-    #                (gear %in% input$input_gear) &
-    #                (mpg > input$input_mpg_cutoff)
-    #       )
-    #   })
-    # }
-    # if (input$input_merge) {
-    #   input$merge_action
-    #   isolate({
-    #     mtcars_mod_filt <- mtcars_mod_filt %>%
-    #       group_by_at(input$merge_cond) %>%
-    #       summarize(mpg = median(mpg)) %>%
-    #       unite(car, all_of(input$merge_cond), sep = "|")
-    #   })
-    # }
     return(
       list(
         "summary_table" = figure_summary_table_filt,
         "scaling_plot" = scaling_plot,
         "discovery_rate_plot" = discovery_rate_plot
-      )
-    )
-  })
-
-  # Observe changes in input_cars and update input_gear and input_carb choices
-  observeEvent(input$input_cars, {
-    selected_cars <- input$input_cars
-    filtered_data <- mtcars_mod %>% filter(car %in% selected_cars)
-    gear_selected <- input$input_gear
-    carb_selected <- input$input_carb
-    if ((is.null(gear_selected)) | (!(isTRUE(input$input_filter)))) {
-      gear_selected <- unique(filtered_data$gear)
-    }
-    if ((is.null(carb_selected)) | (!(isTRUE(input$input_filter)))) {
-      carb_selected <- unique(filtered_data$carb)
-    }
-    # Update input_gear choices and retain previous selections
-    shinyWidgets::updatePickerInput(
-      session,
-      inputId = "input_gear",
-      label = "Filter by gear:",
-      choices = unique(filtered_data$gear),
-      selected = intersect(gear_selected, unique(filtered_data$gear)),
-      options = list(
-        `actions-box` = TRUE,
-        size = 10,
-        `selected-text-format` = "count > 1"
-      )
-    )
-
-    # Update input_carb choices and retain previous selections
-    shinyWidgets::updatePickerInput(
-      session,
-      inputId = "input_carb",
-      label = "Filter by carb:",
-      choices = unique(filtered_data$carb),
-      selected = intersect(carb_selected, unique(filtered_data$carb)),
-      options = list(
-        `actions-box` = TRUE,
-        size = 10,
-        `selected-text-format` = "count > 1"
       )
     )
   })
@@ -1023,7 +997,7 @@ server <- function(input, output, session) {
       updateSelectInput(
         session,
         "plot_type",
-        choices = c("Corr. vs. rate", "CV vs. rate", "Rate vs. size"),
+        choices = c("Corr. vs. rate", "CV vs. rate", "SD vs. rate", "Mean vs. rate", "Rate vs. size"),
         selected = last_plot_type$discovery
       )
     } else {
