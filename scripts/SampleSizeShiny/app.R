@@ -214,6 +214,16 @@ ui <- navbarPage(
 )
 
 
+calculate_optimal_N <- function(L, a, b, s, N_guess=c(10000)) {
+  optimize_N = function(par){
+    N = par[1]
+    f = s - L * exp((b * N ** (-a + 1)) / (-a + 1))
+    return((abs(f)))
+  }
+  res = optim(par=N_guess, fn=optimize_N, method="Brent", lower=3, upper=50000)
+  return(res$par)
+}
+
 #-----------#
 # Read data #
 #-----------#
@@ -280,6 +290,8 @@ name_dict <- c(
   "tcga:tcga-luad" = "TCGA: Lung Adenocarcinoma",
   "tcga:tcga-lusc" = "TCGA: Lung Squamous Cell Cancer",
   "tcga:tcga-brca_female" = "TCGA: Breast cancer (Female)",
+  "tcga:tcga-kirc" = "TCGA: Kidney Renal Clear Cell Cancer",
+  "tcga:tcga-kirp" = "TCGA: Kidney Renal Papillary Cell Cancer",
   "tcga:tcga-thca" = "TCGA: Thyroid cancer",
   "scipher:scipher.complete.dataset" = "R. arthritis (all samples)",
   "scipher:scipher.sample.per.patient.baseline" = "R. arthritis (sample/patient)"
@@ -557,6 +569,30 @@ sd_genes_vs_a_df <- sd_genes_df %>%
   unique() %>%
   as.data.frame()
 
+# Calculate number of samples for a given fraction of links
+fraction_links <- 0.5
+cols <- c("dataset", "type_dataset", "s", "a", "N_opt")
+n_opt_df <- data.frame(
+  matrix(ncol = length(cols), nrow = 0, dimnames = list(NULL, cols))
+)
+for (dataset_selected in unique(analytical_model_summary_df$type_dataset)){
+  analytical_params_selected <- analytical_model_summary_df %>%
+    filter((type_dataset == dataset_selected) & (model == model_selected))
+  N_opt <- calculate_optimal_N(L = analytical_params_selected$L, 
+                               a = analytical_params_selected$a,
+                               b = analytical_params_selected$b, 
+                               s = fraction_links * analytical_params_selected$L)
+                               # Why multiply 0.5 x L? Because the normalized result (e.g., 0.5) is the result of:
+                               # 0.5 = (s * max_value_in_dataset / max_value_in_dataset) / L = s / L
+                               # --> s = 0.5 * L
+  n_opt_df <- rbind(n_opt_df,
+                    data.frame(dataset = analytical_params_selected$dataset,
+                               type_dataset = dataset_selected,
+                               s = fraction_links,
+                               a = analytical_params_selected$a,
+                               N_opt = N_opt))
+}
+
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
 
@@ -742,6 +778,55 @@ server <- function(input, output, session) {
       round(sd_genes_vs_a_adj_r_squared, 3),
       "\ncorr. =",
       round(sd_genes_vs_a_cor, 3)
+    )
+
+    # Filter sample size vs. a table by dataset
+    type_correlation_selected <- "weak"
+    n_opt_filt <- n_opt_df %>%
+      filter(
+        dataset %in% c("gtex", "tcga", "scipher")
+      ) %>%
+      # Include color codes for each dataset
+      left_join(
+        (color_dict %>%
+          as.data.frame() %>%
+          dplyr::rename("rgb_col" = ".") %>%
+          tibble::rownames_to_column("type_dataset")
+        ), by = c("dataset" = "type_dataset")
+      ) %>%
+      # Create geom_text_repel_label
+      # Rename dataset and type_dataset to human readable names
+      mutate(
+        geom_text_repel_label = ifelse(
+          (dataset %in% input$dataset_input) & (type_dataset %in% selected_dataset_types),
+          type_dataset,
+          ""
+        ),
+        type_dataset = dplyr::recode(type_dataset, !!!name_dict),
+        dataset = dplyr::recode(dataset, !!!name_dict),
+        geom_text_repel_label = dplyr::recode(geom_text_repel_label, !!!name_dict)
+      )
+
+    # Calculate correlation and regression between optimized sample size and a
+    n_opt_cor <- cor(
+      log10(n_opt_filt$N_opt),
+      n_opt_filt$a
+    )
+    n_opt_lm <- summary(
+      lm(
+        n_opt_filt$a ~
+        log10(n_opt_filt$N_opt)
+      )
+    )
+
+    n_opt_slope <- coef(n_opt_lm)[2]
+    n_opt_intercept <- coef(n_opt_lm)[1]
+    n_opt_adj_r_squared <- n_opt_lm$adj.r.squared
+    n_opt_cor_lm <- paste(
+      "R² =",
+      round(n_opt_adj_r_squared, 3),
+      "\ncorr. =",
+      round(n_opt_cor, 3)
     )
 
     # Initialize the plot variable as NULL
@@ -940,6 +1025,59 @@ server <- function(input, output, session) {
         annotate("text", x = x_annotation, y = y_annotation, label = sd_genes_vs_a_cor_lm, size = 5) +
         xlab(expression(alpha)) +
         ylab(paste("Frac. genes with ", variance_metric, " above ", variance_metric_cut, sep = "")) +
+        theme_linedraw() +
+        theme(
+          aspect.ratio = 1,
+          plot.title =  element_text(size = 20, face = "bold"),
+          axis.title = element_text(size = 17, face = "bold"),
+          axis.text = element_text(size = 16),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          text = element_text(family = "Helvetica"),
+          legend.text = element_text(size = 16),
+          legend.title = element_blank(),
+          legend.background = element_rect(
+            fill = "transparent",
+            color = "transparent"
+          )
+        )
+
+    } else if (input$plot_type == "Rate vs. size") {
+      
+      discovery_rate_plot <- n_opt_filt %>%
+        ggplot(aes(x = log10(N_opt), y = a)) +
+          geom_point(
+            aes(col = dataset),
+            alpha = 0.6,
+            size = 3,
+            show.legend = TRUE
+          ) +
+          scale_color_manual(
+            guide = "legend",
+            values = setNames(n_opt_filt$rgb_col, n_opt_filt$dataset)
+          ) +
+          geom_label_repel(
+            aes(col = dataset, label = geom_text_repel_label),
+            fill="white",
+            box.padding = 0.5, max.overlaps = Inf,
+            label.size = 0.75,
+            size = 5,
+            alpha = 0.6,
+            label.padding = 0.25,
+            fontface = "bold",
+            na.rm = TRUE,
+            show.legend = FALSE,
+            max.iter = 1e5,
+            seed = 5555
+          ) +
+          geom_abline(aes(slope = n_opt_slope,
+                          intercept = n_opt_intercept),
+                      linetype = "dashed",
+                      col = "gray50",
+                      show.legend = FALSE) +
+        annotate("text", x = 3.3, y = 2, label = n_opt_cor_lm, size = 5) +
+        xlab("log10(n) to get 50% sig. links") +
+        ylab(expression(alpha)) +
         theme_linedraw() +
         theme(
           aspect.ratio = 1,
