@@ -1,5 +1,4 @@
 import sys, os
-import configparser 
 import hashlib
 import optparse
 import pwd
@@ -54,13 +53,8 @@ def create_gene_coexpression_networks(options):
     src_path =  os.path.abspath(os.path.dirname(__file__))
     sys.path.append(src_path)
 
-    # Read configuration file #     
-    config = configparser.ConfigParser()
-    config_file = os.path.join(src_path, "config.ini")
-    config.read(config_file)
-
     # Define directories and files
-    data_dir = os.path.join(src_path, '../data')
+    data_dir = os.path.join(src_path, '../../data')
     input_dir = options.input_dir
     ppi_file = options.ppi_file
     disease_genes_file = options.disease_genes_file
@@ -70,15 +64,15 @@ def create_gene_coexpression_networks(options):
     create_directory(output_analysis_dir)
     output_networks_dir = options.output_networks_dir
     create_directory(output_networks_dir)
-    logs_dir = os.path.join(src_path, '../logs')
+    logs_dir = os.path.join(src_path, '../../logs')
     create_directory(logs_dir)
-    dummy_dir = os.path.join(src_path, '../cluster_scripts')
+    dummy_dir = os.path.join(src_path, '../../cluster_scripts')
     create_directory(dummy_dir)
 
     # Define queue parameters
-    #max_mem = config.get("Cluster", "max_mem")
     max_mem = 60000
-    queue = config.get("Cluster", "cluster_queue") # debug, express, short, long, large
+    queue = "short"
+    max_jobs_in_queue = 200
     constraint = False
     exclude = []
     #exclude = ['d0012', 'd0123']
@@ -97,10 +91,6 @@ def create_gene_coexpression_networks(options):
     }
     queue_parameters = {'max_mem':max_mem, 'queue':queue, 'max_time':max_time_per_queue[queue], 'logs_dir':logs_dir, 'modules':modules}
 
-    # Limit of jobs
-    limit = int(config.get("Cluster", "max_jobs_in_queue"))
-    l = 1
-
     # Run co-expression for all files
     datasets = [f for f in os.listdir(input_dir) if fileExist(os.path.join(input_dir, f))]
     sizes = [str(size) for size in range(20, 12000, 20)]
@@ -109,6 +99,7 @@ def create_gene_coexpression_networks(options):
     #reps = ['1', '2', '3']
     #reps = ['1']
 
+    l = 1
     for dataset in sorted(datasets):
 
         dataset_short = dataset.replace('.net', '')
@@ -135,8 +126,8 @@ def create_gene_coexpression_networks(options):
         
             for dataset_name, threshold in dataset_names:
 
-                if limit: # Break the loop if a limit of jobs is introduced
-                    if l > limit:
+                if max_jobs_in_queue: # Break the loop if a limit of jobs is introduced
+                    if l > max_jobs_in_queue:
                         print('The number of submitted jobs arrived to the limit of {}. The script will stop sending submissions!'.format(limit))
                         sys.exit(0)
                 
@@ -167,7 +158,7 @@ def create_gene_coexpression_networks(options):
                         #print(output_topology_file)
                         print(command)
                         print(l)
-                        submit_command_to_queue(command, max_jobs_in_queue=int(config.get("Cluster", "max_jobs_in_queue")), queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude, conda_environment=conda_environment, rstudio_environment=rstudio_environment)
+                        submit_command_to_queue(command, max_jobs_in_queue=max_jobs_in_queue, queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude, conda_environment=conda_environment, rstudio_environment=rstudio_environment)
 
                         l += 1
 
