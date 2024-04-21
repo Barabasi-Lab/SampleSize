@@ -205,6 +205,25 @@ ui <- navbarPage(
                   outputId = "discoveryRatePlot"
                 )
               )
+            ),
+            tabPanel(
+              title = "Gene expression distributions",
+              grid_container(
+                layout = c(
+                  "gene_expression_area"
+                ),
+                row_sizes = c(
+                  "1fr"
+                ),
+                col_sizes = c(
+                  "1fr"
+                ),
+                gap_size = "10px",
+                grid_card_plot(
+                  area = "gene_expression_area",
+                  outputId = "geneExpressionPlot"
+                )
+              )
             )
           )
         )
@@ -1094,6 +1113,8 @@ server <- function(input, output, session) {
             color = "transparent"
           )
         )
+      
+    } else if (input$power_law_tabset == "Gene expression distributions") {
 
     }
 
@@ -1117,13 +1138,16 @@ server <- function(input, output, session) {
   # Initialize reactive values to store the last selected 'plot_type' for each tab
   last_plot_type <- reactiveValues(
     discovery = "Corr. vs. rate",
-    scaling = "Corr. vs. size"
+    scaling = "Corr. vs. size",
+    gene_expression = "CV"
   )
 
   # Update 'last_plot_type' whenever 'plot_type' changes
   observeEvent(input$plot_type, {
     if (input$power_law_tabset == "Discovery rate plots") {
       last_plot_type$discovery <- input$plot_type
+    } else if (input$power_law_tabset == "Gene expression distributions") {
+      last_plot_type$gene_expression <- input$plot_type
     } else {
       last_plot_type$scaling <- input$plot_type
     }
@@ -1137,6 +1161,13 @@ server <- function(input, output, session) {
         "plot_type",
         choices = c("Corr. vs. rate", "CV vs. rate", "SD vs. rate", "Mean vs. rate", "Rate vs. size"),
         selected = last_plot_type$discovery
+      )
+    } else if (input$power_law_tabset == "Gene expression distributions") {
+      updateSelectInput(
+        session,
+        "plot_type",
+        choices = c("CV", "SD", "Mean"),
+        selected = last_plot_type$gene_expression
       )
     } else {
       updateSelectInput(
@@ -1161,6 +1192,11 @@ server <- function(input, output, session) {
   output$discoveryRatePlot  <- renderCachedPlot({
     results <- process_inputs()
     results$discovery_rate_plot
+  }, cacheKeyExpr = { list(current_tab(), input$plot_type, input$dataset_input, input$type_dataset_gtex, input$type_dataset_tcga, input$type_dataset_scipher) })  # Include all relevant inputs
+
+  output$geneExpressionPlot  <- renderCachedPlot({
+    results <- process_inputs()
+    results$gene_expression_plot
   }, cacheKeyExpr = { list(current_tab(), input$plot_type, input$dataset_input, input$type_dataset_gtex, input$type_dataset_tcga, input$type_dataset_scipher) })  # Include all relevant inputs
 
 }
