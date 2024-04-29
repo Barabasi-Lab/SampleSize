@@ -13,7 +13,10 @@ essential_genes_results_file = paste(input_dir, 'analysis_essential_genes.csv', 
 numbers_complete_graph_file = paste(input_dir, 'dataset_numbers_complete_graph.txt', sep='/')
 methods_selected <- c("pearson", "aracne")
 thresholds_selected <- c(0.05, 0)
-type_data_selection = 'pearson_aracne' # pearson_pval_0.05
+type_data_selection = 'pearson_aracne'
+#methods_selected <- c("pearson")
+#thresholds_selected <- c(0.05)
+#type_data_selection = 'pearson_pval_0.05'
 output_dir = paste('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/example_', type_data_selection, sep = '')
 dir.create(output_dir, showWarnings = FALSE)
 
@@ -606,7 +609,6 @@ analytical_model_summary_df = analytical_model_summary_df %>% inner_join(numbers
 # Write results #
 #---------------#
 
-output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/example_pearson_pval_0.05'
 topology_results_file = paste(output_dir, 'topology_results_pearson_pval_0.05.txt', sep='/')
 results_selected_df %>% fwrite(topology_results_file)
 topology_results_by_size_file = paste(output_dir, 'topology_results_mean_pearson_pval_0.05.txt', sep='/')
