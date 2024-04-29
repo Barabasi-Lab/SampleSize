@@ -1,0 +1,41 @@
+---
+title: "Test Aracne"
+author: "Joaquim Aguirre-Plans"
+date: '2024-04-27'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Description
+
+Test visualization of Aracne results.
+
+```{r}
+packrat::init("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR")
+```
+
+```{r}
+library(data.table)
+library(dplyr)
+library(igraph)
+library(ggalluvial)
+library(gghalves)
+library(ggplot2)
+library(ggnewscale)
+require(ggrepel)
+library(grid)
+library(gridExtra)
+library(gtable)
+require(magrittr)
+library(patchwork)
+library(tidyr)
+set.seed(1510)
+options(bitmapType='cairo')
+`%ni%` <- Negate(`%in%`)
+```
+
+
+
