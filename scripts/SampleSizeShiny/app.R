@@ -10,6 +10,8 @@ library(DT)
 library(data.table)
 require(ggrepel)
 
+#setwd("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny")
+#setwd("/Users/j.aguirreplans/WORK/Postdoc/Projects/Scipher/SampleSize/scripts/SampleSizeShiny")
 #shiny::runApp('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/app.R')
 #shiny::runApp('/Users/j.aguirreplans/WORK/Postdoc/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/app.R')
 
@@ -277,7 +279,7 @@ analytical_regression_results_file <- paste(input_dir, 'analytical_model_regress
 stretched_exponential_regression_df <- fread(analytical_regression_results_file)
 theoretical_sample_size_file <- paste(input_dir, 'theoretical_sample_size_for_correlations_of_datasets.txt', sep = "/") # from => calculate_convergence_correlation_types.Rmd
 sample_size_correlation_df <- fread(theoretical_sample_size_file)
-a_vs_fraction_corr_file <- paste(input_dir, "a_vs_fraction_sig_correlations_pearson_pval_0.05.txt", sep = "/")
+a_vs_fraction_corr_file <- paste(input_dir, "a_vs_fraction_sig_correlations_pearson_pval_0.05.txt", sep = "/") # from => create_figures.Rmd
 a_vs_fraction_corr_df <- fread(a_vs_fraction_corr_file)
 
 # Read normalized data
