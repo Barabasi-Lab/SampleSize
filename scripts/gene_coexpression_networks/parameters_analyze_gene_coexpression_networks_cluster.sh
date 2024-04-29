@@ -1,13 +1,15 @@
 #!/bin/bash
 
-input_folder="$1"
-output_results_dir="$2"
-output_subgraphs_dir="$3"
-genes_dataset_file="$4"
-ppi_file="$5"
-disease_genes_file="$6"
-essential_genes_file="$7"
-threshold="$8"
+config_file="$1"
+
+# Check if the config file exists
+if [ ! -f "$config_file" ]; then
+    echo "Config file not found: $config_file"
+    exit 1
+fi
+
+# Read variables from the config file
+source "$config_file"
 
 # Loop through each file in the directory
 for coexpression_network_file in "$input_folder"/*; do

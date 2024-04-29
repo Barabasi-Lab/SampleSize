@@ -1,11 +1,17 @@
 #!/bin/bash
 
-samples_folder="$1"
-rnaseq_file="$2"
-output_folder="$3"
-dataset="$4"
-metric="$5"
-max_size="$6"
+config_file="$1"
+
+# Check if the config file exists
+if [ ! -f "$config_file" ]; then
+    echo "Config file not found: $config_file"
+    exit 1
+fi
+
+# Read variables from the config file
+source "$config_file"
+
+# Define fixed variables
 min_size=20
 step_size=20
 repetitions=(1 2 3 4 5)
