@@ -11,6 +11,11 @@ ppi_results_file = paste(input_dir, 'analysis_ppi.csv', sep='/')
 disease_genes_results_file = paste(input_dir, 'analysis_disease_genes.csv', sep='/')
 essential_genes_results_file = paste(input_dir, 'analysis_essential_genes.csv', sep='/')
 numbers_complete_graph_file = paste(input_dir, 'dataset_numbers_complete_graph.txt', sep='/')
+methods_selected <- c("pearson", "aracne")
+thresholds_selected <- c(0.05, 0)
+type_data_selection = 'pearson_aracne' # pearson_pval_0.05
+output_dir = paste('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/example_', type_data_selection, sep = '')
+dir.create(output_dir, showWarnings = FALSE)
 
 # Dictionary that maps the name of the variable to a nice name for the plot
 parameter2label <- list("nodes"="Nodes", "edges"="Edges", "av_degree"="Av. degree", "av_path_length", "Av. path length", "av_clustering_coef" = "Av. clust. coef.", "num_components" = "Num. of components", "size_lcc" = "Size of the LCC", 
@@ -469,7 +474,8 @@ numbers_complete_graph_df$type_dataset = tolower(numbers_complete_graph_df$type_
 
 #results_selected_df = results_df %>% filter((type_dataset %in% c("tcga:tcga-brca")) & (method %in% c("pearson")) & (type_correlation %in% c("all")) & (threshold %in% c(0.05))) # For a test
 #results_selected_df = results_df %>% filter((type_dataset %in% c("tcga:tcga-brca", "tcga:tcga-ucec")) & (method %in% c("pearson")) & (type_correlation %in% c("all")) & (threshold %in% c(0.05))) # For a test with multiple parameters
-results_selected_df = results_df %>% filter((method %in% c("pearson")) & (type_correlation %in% c("all")) & (threshold %in% c(0.05))) # For a test with multiple parameters
+#results_selected_df = results_df %>% filter((method %in% c("pearson")) & (type_correlation %in% c("all")) & (threshold %in% c(0.05))) # For a test with multiple parameters
+results_selected_df = results_df %>% filter((method %in% methods_selected) & (type_correlation %in% c("all")) & (threshold %in% thresholds_selected)) # Include the methods and thresholds selected by the user
 
 # Merge with total number of edges
 results_selected_df = results_selected_df %>% inner_join(numbers_complete_graph_df %>% select("type_dataset", "total_num_edges"), by = "type_dataset") %>% group_by_at(c("dataset", "type_dataset")) %>% mutate(total_num_edges_norm=total_num_edges/max(num_edges)) %>% ungroup() %>% as.data.frame()
@@ -675,13 +681,12 @@ if(isTRUE(topology_normalize_y)){
 # Write normalized results #
 #--------------------------#
 
-output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/example_pearson_pval_0.05'
-topology_results_file = paste(output_dir, '/', 'topology_results_norm_', topology_type_normalization, '_pearson_pval_0.05.txt', sep='')
+topology_results_file = paste(output_dir, '/', 'topology_results_norm_', topology_type_normalization, '_', type_data_selection, '.txt', sep='')
 results_selected_norm_df %>% fwrite(topology_results_file)
-topology_results_by_size_file = paste(output_dir, '/', 'topology_results_mean_norm_', topology_type_normalization, '_pearson_pval_0.05.txt', sep='')
+topology_results_by_size_file = paste(output_dir, '/', 'topology_results_mean_norm_', topology_type_normalization, '_', type_data_selection, '.txt', sep='')
 topology_results_selected_by_size_norm_df %>% fwrite(topology_results_by_size_file)
-predictions_file = paste(output_dir, '/', 'predictions_', topology_type_normalization, '_pearson_pval_0.05.txt', sep='')
+predictions_file = paste(output_dir, '/', 'predictions_', topology_type_normalization, '_', type_data_selection, '.txt', sep='')
 predicted_results_norm_df %>% fwrite(predictions_file)
-analytical_results_file = paste(output_dir, '/', 'analytical_model_results_', topology_type_normalization, '_pearson_pval_0.05.txt', sep='')
+analytical_results_file = paste(output_dir, '/', 'analytical_model_results_', topology_type_normalization, '_', type_data_selection, '.txt', sep='')
 topology_results_selected_analytical_norm_df %>% fwrite(analytical_results_file)
 
