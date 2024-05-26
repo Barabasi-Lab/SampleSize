@@ -2,6 +2,12 @@ gtex whole blood aracne
 bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_calculate_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_create_coexpr_gtex_wholeblood.sh
 bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_analyze_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_analysis_coexpr_gtex_wholeblood.sh
 
+gtex lung aracne
+bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_calculate_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_create_coexpr_gtex_lung.sh
+
+gtex breast aracne
+bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_calculate_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_create_coexpr_gtex_breast.sh
+
 tcga brca female aracne
 bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_calculate_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_create_coexpr_tcga_brcafemale.sh
 bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_analyze_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_analysis_coexpr_tcga_brcafemale.sh
@@ -10,6 +16,22 @@ scipher sample per patient aracne
 bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_calculate_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_create_coexpr_scipher_sampleperpatientbaseline.sh
 bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_analyze_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_analysis_coexpr_scipher_sampleperpatientbaseline.sh
 
-GSE193677 Rectum_CD_inflamed
+GSE193677 Rectum_CD_inflamed aracne / pearson
 bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_calculate_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_create_coexpr_gse193677_rectumcdinflamed.sh
 bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_analyze_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_analysis_coexpr_gse193677_rectumcdinflamed.sh
+
+GSE193677 Rectum_UC_inflamed aracne / pearson
+bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_calculate_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_create_coexpr_gse193677_rectumucinflamed.sh
+bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_analyze_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_analysis_coexpr_gse193677_rectumucinflamed.sh
+
+GSE193677 Rectum_Control_noninflamed pearson (aracne missing)
+bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_calculate_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_create_coexpr_gse193677_rectumcontrolnoninflamed.sh
+bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_analyze_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_analysis_coexpr_gse193677_rectumcontrolnoninflamed.sh
+
+GSE193677 Rectum_inflamed pearson (aracne missing)
+bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_calculate_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_create_coexpr_gse193677_rectuminflamed.sh
+bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_analyze_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_analysis_coexpr_gse193677_rectuminflamed.sh
+
+GSE193677 Rectum_noninflamed pearson (aracne missing)
+bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_calculate_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_create_coexpr_gse193677_rectumnoninflamed.sh
+bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_analyze_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_analysis_coexpr_gse193677_rectumnoninflamed.sh

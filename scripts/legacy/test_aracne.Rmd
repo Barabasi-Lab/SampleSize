@@ -37,5 +37,16 @@ options(bitmapType='cairo')
 `%ni%` <- Negate(`%in%`)
 ```
 
+```{r}
+type_data_selection = "pearson_aracne"
+input_dir = paste('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/example_', type_data_selection, sep = '')
+results_file <- paste(input_dir, 'topology_results_pearson_pval_0.05.txt', sep = "/")
+results_df <- fread(results_file)
+```
 
-
+```{r}
+results_df %>%
+  filter(method == "aracne") %>%
+  ggplot(aes(x = size, y = num_edges)) +
+    geom_point(aes(col = type_dataset))
+```
