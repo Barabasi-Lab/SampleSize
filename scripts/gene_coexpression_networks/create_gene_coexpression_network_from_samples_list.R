@@ -4,6 +4,7 @@ library(optparse)
 require(dplyr)
 require(magrittr)
 require(data.table)
+require(dplyr)
 require(wTO)
 set.seed(1510)
 
@@ -56,12 +57,12 @@ mi_estimator = opt$mi_estimator
 aracne_eps = as.double(opt$aracne_eps)
 correction_method = opt$correction_method
 
-#scripts.dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts'
-#samples_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood_female/RNAseq_samples_Whole.Blood_female_size_20_rep_1.txt'
+#scripts.dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks'
+#samples_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood/gtex_Whole.Blood_size_360_rep_1.txt'
 #samples_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-03-28-Dataset/sampling_with_repetition/TCGA/RNAseq_samples_TCGA_size_9900_rep_2.txt'
 #samples_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/complete_dataset/scipher_complete_dataset_size_580_rep_4.txt'
 #samples_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor/TCGA-BRCA_female/tcga_TCGA-BRCA_female_size_800_rep_1.txt"
-#rnaseq_file = '/home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood.gct'
+#rnaseq_file = '/work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood.gct'
 #rnaseq_file = '/home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/TCGA_processed_for_coexpression.csv'
 #rnaseq_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_counts_processed.csv'
 #rnaseq_file= "/work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-BRCA_female.csv"
@@ -138,6 +139,9 @@ if((metric == 'spearman') | (metric == 'pearson')){
     wto %>% fwrite(save)
     return(wto)
   }
+
+  # Remove transposed matrix to reduce memory
+  rm(rnaseq.t)
 
   # Run wTO fast  
   #wto = wTO.fast(Data = rnaseq, Overlap = row.names(rnaseq), method = "p",
