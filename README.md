@@ -11,6 +11,7 @@ This repository contains the scripts used to analyze the impact of sample size o
 * GTEx
 * TCGA
 * Rheumatoid Arthritis dataset
+* GSE193677 dataset
 
 We created the gene co-expression networks using **Pearson correlation** and employed **bootstrapping** to generate gene co-expression networks of different sample sizes. We also calculated the **consensus networks** between the 5 replicate genes co-expression networks from each sample size and condition.
 
@@ -65,15 +66,15 @@ We executed the following notebook to analyze the data and prepare it for the an
 scripts/extract_data/GTEx_analysis_for_coexpr.Rmd
 ```
 
-#### 1.3. TCGA
+#### 1.2. TCGA
 
-##### 1.3.1. Download the GDC-Client App
+##### 1.2.1. Download the GDC-Client App
 
 We downloaded the GDC-CLIENT app (Ubuntu - Client), necessary to download the dataset, at the following website: https://gdc.cancer.gov/access-data/gdc-data-transfer-tool
 
 This video was also useful to get to know how to download the data: https://www.youtube.com/watch?v=GDxj8DrkZok 
 
-##### 1.3.2. Use the GenomicDataCommons R package to download the metadata and manifest
+##### 1.2.2. Use the GenomicDataCommons R package to download the metadata and manifest
 
 To download the TCGA dataset, we need to define the the parameters that we want to download and create a manifest file that will be used by the GDC-CLIENT app to download the dataset.
 
@@ -89,7 +90,7 @@ The script will generate the following files:
 * Manifest file: `gdc_manifest.2022-11-18.txt`
 * Metadata file: `metadata.txt`
 
-##### 1.3.3. Download the dataset
+##### 1.2.3. Download the dataset
 
 To download the dataset, we executed the following command:
 
@@ -99,7 +100,7 @@ gdc-client download -m /path/to/Databases/TCGA/2022-11-18-Dataset/TCGA/raw/addit
 
 The process of downloading the dataset requires a lot of computational memory, so we used a computational cluster to run the command.
 
-##### 1.3.4. Compile the dataset
+##### 1.2.4. Compile the dataset
 
 The TCGA downloaded dataset is scattered in many files. To compile it into a unique file, we executed the following command:
 
@@ -109,13 +110,23 @@ python scripts/extract_data/compile_tcga.py -d /path/to/Databases/TCGA/2022-11-1
 
 The process of compiling the dataset requires a lot of computational memory, so we used a computational cluster to run the command.
 
-##### 1.3.5. Analyze and prepare the dataset
+##### 1.2.5. Analyze and prepare the dataset
 
 We executed the following notebook to analyze the data and prepare it for the analysis:
 
 ```
 scripts/extract_data/TCGA_preparation.Rmd
 ```
+
+#### 1.3. GSE193677 dataset
+
+We executed the following notebook to download and analyze the data to prepare it for the analysis:
+
+```
+scripts/extract_data/GEO_data_extraction_GSE193677.Rmd
+```
+
+In this notebook, we describe how to download the data from GEO using the R library `GEOquery`.
 
 
 ### 2. Process the gene expression datasets
@@ -142,6 +153,19 @@ scripts/process_gene_expression/scipher_preprocessing.Rmd
 scripts/process_gene_expression/TCGA_preprocessing_for_coexpr.Rmd
 ```
 
+* For Rheumatoid Arthritis dataset:
+
+```
+scripts/process_gene_expression/scipher_preprocessing_unique_patients.Rmd
+```
+
+* For GSE193677:
+
+```
+scripts/process_gene_expression/GEO_preprocessing_for_coexpr_GSE193677.Rmd
+```
+
+
 ### 3. Bootstrapping
 
 => folder: `scripts/bootstrapping`
@@ -154,16 +178,22 @@ We create groups of samples of different sizes using random sampling with replac
 scripts/bootstrapping/GTEx_subsampling.Rmd
 ```
 
+* For TCGA:
+
+```
+scripts/bootstrapping/TCGA_subsampling.Rmd
+```
+
 * For Rheumatoid Arthritis dataset:
 
 ```
 scripts/bootstrapping/scipher_subsampling.Rmd
 ```
 
-* For TCGA:
+* For GSE193677:
 
 ```
-scripts/bootstrapping/TCGA_subsampling.Rmd
+scripts/bootstrapping/GEO_subsampling_for_coexpr_GSE193677.Rmd
 ```
 
 
