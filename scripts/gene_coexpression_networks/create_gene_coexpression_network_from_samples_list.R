@@ -17,7 +17,7 @@ option_list = list(
   make_option(c("-o", "--output_file"), type="character", default="gene_coexpression_network_wto.net", 
               help="output file [default= %default]", metavar="character"),
   make_option(c("-m", "--metric"), type="character", default="wto", 
-              help="metric (e.g., pearson, spearman, mutual_information, wto, wgcna, aracne) [default= %default]", metavar="character"),
+              help="metric (e.g., pearson, spearman, mutual_information, wto, wgcna, aracne, genie3) [default= %default]", metavar="character"),
   make_option(c("-n", "--wto_n"), type="integer", default=100, 
               help="Number of wTO bootstrap repetitions to calculate the p-value [default= %default]", metavar="integer"),
   make_option(c("-d", "--wto_delta"), type="double", default=0.05,
@@ -129,6 +129,10 @@ if((metric == 'spearman') | (metric == 'pearson')){
   
   calculate_network_ARACNE(rnaseq.t, output_file, estimator=mi_estimator, eps=aracne_eps)
   
+} else if(metric == 'genie3'){
+  
+  calculate_network_GENIE3(rnaseq, output_file)
+
 } else if(metric == 'wto'){
   
   # Function to calculate network using wTO faster

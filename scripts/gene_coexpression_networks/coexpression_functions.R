@@ -10,6 +10,7 @@ require(WGCNA)
 require(wTO)
 require(dplyr)
 require(data.table)
+require(GENIE3)
 require(Hmisc)
 require(igraph)
 require(minet)
@@ -82,7 +83,7 @@ calculate_correlation <- function(rnaseq, out_name, cor_method="pearson", dispar
 #'  Method to calculate correlation and p-value between genes from gene expression data.
 #'  
 #'  @param rnaseq   RNAseq expression data frame
-#'                     (columns are samples, rows are genes).
+#'                     (columns are genes, rows are samples).
 #'  @param out_name The name of the file to write the correlations to.
 #'  @param cor_method The correlation method to use. Spearman ("s", "spearman") or Pearson ("p", "pearson") correlation. Default is "pearson". 
 #'  @param correction_method Method to correct p-value for multiple testing. Options: "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr". Default is "bonferroni". 
@@ -220,4 +221,24 @@ calculate_network_ARACNE <- function(rnaseq, out_name, estimator="pearson", eps=
   fwrite(net, out_name)
   
 }
+
+################################################################################
+
+#'  Create gene co-expression networks using GENIE3
+#'
+#'  Method to create co-expression networks using GENIE3
+#'  
+#'  @param rnaseq   RNAseq expression data frame
+#'                     (columns are samples, rows are genes).
+#'  @param out_name The name of the file to write the network to.
+#'  @param regulators List of genes that serve as regulators and restrict the computation of the network to interactions with the regulators and the rest of the genes.
+#'
+calculate_network_GENIE3 <- function(rnaseq, out_name, regulators = NULL){
+  # Information about how to calculate a network using GENIE3 package:
+  # https://bioconductor.org/packages/release/bioc/vignettes/GENIE3/inst/doc/GENIE3.html
+  set.seed(123)
+  weightMat <- GENIE3(rnaseq, regulators = regulators, nCores = 4)
+  fwrite(weightMat, out_name)
+}
+
 
