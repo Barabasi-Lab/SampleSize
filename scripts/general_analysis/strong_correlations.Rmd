@@ -1,0 +1,282 @@
+---
+title: "Influence of sample size on strong correlations"
+author: "Joaquim Aguirre-Plans"
+date: "2024-09-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Description
+
+Analysis on strong correlations across sample size.
+
+```{r}
+packrat::init("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR")
+```
+
+```{r load_libraries}
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(patchwork)
+set.seed(1510)
+options(bitmapType='cairo')
+```
+
+## Load functions
+
+```{r load_functions}
+#'  calculate_predictions_using_stretched_exponential_model_optimized
+#'  Formula to calculate exponential decay of significant interactions from a list of sample sizes.
+#'  This formula requires the use of the L parameter
+#'  @param x List of sample sizes.
+#'  @param a Slope coefficient.
+#'  @param b Intercept coefficient.
+#'  
+calculate_predictions_using_stretched_exponential_model_optimized = function(x, L, a, b){
+  y = L * exp((b * x ** (-a + 1)) / (-a + 1))
+  #y = exp(log(L) - exp(b+a*log(x)))
+  return(y)
+}
+
+#'  calculate_prediction_from_analytical_model
+#'  Function to calculate predictions using a specific analytical model
+#'  @param model Name of the model used.
+#'  @param x_list List of values in the x axis (e.g. size)
+#'  @param a Parameter a.
+#'  @param b Parameter b.
+#'  @param L Parameter L.
+#'  
+calculate_prediction_from_analytical_model = function(model, x_list, a, b, L){
+  if(model == "Logarithmic"){
+    prediction_result = (log(x_list)*a + b)
+  } else if(model == "Linear"){
+    prediction_result = (x_list*a + b)
+  } else if(model == "Exponential"){
+    prediction_result = (exp((x_list*a + b)))
+  } else if(model == "Square root"){
+    prediction_result = (exp((log(x_list)*a + b)))
+  } else if((model == "Stretched exponential (by optimization)") | (model == "Stretched exponential (by linear fit)")){
+    prediction_result = calculate_predictions_using_stretched_exponential_model_optimized(x=x_list, L=L, a=a, b=b)
+  } else if(model == "Stretched exponential (without L)"){
+    prediction_result = calculate_predictions_using_stretched_exponential_model_without_L(x=x_list, a=a, b=b)
+  } else if(model == "Exponential decay"){
+    prediction_result = calculate_predictions_using_exponential_decay_model(x=x_list, L=L, a=a, b=b)
+  }
+  return(prediction_result)
+}
+```
+
+## Load data
+
+```{r define_paths}
+input_dir <- '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data'
+example_dir <- paste(input_dir, 'example_pearson_pval_0.05', sep = "/")
+plots_dir <- '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots'
+tables_dir <- '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables'
+font_selected <- "Helvetica"
+model_selected <- "Stretched exponential (by linear fit)"
+topology_type_normalization <- "divide.L"
+datasets_selected = c("gtex:breast.mammary.tissue_female", 
+                      "gtex:lung", 
+                      "tcga:tcga-brca_female", 
+                      "tcga:tcga-luad", 
+                      "scipher:scipher.sample.per.patient.baseline")
+
+name2color <- c(
+  "TCGA: Lung cancer" = "#56B4E9",
+  "tcga:tcga-luad" = "#56B4E9",
+  "tcga:tcga-luad-tumor" = "#56B4E9", # #D55E00
+  "TCGA: Breast cancer" = "#0072B2",
+  "TCGA: Breast c." = "#0072B2",
+  "tcga:tcga-brca_female" = "#0072B2",
+  "tcga:tcga-brca-tumor_female" = "#0072B2",
+  "breast neoplasms"="#0072B2", 
+  "gse193677" = "#E032EC",
+  "GSE193677" = "#E032EC",
+  "GTEx: Whole blood" = "#65F3BF",
+  "gtex:whole.blood" = "#65F3BF",
+  "GTEx: Lung" = "#24D157",
+  "gtex:lung" = "#24D157",
+  "GTEx: Breast" = "#00BA37", #44AA99
+  "gtex:breast.mammary.tissue" = "#00BA37",
+  "gtex:breast.mammary.tissue_female" = "#00BA37",
+  "R. arthritis" = "#D55E00", #E69F00
+  "scipher:scipher.sample.per.patient.baseline" = "#D55E00",
+  "arthritis rheumatoid"="#D55E00", 
+  "asthma"="#d9f365", 
+  "thyroid neoplasms"="#0072B2",
+  "tcga" = "#0072B2",
+  "TCGA" = "#0072B2",
+  "gtex" = "#00BA37",
+  "GTEx" = "#00BA37",
+  "scipher" = "#D55E00",
+  #"Analytical model"="#e3f705",
+  "Analytical model"="#cc68f7",
+  "Power law"="#cc68f7",
+  "Logarithm"="#09b863",
+  "Exponential decay"="#09b863",
+  "\u2265 0.2" = "#F8766D",
+  "\u2265 0.4" = "#7CAE00",
+  "\u2265 0.6" = "#00BFC4",
+  "\u2265 0.8" = "#C77CFF",
+  "Very Weak" = "#ff7b00",
+  "Weak" = "#F8766D",
+  "Moderate" = "#7CAE00",
+  "Strong" = "#00BFC4",
+  "Very Strong" = "#C77CFF",
+  "Convergence point" = "red",
+  "Model prediction" = "red",
+  "P-value < 0.05" = "red",
+  "common" = "#619CFF",
+  "disease-gene" = "#cc68f7",
+  "disease-specific" = "#F8766D",
+  "normal-specific" = "#00BA38",
+  "undefined" = "#808080",
+  "different" = "#C77CFF",
+  "all" = "#CD9600",
+  "common (constant)" = "#619CFF",
+  "common (change)" = "#b5d1ff",
+  "disease-specific (constant)" = "#F8766D",
+  "disease-specific (change)" = "#ffcbc7",
+  "normal-specific (constant)" = "#00BA38",
+  "normal-specific (change)" = "#a3d1b1",
+  "undefined (constant)" = "#808080",
+  "undefined (change)" = "#c2c2c2"
+  )
+```
+
+```{r load_topology}
+topology_results_file <- paste(input_dir, 'analysis_topology.csv', sep = "/")
+topology_results_df <- data.table::fread(topology_results_file)
+topology_results_df$type_dataset <- paste(tolower(topology_results_df$dataset), tolower(topology_results_df$type_dataset), sep = ":")
+head(topology_results_df)
+```
+
+```{r load_analytical}
+analytical_results_file <- paste(example_dir, '/', 'analytical_model_results_', topology_type_normalization, '_pearson_pval_0.05.txt', sep='')
+analytical_results_df <- data.table::fread(analytical_results_file) %>%
+  dplyr::filter(model == model_selected) %>%
+  dplyr::select(type_dataset, max_value_in_dataset, a, b, L, slope, intercept) %>%
+  unique()
+head(analytical_results_df)
+```
+
+```{r load_theoretical_ss}
+theoretical_sample_size_file <- paste(example_dir, 'theoretical_sample_size_for_correlations_of_datasets.txt', sep='/') # from => calculate_convergence_correlation_types.Rmd
+theoretical_sample_size_df <- data.table::fread(theoretical_sample_size_file) %>%
+  dplyr::rename(type_dataset = dataset) %>%
+  filter(type_correlation == "strong") %>%
+  dplyr::select(type_dataset, sample_size_statistical_corrected) %>%
+  unique()
+head(theoretical_sample_size_df)
+```
+
+```{r load_predictions}
+#predictions_file = paste(example_dir, 'predictions_pearson_pval_0.05.txt', sep='/')
+#predicted_results_df = data.table::fread(predictions_file) %>%
+#  dplyr::mutate(model_result = as.numeric(model_result)) %>%
+#  dplyr::filter(model == model_selected) %>%
+#  dplyr::select(type_dataset, size, model_result)
+#head(predicted_results_df)
+```
+
+```{r calculate_predictions}
+predicted_results_df = data.frame()
+for (type_dataset_sel in datasets_selected) {
+  max_size <- round(theoretical_sample_size_df[theoretical_sample_size_df$type_dataset == type_dataset_sel]$sample_size_statistical_corrected)
+  N_vals <- seq(3, max_size, 1)
+  a_sel <- analytical_results_df[analytical_results_df$type_dataset == type_dataset_sel]$a
+  b_sel <- analytical_results_df[analytical_results_df$type_dataset == type_dataset_sel]$b
+  L_sel <- analytical_results_df[analytical_results_df$type_dataset == type_dataset_sel]$L
+  max_value_in_dataset <- analytical_results_df[analytical_results_df$type_dataset == type_dataset_sel]$max_value_in_dataset
+  prediction_result = calculate_prediction_from_analytical_model(
+    model = model_selected,
+    x_list = N_vals,
+    a = a_sel,
+    b = b_sel,
+    L = L_sel
+  )
+  predicted_results_df <- rbind(
+    predicted_results_df,
+    data.frame(
+      type_dataset = type_dataset_sel,
+      size = N_vals,
+      model_result = prediction_result * max_value_in_dataset
+    )
+  )
+}
+
+head(predicted_results_df)
+```
+
+## Significance of strong correlations vs. sample size
+
+```{r filter_model_results}
+# Join analytical and theoretical tables and filter out model predictions above
+# the maximum sample size predicted for "strong" edges
+predicted_results_mod_df <- predicted_results_df %>%
+  dplyr::inner_join(analytical_results_df, by = c("type_dataset")) %>%
+  dplyr::inner_join(theoretical_sample_size_df, by = c("type_dataset")) %>%
+  dplyr::rename("model_num_edges" = "model_result") %>%
+  dplyr::mutate(model_frac_edges = (model_num_edges / max_value_in_dataset) / L) %>%
+  dplyr::filter((type_dataset %in% datasets_selected) & (size <= sample_size_statistical_corrected))
+
+# Calculate maximum number of "strong" edges
+predicted_results_mod_df$max_frac_strong_edges <- calculate_predictions_using_stretched_exponential_model_optimized(
+  x = predicted_results_mod_df$sample_size_statistical_corrected,
+  L = predicted_results_mod_df$L,
+  a = predicted_results_mod_df$a,
+  b = predicted_results_mod_df$b
+)
+# Normalize maximum number of strong edges
+predicted_results_mod_df$max_frac_strong_edges <- predicted_results_mod_df$max_frac_strong_edges / predicted_results_mod_df$L
+# Calculate fraction of strong edges
+predicted_results_mod_df$frac_strong_edges_model <- predicted_results_mod_df$model_frac_edges / predicted_results_mod_df$max_frac_strong_edges
+
+head(predicted_results_mod_df)
+```
+
+```{r significance_strong_corr_plot}
+predicted_results_mod_df <- predicted_results_mod_df %>%
+  inner_join( (name2color %>% 
+                 as.data.frame() %>% 
+                 dplyr::rename("rgb_col"=".") %>% 
+                 tibble::rownames_to_column("type_dataset")), 
+              by=c("type_dataset") )
+
+predicted_results_mod_df %>%
+  ggplot(aes(x = size, y = frac_strong_edges_model)) +
+  geom_line(aes(col = rgb_col), size=1) +
+  scale_colour_identity(
+    labels = unique(predicted_results_mod_df$type_dataset),
+    breaks = unique(predicted_results_mod_df$rgb_col),
+    guide = "legend"
+  ) +
+  theme_linedraw() +
+  theme(aspect.ratio = 1, 
+        plot.title =  element_text(size = 20, face = "bold"), 
+        axis.title = element_text(size = 17, face = "bold"), 
+        axis.text = element_text(size = 16), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        text = element_text(family = font_selected)
+        #legend.position = "none"
+  )
+```
+
+
+
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
