@@ -29,7 +29,9 @@ options(bitmapType='cairo')
 Define input directories and files:
 
 ```{r}
-input_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/example_pearson_pval_0.05'
+#type_data_selection = 'pearson_aracne'
+type_data_selection = 'pearson_pval_0.05'
+input_dir = paste('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/example_', type_data_selection, sep = '')
 topology_results_file = paste(input_dir, 'topology_results_pearson_pval_0.05.txt', sep='/')
 results_selected_df = fread(topology_results_file)
 type_datasets_selected = unique(results_selected_df$type_dataset)
@@ -325,6 +327,46 @@ head(scipher_sd_samples_df)
 scipher_meta_df
 ```
 
+#### Parse GSE193677
+
+```{r}
+gse193677_sd_genes_df = data.frame()
+gse193677_sd_samples_df = data.frame()
+gse193677_meta_df = data.frame()
+
+rnaseq_file_path = "/work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out/reads/filter_genes_low_counts/rnaseq_GSE193677.txt"
+rnaseq = fread(rnaseq_file_path) %>% as.data.frame()
+gse193677_sd_genes_df = data.frame(gene = rnaseq$Gene, 
+                                   sd = apply(rnaseq[,-1], 1, sd), 
+                                   mean = apply(rnaseq[,-1], 1, mean), 
+                                   dataset = "gse193677", 
+                                   type_dataset = "gse193677", 
+                                   type_counts = "reads",
+                                   sex = NA)
+gse193677_sd_samples_df = data.frame(sample = colnames(rnaseq[,-1]), 
+                                     sd = apply(rnaseq[,-1], 2, sd), 
+                                     mean = apply(rnaseq[,-1], 2, mean), 
+                                     dataset = "gse193677", 
+                                     type_dataset = "gse193677", 
+                                     type_counts = "reads",
+                                     sex = NA)
+gse193677_meta_df = data.frame(dataset = "gse193677", 
+                               type_dataset = "gse193677", 
+                               type_counts = "reads", 
+                               sex = NA, 
+                               num_samples = ncol(rnaseq[,-1]), 
+                               num_genes = nrow(rnaseq[,-1]))
+
+# Calculate CV
+gse193677_sd_genes_df$cv = (gse193677_sd_genes_df$sd/gse193677_sd_genes_df$mean)*100
+gse193677_sd_samples_df$cv = (gse193677_sd_samples_df$sd/gse193677_sd_samples_df$mean)*100
+```
+
+```{r}
+head(gse193677_sd_genes_df)
+head(gse193677_sd_samples_df)
+gse193677_meta_df
+```
 
 #### Merge datasets
 
@@ -334,19 +376,20 @@ Merging of SD / mean calculation by gene:
 # Full join of gene SD datasets
 sd_genes_df = gtex_sd_genes_df %>% 
   full_join(tcga_sd_genes_df) %>% 
-  full_join(scipher_sd_genes_df)
+  full_join(scipher_sd_genes_df) %>%
+  full_join(gse193677_sd_genes_df)
 
 # Write full dataset name
 sd_genes_df$dataset_name = paste(sd_genes_df$dataset, 
                                  sd_genes_df$type_dataset, 
                                  sep = ":")
 sd_genes_df$dataset_name = tolower(sd_genes_df$dataset_name)
-sd_genes_df$dataset_name = ifelse(!(sd_genes_df$subclassification == ""),
+sd_genes_df$dataset_name = ifelse(!((sd_genes_df$subclassification == "") | (is.na(sd_genes_df$subclassification))),
                                   paste(sd_genes_df$dataset_name, 
                                         sd_genes_df$subclassification, 
                                         sep = "-"), 
                                   sd_genes_df$dataset_name)
-sd_genes_df$dataset_name = ifelse(!(sd_genes_df$sex == ""),
+sd_genes_df$dataset_name = ifelse(!((sd_genes_df$sex == "") | (is.na(sd_genes_df$sex))),
                                   paste(sd_genes_df$dataset_name, 
                                         sd_genes_df$sex, 
                                         sep = "_"), 
@@ -364,7 +407,8 @@ Merging of SD / mean calculation by samples:
 # Full join of sample SD datasets
 sd_samples_df = gtex_sd_samples_df %>% 
   full_join(tcga_sd_samples_df) %>% 
-  full_join(scipher_sd_samples_df)
+  full_join(scipher_sd_samples_df) %>%
+  full_join(gse193677_sd_samples_df)
 
 # Write full dataset name
 sd_samples_df$dataset_name = paste(sd_samples_df$dataset, 
@@ -394,7 +438,8 @@ Merging of metadata:
 # Full join of metadata
 meta_df = gtex_meta_df %>% 
   full_join(tcga_meta_df) %>% 
-  full_join(scipher_meta_df)
+  full_join(scipher_meta_df) %>%
+  full_join(gse193677_meta_df)
 
 # Write full dataset name
 meta_df$dataset_name = paste(meta_df$dataset, 
@@ -425,7 +470,7 @@ head(meta_df)
 ```{r}
 #datasets_selected = c("Artery.Tibial", "Whole.Blood", "TCGA-BRCA", "TCGA-COAD", "scipher.complete.dataset")
 #datasets_selected = c("Breast.Mammary.Tissue", "Thyroid", "TCGA-BRCA", "TCGA-THCA", "scipher.complete.dataset")
-datasets_selected = c("Breast.Mammary.Tissue", "Thyroid", "Whole.Blood", "TCGA-BRCA", "TCGA-THCA", "scipher.complete.dataset")
+datasets_selected = c("Breast.Mammary.Tissue", "Thyroid", "Whole.Blood", "TCGA-BRCA", "TCGA-THCA", "scipher.complete.dataset", "gse193677")
 parameters = c("sd", "mean", "cv")
 parameter2label <- list("sd"="SD", "mean"="mean", "cv"="CV")
 distribution_plots = list()
@@ -445,7 +490,7 @@ for (x in 1:length(parameters)){
     geom_freqpoly(size=1.5) +
     #geom_histogram(alpha=0.2) +
     #scale_color_manual(values = c("#D55E00", "#E69F00", "#44AA99", "#0072B2", "#56B4E9")) +
-    scale_color_manual(values = c("#D55E00", "#E69F00", "#44AA99", "#65F3BF", "#0072B2", "#56B4E9")) +
+    scale_color_manual(values = c("#D55E00", "#E69F00", "#44AA99", "#65F3BF", "#0072B2", "#56B4E9", "purple")) +
     scale_x_log10() + 
     scale_y_log10() + 
     labs(x=paste("Gene expression ", parameter2label[[parameter]], " (Log)", sep=""), y = "Number of genes (Log)") +
@@ -473,7 +518,7 @@ for (x in 1:length(parameters)){
 ```{r}
 input_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables'
 a_vs_fraction_corr_file = paste(input_dir, 'a_vs_fraction_sig_correlations_pearson_pval_0.05.txt', sep='/')
-a_vs_fraction_corr_df = fread(a_vs_fraction_corr_file) %>% rename("dataset_name"="type_dataset")
+a_vs_fraction_corr_df = fread(a_vs_fraction_corr_file)
 head(a_vs_fraction_corr_df)
 ```
 
@@ -482,7 +527,26 @@ sd_cut=10
 mean_cut=10
 cv_cut=50
 sd_genes_df %>% group_by(dataset, type_dataset) %>% summarize(mean_sd=mean(sd), median_sd=median(sd), mean_mean=mean(mean), median_mean=median(mean), mean_cv=mean(cv), median_cv=median(cv))
-sd_genes_vs_a_df = sd_genes_df %>% group_by(dataset, type_dataset, dataset_name) %>% summarize(num_genes_above_sd_cut=length(sd[sd >= sd_cut]), num_genes_above_mean_cut=length(mean[mean >= mean_cut]), num_genes_above_cv_cut=length(cv[cv >= cv_cut]), num_genes=n()) %>% ungroup() %>% mutate(fraction_genes_above_sd_cut = num_genes_above_sd_cut / num_genes, fraction_genes_above_mean_cut = num_genes_above_mean_cut / num_genes, fraction_genes_above_cv_cut = num_genes_above_cv_cut / num_genes) %>% inner_join(a_vs_fraction_corr_df, by=c("dataset_name"="dataset_name")) %>% select(!c("type_correlation", "correlation", "sample_size_statistical", "sample_size_statistical_corrected", "num_edges_from_statistical_corrected", "num_edges_from_statistical_corrected_norm")) %>% unique()
+sd_genes_vs_a_df = sd_genes_df %>%
+  group_by(dataset, type_dataset, dataset_name) %>%
+  summarize(
+    num_genes_above_sd_cut=length(sd[sd >= sd_cut]),
+    num_genes_above_mean_cut=length(mean[mean >= mean_cut]),
+    num_genes_above_cv_cut=length(cv[cv >= cv_cut]),
+    num_genes=n()
+  ) %>%
+  ungroup() %>%
+  mutate(
+    fraction_genes_above_sd_cut = num_genes_above_sd_cut / num_genes,
+    fraction_genes_above_mean_cut = num_genes_above_mean_cut / num_genes,
+    fraction_genes_above_cv_cut = num_genes_above_cv_cut / num_genes
+  ) %>%
+  inner_join(
+    a_vs_fraction_corr_df,
+    by = c("dataset_name" = "dataset_name")
+  ) %>%
+  dplyr::select(!c("type_correlation", "correlation", "sample_size_statistical", "sample_size_statistical_corrected", "num_edges_from_statistical_corrected", "num_edges_from_statistical_corrected_norm")) %>%
+  unique()
 
 head(sd_genes_vs_a_df)
 ```
