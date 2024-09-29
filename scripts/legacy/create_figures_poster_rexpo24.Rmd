@@ -1,0 +1,1245 @@
+---
+title: "Create Figures"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Description
+
+Create figures for the manuscript, extended abstract and poster.
+
+```{r}
+library(data.table)
+library(dplyr)
+library(igraph)
+library(ggplot2)
+library(ggalluvial)
+library(gghalves)
+library(ggnewscale)
+require(ggrepel)
+require(magrittr)
+library(patchwork)
+library(tidyr)
+set.seed(1510)
+options(bitmapType='cairo')
+`%ni%` <- Negate(`%in%`)
+```
+
+### Load data
+
+Un-normalized data:
+
+```{r}
+input_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data'
+plots_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/plots_rexpo24'
+dir.create(plots_dir, showWarnings = FALSE)
+tables_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables'
+numbers_file = paste(input_dir, 'dataset_numbers_complete_graph.txt', sep='/')
+numbers_df = fread(numbers_file)
+numbers_df$dataset = tolower(numbers_df$dataset)
+meta_file = paste(input_dir, "metadata_summary.txt", sep="/")
+meta_df = fread(meta_file)
+sd_genes_file = paste(input_dir, "variation_by_gene.txt", sep="/") # from => calculate_rnaseq_datasets_variation.Rmd
+sd_genes_df = fread(sd_genes_file)
+name2color <- c(
+  "TCGA: Lung cancer" = "#56B4E9",
+  "tcga:tcga-luad" = "#56B4E9",
+  "tcga:tcga-luad-tumor" = "#56B4E9", # #D55E00
+  "TCGA: Breast cancer" = "#0072B2",
+  "TCGA: Breast c." = "#0072B2",
+  "tcga:tcga-brca_female" = "#0072B2",
+  "tcga:tcga-brca-tumor_female" = "#0072B2",
+  "breast neoplasms"="#0072B2", 
+  "gse193677" = "#E032EC",
+  "GSE193677" = "#E032EC",
+  "GTEx: Whole blood" = "#65F3BF",
+  "gtex:whole.blood" = "#65F3BF",
+  "GTEx: Lung" = "#24D157",
+  "gtex:lung" = "#24D157",
+  "GTEx: Breast" = "#00BA37", #44AA99
+  "gtex:breast.mammary.tissue" = "#00BA37",
+  "gtex:breast.mammary.tissue_female" = "#00BA37",
+  "R. arthritis" = "#D55E00", #E69F00
+  "scipher:scipher.sample.per.patient.baseline" = "#D55E00",
+  "arthritis rheumatoid"="#D55E00", 
+  "asthma"="#d9f365", 
+  "thyroid neoplasms"="#0072B2",
+  "tcga" = "#0072B2",
+  "TCGA" = "#0072B2",
+  "gtex" = "#00BA37",
+  "GTEx" = "#00BA37",
+  "scipher" = "#D55E00",
+  #"Analytical model"="#e3f705",
+  "Analytical model"="#cc68f7",
+  "Power law"="#cc68f7",
+  "Logarithm"="#09b863",
+  "Exponential decay"="#09b863",
+  "\u2265 0.2" = "#F8766D",
+  "\u2265 0.4" = "#7CAE00",
+  "\u2265 0.6" = "#00BFC4",
+  "\u2265 0.8" = "#C77CFF",
+  "Very Weak" = "#ff7b00",
+  "Weak" = "#F8766D",
+  "Moderate" = "#7CAE00",
+  "Strong" = "#00BFC4",
+  "Very Strong" = "#C77CFF",
+  "Convergence point" = "red",
+  "Model prediction" = "red",
+  "P-value < 0.05" = "red",
+  "common" = "#619CFF",
+  "disease-gene" = "#cc68f7",
+  "disease-specific" = "#F8766D",
+  "normal-specific" = "#00BA38",
+  "undefined" = "#808080",
+  "different" = "#C77CFF",
+  "all" = "#CD9600",
+  "common (constant)" = "#619CFF",
+  "common (change)" = "#b5d1ff",
+  "disease-specific (constant)" = "#F8766D",
+  "disease-specific (change)" = "#ffcbc7",
+  "normal-specific (constant)" = "#00BA38",
+  "normal-specific (change)" = "#a3d1b1",
+  "undefined (constant)" = "#808080",
+  "undefined (change)" = "#c2c2c2"
+  )
+
+input_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/example_pearson_pval_0.05'
+topology_results_file = paste(input_dir, 'topology_results_pearson_pval_0.05.txt', sep='/')
+results_selected_df = fread(topology_results_file)
+topology_results_by_size_file = paste(input_dir, 'topology_results_mean_pearson_pval_0.05.txt', sep='/')
+topology_results_selected_by_size_df = fread(topology_results_by_size_file)
+predictions_file = paste(input_dir, 'predictions_pearson_pval_0.05.txt', sep='/')
+predicted_results_df = fread(predictions_file)
+analytical_results_file = paste(input_dir, 'analytical_model_results_pearson_pval_0.05.txt', sep='/')
+topology_results_selected_analytical_df = fread(analytical_results_file)
+analytical_summary_file = paste(input_dir, 'analytical_model_summary_pearson_pval_0.05.txt', sep='/')
+analytical_model_summary_df = fread(analytical_summary_file)
+analytical_regression_results_file = paste(input_dir, 'analytical_model_regression_results_pearson_pval_0.05.txt', sep='/')
+stretched_exponential_regression_df = fread(analytical_regression_results_file)
+theoretical_sample_size_file = paste(input_dir, 'theoretical_sample_size_for_correlations_of_datasets.txt', sep='/') # from => calculate_convergence_correlation_types.Rmd
+sample_size_correlation_df = fread(theoretical_sample_size_file)
+```
+
+Normalized data:
+
+```{r}
+topology_type_normalization = "divide.L"
+input_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/example_pearson_pval_0.05'
+topology_results_file = paste(input_dir, '/', 'topology_results_norm_', topology_type_normalization, '_pearson_pval_0.05.txt', sep='')
+results_selected_norm_df = fread(topology_results_file)
+topology_results_by_size_file = paste(input_dir, '/', 'topology_results_mean_norm_', topology_type_normalization, '_pearson_pval_0.05.txt', sep='')
+topology_results_selected_by_size_norm_df = fread(topology_results_by_size_file)
+predictions_file = paste(input_dir, '/', 'predictions_', topology_type_normalization, '_pearson_pval_0.05.txt', sep='')
+predicted_results_norm_df = fread(predictions_file)
+analytical_results_file = paste(input_dir, '/', 'analytical_model_results_', topology_type_normalization, '_pearson_pval_0.05.txt', sep='')
+topology_results_selected_analytical_norm_df = fread(analytical_results_file)
+```
+
+### Make plots
+
+#### Curve plot
+
+```{r}
+datasets_selected = c("gtex:breast.mammary.tissue_female", 
+                      "tcga:tcga-brca_female")
+models_selected = c("Stretched exponential (by linear fit)")
+
+# Join predicted results with mean
+#predicted_results_norm_and_mean_df <- 
+predicted_results_mean_df <- 
+  #rbind((topology_results_selected_by_size_norm_df %>% 
+  rbind((topology_results_selected_by_size_df %>% 
+           #dplyr::select("type_dataset", "size", "mean_norm") %>% 
+           dplyr::select("type_dataset", "size", "mean") %>% 
+           unique() %>% 
+           #rename("model_result" = "mean_norm") %>% 
+           rename("model_result" = "mean") %>% 
+           mutate(model="Mean")), 
+        #(predicted_results_norm_df %>% 
+        (predicted_results_df %>% 
+           dplyr::select(type_dataset, size, model_result, model) %>% 
+           unique() 
+         %>% mutate_at(c('model_result'), as.numeric))) %>%
+  filter(type_dataset %in% datasets_selected) %>%
+  filter(model %in% models_selected) %>%
+  inner_join((analytical_model_summary_df %>% 
+                dplyr::select("type_dataset", "model", "adj.r.squared")),
+             by = c("type_dataset", "model")) %>%
+  mutate_at(c('adj.r.squared'), ~sprintf("%.2f",.)) %>%
+  mutate_at(c('adj.r.squared'), as.character)
+
+# Process data
+#goodnessfit_lessdatasets_df = results_selected_norm_df %>% 
+goodnessfit_lessdatasets_df = results_selected_df %>% 
+  dplyr::select(type_dataset, size, rep, num_edges) %>%
+  #right_join(predicted_results_norm_and_mean_df, by=c("type_dataset", "size")) %>%
+  right_join(predicted_results_mean_df, by=c("type_dataset", "size")) %>%
+  filter(type_dataset %in% datasets_selected) %>%
+  #filter(size <= max((results_selected_norm_df %>% 
+  filter(size <= max((results_selected_df %>% 
+                        filter(type_dataset %in% datasets_selected))$size)) %>%
+  #filter(size >= min((results_selected_norm_df %>% 
+  filter(size >= min((results_selected_df %>% 
+                        filter(type_dataset %in% datasets_selected))$size)) %>%
+  filter(!(is.na(num_edges))) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "gtex:breast.mammary.tissue_female", "GTEx: Breast")) %>%
+  mutate(type_dataset = replace(type_dataset, type_dataset == "tcga:tcga-brca_female", "TCGA: Breast cancer")) %>%
+  inner_join( (name2color %>% as.data.frame() %>% dplyr::rename("rgb_col"=".") %>% tibble::rownames_to_column("type_dataset")), by=c("type_dataset") ) %>%
+  mutate(geom_text_repel_label=dplyr::if_else(type_dataset == "R. arthritis" & size == 240 & rep == 1, "R. arthritis", dplyr::if_else(type_dataset == "GTEx: Whole blood" & size == 700 & rep == 1, "GTEx: Whole blood", dplyr::if_else(type_dataset == "GTEx: Lung" & size == 560 & rep == 1, "GTEx: Lung", dplyr::if_else(type_dataset == "GTEx: Breast" & size == 140 & rep == 1, "GTEx: Breast", dplyr::if_else(type_dataset == "TCGA: Lung cancer" & size == 460 & rep == 1, "TCGA: Lung cancer", dplyr::if_else(type_dataset == "TCGA: Breast cancer" & size == 1000 & rep == 1, "TCGA: Breast cancer", "")))))))
+
+goodnessfit_lessdatasets_df$r2labels = 
+  ifelse(goodnessfit_lessdatasets_df$type_dataset == "GTEx: Breast", 
+         paste("GTEx Breast: ", 
+               unique((goodnessfit_lessdatasets_df %>% 
+                         filter(type_dataset == "GTEx: Breast"))$adj.r.squared), 
+               sep=""), 
+         ifelse(goodnessfit_lessdatasets_df$type_dataset == "TCGA: Breast cancer", 
+                paste("TCGA Breast c.: ", 
+                      unique((goodnessfit_lessdatasets_df %>% 
+                                filter(type_dataset == "TCGA: Breast cancer"))$adj.r.squared), 
+                      sep=""), 
+                ""))
+
+# Plot with labels
+goodnessfit_plot_lessdatasets = goodnessfit_lessdatasets_df %>%
+  ggplot(aes(x=size, y=num_edges, col=r2labels)) +
+  geom_point(alpha=0.6, size=3) +
+  geom_line(aes(x=size, y=model_result, col=r2labels), size=1) +
+  #scale_colour_identity() +
+  scale_color_manual(guide = 'legend', values=as.vector(name2color[levels(factor(goodnessfit_lessdatasets_df$type_dataset))])) +
+  theme_linedraw() +
+  xlab("Num. samples") +
+  ylab("Num. significant correlations") +
+  guides(col=guide_legend(title=bquote(bold(.('Analytical model') ~ R^2)))) +
+  theme(aspect.ratio=1, 
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16), 
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        text = element_text(family = "Helvetica"),
+        #legend.position="none") +
+        legend.position = c(0.64, 0.15),
+        legend.text = element_text(size = 16), 
+        legend.title=element_text(size=16, face="bold"),
+        #legend.background = element_rect(linewidth=0.2, linetype="solid", colour ="black")
+        legend.background = element_rect(fill = "transparent", color = "transparent")
+        )
+
+plot_file = paste(plots_dir, "/goodnessfit_2models_pearson_pval_0.05.png", sep="")
+print(goodnessfit_plot_lessdatasets)
+ggsave(
+  plot_file,
+  plot = goodnessfit_plot_lessdatasets,
+  dpi = 1200,
+  units = c("px")
+)
+
+```
+
+
+#### a vs. fraction of significant correlations plot
+
+
+```{r}
+# Load data
+type_correlation_selected <- "weak"
+a_vs_fraction_corr_file <- paste(tables_dir, 
+                                 "a_vs_fraction_sig_correlations_pearson_pval_0.05.txt", 
+                                sep = "/")
+sample_size_vs_a_df <- fread(a_vs_fraction_corr_file)
+
+# Process data
+datasets_selected <- c("scipher:scipher.sample.per.patient.baseline",
+                       "gse193677:rectum-disease_inflamed_vs_control_cd",
+                       "gse193677:rectum-disease_inflamed_vs_control_uc",
+                       "gse193677:rectum-disease_inflamed_vs_control_control",
+                       "gse193677:rectum-inflamed_vs_noninflamed_inflamed",
+                       "gse193677:rectum-inflamed_vs_noninflamed_noninflamed",
+                       "gtex:breast.mammary.tissue_female",
+                       "gtex:lung",
+                       "gtex:skin.sun.exposed.lower.leg",
+                       "gtex:thyroid",
+                       "gtex:whole.blood",
+                       "tcga:tcga-brca-tumor_female",
+                       "tcga:tcga-kirc-tumor",
+                       "tcga:tcga-kirp-tumor",
+                       "tcga:tcga-luad-tumor",
+                       "tcga:tcga-lusc-tumor",
+                       "tcga:tcga-thca-tumor",
+                       "tcga:breast-tissue_female", 
+                       "tcga:kidney-tissue",
+                       "tcga:lung-tissue",
+                       "tcga:brca.luma-subtype",
+                       "tcga:brca.lumb-subtype")
+
+sample_size_vs_a_plot_lessdatasets_df = sample_size_vs_a_df %>% 
+  filter(type_correlation == type_correlation_selected) %>% 
+  filter(dataset_name %in% datasets_selected) %>%
+  mutate(dataset = replace(dataset, dataset == "scipher", "R. arthritis"),
+         dataset = replace(dataset, dataset == "gse193677", "GSE193677"),
+         dataset = replace(dataset, dataset == "gtex", "GTEx"),
+         dataset = replace(dataset, dataset == "tcga", "TCGA")) %>%
+  mutate(dataset_name = 
+           replace(dataset_name, 
+                   dataset_name == "gtex:breast.mammary.tissue_female", 
+                   "GTEx: Breast")) %>%
+  mutate(dataset_name = 
+           replace(dataset_name, 
+                   dataset_name == "tcga:tcga-brca-tumor_female", 
+                   "TCGA: Breast cancer")) %>%
+  left_join( (name2color %>% 
+                as.data.frame() %>% 
+                dplyr::rename("rgb_col" = ".") %>% 
+                tibble::rownames_to_column("dataset")# %>% 
+                #filter(dataset_name %in% c("TCGA: Breast cancer", "GTEx: Breast"))
+              ), 
+             by = c("dataset") ) %>%
+  mutate(rgb_col = replace(rgb_col, is.na(rgb_col), "#000000")) %>% # Non-selected datasets with color black
+  mutate(geom_text_repel_label=dplyr::if_else(dataset_name == "R. arthritis", "R. arthritis", 
+                                              dplyr::if_else(dataset_name == "GTEx: Whole blood", "GTEx: Whole blood", 
+                                                             dplyr::if_else(dataset_name == "GTEx: Lung", "GTEx: Lung", 
+                                                                            dplyr::if_else(dataset_name == "GTEx: Breast", "GTEx: Breast", 
+                                                                                           dplyr::if_else(dataset_name == "TCGA: Lung cancer", "TCGA: Lung cancer", 
+                                                                                                          dplyr::if_else(dataset_name == "TCGA: Breast cancer", "TCGA: Breast cancer", "")))))))
+
+# Calculate correlation
+a_vs_fr_cor <- cor(sample_size_vs_a_plot_lessdatasets_df$a, sample_size_vs_a_plot_lessdatasets_df$num_edges_from_statistical_corrected_norm)
+
+# Calculate regression
+lm_summary_avsfr <- summary(lm(sample_size_vs_a_plot_lessdatasets_df$num_edges_from_statistical_corrected_norm ~ sample_size_vs_a_plot_lessdatasets_df$a))
+slope_avsfr <- coef(lm_summary_avsfr)[2]
+intercept_avsfr <- coef(lm_summary_avsfr)[1]
+adj.r.squared_avsfr <- lm_summary_avsfr$adj.r.squared
+lm_cor_result_avsfr <- paste("R² =", 
+                       round(adj.r.squared_avsfr, 3), 
+                       "\ncorr. =", 
+                       round(a_vs_fr_cor, 3))
+
+
+# Make scatter plot
+a_vs_fraction_sig_correlations_lessdatasets_plot <- sample_size_vs_a_plot_lessdatasets_df %>%
+    ggplot(aes(x=a, y=num_edges_from_statistical_corrected_norm)) + 
+    geom_point(aes(col=rgb_col), alpha = 0.6, size = 3, show.legend = TRUE) +
+    #scale_colour_identity() +
+    scale_colour_identity(labels = unique(sample_size_vs_a_plot_lessdatasets_df$dataset), breaks = unique(sample_size_vs_a_plot_lessdatasets_df$rgb_col), guide = "legend") +
+    geom_label_repel(aes(col = rgb_col, label = geom_text_repel_label),
+                     fill="white",
+                     box.padding = 0.5, max.overlaps = Inf,
+                     label.size = 0.75, 
+                     size = 5,
+                     alpha = 0.6, 
+                     label.padding = 0.25, 
+                     fontface = "bold",
+                     na.rm = TRUE,
+                     show.legend = FALSE,
+                     max.iter = 1e5,
+                     seed = 5555) +
+    geom_abline(aes(slope = slope_avsfr,
+                    intercept = intercept_avsfr),
+                linetype = "dashed", 
+                col = "gray50",
+                show.legend = FALSE) +
+  annotate("text", x = 2.00, y = 0.45, label = lm_cor_result_avsfr, size = 5) +
+  xlab(expression(alpha)) +
+  ylab("Frac. correlations above 0.2") +
+  theme_linedraw() +
+  theme(aspect.ratio = 1, 
+        plot.title = element_text(size = 20, face = "bold"), 
+        axis.title = element_text(size = 17, face = "bold"), 
+        axis.text = element_text(size = 16), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        text = element_text(family = "Helvetica"),
+        #legend.position="none")
+        legend.position = c(0.23, 0.87),
+        legend.background = element_rect(fill = 'transparent', color = "transparent"),
+        legend.text = element_text(size = 16), 
+        legend.title=element_blank())
+
+print(a_vs_fraction_sig_correlations_lessdatasets_plot)
+plot_file <- paste(plots_dir,
+                   "a_vs_fraction_sig_correlations_pearson_pval_0.05_lessdatasets.png",
+                   sep="/")
+ggsave(
+  plot_file,
+  plot=a_vs_fraction_sig_correlations_lessdatasets_plot,
+  dpi = 1200,
+  #width = 6400,
+  #height = 6000,
+  units = c("px")
+)
+```
+
+
+#### a vs. sample size
+
+```{r}
+fraction_links <- 0.5
+N_opt_file <- paste(tables_dir,
+                    "/optimal_sample_size_",
+                    fraction_links,
+                    "links",
+                    sep = "")
+
+N_opt_df <- fread(N_opt_file)
+
+```
+
+```{r}
+sd_cut <- 10
+mean_cut <- 10
+cv_cut <- 50
+type_counts_selected = "reads"
+
+# Calculate number of genes above certain SD, mean and CV cut-offs
+sd_genes_summary_df = sd_genes_df %>% 
+  filter(type_counts == type_counts_selected) %>% 
+  group_by(dataset, 
+           type_dataset, 
+           dataset_name, 
+           type_counts, 
+           sex, 
+           subclassification) %>% 
+  summarize(num_genes_above_sd_cut = length(sd[sd >= sd_cut]), 
+            num_genes_above_mean_cut = length(mean[mean >= mean_cut]), 
+            num_genes_above_cv_cut = length(cv[cv >= cv_cut]), 
+            num_genes = n()) %>% 
+  ungroup() %>% 
+  mutate(fraction_genes_above_sd_cut = num_genes_above_sd_cut / num_genes, 
+         fraction_genes_above_mean_cut = num_genes_above_mean_cut / num_genes, 
+         fraction_genes_above_cv_cut = num_genes_above_cv_cut / num_genes)
+
+a_vs_fraction_corr_file = 
+  paste(tables_dir, 
+        "a_vs_fraction_sig_correlations_pearson_pval_0.05.txt", 
+        sep='/')
+a_vs_fraction_corr_df = fread(a_vs_fraction_corr_file)
+
+sd_genes_summary_gse <- sd_genes_summary_df %>%
+  filter(dataset == "gse193677") %>%
+  dplyr::select(-type_dataset, dataset_name) %>%
+  slice(rep(1, 5)) %>%
+  mutate(
+    type_dataset = (a_vs_fraction_corr_df %>% filter(dataset == "gse193677") %>% pull(type_dataset) %>% unique()),
+    dataset_name = (a_vs_fraction_corr_df %>% filter(dataset == "gse193677") %>% pull(dataset_name) %>% unique())
+  )
+
+sd_genes_summary_df <- sd_genes_summary_df %>%
+  filter(!(dataset == "gse193677")) %>%
+  bind_rows(sd_genes_summary_gse)
+
+sd_genes_vs_a_df <- sd_genes_summary_df %>%
+  inner_join((a_vs_fraction_corr_df %>% select(-type_dataset, -sex, -subclassification)), 
+             by = c("dataset_name", "dataset")) %>% 
+  select(!c("type_correlation", 
+            "correlation", 
+            "sample_size_statistical", 
+            "sample_size_statistical_corrected", 
+            "num_edges_from_statistical_corrected", 
+            "num_edges_from_statistical_corrected_norm")) %>% 
+  unique() %>%
+  as.data.frame()
+
+head(sd_genes_vs_a_df)
+```
+
+```{r}
+sd_cut <- 10
+mean_cut <- 10
+cv_cut <- 50
+
+datasets_selected <- c("scipher:scipher.sample.per.patient.baseline",
+                       "gse193677:rectum-disease_inflamed_vs_control_cd",
+                       "gse193677:rectum-disease_inflamed_vs_control_uc",
+                       "gse193677:rectum-disease_inflamed_vs_control_control",
+                       "gse193677:rectum-inflamed_vs_noninflamed_inflamed",
+                       "gse193677:rectum-inflamed_vs_noninflamed_noninflamed",
+                       "gtex:breast.mammary.tissue_female",
+                       "gtex:lung",
+                       "gtex:skin.sun.exposed.lower.leg",
+                       "gtex:thyroid",
+                       "gtex:whole.blood",
+                       "tcga:tcga-brca-tumor_female",
+                       "tcga:tcga-kirc-tumor",
+                       "tcga:tcga-kirp-tumor",
+                       "tcga:tcga-luad-tumor",
+                       "tcga:tcga-lusc-tumor",
+                       "tcga:tcga-thca-tumor",
+                       "tcga:breast-tissue_female", 
+                       "tcga:kidney-tissue",
+                       "tcga:lung-tissue",
+                       "tcga:brca.luma-subtype",
+                       "tcga:brca.lumb-subtype")
+
+sd_genes_vs_ss_df <- sd_genes_summary_df %>% 
+  inner_join(N_opt_df, by=c("dataset_name")) %>% 
+  unique() %>%
+  as.data.frame()
+
+sd_genes_vs_ss_file = paste(tables_dir,
+                            "/sd_vs_optimal_sample_size_",
+                            fraction_links,
+                            "links",
+                            sep = "")
+
+sd_genes_vs_ss_df %>% 
+  fwrite(sd_genes_vs_ss_file)
+
+# Modify dataset names for the plots
+sd_genes_vs_ss_df = sd_genes_vs_ss_df %>%
+  mutate(dataset_name = 
+           replace(dataset_name, 
+                   dataset_name == "tcga:tcga-brca-tumor_female", 
+                   "TCGA: Breast cancer")) %>%
+  mutate(dataset_name = 
+           replace(dataset_name, 
+                   dataset_name == "gtex:breast.mammary.tissue_female", 
+                   "GTEx: Breast")) %>%
+  left_join( (name2color %>% 
+                as.data.frame() %>% 
+                dplyr::rename("rgb_col"=".") %>% 
+                tibble::rownames_to_column("dataset") #%>% 
+                #filter(dataset_name %in% c("TCGA: Breast cancer", "GTEx: Breast"))
+              ), 
+             by=c("dataset") ) %>%
+  mutate(rgb_col = replace(rgb_col, is.na(rgb_col), "#000000")) %>% # Non-selected datasets with color black
+  mutate(geom_text_repel_label=dplyr::if_else(dataset_name == "R. arthritis", "R. arthritis", 
+                                              dplyr::if_else(dataset_name == "GTEx: Whole blood", "GTEx: Whole blood", 
+                                                             dplyr::if_else(dataset_name == "GTEx: Lung", "GTEx: Lung", 
+                                                                            dplyr::if_else(dataset_name == "GTEx: Breast", "GTEx: Breast", 
+                                                                                           dplyr::if_else(dataset_name == "TCGA: Lung cancer", "TCGA: Lung cancer", 
+                                                                                                          dplyr::if_else(dataset_name == "TCGA: Breast cancer", "TCGA: Breast cancer", "")))))))
+
+sd_genes_vs_ss_df
+```
+
+```{r}
+parameters = c("sd", "mean", "cv")
+parameter2label <- list("sd"="SD", "mean"="mean", "cv"="CV")
+datasets_selected <- c("scipher:scipher.sample.per.patient.baseline",
+                       "gse193677:rectum-disease_inflamed_vs_control_cd",
+                       "gse193677:rectum-disease_inflamed_vs_control_uc",
+                       "gse193677:rectum-disease_inflamed_vs_control_control",
+                       "gse193677:rectum-inflamed_vs_noninflamed_inflamed",
+                       "gse193677:rectum-inflamed_vs_noninflamed_noninflamed",
+                       "gtex:breast.mammary.tissue_female",
+                       "gtex:lung",
+                       "gtex:skin.sun.exposed.lower.leg",
+                       "gtex:thyroid",
+                       "gtex:whole.blood",
+                       "tcga:tcga-brca-tumor_female",
+                       "tcga:tcga-kirc-tumor",
+                       "tcga:tcga-kirp-tumor",
+                       "tcga:tcga-luad-tumor",
+                       "tcga:tcga-lusc-tumor",
+                       "tcga:tcga-thca-tumor",
+                       "tcga:breast-tissue_female", 
+                       "tcga:kidney-tissue",
+                       "tcga:lung-tissue",
+                       "tcga:brca.luma-subtype",
+                       "tcga:brca.lumb-subtype")
+
+# Prepare table for plots
+sd_genes_vs_a_filtered = sd_genes_vs_a_df %>%
+  filter(dataset_name %in% datasets_selected) %>%
+  mutate(dataset_name = 
+           replace(dataset_name, 
+                   dataset_name == "gtex:breast.mammary.tissue_female", 
+                   "GTEx: Breast")) %>%
+  mutate(dataset_name = 
+           replace(dataset_name, 
+                   dataset_name == "tcga:tcga-brca-tumor_female", 
+                   "TCGA: Breast cancer")) %>%
+  left_join( (name2color %>% 
+                as.data.frame() %>% 
+                dplyr::rename("rgb_col"=".") %>% 
+                tibble::rownames_to_column("dataset") #%>% 
+                #filter(dataset_name %in% c("TCGA: Breast cancer", "GTEx: Breast"))
+              ), 
+             by=c("dataset") ) %>%
+  mutate(rgb_col = replace(rgb_col, 
+                           is.na(rgb_col), 
+                           "#000000")) %>% # Non-selected datasets with color black
+  mutate(geom_text_repel_label = 
+           dplyr::if_else(dataset_name == "R. arthritis", 
+                          "R. arthritis", 
+                          dplyr::if_else(dataset_name == "GTEx: Whole blood", 
+                                         "GTEx: Whole blood", 
+                                         dplyr::if_else(dataset_name == "GTEx: Lung", 
+                                                        "GTEx: Lung", 
+                                                        dplyr::if_else(dataset_name == "GTEx: Breast", 
+                                                                       "GTEx: Breast", dplyr::if_else(dataset_name == "TCGA: Lung cancer", 
+                                                                                                      "TCGA: Lung cancer", 
+                                                                                                      dplyr::if_else(dataset_name == "TCGA: Breast cancer", 
+                                                                                                                     "TCGA: Breast cancer", 
+                                                                                                                     ""))))))) %>% 
+  as.data.frame()
+
+scatter_plots_lessdatasets = list()
+lm_summary_avspar = list()
+lm_cor_result_avspar = list()
+
+for (x in 1:length(parameters)){
+  parameter = parameters[x]
+  if (parameter == "cv"){
+    cut <- cv_cut
+    x_legend <- 2
+    y_legend <- 0.38
+  } else if (parameter == "sd"){
+    cut <- sd_cut
+    x_legend <- 1.585
+    y_legend <- 0.938
+  } else if (parameter == "mean"){
+    cut <- mean_cut
+    x_legend <- 1.585
+    y_legend <- 0.968
+  }
+
+  # Calculate correlation
+  a_vs_par_cor <- cor(sd_genes_vs_a_filtered$a, 
+                     sd_genes_vs_a_filtered[[paste("fraction_genes_above_",
+                                                   parameter,
+                                                   "_cut",
+                                                   sep = "")]])
+  
+  # Calculate regression
+  lm_summary_avspar[[x]] <- summary(lm(sd_genes_vs_a_filtered[[paste("fraction_genes_above_",
+                                                   parameter,
+                                                   "_cut",
+                                                   sep = "")]] ~ 
+                             sd_genes_vs_a_filtered$a))
+  lm_cor_result_avspar[[x]] <- paste("R² =", 
+                         round(lm_summary_avspar[[x]]$adj.r.squared, 3), 
+                         "\ncorr. =", 
+                         round(a_vs_par_cor, 3))
+  
+  scatter_plots_lessdatasets[[x]] <- sd_genes_vs_a_filtered %>%
+    ggplot(aes(x = a, 
+               y = .data[[paste("fraction_genes_above_", 
+                                parameter, 
+                                "_cut", 
+                                sep = "")]], 
+               col = rgb_col)) + 
+    geom_point(alpha = 0.6, size = 3) +
+    scale_colour_identity() +
+    geom_label_repel(aes(col=rgb_col, label=geom_text_repel_label),
+                     fill="white",
+                     max.iter = 1e6,
+                     label.size = 0.75, 
+                     size = 5,
+                     alpha = 0.6, 
+                     box.padding = 0.5,
+                     label.padding = 0.25, 
+                     fontface = "bold",
+                     na.rm=TRUE,
+                     seed = 1234) +
+    geom_abline(aes(slope = coef(lm_summary_avspar[[x]])[2],
+                  intercept = coef(lm_summary_avspar[[x]])[1]),
+              col = "gray50",
+              linetype = "dashed", 
+              show.legend = FALSE) +
+    annotate("text", x = x_legend, y = y_legend, label = lm_cor_result_avspar[[x]], size = 5) +
+    xlab(expression(alpha)) +
+    ylab(paste("Frac. genes with ", 
+               parameter2label[[parameter]], 
+               " above ", 
+               cut, 
+               sep = "")) +
+    theme_linedraw() +
+    theme(aspect.ratio = 1, 
+          plot.title =  element_text(size = 20, face="bold"), 
+          axis.title = element_text(size = 17, face="bold"), 
+          axis.text = element_text(size = 16), 
+          panel.grid.major=element_blank(), 
+          panel.grid.minor = element_blank(),
+          text = element_text(family = "Helvetica"),
+          legend.position="none")
+
+  plot_file = paste(plots_dir, 
+                    "/a_vs_fraction_genes_above_", 
+                    parameter, 
+                    "_cut_lessdatasets.png", 
+                    sep = "")
+  ggsave(
+    plot_file,
+    plot = scatter_plots_lessdatasets[[x]],
+    dpi = 1200,
+    #width = 6000,
+    height = 5406,
+    units = c("px")
+  )
+  print(scatter_plots_lessdatasets[[x]])
+}
+```
+
+```{r}
+# Calculate correlation
+ss_vs_a_cor <- cor(log10(sd_genes_vs_ss_df$N_opt),
+                   sd_genes_vs_ss_df$a)
+
+# Calculate regression
+lm_summary_ssvsa_linlog <- summary(lm(sd_genes_vs_ss_df$a ~ 
+                           log10(sd_genes_vs_ss_df$N_opt)))
+slope_ssvsa_linlog <- coef(lm_summary_ssvsa_linlog)[2]
+intercept_ssvsa_linlog <- coef(lm_summary_ssvsa_linlog)[1]
+adj.r.squared_ssvsa <- lm_summary_ssvsa_linlog$adj.r.squared
+lm_cor_result_ssvsa <- paste("R² =", 
+                       round(adj.r.squared_ssvsa, 3), 
+                       "\ncorr. =", 
+                       round(ss_vs_a_cor, 3))
+
+a_vs_ss_lin_log_plot <- sd_genes_vs_ss_df %>%
+    ggplot(aes(x = log10(N_opt), 
+               y = a, 
+               col = rgb_col)) + 
+    geom_point(alpha = 0.6, size = 3) +
+    scale_colour_identity() +
+    geom_label_repel(aes(col = rgb_col, 
+                         label = geom_text_repel_label),
+                     fill = "white",
+                     box.padding = 0.5, 
+                     max.iter = 1e5,
+                     label.size = 0.75, 
+                     size = 5,
+                     alpha = 0.6, 
+                     label.padding=0.25, 
+                     fontface = "bold",
+                     na.rm = TRUE,
+                     seed = 1234) +
+    new_scale_color() +
+    geom_abline(aes(slope = slope_ssvsa_linlog,
+                    intercept = intercept_ssvsa_linlog,
+                    col = lm_cor_result_ssvsa),
+              linetype = "dashed", 
+              show.legend = FALSE) +
+    scale_color_manual(values = c("gray50")) +
+    #annotate("text", x = 4500, y = 2.05, label = lm_cor_result_ssvsa, size = 5) +
+    annotate("text", x = 3.3, y = 2, label = lm_cor_result_ssvsa, size = 5) +
+    xlab("log10(n) to get 50% sig. links") +
+    ylab(expression(bold(alpha))) +
+    theme_linedraw() +
+    theme(aspect.ratio = 1, 
+          plot.title =  element_text(size = 20, face="bold"), 
+          axis.title = element_text(size = 17, face="bold"), 
+          axis.text = element_text(size = 16), 
+          panel.grid.major=element_blank(), 
+          panel.grid.minor = element_blank(),
+          text = element_text(family = "Helvetica"),
+          legend.position="none")
+plot_file = paste(plots_dir, "/ss_vs_a_lin_log.png", sep="")
+ggsave(
+  plot_file,
+  plot = a_vs_ss_lin_log_plot,
+  dpi = 1200,
+  #width = 8000,
+  height = 5406,
+  units = c("px")
+)
+print(a_vs_ss_lin_log_plot)
+```
+
+#### Plot with 5 specific links
+
+Read data: 
+
+```{r}
+input_data_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/analysis_specific_edges_pearson_gtex_Whole.Blood.txt"
+input_df = fread(input_data_file)
+input_df$link = paste(input_df$Node.1, input_df$Node.2, sep="---")
+input_df = input_df %>% mutate(pval.adj = replace(pval.adj, pval.adj < 0.000001, 0.000001))
+head(input_df)
+```
+
+Calculate mean and SD of correlation among replicates:
+
+```{r}
+input_mean_df = input_df %>% 
+  group_by(link, method, size) %>%
+  summarize(mean_score = mean(abs(score)), sd_score = sd(abs(score)), min_score=min(abs(score)), max_score=max(abs(score)), mean_pval = mean(pval.adj), sd_pval = sd(pval.adj), min_pval=min(pval.adj), max_pval=max(pval.adj)) %>%
+  ungroup()
+head(input_mean_df)
+```
+
+Select the links of different correlation levels:
+
+```{r}
+set.seed(2106)
+max_size_links_df = input_mean_df %>% 
+  filter(size == max(size)) %>% 
+  mutate(type_correlation="Very Weak") %>% 
+  mutate(type_correlation = replace(type_correlation, abs(mean_score) >= 0.2, "Weak")) %>%
+  mutate(type_correlation = replace(type_correlation, abs(mean_score) >= 0.4, "Moderate")) %>%
+  mutate(type_correlation = replace(type_correlation, abs(mean_score) >= 0.6, "Strong")) %>%
+  mutate(type_correlation = replace(type_correlation, abs(mean_score) >= 0.8, "Very Strong"))
+num_links_selected = 1
+specific_links_df = max_size_links_df %>% select(link, type_correlation, mean_score) %>% filter(type_correlation == "Very Weak") %>% sample_n(size=num_links_selected, replace = FALSE)
+specific_links_df = rbind(specific_links_df, max_size_links_df %>% select(link, type_correlation, mean_score) %>% filter(type_correlation == "Weak") %>% filter((abs(mean_score) > 0.25) & (abs(mean_score) < 0.35)) %>% sample_n(size=num_links_selected, replace = FALSE))
+specific_links_df = rbind(specific_links_df, max_size_links_df %>% select(link, type_correlation, mean_score) %>% filter(type_correlation == "Moderate") %>% filter((abs(mean_score) > 0.45) & (abs(mean_score) < 0.55)) %>% sample_n(size=num_links_selected, replace = FALSE))
+specific_links_df = rbind(specific_links_df, max_size_links_df %>% select(link, type_correlation, mean_score) %>% filter(type_correlation == "Strong") %>% filter((abs(mean_score) > 0.65) & (abs(mean_score) < 0.75)) %>% sample_n(size=num_links_selected, replace = FALSE))
+specific_links_df = rbind(specific_links_df, max_size_links_df %>% select(link, type_correlation, mean_score) %>% filter(type_correlation == "Very Strong") %>% sample_n(size=num_links_selected, replace = FALSE))
+head(specific_links_df)
+```
+
+Make the plot:
+
+```{r}
+specific_links_plot_df = input_mean_df %>% 
+  inner_join((specific_links_df %>% select(link, type_correlation)), by=c("link")) %>% 
+  mutate(max_pval_discrete=if_else(max_pval >= 0.05, "P. adj. \u2265 0.05", "P. adj. < 0.05")) %>% 
+  mutate(max_pval_size=if_else(max_pval >= 0.05, "P. adj. \u2265 0.05", if_else(max_pval >= 0.01, "P. adj. < 0.05", if_else(max_pval >= 0.001, "P. adj. < 0.01", "P. adj. < 0.001")))) %>%
+  mutate(type_correlation = factor(type_correlation, levels = c("Very Strong", "Strong", "Moderate", "Weak", "Very Weak")))
+# name2size <- c(
+#   "P. adj. \u2265 0.05" = 0.1,
+#   "P. adj. < 0.05" = 1,
+#   "P. adj. < 0.01" = 1.5,
+#   "P. adj. < 0.001" = 2
+#   )
+
+specific_links_plot = specific_links_plot_df %>%
+  ggplot(aes(x=size, y=abs(mean_score))) +
+  geom_line(aes(col=type_correlation)) +
+  #geom_point(data=(input_df %>% filter(link %in% specific_links)), aes(x = size, y = abs(score), col=link), alpha=0.2) +
+  geom_ribbon(aes(ymin = abs(min_score), ymax = abs(max_score), fill=type_correlation), alpha=0.3) +
+  #geom_point(aes(size=max_pval_size), col="red") +
+  #scale_color_manual(name = "Correlation strength", values = c("#ff7b00", "#F8766D", "#7CAE00", "#00BFC4", "#C77CFF")) +
+  scale_color_manual(name = "Correlation strength", values = as.vector(name2color[levels(factor(specific_links_plot_df$type_correlation))])) + # Plot using the dictionary
+  #scale_fill_manual(name = "Correlation strength", values = c("#ff7b00", "#F8766D", "#7CAE00", "#00BFC4", "#C77CFF")) +
+  scale_fill_manual(name = "Correlation strength", values = as.vector(name2color[levels(factor(specific_links_plot_df$type_correlation))])) + # Plot using the dictionary
+  new_scale_color() +
+  geom_point(data = ~filter(.x, max_pval < 0.05), aes(x=size, y=abs(mean_score), col=max_pval_discrete)) +
+  scale_color_manual(name = NULL, values = c("red")) +
+  #geom_errorbar(aes(ymin=abs(mean_score)-sd_score, ymax=abs(mean_score)+sd_score), width=.2, position=position_dodge(0.05)) +
+  theme_linedraw() +
+  xlab("Num. samples") +
+  ylab("Pearson correlation (abs)") +
+  #scale_size_manual(values = as.vector(name2size[levels(factor(specific_links_plot_df$max_pval_size))])) +
+  #scale_color_manual(values = c("#C77CFF", "#7CAE00", "#FF7B00", "#F8766D", "#00BFC4")) +
+  #scale_fill_manual(values = c("#C77CFF", "#7CAE00", "#FF7B00", "#F8766D", "#00BFC4")) +
+  #guides(col=guide_legend(title="Correlation strength"), fill=guide_legend(title="Correlation strength")) +
+  theme(aspect.ratio=1,
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16),
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(size = 16), 
+        legend.title=element_text(size=16, face="bold"),
+        text = element_text(family = "Helvetica"))
+
+plot_file = paste(plots_dir, "specific_links_gtex_Whole.Blood.png", sep="/")
+ggsave(
+  plot_file,
+  plot = specific_links_plot,
+  dpi = 1200,
+  #width = 9000,
+  #height = 6000,
+  units = c("px")
+)
+print(specific_links_plot)
+```
+
+
+#### Standard deviation of co-expression value plot
+
+Read data:
+
+```{r}
+sd_table_file = paste(tables_dir, "analysis_sd_coexpression_weight_gtex_Whole.Blood.txt", sep="/")
+sd_table_df = fread(sd_table_file)
+```
+
+Plot:
+
+```{r}
+# Define palette using the scale_fill_brewer Oranges palette and selecting manually the colors using RColorBrewer
+# https://stackoverflow.com/questions/29466239/how-to-set-the-color-range-of-scale-colour-brewer-in-ggplot2-palette-selecte 
+my_orange = RColorBrewer::brewer.pal(n = (length(unique(sd_table_df$ss)) + 2), "Oranges")[3:(length(unique(sd_table_df$ss))+2)] # I get 8 and exclude the 2 first colors, which are more light 
+
+sd_plot_file = paste(plots_dir, "analysis_sd_coexpression_weight_gtex_Whole.Blood.png", sep="/")
+sd_plot = sd_table_df %>%
+  mutate(ss = factor(ss, levels = as.character(sort(as.numeric(unique(sd_table_df$ss)))))) %>%
+  ggplot(aes(x = ss, y = sd_correlation)) +
+  #geom_half_violin(side = "r", color="orangered4", fill="orangered1") +
+  geom_half_violin(aes(fill=ss), color="transparent", side = "r") +
+  #scale_fill_brewer(palette="Oranges") +
+  scale_fill_manual(values=my_orange) +
+  theme_linedraw() +
+  theme(aspect.ratio=1, 
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16), 
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        text = element_text(family = "Helvetica"),
+        legend.position="none") +
+  labs (x = "Num. samples",
+        y = "Pearson correlation SD",
+        color = "",
+        fill = "")
+ggsave(
+  sd_plot_file,
+  plot = sd_plot,
+  dpi = 1200,
+  #width = 9300,
+  #height = 6000,
+  units = c("px")
+)
+print(sd_plot)
+rm(sd_table_df)
+```
+
+```{r}
+(sd_plot +
+  plot_spacer() +
+  specific_links_plot) +
+  plot_layout(widths = c(5, 1, 5))
+
+plot_file = paste(plots_dir, "/sd_coexpression_results.png", sep="")
+ggsave(
+  plot_file,
+  dpi = 1200,
+  width = 15000,
+  height = 8000,
+  units = c("px")
+)
+```
+
+
+#### Protein-protein interaction plots
+
+```{r}
+dataset = "gtex"
+type_dataset = "Whole.Blood"
+sample_group_type = "tumor" # if dataset = "tcga"
+type_counts = "reads" # tpm, reads
+sizes_selected = c(20, 100, 200, 300, 400, 500)
+sizes_selected_comparison_plot = c(20, 100, 200, 300)
+threshold_selected = 0.05
+coexpression_pairs_file = sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/ppi_analysis_pairs_pval_%s_%s_%s.txt", as.character(threshold_selected), dataset, type_dataset)
+coexpression_pairs_filt = fread(coexpression_pairs_file)
+perf_file = sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/ppi_coexpression_analysis_ppi_vs_random_far_pairs_performance_%s_%s.txt", dataset, type_dataset)
+perf_df = fread(perf_file)
+
+colors_defined = c("PPI" = "#DBA9CA",
+                   "PPI & iNCI" = "#FAF69E",
+                   "Random" = "#B8BECC",
+                   "Random pairs in PPI" = "#B8BECC",
+                   "Random (distance > 4)" = "#543F4D",
+                   "Distance > 4" = "#543F4D",
+                   "Random pairs in PPI (dist. > 4)" = "#543F4D",
+                   "Random pairs in PPI & iNCI (dist. > 4)" = "#545334",
+                   "1" = "#DBA9CA",
+                   "2" = "#a8829b",
+                   "3" = "#87677c",
+                   "4" = "#5e4857",
+                   "5" = "#40303b",
+                   "6" = "#1c151a")
+```
+
+Violin plot of PPI vs. pairs > 4 distance across sample size:
+
+```{r}
+violinplot_ppi_coexpression_by_types_nozero_file =  sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/ppi_coexpression_violinplot_by_pair_type_nozero_pval_%s_%s_%s.png", as.character(threshold_selected), dataset, type_dataset)
+colors_defined_filt = colors_defined[names(colors_defined) %in% c("PPI", "Distance > 4")]
+violinplot_ppi_coexpression_by_types_nozero = coexpression_pairs_filt %>%
+  select(-distances_ppi, -distances_nci, -nci, -random_not_ppi, -random_far_not_nci) %>%
+  pivot_longer(c("ppi", "random_far_not_ppi"), names_to = "category", values_to = "category_bool") %>%
+  filter(category_bool == TRUE) %>%
+  select(-category_bool) %>%
+  pivot_longer(as.character(sizes_selected), names_to = "size", values_to = "correlation", names_transform = list(size = as.character), values_transform = list(correlation = as.numeric)) %>%
+  filter(size %in% sizes_selected_comparison_plot) %>%
+  filter(!(is.na(correlation))) %>%
+  filter(abs(correlation) > 0 ) %>% 
+  mutate(category = replace(category, category == "ppi", "PPI")) %>%
+  mutate(category = replace(category, category == "random_far_not_ppi", "Distance > 4")) %>%
+  mutate(category = factor(category, levels = c("PPI", "Distance > 4"))) %>%
+  ggplot() +
+  aes(x = reorder(size, as.numeric(size)),
+      y = abs(correlation),
+      fill = category,
+      colour = category) +
+  geom_violin(alpha = 0.8, 
+              scale = "width", 
+              adjust = 0.5) +
+  scale_fill_manual(values = colors_defined_filt) +
+  scale_color_manual(values = colors_defined_filt) +
+  theme_linedraw() +
+  theme(aspect.ratio=1,
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16),
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(size = 16), 
+        legend.title=element_text(size=16, face="bold"),
+        text = element_text(family = "Helvetica")) +
+  labs (x = "Number of samples",
+        y = "Absolute co-expression weight",
+        color = "",
+        fill = ""); violinplot_ppi_coexpression_by_types_nozero
+ggsave(
+  violinplot_ppi_coexpression_by_types_nozero_file,
+  plot = violinplot_ppi_coexpression_by_types_nozero,
+  dpi = 1200,
+  #width = 9300,
+  #height = 6000,
+  units = c("px")
+)
+```
+
+```{r}
+perf_auc = perf_df %>%
+  select(size, AUC) %>%
+  unique()
+print(perf_auc)
+
+auc_plot = perf_auc %>% 
+  mutate(size = factor(size, 
+                       levels = sizes_selected, 
+                       labels = sizes_selected)) %>% 
+  ggplot() +
+  aes(x = size, 
+      #fill = base, 
+      #colour = base, 
+      weight = AUC) +
+  geom_bar(col="#DBA9CA",
+         fill="#DBA9CA") +
+  #scale_fill_manual(values = colors_defined) +
+  #scale_color_manual(values = colors_defined) +
+  coord_cartesian(ylim=c(0.5,NA)) +
+  theme_linedraw() +
+  #facet_grid(vars(name))+ 
+  theme(aspect.ratio=1,
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16), 
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(size = 16), 
+        legend.title=element_text(size=16, face="bold"),
+        text = element_text(family = "Helvetica")) +
+  labs(y = "AUROC",
+       x = "Number of samples"
+       )
+
+auc_plot_file =  sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/ppi_coexpression_perf_AUC_pval_%s_%s_%s.png", as.character(threshold_selected), dataset, type_dataset)
+ggsave(
+  auc_plot_file,
+  plot = auc_plot,
+  dpi = 1200,
+  #width = 9300,
+  height = 6000,
+  units = c("px")
+)
+ auc_plot
+```
+
+```{r}
+((violinplot_ppi_coexpression_by_types_nozero +
+    theme(legend.position = "bottom")) +
+  plot_spacer() +
+  auc_plot) +
+  plot_layout(widths = c(6, 1, 6))
+
+plot_file = paste(plots_dir, "/ppi_coexpression_results.png", sep="")
+ggsave(
+  plot_file,
+  dpi = 1200,
+  width = 15000,
+  height = 8000,
+  units = c("px")
+)
+```
+
+#### Differential co-expression analysis plots
+
+```{r}
+name_D = "tcga.brca.female"
+name_N = "tcga.breast.female"
+diffcoexp_plots_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/plots_differential_coexpression/TCGA-BRCA_female___TCGA-Breast_female"
+diffcoexp_tables_dir = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/tables_differential_coexpression/TCGA-BRCA_female___TCGA-Breast_female"
+name2color_df = name2color %>% as.data.frame() %>% dplyr::rename("rgb_col"=".") %>% tibble::rownames_to_column("name")
+```
+
+Read file:
+
+```{r}
+change_of_category_file = paste(diffcoexp_tables_dir, paste("codina_", name_D, "_", name_N, "_changes.txt", sep=""), sep="/")
+change_of_category_df = fread(change_of_category_file)
+```
+
+Make plot:
+
+```{r}
+sizes_list = sort(unique(change_of_category_df$size.prev))
+if (max(sizes_list) <= 160) {
+  sizes_to_plot = c(20, 40, 60, 80, 100, 120, 140, 160)
+} else if ((max(sizes_list) > 160) & (max(sizes_list) <= 300)) {
+  sizes_to_plot = c(20, 60, 100, 140, 180, 220, 260, 300)
+} else if ((max(sizes_list) > 300) & (max(sizes_list) <= 440)) {
+  sizes_to_plot = c(20, 80, 140, 200, 260, 320, 380, 440)
+} else {
+  sizes_to_plot = seq(20, max(sizes_list), 100)
+}
+
+# Create last column of plot (size 100)
+change_of_category_size100_df = change_of_category_df %>%
+  filter(size.curr == 100) %>%
+  dplyr::select(Node, Phi_name.curr, size.curr) %>%
+  dplyr::rename("Phi_name.prev"="Phi_name.curr", "size.prev"="size.curr") %>%
+  mutate(Phi_name.curr = NA) %>%
+  mutate(size.curr = NA) %>%
+  mutate(transition_type = NA) %>%
+  mutate(transition_name = NA) %>%
+  mutate(transition_name_simple = Phi_name.prev) %>%
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple == "common", "common (constant)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple == "disease-specific", "disease-specific (constant)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple == "normal-specific", "normal-specific (constant)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple == "undefined", "undefined (constant)")) %>% 
+  left_join(name2color_df, by=c("Phi_name.prev"="name"))
+
+# Count transitions / merge with colors / merge with last column
+change_of_category_col_df = change_of_category_df %>%
+  mutate(transition_name_simple = transition_name) %>%
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple == "common / common", "common (constant)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple %in% c("common / disease-specific", "common / normal-specific", "common / undefined"), "common (change)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple == "disease-specific / disease-specific", "disease-specific (constant)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple %in% c("disease-specific / common", "disease-specific / normal-specific", "disease-specific / undefined"), "disease-specific (change)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple == "normal-specific / normal-specific", "normal-specific (constant)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple %in% c("normal-specific / common", "normal-specific / disease-specific", "normal-specific / undefined"), "normal-specific (change)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple == "undefined / undefined", "undefined (constant)")) %>% 
+  mutate(transition_name_simple = replace(transition_name_simple, transition_name_simple %in% c("undefined / disease-specific", "undefined / normal-specific", "undefined / common"), "undefined (change)")) %>% 
+  left_join(name2color_df, by=c("transition_name_simple"="name")) %>%
+  full_join(change_of_category_size100_df)
+
+# Define factors
+change_of_category_col_df$transition_name_simple <- factor(change_of_category_col_df$transition_name_simple, levels=c("common (constant)", "common (change)", "disease-specific (constant)",  "disease-specific (change)", "normal-specific (constant)", "normal-specific (change)", "undefined (constant)", "undefined (change)"))
+change_of_category_col_df$size.prev = as.character(change_of_category_col_df$size.prev)
+change_of_category_col_df$size.prev <- factor(change_of_category_col_df$size.prev, levels=as.character(sort(unique(as.integer(change_of_category_col_df$size.prev)))))
+
+# Plot
+plot_flow = change_of_category_col_df %>% 
+  filter(size.prev %in% sizes_to_plot) %>%
+  ggplot(aes(x = size.prev, stratum = transition_name_simple, alluvium = Node, 
+             fill = transition_name_simple, label = transition_name_simple)) +
+  geom_flow(stat = "alluvium", lode.guidance = "frontback") +
+  #geom_stratum() +
+  geom_stratum(aes(col=transition_name_simple), size=0) +
+  scale_fill_manual(name="Gene category", values=setNames(change_of_category_col_df$rgb_col, change_of_category_col_df$transition_name_simple)) + # If I want to plot only specific elements in the legend, use the argument breaks with a list of the elements that I want to show
+  scale_color_manual(name="Gene category", values=setNames(change_of_category_col_df$rgb_col, change_of_category_col_df$transition_name_simple)) +
+  xlab("Num. samples") +
+  ylab("Num. disease genes") +
+  guides(fill=guide_legend(title="Gene category")) +
+  theme_linedraw() +
+  theme(aspect.ratio=1,
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16),
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(size = 16), 
+        legend.title=element_text(size=16, face="bold"),
+        text = element_text(family = "Helvetica"))
+plot_file = paste(diffcoexp_plots_dir, paste("codina_", name_D, "_", name_N, "_change_disease_genes_improved.png", sep=""), sep="/")
+ggsave(
+  plot_file,
+  plot = plot_flow,
+  dpi = 1200,
+  width = 10000,
+  height = 6000,
+  units = c("px")
+)
+print(plot_flow)
+```
+
+Calculate stable genes by category:
+
+```{r}
+# Calculate total of stable genes
+total_stable_change_genes_df = change_of_category_df %>%
+  group_by(size.curr) %>% 
+  mutate(n_total = n()) %>%
+  ungroup() %>%
+  select(Node, Phi_name.curr, size.curr, transition_type, n_total) %>% 
+  group_by(size.curr, transition_type, n_total) %>% 
+  summarize(n_genes = n()) %>% 
+  ungroup() %>%
+  mutate(frac_genes = n_genes / n_total)
+total_stable_change_genes_df$Phi_name.curr = "all"
+
+# Calculate stable genes by category
+categories_stable_change_genes_df = change_of_category_df %>%
+  group_by(size.curr) %>% 
+  mutate(n_total = n()) %>%
+  ungroup() %>%
+  filter(transition_type == "stable") %>%
+  select(Node, Phi_name.curr, size.curr, transition_type, n_total) %>% 
+  group_by(Phi_name.curr, size.curr, transition_type, n_total) %>% 
+  summarize(n_genes = n()) %>% 
+  ungroup() %>%
+  mutate(frac_genes = n_genes / n_total)
+
+# Merge two tables
+stable_genes_df = rbind(total_stable_change_genes_df, categories_stable_change_genes_df) %>%
+  filter(transition_type == "stable") %>%
+  left_join(name2color_df, by=c("Phi_name.curr"="name"))
+```
+
+Make plot:
+
+```{r}
+plot_stable_genes = stable_genes_df %>%
+  ggplot(aes(x = size.curr, y = frac_genes, col = Phi_name.curr)) + 
+  geom_line(aes(size = Phi_name.curr)) +
+  xlab("Num. samples") +
+  ylab("Fraction of stable disease genes") +
+  scale_size_manual(values = c("all" = 1, "common" = 0.5, "disease-specific" = 0.5, "normal-specific" = 0.5, "undefined" = 0.5, "different" = 0.5)) +
+  scale_color_manual(values=setNames(stable_genes_df$rgb_col, stable_genes_df$Phi_name.curr)) +
+  guides(col=guide_legend(title="Gene category"), size="none") +
+  theme_linedraw() +
+  theme(aspect.ratio=1,
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16),
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(size = 16), 
+        legend.title=element_text(size=16, face="bold"),
+        text = element_text(family = "Helvetica"))
+
+plot_file = paste(diffcoexp_plots_dir, paste("codina_", name_D, "_", name_N, "_stable_genes.png", sep=""), sep="/")
+ggsave(
+  plot_file,
+  plot = plot_stable_genes,
+  dpi = 1200,
+  width = 9000,
+  height = 6000,
+  units = c("px")
+)
+print(plot_stable_genes)
+```
+
+```{r}
+((plot_flow +
+    theme(legend.position = "none")) +
+  plot_spacer() +
+  (plot_stable_genes +
+    theme(legend.position = "bottom") +
+    guides(color = guide_legend(nrow = 5, byrow = TRUE, title="Gene category"))
+   )) +
+  plot_layout(widths = c(4.25, 0.5, 4.25))
+
+plot_file = paste(plots_dir, "/diff_coexpression.png", sep="")
+ggsave(
+  plot_file,
+  dpi = 1200,
+  width = 12000,
+  height = 8000,
+  units = c("px")
+)
+```
+
