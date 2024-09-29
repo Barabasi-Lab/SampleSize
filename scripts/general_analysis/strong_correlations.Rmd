@@ -80,11 +80,49 @@ tables_dir <- '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables'
 font_selected <- "Helvetica"
 model_selected <- "Stretched exponential (by linear fit)"
 topology_type_normalization <- "divide.L"
-datasets_selected = c("gtex:breast.mammary.tissue_female", 
+#datasets_selected = c("gtex:breast.mammary.tissue_female", 
+#                      "gtex:lung", 
+#                      "tcga:tcga-brca_female", 
+#                      "tcga:tcga-luad", 
+#                      "scipher:scipher.sample.per.patient.baseline")
+datasets_selected = c("gse193677:rectum_uc_inflamed", 
+                      "gtex:breast.mammary.tissue_female", 
                       "gtex:lung", 
-                      "tcga:tcga-brca_female", 
-                      "tcga:tcga-luad", 
-                      "scipher:scipher.sample.per.patient.baseline")
+                      "tcga:tcga-brca_female")
+all_datasets <- c(
+  "scipher:scipher.sample.per.patient.baseline",
+  "gse193677:rectum_cd_inflamed",
+  "gse193677:rectum_uc_inflamed",
+  "gse193677:rectum_control_noninflamed",
+  "gse193677:rectum_inflamed",
+  "gse193677:rectum_noninflamed",
+  "gtex:breast.mammary.tissue_female",
+  "gtex:lung",
+  "gtex:skin.sun.exposed.lower.leg",
+  "gtex:thyroid",
+  "gtex:whole.blood",
+  "tcga:tcga-brca_female",
+  "tcga:tcga-kirc",
+  "tcga:tcga-kirp",
+  "tcga:tcga-luad",
+  "tcga:tcga-lusc",
+  "tcga:tcga-thca",
+  "tcga:breast_female", 
+  "tcga:kidney",
+  "tcga:lung",
+  "tcga:brca.luma",
+  "tcga:brca.lumb"
+)
+
+dataset2name <- c(
+  "gtex:breast.mammary.tissue_female" = "GTEx: Breast",
+  "gtex:whole.blood" = "GTEx: Whole blood",
+  "gtex:lung" = "GTEx: Lung",
+  "tcga:tcga-brca_female" = "TCGA: Breast cancer",
+  "tcga:tcga-luad" = "TCGA: Lung cancer",
+  "scipher:scipher.sample.per.patient.baseline" = "R. arthritis",
+  "gse193677:rectum_uc_inflamed" = "UC inflamed"
+)
 
 name2color <- c(
   "TCGA: Lung cancer" = "#56B4E9",
@@ -97,10 +135,12 @@ name2color <- c(
   "breast neoplasms"="#0072B2", 
   "gse193677" = "#E032EC",
   "GSE193677" = "#E032EC",
+  "gse193677:rectum_uc_inflamed" = "#E032EC",
+  "UC inflamed" = "#E032EC",
   "GTEx: Whole blood" = "#65F3BF",
   "gtex:whole.blood" = "#65F3BF",
-  "GTEx: Lung" = "#24D157",
-  "gtex:lung" = "#24D157",
+  "GTEx: Lung" = "#077d2b",
+  "gtex:lung" = "#077d2b",
   "GTEx: Breast" = "#00BA37", #44AA99
   "gtex:breast.mammary.tissue" = "#00BA37",
   "gtex:breast.mammary.tissue_female" = "#00BA37",
@@ -159,7 +199,7 @@ head(topology_results_df)
 ```{r load_analytical}
 analytical_results_file <- paste(example_dir, '/', 'analytical_model_results_', topology_type_normalization, '_pearson_pval_0.05.txt', sep='')
 analytical_results_df <- data.table::fread(analytical_results_file) %>%
-  dplyr::filter(model == model_selected) %>%
+  dplyr::filter((model == model_selected) & (type_dataset %in% all_datasets)) %>%
   dplyr::select(type_dataset, max_value_in_dataset, a, b, L, slope, intercept) %>%
   unique()
 head(analytical_results_df)
@@ -169,10 +209,15 @@ head(analytical_results_df)
 theoretical_sample_size_file <- paste(example_dir, 'theoretical_sample_size_for_correlations_of_datasets.txt', sep='/') # from => calculate_convergence_correlation_types.Rmd
 theoretical_sample_size_df <- data.table::fread(theoretical_sample_size_file) %>%
   dplyr::rename(type_dataset = dataset) %>%
-  filter(type_correlation == "strong") %>%
+  filter((type_correlation == "strong") & (type_dataset %in% all_datasets)) %>%
   dplyr::select(type_dataset, sample_size_statistical_corrected) %>%
   unique()
 head(theoretical_sample_size_df)
+```
+
+```{r distribution_theoretical_ss}
+mean(theoretical_sample_size_df$sample_size_statistical_corrected)
+quantile(theoretical_sample_size_df$sample_size_statistical_corrected)
 ```
 
 ```{r load_predictions}
@@ -246,7 +291,8 @@ predicted_results_mod_df <- predicted_results_mod_df %>%
                  as.data.frame() %>% 
                  dplyr::rename("rgb_col"=".") %>% 
                  tibble::rownames_to_column("type_dataset")), 
-              by=c("type_dataset") )
+              by=c("type_dataset") ) %>%
+  dplyr::mutate(type_dataset = dplyr::recode(type_dataset, !!!dataset2name))
 
 predicted_results_mod_df %>%
   ggplot(aes(x = size, y = frac_strong_edges_model)) +
@@ -256,6 +302,39 @@ predicted_results_mod_df %>%
     breaks = unique(predicted_results_mod_df$rgb_col),
     guide = "legend"
   ) +
+  xlab("Num. samples") +
+  ylab("Frac. sign. strong correlations") +
+  guides(col=guide_legend(title="Dataset")) +
+  theme_linedraw() +
+  theme(aspect.ratio = 1, 
+        plot.title =  element_text(size = 20, face = "bold"), 
+        axis.title = element_text(size = 17, face = "bold"), 
+        axis.text = element_text(size = 16), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        text = element_text(family = font_selected),
+        legend.text = element_text(size = 16), 
+        legend.title=element_text(size=16, face="bold")
+  )
+```
+
+## Stability of strong correlations vs. sample size
+
+```{r load_sd}
+sd_file <- "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/analysis_sd_coexpression_weight_filtered_by_strong_correlations_tcga_TCGA-BRCA_female_spearman.txt"
+sd_df <- data.table::fread(sd_file, header = TRUE)
+```
+
+```{r mean_sd_vs_ss_plot}
+sd_df %>%
+  dplyr::group_by(ss) %>%
+  dplyr::summarize(mean_sd_correlation = mean(sd_correlation)) %>%
+  dplyr::ungroup() %>%
+  ggplot(aes(x = ss, y = mean_sd_correlation)) +
+  geom_line(size = 1) +
+  xlab("Num. samples") +
+  ylab("Mean SD of strong correlations") +
+  guides(col=guide_legend(title="Dataset")) +
   theme_linedraw() +
   theme(aspect.ratio = 1, 
         plot.title =  element_text(size = 20, face = "bold"), 
@@ -264,19 +343,7 @@ predicted_results_mod_df %>%
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         text = element_text(family = font_selected)
-        #legend.position = "none"
   )
 ```
 
 
-
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
