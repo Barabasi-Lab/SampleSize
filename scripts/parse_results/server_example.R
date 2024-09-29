@@ -11,12 +11,12 @@ ppi_results_file = paste(input_dir, 'analysis_ppi.csv', sep='/')
 disease_genes_results_file = paste(input_dir, 'analysis_disease_genes.csv', sep='/')
 essential_genes_results_file = paste(input_dir, 'analysis_essential_genes.csv', sep='/')
 numbers_complete_graph_file = paste(input_dir, 'dataset_numbers_complete_graph.txt', sep='/')
-methods_selected <- c("pearson", "aracne")
-thresholds_selected <- c(0.05, 0)
-type_data_selection = 'pearson_aracne'
-#methods_selected <- c("pearson")
-#thresholds_selected <- c(0.05)
-#type_data_selection = 'pearson_pval_0.05'
+#methods_selected <- c("pearson", "aracne")
+#thresholds_selected <- c(0.05, 0)
+#type_data_selection = 'pearson_aracne'
+methods_selected <- c("pearson")
+thresholds_selected <- c(0.05)
+type_data_selection = 'pearson_pval_0.05'
 output_dir = paste('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/example_', type_data_selection, sep = '')
 dir.create(output_dir, showWarnings = FALSE)
 
@@ -39,17 +39,6 @@ parameter2label <- list("nodes"="Nodes", "edges"="Edges", "av_degree"="Av. degre
 #------------------#
 # Define variables #
 #------------------#
-
-# Input files
-#input_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/data_shiny_app'
-#setwd("/Users/j.aguirreplans/Dropbox (CCNR)/Biology/Quim/Scipher/SampleSize/scripts/SampleSizeShiny")
-#setwd("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny")
-input_dir = 'data'
-topology_results_file = paste(input_dir, 'analysis_topology.csv', sep='/')
-ppi_results_file = paste(input_dir, 'analysis_ppi.csv', sep='/')
-disease_genes_results_file = paste(input_dir, 'analysis_disease_genes.csv', sep='/')
-essential_genes_results_file = paste(input_dir, 'analysis_essential_genes.csv', sep='/')
-numbers_complete_graph_file = paste(input_dir, 'dataset_numbers_complete_graph.txt', sep='/')
 
 # Dictionary that maps the name of the variable to a nice name for the plot
 parameter2label <- list("nodes"="Nodes", "edges"="Edges", "av_degree"="Av. degree", "av_path_length", "Av. path length", "av_clustering_coef" = "Av. clust. coef.", "num_components" = "Num. of components", "size_lcc" = "Size of the LCC", 
