@@ -19,6 +19,10 @@ option_list = list(
               help="Output file to save the merged network without filtering. If it exists, it will be used for the filtering.", metavar="character"),
   make_option(c("-f", "--output_filtered_network"), type="character",
               help="Output file to save the filtered merged network", metavar="character"),
+  make_option(c("-a", "--min_size"), type="integer", default=20,
+              help="Minimum sample size", metavar="integer"),
+  make_option(c("-b", "--max_size"), type="integer", default=120,
+              help="Maximum sample size", metavar="integer"),
   make_option(c("-s", "--step"), type="integer", default=20,
               help="Step between sample sizes", metavar="integer"),
   make_option(c("-r", "--max_rep"), type="integer", default=1,
@@ -44,10 +48,45 @@ networks_dir = opt$networks_dir
 method = opt$method
 output_merged_network = opt$output_merged_network
 output_filtered_network = opt$output_filtered_network
+min_size = as.integer(opt$min_size)
+max_size = as.integer(opt$max_size)
 step = as.integer(opt$step)
 max_rep = as.integer(opt$max_rep)
 score_threshold = as.numeric(opt$score_threshold)
-selected_sizes <- c(20, 40, 60, 80, 100, 120)
+selected_sizes <- seq(min_size, max_size, step)
+
+
+#### DEFINE FUNCTIONS ####
+
+###############################
+## read_coexpression_network ##
+###############################
+#'  @param coexpression_network_file The path to the co-expression network file
+#'  @param method The method used to create the co-expression network. 
+
+read_coexpression_network <- function(coexpression_network_file, method){
+  
+  # Read file
+  coexpression_df = as.data.frame(data.table::fread(coexpression_network_file))
+  
+  # If method is aracne, genie3 or wgcna, transform matrix to dataframe of pairs of genes
+  if (method %in% c("aracne", "genie3", "wgcna")){
+    rownames(coexpression_df) = colnames(coexpression_df)
+    coexpression_df = coexpression_df[order(rownames(coexpression_df)), order(colnames(coexpression_df))]
+    coexpression_df = coexpression_df %>%
+      wTO::wTO.in.line() %>%
+      dplyr::rename(score=wTO)
+  } else {
+    if (method == "wto"){
+      coexpression_df = coexpression_df %>%
+        dplyr::rename("score"= "wTO")
+    }
+    coexpression_df = coexpression_df %>%
+      dplyr::select(Node.1, Node.2, score)
+  }
+  
+  return(coexpression_df)
+}
 
 
 #### PARSE NETWORKS AND CREATE UNIQUE DATAFRAME ####
@@ -83,20 +122,19 @@ if (file.exists(output_merged_network) && !dir.exists(output_merged_network)) {
   selected_files_df <- result_files_df %>%
     dplyr::filter((size %in% selected_sizes) & (rep %in% seq(from=1, to=max_rep, by=1))) %>%
     dplyr::arrange(size, rep)
-  
-  for (i in 1:nrow(selected_files_df)) {
+
+  for (i in 1:nrow(selected_files_df)){
     result_file = selected_files_df[i,]$file_name
     result_name = selected_files_df[i,]$name
     print(result_file)
+    
     if (i == 1) {
-      nets_df <- data.table::fread(paste(networks_dir, result_file, sep="/")) %>%
-        dplyr::select(Node.1, Node.2, score) %>%
+      nets_df <- read_coexpression_network(paste(networks_dir, result_file, sep="/"), method) %>%
         dplyr::rename(!!result_name := "score")
     } else {
       nets_df <- nets_df %>%
         dplyr::full_join(
-          (data.table::fread(paste(networks_dir, result_file, sep="/")) %>%
-             dplyr::select(Node.1, Node.2, score) %>%
+          (read_coexpression_network(paste(networks_dir, result_file, sep="/"), method) %>%
              dplyr::rename(!!result_name := "score")),
           by = c("Node.1", "Node.2")
         )
@@ -110,8 +148,13 @@ if (file.exists(output_merged_network) && !dir.exists(output_merged_network)) {
 # Filter by score
 cols <- colnames(nets_df)
 score_cols <- cols[!(cols %in% c("Node.1", "Node.2"))]
-nets_df <- nets_df %>%
-  dplyr::filter(dplyr::if_any(score_cols, ~ abs(.) >= abs(score_threshold)))
+if (score_threshold == 0) {
+  nets_df <- nets_df %>%
+    dplyr::filter(dplyr::if_any(score_cols, ~ abs(.) > abs(score_threshold)))
+} else {
+  nets_df <- nets_df %>%
+    dplyr::filter(dplyr::if_any(score_cols, ~ abs(.) >= abs(score_threshold)))
+}
 
 # Write output table
 nets_df %>% data.table::fwrite(output_filtered_network)
