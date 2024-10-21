@@ -35,6 +35,11 @@ Read the number of edges of each dataset:
 ```{r}
 input_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data'
 plots_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots'
+#type_data_selection = 'pearson_aracne'
+#type_data_selection = 'pearson_pval_0.05'
+type_data_selection = 'spearman_pval_0.05'
+method_selected = 'spearman'
+output_dir = paste('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/example_', type_data_selection, sep = '')
 numbers_file = paste(input_dir, 'dataset_numbers_complete_graph.txt', sep='/')
 numbers_df = fread(numbers_file)
 numbers_df$dataset = tolower(numbers_df$dataset)
@@ -83,7 +88,7 @@ types_correlation = c("weak", "moderate", "strong", "very strong")
 cols = c("dataset", "type_correlation", "correlation", "sample_size_statistical", "sample_size_statistical_corrected")
 sample_size_correlation_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
 for (dataset in numbers_df$dataset){
-  total_num_edges = (numbers_df %>% filter(dataset == !!dataset))$total_num_edges
+  total_num_edges = unique((numbers_df %>% filter(dataset == !!dataset))$total_num_edges)
   for (type_correlation in types_correlation){
     r = (type_correlation_df %>% filter(type_correlation == !!type_correlation))$lower_val
     #N_result = calculate_sample_size_for_pearson_correlation_using_z_distribution(r=r, total_num_edges=total_num_edges, alpha=0.05, power=0.5)
@@ -94,7 +99,6 @@ for (dataset in numbers_df$dataset){
   }
 }
 
-output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/example_pearson_pval_0.05'
 theoretical_sample_size_file = paste(output_dir, 'theoretical_sample_size_for_correlations_of_datasets.txt', sep='/')
 sample_size_correlation_df %>% fwrite(theoretical_sample_size_file)
 
@@ -120,48 +124,52 @@ Calculate sample size where each type of correlation converges.
 ```{r}
 type_correlation_df = data.frame(type_correlation=c("very strong", "strong-very strong", "moderate-strong-very strong", "weak-moderate-strong-very strong"), lower_val=c(0.8,0.6,0.4,0.2), upper_val=c(NA,NA,NA,NA))
 types_correlation = c("very strong", "strong-very strong", "moderate-strong-very strong", "weak-moderate-strong-very strong")
-method = "pearson"
-threshold = 0.05
+#methods = c("pearson", "aracne")
+method_to_threshold = list("pearson" = 0.05, "spearman" = 0.05, "aracne" = 0)
 
 cols = c("dataset", "type_correlation", "correlation", "sample_size_from_graphic", "num_edges_from_graphic", "sample_size_max_value")
 size_convergence_correlation_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
 for (dataset in (numbers_df %>% filter(dataset %in% unique(topology_results_df$dataset)))$dataset){
-  # Calculate mean for all correlations
-  topology_results_all_corr_df = topology_results_df %>% filter((method == !!method) & (dataset == !!dataset) & (type_correlation == "all") & (threshold == !!threshold)) %>% select(size, rep, num_edges)
-topology_results_all_corr_by_size_df = topology_results_all_corr_df %>%
-  group_by(size) %>%
-  summarise(mean=mean(num_edges), sd=sd(num_edges)) %>%
-  arrange(size)
-  for (type_correlation in types_correlation){
-    r = (type_correlation_df %>% filter(type_correlation == !!type_correlation))$lower_val
-    topology_results_selected_df = topology_results_df %>% filter((method == !!method) & (dataset == !!dataset) & (type_correlation == !!type_correlation) & (threshold == !!threshold)) %>% select(size, rep, num_edges)
-    topology_results_selected_by_size_df = topology_results_selected_df %>%
-      group_by(size) %>%
-      summarise(mean=mean(num_edges), sd=sd(num_edges)) %>%
-      arrange(size)
-    max_value = max(topology_results_selected_by_size_df$mean)
-    sample_size_max_value = (topology_results_selected_by_size_df %>% filter(mean == max_value))$size
-    
-    # Compare mean of selected correlation to mean of all correlations and select first sample size with different number of edges
-    sample_size_from_graphic = sample_size_prev = NA
-    num_edges_from_graphic = num_edges_prev = NA
-    for (i in 1:(length(topology_results_selected_by_size_df$size))){
-      sample_size_selected = topology_results_selected_by_size_df$size[i]
-      value_size_selected = (topology_results_selected_by_size_df %>% filter(size == sample_size_selected))$mean
-      value_size_all_corr = (topology_results_all_corr_by_size_df %>% filter(size == sample_size_selected))$mean
-      diff = abs(value_size_selected - value_size_all_corr)
-      #print(c(dataset, type_correlation, sample_size_selected, value_size_selected, value_size_all_corr, diff))
-      if(diff > 0){
-        sample_size_from_graphic = sample_size_prev
-        num_edges_from_graphic = num_edges_prev
-        break
-      } else {
-        sample_size_prev = sample_size_selected
-        num_edges_prev = value_size_selected
+  methods <- unique((topology_results_df %>% filter(dataset == !!dataset))$method)
+  for (method in methods) {
+    # Calculate mean for all correlations
+    threshold = method_to_threshold[[method]]
+    topology_results_all_corr_df = topology_results_df %>% filter((method == !!method) & (dataset == !!dataset) & (type_correlation == "all") & (threshold == !!threshold)) %>% select(size, rep, num_edges)
+  topology_results_all_corr_by_size_df = topology_results_all_corr_df %>%
+    group_by(size) %>%
+    summarise(mean=mean(num_edges), sd=sd(num_edges)) %>%
+    arrange(size)
+    for (type_correlation in types_correlation){
+      r = (type_correlation_df %>% filter(type_correlation == !!type_correlation))$lower_val
+      topology_results_selected_df = topology_results_df %>% filter((method == !!method) & (dataset == !!dataset) & (type_correlation == !!type_correlation) & (threshold == !!threshold)) %>% select(size, rep, num_edges)
+      topology_results_selected_by_size_df = topology_results_selected_df %>%
+        group_by(size) %>%
+        summarise(mean=mean(num_edges), sd=sd(num_edges)) %>%
+        arrange(size)
+      max_value = max(topology_results_selected_by_size_df$mean)
+      sample_size_max_value = (topology_results_selected_by_size_df %>% filter(mean == max_value))$size
+      
+      # Compare mean of selected correlation to mean of all correlations and select first sample size with different number of edges
+      sample_size_from_graphic = sample_size_prev = NA
+      num_edges_from_graphic = num_edges_prev = NA
+      for (i in 1:(length(topology_results_selected_by_size_df$size))){
+        sample_size_selected = topology_results_selected_by_size_df$size[i]
+        value_size_selected = (topology_results_selected_by_size_df %>% filter(size == sample_size_selected))$mean
+        value_size_all_corr = (topology_results_all_corr_by_size_df %>% filter(size == sample_size_selected))$mean
+        diff = abs(value_size_selected - value_size_all_corr)
+        #print(c(dataset, type_correlation, sample_size_selected, value_size_selected, value_size_all_corr, diff))
+        if(diff > 0){
+          sample_size_from_graphic = sample_size_prev
+          num_edges_from_graphic = num_edges_prev
+          break
+        } else {
+          sample_size_prev = sample_size_selected
+          num_edges_prev = value_size_selected
+        }
       }
+  
+      size_convergence_correlation_df <- rbind(size_convergence_correlation_df, data.frame(dataset=dataset, method=method, threshold=threshold, type_correlation=type_correlation, correlation=r, sample_size_from_graphic=sample_size_from_graphic, num_edges_from_graphic=num_edges_from_graphic, sample_size_max_value=sample_size_max_value))
     }
-
-    size_convergence_correlation_df <- rbind(size_convergence_correlation_df, data.frame(dataset=dataset, type_correlation=type_correlation, correlation=r, sample_size_from_graphic=sample_size_from_graphic, num_edges_from_graphic=num_edges_from_graphic, sample_size_max_value=sample_size_max_value))
   }
 }
 
@@ -169,7 +177,7 @@ print(size_convergence_correlation_df)
 ```
 
 ```{r}
-topology_results_selected_df = topology_results_df %>% filter((method == "pearson") & (dataset == "tcga:tcga-brca_female") & (threshold == 0.05) & (type_correlation %in% c("all", "very strong", "strong-very strong", "moderate-strong-very strong", "weak-moderate-strong-very strong"))) %>% select(size, rep, num_edges, type_correlation)
+topology_results_selected_df = topology_results_df %>% filter((method == method_selected) & (dataset == "tcga:tcga-brca_female") & (threshold == 0.05) & (type_correlation %in% c("all", "very strong", "strong-very strong", "moderate-strong-very strong", "weak-moderate-strong-very strong"))) %>% select(size, rep, num_edges, type_correlation)
 topology_results_selected_by_size_df = topology_results_selected_df %>%
   group_by(size, type_correlation) %>%
   summarise(mean=mean(num_edges), sd=sd(num_edges)) %>%
@@ -187,10 +195,51 @@ topology_results_plot = topology_results_plot +
   theme_linedraw() +
   xlab("Number of samples") +
   ylab("Number of significant edges") +
-  theme(plot.title =  element_text(size = 17, face="bold"), axis.title = element_text(size = 16, face="bold"), axis.text = element_text(size = 15), legend.text = element_text(size = 14), legend.title=element_text(size=15, face="bold"), legend.position="bottom")
+  theme(aspect.ratio = 1, 
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16), 
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        text = element_text(family = "Helvetica"),
+        legend.text = element_text(size = 16), 
+        legend.title = element_text(size=16, face="bold")
+        )
 
 topology_results_plot
+```
 
+```{r}
+topology_results_selected_df = topology_results_df %>% filter((method == "aracne") & (dataset == "tcga:tcga-brca_female") & (threshold == 0) & (type_correlation %in% c("all", "very strong", "strong-very strong", "moderate-strong-very strong", "weak-moderate-strong-very strong"))) %>% select(size, rep, num_edges, type_correlation)
+topology_results_selected_by_size_df = topology_results_selected_df %>%
+  group_by(size, type_correlation) %>%
+  summarise(mean=mean(num_edges), sd=sd(num_edges)) %>%
+  arrange(size)
+
+topology_results_plot = ggplot(topology_results_selected_df, aes(x=size, y=num_edges, col=type_correlation)) + 
+  guides(col=guide_legend(title="Type of correlation")) +
+  geom_point(alpha=0.5, size=3) +
+  geom_line(data = topology_results_selected_by_size_df,
+            aes(x = size, y = mean),
+            lwd=1)
+
+# Customize axes/labels/grid
+topology_results_plot = topology_results_plot + 
+  theme_linedraw() +
+  xlab("Number of samples") +
+  ylab("Number of significant edges") +
+  theme(aspect.ratio = 1, 
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16), 
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        text = element_text(family = "Helvetica"),
+        legend.text = element_text(size = 16), 
+        legend.title = element_text(size=16, face="bold")
+        )
+
+topology_results_plot
 ```
 
 Compare statistical results with manual results
