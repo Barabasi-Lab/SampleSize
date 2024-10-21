@@ -83,26 +83,32 @@ genes_dataset_file = opt$genes_dataset_file
 read_coexpression_network <- function(coexpression_network_file, method, threshold){
   
   # Read file
-  coexpression_df = as.data.frame(fread(coexpression_network_file))
+  coexpression_df = as.data.frame(data.table::fread(coexpression_network_file))
   
   # If method is aracne or wgcna, transform matrix to dataframe of pairs of genes
-  if((method == "aracne") | (method == "wgcna")){
+  if ((method == "aracne") | (method == "wgcna")){
     rownames(coexpression_df) = colnames(coexpression_df)
     coexpression_df = coexpression_df[order(rownames(coexpression_df)), order(colnames(coexpression_df))]
-    coexpression_df = coexpression_df %>% wTO.in.line() %>% rename(score=wTO)
-    if(method == "aracne"){
+    coexpression_df = coexpression_df %>%
+      wTO::wTO.in.line() %>%
+      dplyr::rename(score = wTO)
+    if (method == "aracne"){
       threshold = 0
     }
-    coexpression_df = coexpression_df %>% filter(abs(score) > threshold)
+    coexpression_df = coexpression_df %>%
+      dplyr::filter(abs(score) > threshold)
   } else {
-    if(method == "wto"){
-      coexpression_df = coexpression_df %>% rename("score"= "wTO")
+    if (method == "wto"){
+      coexpression_df = coexpression_df %>%
+        dplyr::rename("score" = "wTO")
     }
-    coexpression_df = coexpression_df %>% dplyr::select(Node.1, Node.2, score, pval.adj) %>% filter(pval.adj < threshold)
+    coexpression_df = coexpression_df %>%
+      dplyr::select(Node.1, Node.2, score, pval.adj) %>%
+      dplyr::filter(pval.adj < threshold)
   }
   
   return(coexpression_df)
-}  
+}
 
 ###################################
 ## filter_network_by_correlation ##
