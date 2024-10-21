@@ -4,6 +4,7 @@ library(optparse)
 require(dplyr)
 require(magrittr)
 require(data.table)
+require(dplyr)
 require(wTO)
 set.seed(1510)
 
@@ -16,7 +17,7 @@ option_list = list(
   make_option(c("-o", "--output_file"), type="character", default="gene_coexpression_network_wto.net", 
               help="output file [default= %default]", metavar="character"),
   make_option(c("-m", "--metric"), type="character", default="wto", 
-              help="metric (e.g., pearson, spearman, mutual_information, wto, wgcna, aracne) [default= %default]", metavar="character"),
+              help="metric (e.g., pearson, spearman, mutual_information, wto, wgcna, aracne, genie3) [default= %default]", metavar="character"),
   make_option(c("-n", "--wto_n"), type="integer", default=100, 
               help="Number of wTO bootstrap repetitions to calculate the p-value [default= %default]", metavar="integer"),
   make_option(c("-d", "--wto_delta"), type="double", default=0.05,
@@ -56,12 +57,12 @@ mi_estimator = opt$mi_estimator
 aracne_eps = as.double(opt$aracne_eps)
 correction_method = opt$correction_method
 
-#scripts.dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts'
-#samples_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood_female/RNAseq_samples_Whole.Blood_female_size_20_rep_1.txt'
+#scripts.dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks'
+#samples_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood/gtex_Whole.Blood_size_360_rep_1.txt'
 #samples_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-03-28-Dataset/sampling_with_repetition/TCGA/RNAseq_samples_TCGA_size_9900_rep_2.txt'
 #samples_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/complete_dataset/scipher_complete_dataset_size_580_rep_4.txt'
 #samples_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-07-27-Dataset/sampling_with_repetition/tumor/TCGA-BRCA_female/tcga_TCGA-BRCA_female_size_800_rep_1.txt"
-#rnaseq_file = '/home/j.aguirreplans/Databases/GTEx/v8/tpm_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood.gct'
+#rnaseq_file = '/work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood.gct'
 #rnaseq_file = '/home/j.aguirreplans/Databases/TCGA/2022-03-28-Dataset/TCGA/out/TCGA_processed_for_coexpression.csv'
 #rnaseq_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/Dec2021/00_data/scipher_rnaseq_counts_processed.csv'
 #rnaseq_file= "/work/ccnr/j.aguirreplans/Databases/TCGA/2022-07-27-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_project/tcga_rnaseq_TCGA-BRCA_female.csv"
@@ -88,10 +89,10 @@ source(coexpression.functions.file)
 #### READ DATASET ####
 
 # Read samples
-subsample = fread(samples_file)[, 1][[1]]
+subsample = data.table::fread(samples_file)[, 1][[1]]
 
 # Read RNAseq dataset (rows = genes, columns = samples)
-rnaseq = fread(rnaseq_file) %>% as.data.frame()
+rnaseq = data.table::fread(rnaseq_file) %>% as.data.frame()
 
 # Subset gene expression dataset by samples in the samples file
 rnaseq = rnaseq[, c(names(rnaseq)[1], subsample)]
@@ -112,24 +113,32 @@ rownames(rnaseq.t) <- colnames(rnaseq)
 #### RUN CO-EXPRESSION ####
 
 if((metric == 'spearman') | (metric == 'pearson')){
-  
-  #calculate_correlation(rnaseq, output_file, cor_method=metric, disparity_filter=TRUE, corr_threshold=NA, pval_threshold=NA)
+
+  rm(rnaseq)  
   calculate_correlation_and_pvalue(rnaseq.t, output_file, cor_method=metric, correction_method=correction_method, disparity_filter=FALSE)
 
 } else if((metric == 'mi') | (metric == 'mutual_information')){
-  
+
+  rm(rnaseq)
   calculate_mutual_information(rnaseq.t, output_file, estimator=mi_estimator)
-  
+
 } else if(metric == 'wgcna'){
-  
+
+  rm(rnaseq)
   calculate_network_WGCNA(rnaseq.t, output_file, type=wgcna_type, power=wgcna_power)
-  
+
 } else if(metric == 'aracne'){
-  
+
+  rm(rnaseq)
   calculate_network_ARACNE(rnaseq.t, output_file, estimator=mi_estimator, eps=aracne_eps)
-  
+
+} else if(metric == 'genie3'){
+
+  rm(rnaseq.t)
+  calculate_network_GENIE3(rnaseq, output_file)
+
 } else if(metric == 'wto'){
-  
+
   # Function to calculate network using wTO faster
   prepare_wTO <- function(input, save, scripts.dir, N=100){
     newwTO.file <- paste(scripts.dir, "99_newwTO.R", sep="/")
@@ -139,17 +148,7 @@ if((metric == 'spearman') | (metric == 'pearson')){
     return(wto)
   }
 
-  # Run wTO fast  
-  #wto = wTO.fast(Data = rnaseq, Overlap = row.names(rnaseq), method = "p",
-  #               sign = "sign", delta = wto_delta, n = wto_n,
-  #               method_resampling = "Bootstrap")
-  #wto %>% fwrite(output_file)
-  
-  # Run wTO faster
+  rm(rnaseq.t)
   wto = prepare_wTO(input=rnaseq, save=output_file, scripts.dir=scripts.dir, N=wto_n)
-  
+
 }
-
-
-
-

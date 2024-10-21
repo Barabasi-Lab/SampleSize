@@ -52,6 +52,7 @@ sample_groups_df = fread(sample_groups_file)
 ```{r}
 head(metadata_df)
 head(sample_groups_df)
+table(sample_groups_df$sample_group_id)
 ```
 
 ## Subsampling

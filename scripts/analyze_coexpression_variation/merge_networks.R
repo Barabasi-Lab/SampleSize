@@ -5,6 +5,7 @@ library(igraph)
 require(magrittr)
 library(optparse)
 library(tidyr)
+library(wTO)
 set.seed(1510)
 `%ni%` <- Negate(`%in%`)
 
@@ -56,34 +57,84 @@ max_rep = as.integer(opt$max_rep)
 selected_sizes = c(20, 40, 60, 80, 100, 120)
 #selected_sizes = c(20, 100, 200, 300, 400, 500)
 
+
+#### DEFINE FUNCTIONS ####
+
+###############################
+## read_coexpression_network ##
+###############################
+#'  @param coexpression_network_file The path to the co-expression network file
+#'  @param method The method used to create the co-expression network. 
+
+read_coexpression_network <- function(coexpression_network_file, method){
+  
+  # Read file
+  coexpression_df = as.data.frame(data.table::fread(coexpression_network_file))
+  
+  # If method is aracne, genie3 or wgcna, transform matrix to dataframe of pairs of genes
+  if (method %in% c("aracne", "genie3", "wgcna")){
+    rownames(coexpression_df) = colnames(coexpression_df)
+    coexpression_df = coexpression_df[order(rownames(coexpression_df)), order(colnames(coexpression_df))]
+    coexpression_df = coexpression_df %>%
+      wTO::wTO.in.line() %>%
+      dplyr::rename(score=wTO)
+  } else {
+    if (method == "wto"){
+      coexpression_df = coexpression_df %>%
+        dplyr::rename("score"= "wTO")
+    }
+    coexpression_df = coexpression_df %>%
+      dplyr::select(Node.1, Node.2, score)
+  }
+  
+  return(coexpression_df)
+}
+
+
 #### PARSE NETWORKS AND CREATE UNIQUE DATAFRAME ####
 
-result_files = list.files(networks_dir)
-result_files_df = data.frame(matrix(ncol=3,nrow=0, dimnames=list(NULL, c("file_name", "size", "rep"))))
+result_files <- list.files(networks_dir)
+result_files_df <- data.frame(matrix(ncol=3,nrow=0, dimnames=list(NULL, c("file_name", "size", "rep"))))
 
-for (result_file in result_files){
-  file_split = strsplit(gsub(".net", "", result_file), split="_")[[1]]
-  if(file_split[1] == method){
-    if((length(file_split) == 7) | (length(file_split) == 8)){
-      size = as.integer(file_split[length(file_split)-2])
-      rep = as.integer(file_split[length(file_split)])
-      result_files_df = rbind(result_files_df, data.frame(file_name=result_file, name=paste(size,rep,sep="."), size=size, rep=rep))
+for (result_file in result_files) {
+  file_split <- strsplit(gsub(".net", "", result_file), split="_")[[1]]
+  if (file_split[1] == method) {
+    if (length(file_split) %in% c(7, 8, 9)) {
+      size <- as.integer(file_split[length(file_split)-2])
+      rep <- as.integer(file_split[length(file_split)])
+      result_files_df <- rbind(
+        result_files_df,
+        data.frame(
+          file_name = result_file,
+          name = paste(size,rep,sep="."),
+          size = size,
+          rep = rep
+        )
+      )
     }
   }
 }
 
-#selected_files_df = result_files_df %>% filter((size %% step == 0) & (rep %in% seq(from=1, to=max_rep, by=1))) %>% arrange(size, rep)
-selected_files_df = result_files_df %>% filter((size %in% selected_sizes) & (rep %in% seq(from=1, to=max_rep, by=1))) %>% arrange(size, rep)
+selected_files_df <- result_files_df %>%
+  dplyr::filter((size %in% selected_sizes) & (rep %in% seq(from=1, to=max_rep, by=1))) %>%
+  dplyr::arrange(size, rep)
 
 for (i in 1:nrow(selected_files_df)){
     result_file = selected_files_df[i,]$file_name
     result_name = selected_files_df[i,]$name
     print(result_file)
-    if(i == 1){
-      nets_df = fread(paste(networks_dir, result_file, sep="/")) %>% select(Node.1, Node.2, score) %>% rename(!!result_name := "score")
-    }else{
-      nets_df = cbind(nets_df, (fread(paste(networks_dir, result_file, sep="/")) %>% select(score) %>% rename(!!result_name := "score")))
+    
+    if (i == 1) {
+      nets_df <- read_coexpression_network(paste(networks_dir, result_file, sep="/"), method) %>%
+        dplyr::rename(!!result_name := "score")
+    } else {
+      nets_df <- nets_df %>%
+        dplyr::full_join(
+          (read_coexpression_network(paste(networks_dir, result_file, sep="/"), method) %>%
+             dplyr::rename(!!result_name := "score")),
+          by = c("Node.1", "Node.2")
+        )
     }
 }
 
-nets_df %>% fwrite(output_dataframe)
+nets_df %>% data.table::fwrite(output_dataframe)

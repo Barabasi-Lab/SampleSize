@@ -10,6 +10,7 @@ require(WGCNA)
 require(wTO)
 require(dplyr)
 require(data.table)
+require(GENIE3)
 require(Hmisc)
 require(igraph)
 require(minet)
@@ -70,7 +71,7 @@ calculate_correlation <- function(rnaseq, out_name, cor_method="pearson", dispar
     }
   }
   
-  fwrite(correlation_result, out_name)
+  data.table::fwrite(correlation_result, out_name)
   
 }
 
@@ -82,7 +83,7 @@ calculate_correlation <- function(rnaseq, out_name, cor_method="pearson", dispar
 #'  Method to calculate correlation and p-value between genes from gene expression data.
 #'  
 #'  @param rnaseq   RNAseq expression data frame
-#'                     (columns are samples, rows are genes).
+#'                     (columns are genes, rows are samples).
 #'  @param out_name The name of the file to write the correlations to.
 #'  @param cor_method The correlation method to use. Spearman ("s", "spearman") or Pearson ("p", "pearson") correlation. Default is "pearson". 
 #'  @param correction_method Method to correct p-value for multiple testing. Options: "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr". Default is "bonferroni". 
@@ -131,7 +132,7 @@ calculate_correlation_and_pvalue <- function(rnaseq, out_name, cor_method="spear
   #correlation_result = correlation_result %>% rename(!!cor_method := "score")
   
   # Save data
-  fwrite(correlation_result, out_name)
+  data.table::fwrite(correlation_result, out_name)
   
 }
 
@@ -157,7 +158,7 @@ calculate_correlation_and_pvalue <- function(rnaseq, out_name, cor_method="spear
 calculate_mutual_information <- function(rnaseq, out_name, estimator="pearson"){
   
   mim <- build.mim(rnaseq, estimator = estimator)
-  fwrite(mim, out_name)
+  data.table::fwrite(mim, out_name)
   
 }
 
@@ -187,7 +188,7 @@ calculate_network_WGCNA <- function(rnaseq, out_name, type="signed", power=6){
   rownames(TOM) = rownames(adjacency.res)
   colnames(TOM) = colnames(adjacency.res)
   #TOM = TOM %>% wTO.in.line() %>% rename(WGCNA=wTO)
-  fwrite(TOM, out_name)
+  data.table::fwrite(TOM, out_name)
   
 }
 
@@ -217,7 +218,27 @@ calculate_network_ARACNE <- function(rnaseq, out_name, estimator="pearson", eps=
   # 'eps' is a numeric value indicating the threshold used when removing an edge : for each triplet of nodes (i,j,k), the weakest edge, say (ij), is removed if its weight is below min{(ik),(jk)}-eps - see references.
   mim <- build.mim(rnaseq, estimator = estimator)
   net <- aracne(mim,eps=eps)
-  fwrite(net, out_name)
+  data.table::fwrite(net, out_name)
   
 }
+
+################################################################################
+
+#'  Create gene co-expression networks using GENIE3
+#'
+#'  Method to create co-expression networks using GENIE3
+#'  
+#'  @param rnaseq   RNAseq expression data frame
+#'                     (columns are samples, rows are genes).
+#'  @param out_name The name of the file to write the network to.
+#'  @param regulators List of genes that serve as regulators and restrict the computation of the network to interactions with the regulators and the rest of the genes.
+#'
+calculate_network_GENIE3 <- function(rnaseq, out_name, regulators = NULL){
+  # Information about how to calculate a network using GENIE3 package:
+  # https://bioconductor.org/packages/release/bioc/vignettes/GENIE3/inst/doc/GENIE3.html
+  set.seed(123)
+  weightMat <- GENIE3::GENIE3(as.matrix(rnaseq), regulators = regulators, nCores = 4)
+  data.table::fwrite(weightMat, out_name)
+}
+
 

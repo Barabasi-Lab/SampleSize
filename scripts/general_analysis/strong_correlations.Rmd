@@ -1,0 +1,878 @@
+---
+title: "Influence of sample size on strong correlations"
+author: "Joaquim Aguirre-Plans"
+date: "2024-09-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Description
+
+Analysis on strong correlations across sample size.
+
+```{r}
+packrat::init("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR")
+```
+
+```{r load_libraries}
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(patchwork)
+set.seed(1510)
+options(bitmapType='cairo')
+```
+
+## Load functions
+
+```{r load_functions}
+#'  calculate_predictions_using_stretched_exponential_model_optimized
+#'  Formula to calculate exponential decay of significant interactions from a list of sample sizes.
+#'  This formula requires the use of the L parameter
+#'  @param x List of sample sizes.
+#'  @param a Slope coefficient.
+#'  @param b Intercept coefficient.
+#'  
+calculate_predictions_using_stretched_exponential_model_optimized = function(x, L, a, b){
+  y = L * exp((b * x ** (-a + 1)) / (-a + 1))
+  #y = exp(log(L) - exp(b+a*log(x)))
+  return(y)
+}
+
+#'  calculate_prediction_from_analytical_model
+#'  Function to calculate predictions using a specific analytical model
+#'  @param model Name of the model used.
+#'  @param x_list List of values in the x axis (e.g. size)
+#'  @param a Parameter a.
+#'  @param b Parameter b.
+#'  @param L Parameter L.
+#'  
+calculate_prediction_from_analytical_model = function(model, x_list, a, b, L){
+  if(model == "Logarithmic"){
+    prediction_result = (log(x_list)*a + b)
+  } else if(model == "Linear"){
+    prediction_result = (x_list*a + b)
+  } else if(model == "Exponential"){
+    prediction_result = (exp((x_list*a + b)))
+  } else if(model == "Square root"){
+    prediction_result = (exp((log(x_list)*a + b)))
+  } else if((model == "Stretched exponential (by optimization)") | (model == "Stretched exponential (by linear fit)")){
+    prediction_result = calculate_predictions_using_stretched_exponential_model_optimized(x=x_list, L=L, a=a, b=b)
+  } else if(model == "Stretched exponential (without L)"){
+    prediction_result = calculate_predictions_using_stretched_exponential_model_without_L(x=x_list, a=a, b=b)
+  } else if(model == "Exponential decay"){
+    prediction_result = calculate_predictions_using_exponential_decay_model(x=x_list, L=L, a=a, b=b)
+  }
+  return(prediction_result)
+}
+```
+
+## Load data
+
+```{r define_paths}
+input_dir <- '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data'
+example_dir <- paste(input_dir, 'example_pearson_pval_0.05', sep = "/")
+plots_dir <- '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots'
+tables_dir <- '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables'
+font_selected <- "Helvetica"
+model_selected <- "Stretched exponential (by linear fit)"
+topology_type_normalization <- "divide.L"
+#datasets_selected = c("gtex:breast.mammary.tissue_female", 
+#                      "gtex:lung", 
+#                      "tcga:tcga-brca_female", 
+#                      "tcga:tcga-luad", 
+#                      "scipher:scipher.sample.per.patient.baseline")
+datasets_selected = c("gse193677:rectum_uc_inflamed", 
+                      "gtex:breast.mammary.tissue_female", 
+                      "gtex:lung", 
+                      "tcga:tcga-brca_female")
+all_datasets <- c(
+  "scipher:scipher.sample.per.patient.baseline",
+  "gse193677:rectum_cd_inflamed",
+  "gse193677:rectum_uc_inflamed",
+  "gse193677:rectum_control_noninflamed",
+  "gse193677:rectum_inflamed",
+  "gse193677:rectum_noninflamed",
+  "gtex:breast.mammary.tissue_female",
+  "gtex:lung",
+  "gtex:skin.sun.exposed.lower.leg",
+  "gtex:thyroid",
+  "gtex:whole.blood",
+  "tcga:tcga-brca_female",
+  "tcga:tcga-kirc",
+  "tcga:tcga-kirp",
+  "tcga:tcga-luad",
+  "tcga:tcga-lusc",
+  "tcga:tcga-thca",
+  "tcga:breast_female", 
+  "tcga:kidney",
+  "tcga:lung",
+  "tcga:brca.luma",
+  "tcga:brca.lumb"
+)
+
+id2name <- c(
+  "gtex:breast.mammary.tissue_female" = "GTEx: Breast",
+  "gtex:whole.blood" = "GTEx: Whole blood",
+  "gtex:lung" = "GTEx: Lung",
+  "tcga:tcga-brca_female" = "TCGA: Breast cancer",
+  "tcga:tcga-luad" = "TCGA: Lung cancer",
+  "scipher:scipher.sample.per.patient.baseline" = "R. arthritis",
+  "gse193677:rectum_uc_inflamed" = "UC inflamed",
+  "spearman" = "Spearman",
+  "pearson" = "Pearson",
+  "aracne" = "ARACNe",
+  "genie3" = "GENIE3"
+)
+
+name2color <- c(
+  "TCGA: Lung cancer" = "#56B4E9",
+  "tcga:tcga-luad" = "#56B4E9",
+  "tcga:tcga-luad-tumor" = "#56B4E9", # #D55E00
+  "TCGA: Breast cancer" = "#0072B2",
+  "TCGA: Breast c." = "#0072B2",
+  "tcga:tcga-brca_female" = "#0072B2",
+  "tcga:tcga-brca-tumor_female" = "#0072B2",
+  "breast neoplasms"="#0072B2", 
+  "gse193677" = "#E032EC",
+  "GSE193677" = "#E032EC",
+  "gse193677:rectum_uc_inflamed" = "#E032EC",
+  "UC inflamed" = "#E032EC",
+  "GTEx: Whole blood" = "#65F3BF",
+  "gtex:whole.blood" = "#65F3BF",
+  "GTEx: Lung" = "#077d2b",
+  "gtex:lung" = "#077d2b",
+  "GTEx: Breast" = "#00BA37", #44AA99
+  "gtex:breast.mammary.tissue" = "#00BA37",
+  "gtex:breast.mammary.tissue_female" = "#00BA37",
+  "R. arthritis" = "#D55E00", #E69F00
+  "scipher:scipher.sample.per.patient.baseline" = "#D55E00",
+  "arthritis rheumatoid"="#D55E00", 
+  "asthma"="#d9f365", 
+  "thyroid neoplasms"="#0072B2",
+  "tcga" = "#0072B2",
+  "TCGA" = "#0072B2",
+  "gtex" = "#00BA37",
+  "GTEx" = "#00BA37",
+  "scipher" = "#D55E00",
+  #"Analytical model"="#e3f705",
+  "Analytical model"="#cc68f7",
+  "Power law"="#cc68f7",
+  "Logarithm"="#09b863",
+  "Exponential decay"="#09b863",
+  "\u2265 0.2" = "#F8766D",
+  "\u2265 0.4" = "#7CAE00",
+  "\u2265 0.6" = "#00BFC4",
+  "\u2265 0.8" = "#C77CFF",
+  "Very Weak" = "#ff7b00",
+  "Weak" = "#F8766D",
+  "Moderate" = "#7CAE00",
+  "Strong" = "#00BFC4",
+  "Very Strong" = "#C77CFF",
+  "Convergence point" = "red",
+  "Model prediction" = "red",
+  "P-value < 0.05" = "red",
+  "common" = "#619CFF",
+  "disease-gene" = "#cc68f7",
+  "disease-specific" = "#F8766D",
+  "normal-specific" = "#00BA38",
+  "undefined" = "#808080",
+  "different" = "#C77CFF",
+  "all" = "#CD9600",
+  "common (constant)" = "#619CFF",
+  "common (change)" = "#b5d1ff",
+  "disease-specific (constant)" = "#F8766D",
+  "disease-specific (change)" = "#ffcbc7",
+  "normal-specific (constant)" = "#00BA38",
+  "normal-specific (change)" = "#a3d1b1",
+  "undefined (constant)" = "#808080",
+  "undefined (change)" = "#c2c2c2",
+  "pearson" = "#a57212",
+  "spearman" = "#f5c977",
+  "genie3" = "#f5a14f",
+  "aracne" = "#e35512"
+  )
+```
+
+```{r load_topology}
+topology_results_file <- paste(input_dir, 'analysis_topology.csv', sep = "/")
+topology_results_df <- data.table::fread(topology_results_file)
+topology_results_df$type_dataset <- paste(tolower(topology_results_df$dataset), tolower(topology_results_df$type_dataset), sep = ":")
+head(topology_results_df)
+```
+
+```{r load_analytical}
+analytical_results_file <- paste(example_dir, '/', 'analytical_model_results_', topology_type_normalization, '_pearson_pval_0.05.txt', sep='')
+analytical_results_df <- data.table::fread(analytical_results_file) %>%
+  dplyr::filter((model == model_selected) & (type_dataset %in% all_datasets)) %>%
+  dplyr::select(type_dataset, max_value_in_dataset, a, b, L, slope, intercept) %>%
+  unique()
+head(analytical_results_df)
+```
+
+```{r load_theoretical_ss}
+theoretical_sample_size_file <- paste(example_dir, 'theoretical_sample_size_for_correlations_of_datasets.txt', sep='/') # from => calculate_convergence_correlation_types.Rmd
+theoretical_sample_size_df <- data.table::fread(theoretical_sample_size_file) %>%
+  dplyr::rename(type_dataset = dataset) %>%
+  filter((type_correlation == "strong") & (type_dataset %in% all_datasets)) %>%
+  dplyr::select(type_dataset, sample_size_statistical_corrected) %>%
+  unique()
+head(theoretical_sample_size_df)
+```
+
+```{r distribution_theoretical_ss}
+mean(theoretical_sample_size_df$sample_size_statistical_corrected)
+quantile(theoretical_sample_size_df$sample_size_statistical_corrected)
+```
+
+```{r load_predictions}
+#predictions_file = paste(example_dir, 'predictions_pearson_pval_0.05.txt', sep='/')
+#predicted_results_df = data.table::fread(predictions_file) %>%
+#  dplyr::mutate(model_result = as.numeric(model_result)) %>%
+#  dplyr::filter(model == model_selected) %>%
+#  dplyr::select(type_dataset, size, model_result)
+#head(predicted_results_df)
+```
+
+```{r calculate_predictions}
+predicted_results_df = data.frame()
+for (type_dataset_sel in datasets_selected) {
+  max_size <- round(theoretical_sample_size_df[theoretical_sample_size_df$type_dataset == type_dataset_sel]$sample_size_statistical_corrected)
+  N_vals <- seq(3, max_size, 1)
+  a_sel <- analytical_results_df[analytical_results_df$type_dataset == type_dataset_sel]$a
+  b_sel <- analytical_results_df[analytical_results_df$type_dataset == type_dataset_sel]$b
+  L_sel <- analytical_results_df[analytical_results_df$type_dataset == type_dataset_sel]$L
+  max_value_in_dataset <- analytical_results_df[analytical_results_df$type_dataset == type_dataset_sel]$max_value_in_dataset
+  prediction_result = calculate_prediction_from_analytical_model(
+    model = model_selected,
+    x_list = N_vals,
+    a = a_sel,
+    b = b_sel,
+    L = L_sel
+  )
+  predicted_results_df <- rbind(
+    predicted_results_df,
+    data.frame(
+      type_dataset = type_dataset_sel,
+      size = N_vals,
+      model_result = prediction_result * max_value_in_dataset
+    )
+  )
+}
+
+head(predicted_results_df)
+```
+
+## Significance of strong correlations vs. sample size
+
+```{r filter_model_results}
+# Join analytical and theoretical tables and filter out model predictions above
+# the maximum sample size predicted for "strong" edges
+predicted_results_mod_df <- predicted_results_df %>%
+  dplyr::inner_join(analytical_results_df, by = c("type_dataset")) %>%
+  dplyr::inner_join(theoretical_sample_size_df, by = c("type_dataset")) %>%
+  dplyr::rename("model_num_edges" = "model_result") %>%
+  dplyr::mutate(model_frac_edges = (model_num_edges / max_value_in_dataset) / L) %>%
+  dplyr::filter((type_dataset %in% datasets_selected) & (size <= sample_size_statistical_corrected))
+
+# Calculate maximum number of "strong" edges
+predicted_results_mod_df$max_frac_strong_edges <- calculate_predictions_using_stretched_exponential_model_optimized(
+  x = predicted_results_mod_df$sample_size_statistical_corrected,
+  L = predicted_results_mod_df$L,
+  a = predicted_results_mod_df$a,
+  b = predicted_results_mod_df$b
+)
+# Normalize maximum number of strong edges
+predicted_results_mod_df$max_frac_strong_edges <- predicted_results_mod_df$max_frac_strong_edges / predicted_results_mod_df$L
+# Calculate fraction of strong edges
+predicted_results_mod_df$frac_strong_edges_model <- predicted_results_mod_df$model_frac_edges / predicted_results_mod_df$max_frac_strong_edges
+
+head(predicted_results_mod_df)
+```
+
+```{r critical_sample_size_strong_correlations}
+predicted_results_mod_df %>%
+  dplyr::select(type_dataset, sample_size_statistical_corrected) %>%
+  unique()
+```
+
+```{r significance_strong_corr_plot}
+predicted_results_mod_df <- predicted_results_mod_df %>%
+  inner_join( (name2color %>% 
+                 as.data.frame() %>% 
+                 dplyr::rename("rgb_col"=".") %>% 
+                 tibble::rownames_to_column("type_dataset")), 
+              by=c("type_dataset") ) %>%
+  dplyr::mutate(type_dataset = dplyr::recode(type_dataset, !!!id2name))
+
+significance_strong_corr_plot <- predicted_results_mod_df %>%
+  ggplot(aes(x = size, y = frac_strong_edges_model)) +
+  geom_line(aes(col = rgb_col), size=1) +
+  scale_colour_identity(
+    labels = unique(predicted_results_mod_df$type_dataset),
+    breaks = unique(predicted_results_mod_df$rgb_col),
+    guide = "legend"
+  ) +
+  xlab("Num. samples") +
+  ylab("% sign. strong correlations") +
+  guides(col=guide_legend(title="Dataset")) +
+  theme_linedraw() +
+  theme(aspect.ratio = 1, 
+        plot.title =  element_text(size = 20, face = "bold"), 
+        axis.title = element_text(size = 17, face = "bold"), 
+        axis.text = element_text(size = 16), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        text = element_text(family = font_selected),
+        legend.text = element_text(size = 16), 
+        legend.title=element_text(size=16, face="bold")
+  )
+print(significance_strong_corr_plot)
+```
+
+## Stability of strong correlations vs. sample size
+
+```{r define_network_and_sd_files}
+dataset_to_network_file <- list(
+  "tcga:tcga-brca_female" = "/scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/tcga_TCGA-BRCA_female_pearson_combined_filtered_by_threshold_0.6.txt",
+  "gtex:lung" = "/scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/gtex_Lung_pearson_combined_filtered_by_threshold_0.6.txt",
+  "gtex:breast.mammary.tissue_female" = "/scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/gtex_Breast.Mammary.Tissue_pearson_combined_filtered_by_threshold_0.6.txt",
+  "gse193677:rectum_uc_inflamed" = "/scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/disease_inflamed_vs_control/gse193677_Rectum_UC_inflamed_pearson_combined_filtered_by_threshold_0.6.txt"
+)
+perc_strong_corr_file <- "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/analysis_sd_coexpression_weight_percentage_strong_correlations.txt"
+sd_strong_corr_file <- "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/analysis_sd_coexpression_weight_filtered_by_strong_correlations.txt"
+```
+
+```{r parse_networks}
+large_sample_columns <- c("120.1", "120.2", "120.3", "120.4", "120.5")
+score_threshold <- 0.6
+perc_strong_corr_df <- data.frame()
+sd_df <- data.frame()
+if (!(file.exists(perc_strong_corr_file)) | !(file.exists(sd_strong_corr_file)))  {
+  for (type_dataset_sel in names(dataset_to_network_file)) {
+    # Read networks and filter by strong correlations in the largest sample size
+    networks_df <- data.table::fread(dataset_to_network_file[[type_dataset_sel]], header = TRUE) %>%
+      dplyr::filter(dplyr::if_all(large_sample_columns, ~ abs(.) >= abs(score_threshold)))
+
+    # Select 100k interactions randomly
+    #networks_df <- networks_df[row.names(networks_df) %in% sample(row.names(networks_df), size=100000, replace=FALSE),] # Check example with less edges
+  
+    # Transform data frame into long format
+    networks_df <- networks_df %>%
+      dplyr::mutate(gp = paste(Node.1, Node.2, sep = " -- ")) %>%
+      dplyr::select(!(c(Node.1, Node.2))) %>%
+      tidyr::pivot_longer(!gp, names_to = "ss.rep", values_to = "correlation") %>%
+      tidyr::separate("ss.rep", into=c("ss", "rep"), sep="[.]") %>%
+      dplyr::mutate(ss = as.numeric(ss), rep = as.numeric(rep))
+  
+    # Calculate the percentage of strong correlations by sample size
+    perc_strong_corr_dataset_df <- networks_df %>%
+      dplyr::group_by(gp, ss) %>%
+      dplyr::summarize(mean_corr = mean(correlation)) %>%
+      dplyr::ungroup() %>%
+      dplyr::group_by(gp) %>%
+      mutate(
+        corr_max_ss = mean_corr[ss == max(ss)],
+        diff = abs((corr_max_ss - mean_corr)) 
+      ) %>%
+      ungroup() %>%
+      dplyr::group_by(ss) %>%
+      dplyr::summarize(
+        num_strong_corr = sum(abs(mean_corr) >= abs(score_threshold)),
+        perc_strong_corr = num_strong_corr / n() * 100,
+        mean_diff = mean(diff)
+      ) %>%
+      dplyr::ungroup() %>%
+      dplyr::mutate(type_dataset = type_dataset_sel)
+
+    perc_strong_corr_df <- rbind(
+      perc_strong_corr_df,
+      perc_strong_corr_dataset_df
+    )
+
+    # Calculate difference
+    # Calculate SD for each sample size
+    sd_dataset_df = networks_df %>%
+      dplyr::group_by(gp, ss) %>%
+      dplyr::summarise(sd_correlation=sd(correlation)) %>%
+      dplyr::ungroup() %>%
+      dplyr::group_by(ss) %>%
+      dplyr::summarize(mean_sd_correlation = mean(sd_correlation)) %>%
+      dplyr::ungroup() %>%
+      dplyr::mutate(type_dataset = type_dataset_sel)
+  
+    rm(networks_df)
+    
+    sd_df <- rbind(
+      sd_df,
+      sd_dataset_df
+    )
+  }
+
+  perc_strong_corr_df %>% data.table::fwrite(perc_strong_corr_file, sep = "\t")
+  sd_df %>% data.table::fwrite(sd_strong_corr_file, sep = "\t")
+
+} else {
+  perc_strong_corr_df <- data.table::fread(perc_strong_corr_file, header = TRUE)
+  sd_df <- data.table::fread(sd_strong_corr_file, header = TRUE)
+}
+```
+
+```{r percent_strong_corr_vs_ss}
+if (!("rgb_col" %in% colnames(perc_strong_corr_df))) {
+  perc_strong_corr_df <- perc_strong_corr_df %>%
+    dplyr::inner_join( (name2color %>%
+                          as.data.frame() %>% 
+                          dplyr::rename("rgb_col"=".") %>% 
+                          tibble::rownames_to_column("type_dataset")),
+                       by=c("type_dataset") ) %>%
+    dplyr::mutate(
+      ss = as.numeric(ss),
+      type_dataset = dplyr::recode(type_dataset, !!!id2name)
+    )
+}
+
+perc_lost_strong_corr_plot <- perc_strong_corr_df %>%
+  ggplot(aes(x = ss, y = perc_strong_corr)) +
+  geom_line(aes(col = rgb_col), size = 1) +
+  scale_colour_identity(
+    labels = unique(perc_strong_corr_df$type_dataset),
+    breaks = unique(perc_strong_corr_df$rgb_col),
+    guide = "legend"
+  ) +
+  xlab("Num. samples") +
+  ylab("% remaining strong correlations") +
+  guides(col=guide_legend(title="Dataset")) +
+  theme_linedraw() +
+  theme(aspect.ratio = 1, 
+        plot.title =  element_text(size = 20, face = "bold"), 
+        axis.title = element_text(size = 17, face = "bold"), 
+        axis.text = element_text(size = 16), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        text = element_text(family = font_selected),
+        legend.text = element_text(size = 16), 
+        legend.title=element_text(size=16, face="bold")
+  )
+print(perc_lost_strong_corr_plot)
+```
+
+```{r mean_diff_strong_corr_vs_ss}
+perc_strong_corr_df %>%
+  ggplot(aes(x = ss, y = mean_diff)) +
+  geom_line(aes(col = rgb_col), size = 1) +
+  scale_colour_identity(
+    labels = unique(perc_strong_corr_df$type_dataset),
+    breaks = unique(perc_strong_corr_df$rgb_col),
+    guide = "legend"
+  ) +
+  xlab("Num. samples") +
+  ylab("Mean difference with strong corr. value") +
+  guides(col=guide_legend(title="Dataset")) +
+  theme_linedraw() +
+  theme(aspect.ratio = 1, 
+        plot.title =  element_text(size = 20, face = "bold"), 
+        axis.title = element_text(size = 17, face = "bold"), 
+        axis.text = element_text(size = 16), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        text = element_text(family = font_selected),
+        legend.text = element_text(size = 16), 
+        legend.title=element_text(size=16, face="bold")
+  )
+```
+
+```{r mean_sd_vs_ss_plot}
+sd_df <- sd_df %>%
+  inner_join( (name2color %>% 
+                 as.data.frame() %>% 
+                 dplyr::rename("rgb_col"=".") %>% 
+                 tibble::rownames_to_column("type_dataset")), 
+              by=c("type_dataset") ) %>%
+  dplyr::mutate(
+    ss = as.numeric(ss),
+    type_dataset = dplyr::recode(type_dataset, !!!id2name)
+  )
+
+sd_df %>%
+  ggplot(aes(x = ss, y = mean_sd_correlation)) +
+  geom_line(aes(col = rgb_col), size = 1) +
+  scale_colour_identity(
+    labels = unique(sd_df$type_dataset),
+    breaks = unique(sd_df$rgb_col),
+    guide = "legend"
+  ) +
+  xlab("Num. samples") +
+  ylab("Mean SD of strong correlations") +
+  guides(col=guide_legend(title="Dataset")) +
+  theme_linedraw() +
+  theme(aspect.ratio = 1, 
+        plot.title =  element_text(size = 20, face = "bold"), 
+        axis.title = element_text(size = 17, face = "bold"), 
+        axis.text = element_text(size = 16), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        text = element_text(family = font_selected),
+        legend.text = element_text(size = 16), 
+        legend.title=element_text(size=16, face="bold")
+  )
+```
+
+
+## Percentage of strong scores vs. sample size
+
+```{r define_params_analysis_strong_scores}
+dataset_to_file_names <- list(
+  "tcga:tcga-brca_female" = "/scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/tcga_TCGA-BRCA_female",
+  "gtex:lung" = "/scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/gtex_Lung",
+  "gtex:breast.mammary.tissue_female" = "/scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/gtex_Breast.Mammary.Tissue",
+  "gse193677:rectum_uc_inflamed" = "/scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/disease_inflamed_vs_control/gse193677_Rectum_UC_inflamed"
+)
+methods_selected <- c("pearson", "spearman", "aracne", "genie3")
+method_to_thresholds <- list(
+  "pearson" = c(0.6),
+  "spearman" = c(0.6),
+  "aracne" = c(1),
+  "genie3" = c(0.01)
+)
+```
+
+```{r calculate_percentage_strong_scores}
+perc_strong_scores_file <- "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/analysis_percentage_strong_scores_filtered.txt"
+strong_scores_results_df <- data.frame()
+if (!(file.exists(perc_strong_scores_file)))  {
+  for (method_sel in methods_selected) {
+    for (threshold_sel in method_to_thresholds[[method_sel]]) {
+      for (type_dataset_sel in names(dataset_to_file_names)) {
+  
+        # Read filtered networks
+        merged_networks_file <- paste(
+          dataset_to_file_names[[type_dataset_sel]],
+          "_",
+          method_sel,
+          "_combined_filtered_by_threshold_",
+          threshold_sel,
+          ".txt",
+          sep = "")
+        if (file.exists(merged_networks_file)) {
+          networks_df <- data.table::fread(merged_networks_file, header = TRUE)
+  
+          # Calculate the percentage of non-zero values in each column
+          cols <- colnames(networks_df)
+          score_cols <- cols[!(cols %in% c("Node.1", "Node.2"))]
+          if (threshold_sel == 0) {
+            strong_scores_subset_df <- as.data.frame(colSums(abs(networks_df[, ..score_cols]) > threshold_sel) / nrow(networks_df[, ..score_cols]) * 100)
+          } else {
+            strong_scores_subset_df <- as.data.frame(colSums(abs(networks_df[, ..score_cols]) >= threshold_sel) / nrow(networks_df[, ..score_cols]) * 100)
+          }
+          strong_scores_subset_df$ss.rep <- row.names(strong_scores_subset_df)
+          row.names(strong_scores_subset_df) <- NULL
+          colnames(strong_scores_subset_df) <- c("percentage_above_threshold", "ss.rep")
+          strong_scores_subset_df <- strong_scores_subset_df %>%
+            tidyr::separate("ss.rep", into=c("ss", "rep"), sep="[.]") %>%
+            dplyr::mutate(
+              ss = as.numeric(ss),
+              rep = as.numeric(rep),
+              method = method_sel,
+              threshold = threshold_sel,
+              type_dataset = type_dataset_sel
+            )
+      
+          strong_scores_results_df <- rbind(
+            strong_scores_results_df,
+            strong_scores_subset_df
+          )
+          rm(networks_df)
+        } else {
+          print(paste("The following merged networks file does not exist:", merged_networks_file))
+        }
+      }
+    } 
+  }
+  strong_scores_results_df %>% data.table::fwrite(perc_strong_scores_file, sep = "\t")
+} else {
+  strong_scores_results_df <- data.table::fread(perc_strong_scores_file, header = TRUE)
+}
+head(strong_scores_results_df)
+```
+
+
+```{r plot_aracne_strong_scores}
+aracne_strong_scores_df <- strong_scores_results_df %>%
+  dplyr::filter(method == "aracne") %>%
+  dplyr::group_by(threshold, type_dataset, ss) %>%
+  dplyr::summarize(mean_percentage_above_threshold = mean(percentage_above_threshold)) %>%
+  dplyr::mutate(threshold = as.character(threshold)) %>%
+  dplyr::inner_join( (name2color %>%
+                        as.data.frame() %>%
+                        dplyr::rename("rgb_col"=".") %>%
+                        tibble::rownames_to_column("type_dataset")),
+                     by=c("type_dataset") ) %>%
+  dplyr::mutate(
+    ss = as.numeric(ss),
+    type_dataset = dplyr::recode(type_dataset, !!!id2name)
+  )
+
+aracne_strong_scores_plot <- aracne_strong_scores_df %>%
+  ggplot(aes(x = ss, y = mean_percentage_above_threshold)) +
+  geom_line(aes(col = rgb_col, linetype = threshold), size = 1) +
+  scale_colour_identity(
+    labels = unique(aracne_strong_scores_df$type_dataset),
+    breaks = unique(aracne_strong_scores_df$rgb_col),
+    guide = "legend"
+  ) +
+  xlab("Num. samples") +
+  ylab("% interactions above threshold") +
+  guides(col=guide_legend(title="Dataset")) +
+  theme_linedraw() +
+  theme(aspect.ratio = 1, 
+        plot.title = element_text(size = 20, face = "bold"), 
+        axis.title = element_text(size = 17, face = "bold"), 
+        axis.text = element_text(size = 16), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        text = element_text(family = font_selected),
+        legend.text = element_text(size = 16), 
+        legend.title=element_text(size=16, face="bold")
+  )
+print(aracne_strong_scores_plot)
+```
+
+```{r plot_genie3_strong_scores}
+genie3_strong_scores_df <- strong_scores_results_df %>%
+  dplyr::filter(method == "genie3") %>%
+  dplyr::group_by(threshold, type_dataset, ss) %>%
+  dplyr::summarize(mean_percentage_above_threshold = mean(percentage_above_threshold)) %>%
+  dplyr::mutate(threshold = as.character(threshold)) %>%
+  dplyr::inner_join( (name2color %>% 
+                        as.data.frame() %>%
+                        dplyr::rename("rgb_col"=".") %>%
+                        tibble::rownames_to_column("type_dataset")),
+                     by=c("type_dataset") ) %>%
+  dplyr::mutate(
+    ss = as.numeric(ss),
+    type_dataset = dplyr::recode(type_dataset, !!!id2name)
+  )
+
+genie3_strong_scores_plot <- genie3_strong_scores_df %>%
+  ggplot(aes(x = ss, y = mean_percentage_above_threshold)) +
+  geom_line(aes(col = rgb_col), size = 1) +
+  scale_colour_identity(
+    labels = unique(genie3_strong_scores_df$type_dataset),
+    breaks = unique(genie3_strong_scores_df$rgb_col),
+    guide = "legend"
+  ) +
+  xlab("Num. samples") +
+  ylab("% interactions above 0.01") +
+  guides(col=guide_legend(title="Dataset")) +
+  theme_linedraw() +
+  theme(aspect.ratio = 1, 
+        plot.title =  element_text(size = 20, face = "bold"), 
+        axis.title = element_text(size = 17, face = "bold"), 
+        axis.text = element_text(size = 16), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        text = element_text(family = font_selected),
+        legend.text = element_text(size = 16), 
+        legend.title=element_text(size=16, face="bold")
+  )
+print(genie3_strong_scores_plot)
+```
+
+```{r plot_all_methods_strong_scores}
+strong_scores_by_method_plots <- list()
+for (i in 1:length(datasets_selected)){
+  type_dataset_sel = datasets_selected[[i]]
+  strong_scores_by_method_df <- strong_scores_results_df %>%
+    dplyr::filter(!((method == "aracne") & (threshold == 0))) %>%
+    dplyr::filter(type_dataset == type_dataset_sel) %>%
+    dplyr::group_by(threshold, method, ss) %>%
+    dplyr::summarize(mean_percentage_above_threshold = mean(percentage_above_threshold)) %>%
+    dplyr::mutate(threshold = as.character(threshold)) %>%
+    dplyr::inner_join( (name2color %>% 
+                        as.data.frame() %>% 
+                        dplyr::rename("rgb_col"=".") %>% 
+                        tibble::rownames_to_column("method")), 
+                      by=c("method") ) %>%
+    dplyr::mutate(
+      ss = as.numeric(ss),
+      method = dplyr::recode(method, !!!id2name)
+    )
+
+  strong_scores_by_method_plots[[type_dataset_sel]] <- strong_scores_by_method_df %>%
+    ggplot(aes(x = ss, y = mean_percentage_above_threshold)) +
+    geom_line(aes(col = rgb_col), size = 1) +
+    scale_colour_identity(
+      labels = unique(strong_scores_by_method_df$method),
+      breaks = unique(strong_scores_by_method_df$rgb_col),
+      guide = "legend"
+    ) +
+    xlab("Num. samples") +
+    ylab("% interactions above threshold") +
+    guides(col=guide_legend(title="Method")) +
+    theme_linedraw() +
+    theme(aspect.ratio = 1, 
+          plot.title =  element_text(size = 20, face = "bold"), 
+          axis.title = element_text(size = 17, face = "bold"), 
+          axis.text = element_text(size = 16), 
+          panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank(),
+          text = element_text(family = font_selected),
+          legend.text = element_text(size = 16), 
+          legend.title=element_text(size=16, face="bold")
+    )
+  print(strong_scores_by_method_plots[[type_dataset_sel]])
+}
+```
+
+
+## Percentage of remaining strong scores in smaller sample sizes
+
+```{r calculate_percentage_remaining_strong_scores}
+perc_remaining_strong_scores_file <- "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/analysis_percentage_remaining_strong_scores_filtered.txt"
+large_sample_columns <- c("120.1", "120.2", "120.3", "120.4", "120.5")
+perc_remaining_strong_scores_df <- data.frame()
+sd_df <- data.frame()
+if (!(file.exists(perc_remaining_strong_scores_file))) {
+  for (method_sel in methods_selected) {
+    threshold_sel <- method_to_thresholds[[method_sel]]
+    for (type_dataset_sel in names(dataset_to_file_names)) {
+
+      # Read filtered networks
+      merged_networks_file <- paste(
+        dataset_to_file_names[[type_dataset_sel]],
+        "_",
+        method_sel,
+        "_combined_filtered_by_threshold_",
+        threshold_sel,
+        ".txt",
+        sep = "")
+  
+      if (file.exists(merged_networks_file)) {
+        # Read networks and filter by strong correlations in the largest sample size
+        networks_df <- data.table::fread(merged_networks_file, header = TRUE) %>%
+          dplyr::filter(dplyr::if_all(large_sample_columns, ~ abs(.) >= abs(threshold_sel)))
+    
+        # Select 100k interactions randomly
+        #networks_df <- networks_df[row.names(networks_df) %in% sample(row.names(networks_df), size=100000, replace=FALSE),] # Check example with less edges
+  
+        cols <- colnames(networks_df)
+        score_cols <- cols[!(cols %in% c("Node.1", "Node.2"))]
+        if (threshold_sel == 0) {
+          remaining_strong_scores_subset_df <- as.data.frame(colSums(abs(networks_df[, ..score_cols]) > threshold_sel) / nrow(networks_df[, ..score_cols]) * 100)
+        } else {
+          remaining_strong_scores_subset_df <- as.data.frame(colSums(abs(networks_df[, ..score_cols]) >= threshold_sel) / nrow(networks_df[, ..score_cols]) * 100)
+        }
+        remaining_strong_scores_subset_df$ss.rep <- row.names(remaining_strong_scores_subset_df)
+        row.names(remaining_strong_scores_subset_df) <- NULL
+        colnames(remaining_strong_scores_subset_df) <- c("percentage_above_threshold", "ss.rep")
+        remaining_strong_scores_subset_df <- remaining_strong_scores_subset_df %>%
+          tidyr::separate("ss.rep", into=c("ss", "rep"), sep="[.]") %>%
+          dplyr::mutate(
+            ss = as.numeric(ss),
+            rep = as.numeric(rep),
+            method = method_sel,
+            threshold = threshold_sel,
+            type_dataset = type_dataset_sel
+          )
+        rm(networks_df)
+  
+        perc_remaining_strong_scores_df <- rbind(
+          perc_remaining_strong_scores_df,
+          remaining_strong_scores_subset_df
+        )
+      } else {
+        print(paste("The following merged networks file does not exist:", merged_networks_file))
+      }
+    }
+  }
+
+  perc_remaining_strong_scores_df %>% data.table::fwrite(perc_remaining_strong_scores_file, sep = "\t")
+
+} else {
+  perc_remaining_strong_scores_df <- data.table::fread(perc_remaining_strong_scores_file, header = TRUE)
+}
+head(perc_remaining_strong_scores_df)
+```
+
+
+```{r percent_remaining_strong_corr_vs_ss}
+remaining_strong_scores_by_method_plots <- list()
+for (i in 1:length(datasets_selected)){
+  type_dataset_sel = datasets_selected[[i]]
+
+  remaining_strong_scores_by_method_df <- perc_remaining_strong_scores_df %>%
+    dplyr::filter(!((method == "aracne") & (threshold == 0))) %>%
+    dplyr::filter(type_dataset == type_dataset_sel) %>%
+    dplyr::group_by(threshold, method, ss) %>%
+    dplyr::summarize(mean_percentage_above_threshold = mean(percentage_above_threshold)) %>%
+    dplyr::mutate(threshold = as.character(threshold)) %>%
+    dplyr::inner_join( (name2color %>%
+                          as.data.frame() %>%
+                          dplyr::rename("rgb_col"=".") %>%
+                          tibble::rownames_to_column("method")),
+                       by=c("method") ) %>%
+    dplyr::mutate(
+      ss = as.numeric(ss),
+      method = dplyr::recode(method, !!!id2name)
+    )
+
+  remaining_strong_scores_by_method_plots[[type_dataset_sel]] <- remaining_strong_scores_by_method_df %>%
+    ggplot(aes(x = ss, y = mean_percentage_above_threshold)) +
+    geom_line(aes(col = rgb_col), size = 1) +
+    scale_colour_identity(
+      labels = unique(strong_scores_by_method_df$method),
+      breaks = unique(strong_scores_by_method_df$rgb_col),
+      guide = "legend"
+    ) +
+    xlab("Num. samples") +
+    ylab("% remaining strong correlations") +
+    guides(col=guide_legend(title="Dataset")) +
+    theme_linedraw() +
+    theme(aspect.ratio = 1, 
+          plot.title =  element_text(size = 20, face = "bold"), 
+          axis.title = element_text(size = 17, face = "bold"), 
+          axis.text = element_text(size = 16), 
+          panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank(),
+          text = element_text(family = font_selected),
+          legend.text = element_text(size = 16), 
+          legend.title=element_text(size=16, face="bold")
+    )
+  print(remaining_strong_scores_by_method_plots[[type_dataset_sel]])
+}
+```
+
+
+## Panel
+
+```{r panel_strong_correlations}
+((significance_strong_corr_plot +
+    labs(tag = 'A') +
+    guides(color = guide_legend(nrow = 2, byrow = TRUE, title = NULL)) +
+    theme(legend.position = "bottom")) +
+  (perc_lost_strong_corr_plot +
+     theme(legend.position = "none") +
+     labs(tag = 'B'))) +
+  (remaining_strong_scores_by_method_plots[["gtex:breast.mammary.tissue_female"]] +
+     labs(tag = 'C') +
+     guides(color = guide_legend(nrow = 2, byrow = TRUE, title = NULL)) +
+     theme(legend.position = "bottom")) &
+  #plot_layout(guides = 'collect') &
+  theme(plot.tag = element_text(face = 'bold', size = 17),
+        plot.tag.position  = c(.01, 1.06),
+        plot.margin = margin(0.6, 0.6, 0.6, 0.6, "cm"))
+
+plot_file = paste(plots_dir, "/strong_correlations_results.png", sep="")
+ggsave(
+  plot_file,
+  dpi = 1200,
+  #width = 12000,
+  width = 20000,
+  height = 6500,
+  units = c("px")
+)
+```

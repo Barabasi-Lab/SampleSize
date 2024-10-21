@@ -26,6 +26,9 @@ options(bitmapType='cairo')
 # Input data
 input_dir <- '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out'
 type_counts = "reads"
+#type_data_selection = 'pearson_aracne'
+#type_data_selection = 'pearson_pval_0.05'
+type_data_selection = 'spearman_pval_0.05'
 
 # Define result dataframes
 cols_topology = c("method", "dataset", "type_dataset", "subclassification", "size", "rep", "threshold", "num_nodes", "num_edges", "av_degree", "av_path_length", "av_clustering_coef", "num_components", "num_lcc_nodes", "num_lcc_edges", "lcc_z", "lcc_pvalue", "max_k", "num_main_core_nodes", "num_main_core_edges")
@@ -49,7 +52,7 @@ for(dataset in c('scipher', 'gtex', 'tcga', 'geo')){
     if (dataset == 'tcga'){
       subclassifications = c('tumor', 'tissue', 'subtype')
     } else if (!(dataset == 'tcga') & isTRUE(geo_data)) {
-      subclassifications = c('disease_inflamed_vs_control')
+      subclassifications = c('disease_inflamed_vs_control', 'inflamed_vs_noninflamed')
     } else {
       subclassifications = c(NA)
     }
@@ -133,7 +136,7 @@ head(edges_pearson_df)
 # Write results
 #output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables'
 output_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data'
-edges_file = paste(output_dir, 'example_pearson_pval_0.05', 'pearson_pval_0.05_num_edges_vs_num_samples.txt', sep='/')
+edges_file = paste(output_dir, '/example_', type_data_selection, '/pearson_pval_0.05_num_edges_vs_num_samples.txt', sep = '')
 edges_pearson_df %>% fwrite(edges_file)
 ```
 
