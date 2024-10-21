@@ -89,10 +89,10 @@ source(coexpression.functions.file)
 #### READ DATASET ####
 
 # Read samples
-subsample = fread(samples_file)[, 1][[1]]
+subsample = data.table::fread(samples_file)[, 1][[1]]
 
 # Read RNAseq dataset (rows = genes, columns = samples)
-rnaseq = fread(rnaseq_file) %>% as.data.frame()
+rnaseq = data.table::fread(rnaseq_file) %>% as.data.frame()
 
 # Subset gene expression dataset by samples in the samples file
 rnaseq = rnaseq[, c(names(rnaseq)[1], subsample)]
@@ -113,28 +113,32 @@ rownames(rnaseq.t) <- colnames(rnaseq)
 #### RUN CO-EXPRESSION ####
 
 if((metric == 'spearman') | (metric == 'pearson')){
-  
-  #calculate_correlation(rnaseq, output_file, cor_method=metric, disparity_filter=TRUE, corr_threshold=NA, pval_threshold=NA)
+
+  rm(rnaseq)  
   calculate_correlation_and_pvalue(rnaseq.t, output_file, cor_method=metric, correction_method=correction_method, disparity_filter=FALSE)
 
 } else if((metric == 'mi') | (metric == 'mutual_information')){
-  
+
+  rm(rnaseq)
   calculate_mutual_information(rnaseq.t, output_file, estimator=mi_estimator)
-  
+
 } else if(metric == 'wgcna'){
-  
+
+  rm(rnaseq)
   calculate_network_WGCNA(rnaseq.t, output_file, type=wgcna_type, power=wgcna_power)
-  
+
 } else if(metric == 'aracne'){
-  
+
+  rm(rnaseq)
   calculate_network_ARACNE(rnaseq.t, output_file, estimator=mi_estimator, eps=aracne_eps)
-  
+
 } else if(metric == 'genie3'){
-  
+
+  rm(rnaseq.t)
   calculate_network_GENIE3(rnaseq, output_file)
 
 } else if(metric == 'wto'){
-  
+
   # Function to calculate network using wTO faster
   prepare_wTO <- function(input, save, scripts.dir, N=100){
     newwTO.file <- paste(scripts.dir, "99_newwTO.R", sep="/")
@@ -144,20 +148,7 @@ if((metric == 'spearman') | (metric == 'pearson')){
     return(wto)
   }
 
-  # Remove transposed matrix to reduce memory
   rm(rnaseq.t)
-
-  # Run wTO fast  
-  #wto = wTO.fast(Data = rnaseq, Overlap = row.names(rnaseq), method = "p",
-  #               sign = "sign", delta = wto_delta, n = wto_n,
-  #               method_resampling = "Bootstrap")
-  #wto %>% fwrite(output_file)
-  
-  # Run wTO faster
   wto = prepare_wTO(input=rnaseq, save=output_file, scripts.dir=scripts.dir, N=wto_n)
-  
+
 }
-
-
-
-
