@@ -4,5 +4,5 @@ samples_folder="/home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/G
 rnaseq_file="/work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Breast.Mammary.Tissue.gct"
 output_folder="/scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Breast.Mammary.Tissue"
 dataset="gtex_Breast.Mammary.Tissue"
-metric="pearson"
-max_size=1000
+metric="genie3"
+max_size=240
