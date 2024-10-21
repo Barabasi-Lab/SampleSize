@@ -237,6 +237,12 @@ This execution is done for all datasets at all sample sizes and repetitions. To 
 scripts/gene_coexpression_networks/create_gene_coexpression_network_from_samples_cluster.py -i <input_dir> -o <output_dir> -r <rnaseq_file> -m <metric>
 ```
 
+Alternatively, to automatize the submission of jobs using job arrays, we used the following script:
+
+```
+parameters_calculate_gene_coexpression_networks_cluster.sh
+```
+
 
 #### Consensus co-expression networks
 
@@ -297,6 +303,12 @@ This execution is done for all datasets at all sample sizes and repetitions. To 
 
 ```
 scripts/gene_coexpression_networks/analyze_gene_coexpression_networks_cluster.py -i <input_dir> -p <ppi_file> -d <disease_genes_file> -e <essential_genes_file> -g <genes_dataset_file> -o <output_analysis_dir> -n <output_networks_dir>
+```
+
+Alternatively, to automatize the submission of jobs using job arrays, we used the following script:
+
+```
+parameters_analyze_gene_coexpression_networks_cluster.sh
 ```
 
 
@@ -470,6 +482,11 @@ To create the figures of the manuscript and supplementary material, plus some ad
 create_figures.Rmd
 ```
 
+For the analysis of strong correlations, we executed the following Rmarkdown notebook:
+
+```
+strong_correlations.Rmd
+```
 
 ## Acknowledgments
 
