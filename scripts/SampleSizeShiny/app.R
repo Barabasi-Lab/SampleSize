@@ -275,46 +275,46 @@ calculate_optimal_N <- function(L, a, b, s, N_guess=c(10000)) {
 # Read numbers and sd data
 data_dir <- "data"
 numbers_file <- paste(data_dir, "dataset_numbers_complete_graph.txt", sep = "/")
-numbers_df <- fread(numbers_file)
+numbers_df <- data.table::fread(numbers_file)
 numbers_df$dataset <- tolower(numbers_df$dataset)
 meta_file <- paste(data_dir, "metadata_summary.txt", sep = "/")
-meta_df <- fread(meta_file)
+meta_df <- data.table::fread(meta_file)
 sd_genes_file <- paste(data_dir, "variation_by_gene.txt", sep = "/") # from => calculate_rnaseq_datasets_variation.Rmd
-sd_genes_df <- fread(sd_genes_file)
+sd_genes_df <- data.table::fread(sd_genes_file)
 
 # Read unnormalized data
 input_dir <- file.path(data_dir, "example_pearson_pval_0.05")
 topology_results_file <- paste(input_dir, "topology_results_pearson_pval_0.05.txt", sep = "/")
-results_selected_df <- fread(topology_results_file)
+results_selected_df <- data.table::fread(topology_results_file) %>% mutate(dataset = tolower(dataset))
 dataset_to_type_df <- results_selected_df %>% dplyr::select(dataset, type_dataset) %>% unique()
 gtex_datasets <- results_selected_df %>% filter(dataset == "gtex") %>% pull(type_dataset) %>% unique() # Get GTEx datasets
 tcga_datasets <- results_selected_df %>% filter(dataset == "tcga") %>% pull(type_dataset) %>% unique() # Get TCGA datasets
 scipher_datasets <- results_selected_df %>% filter(dataset == "scipher") %>% pull(type_dataset) %>% unique() # Get scipher datasets
 topology_results_by_size_file <- paste(input_dir, "topology_results_mean_pearson_pval_0.05.txt", sep = "/")
-topology_results_selected_by_size_df <- fread(topology_results_by_size_file)
+topology_results_selected_by_size_df <- data.table::fread(topology_results_by_size_file)
 predictions_file <- paste(input_dir, "predictions_pearson_pval_0.05.txt", sep='/')
-predicted_results_df <- fread(predictions_file)
+predicted_results_df <- data.table::fread(predictions_file)
 analytical_results_file <- paste(input_dir, "analytical_model_results_pearson_pval_0.05.txt", sep = "/")
-topology_results_selected_analytical_df <- fread(analytical_results_file)
+topology_results_selected_analytical_df <- data.table::fread(analytical_results_file)
 analytical_summary_file <- paste(input_dir, 'analytical_model_summary_pearson_pval_0.05.txt', sep = "/")
-analytical_model_summary_df <- fread(analytical_summary_file)
+analytical_model_summary_df <- data.table::fread(analytical_summary_file)
 analytical_regression_results_file <- paste(input_dir, 'analytical_model_regression_results_pearson_pval_0.05.txt', sep = "/")
-stretched_exponential_regression_df <- fread(analytical_regression_results_file)
+stretched_exponential_regression_df <- data.table::fread(analytical_regression_results_file)
 theoretical_sample_size_file <- paste(input_dir, 'theoretical_sample_size_for_correlations_of_datasets.txt', sep = "/") # from => calculate_convergence_correlation_types.Rmd
-sample_size_correlation_df <- fread(theoretical_sample_size_file)
+sample_size_correlation_df <- data.table::fread(theoretical_sample_size_file)
 a_vs_fraction_corr_file <- paste(input_dir, "a_vs_fraction_sig_correlations_pearson_pval_0.05.txt", sep = "/") # from => create_figures.Rmd, copy from data/out/tables
-a_vs_fraction_corr_df <- fread(a_vs_fraction_corr_file)
+a_vs_fraction_corr_df <- data.table::fread(a_vs_fraction_corr_file)
 
 # Read normalized data
 topology_type_normalization <- "divide.L"
 topology_results_file <- paste(input_dir, "/", "topology_results_norm_", topology_type_normalization, "_pearson_pval_0.05.txt", sep = "")
-results_selected_norm_df <- fread(topology_results_file)
+results_selected_norm_df <- data.table::fread(topology_results_file)
 topology_results_by_size_file <- paste(input_dir, "/", 'topology_results_mean_norm_', topology_type_normalization, '_pearson_pval_0.05.txt', sep = "")
-topology_results_selected_by_size_norm_df <- fread(topology_results_by_size_file)
+topology_results_selected_by_size_norm_df <- data.table::fread(topology_results_by_size_file)
 predictions_file <- paste(input_dir, "/", 'predictions_', topology_type_normalization, '_pearson_pval_0.05.txt', sep = "")
-predicted_results_norm_df <- fread(predictions_file)
+predicted_results_norm_df <- data.table::fread(predictions_file)
 analytical_results_file <- paste(input_dir, "/", 'analytical_model_results_', topology_type_normalization, '_pearson_pval_0.05.txt', sep = "")
-topology_results_selected_analytical_norm_df <- fread(analytical_results_file)
+topology_results_selected_analytical_norm_df <- data.table::fread(analytical_results_file)
 
 # Create dictionary of dataset names
 name_dict <- c(
@@ -373,6 +373,11 @@ color_dict <- c(
   "gtex:breast.mammary.tissue_female" = "#00BA37",
   "gse193677" = "#E032EC",
   "GSE193677" = "#E032EC",
+  "gse193677:rectum_uc_inflamed" = "#E032EC",
+  "gse193677:rectum_cd_inflamed" = "#E032EC",
+  "gse193677:rectum_control_noninflamed" = "#E032EC",
+  "gse193677:rectum_inflamed" = "#E032EC",
+  "gse193677:rectum_noninflamed" = "#E032EC",
   "UC inflamed" = "#E032EC",
   "R. arthritis" = "#D55E00", #E69F00
   "R. arthritis (all samples)" = "#D55E00", #E69F00
@@ -592,7 +597,8 @@ figure_summary_table <- scaling_relation_summary_df %>%
 sd_cut <- 10
 mean_cut <- 10
 cv_cut <- 50
-sd_genes_summary_df = sd_genes_df %>% 
+type_counts_selected <- "reads"
+sd_genes_summary_df <- sd_genes_df %>% 
   filter(type_counts == type_counts_selected) %>% 
   group_by(dataset, 
            type_dataset, 
