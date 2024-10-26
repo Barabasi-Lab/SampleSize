@@ -284,6 +284,7 @@ sd_genes_df <- data.table::fread(sd_genes_file)
 
 # Read unnormalized data
 input_dir <- file.path(data_dir, "example_pearson_pval_0.05")
+discarded_datasets <- c("scipher:scipher.complete.dataset", "gtex:breast.mammary.tissue")
 topology_results_file <- paste(input_dir, "topology_results_pearson_pval_0.05.txt", sep = "/")
 results_selected_df <- data.table::fread(topology_results_file) %>% mutate(dataset = tolower(dataset))
 dataset_to_type_df <- results_selected_df %>% dplyr::select(dataset, type_dataset) %>% unique()
@@ -303,7 +304,8 @@ stretched_exponential_regression_df <- data.table::fread(analytical_regression_r
 theoretical_sample_size_file <- paste(input_dir, 'theoretical_sample_size_for_correlations_of_datasets.txt', sep = "/") # from => calculate_convergence_correlation_types.Rmd
 sample_size_correlation_df <- data.table::fread(theoretical_sample_size_file)
 a_vs_fraction_corr_file <- paste(input_dir, "a_vs_fraction_sig_correlations_pearson_pval_0.05.txt", sep = "/") # from => create_figures.Rmd, copy from data/out/tables
-a_vs_fraction_corr_df <- data.table::fread(a_vs_fraction_corr_file)
+a_vs_fraction_corr_df <- data.table::fread(a_vs_fraction_corr_file) %>%
+  dplyr::filter(!(type_dataset %in% discarded_datasets))
 
 # Read normalized data
 topology_type_normalization <- "divide.L"
@@ -325,7 +327,7 @@ name_dict <- c(
   "gtex:whole.blood" = "GTEx: Whole blood",
   "gtex:lung" = "GTEx: Lung",
   "gtex:breast.mammary.tissue" = "GTEx: Breast",
-  "gtex:breast.mammary.tissue_female" = "GTEx: Breast (Female)",
+  "gtex:breast.mammary.tissue_female" = "GTEx: Breast",
   "gtex:skin.sun.exposed.lower.leg" = "GTEx: Skin",
   "gtex:thyroid" = "GTEx: Thyroid",
   "tcga:brca.luma" = "TCGA: Breast cancer (Luminal A)",
