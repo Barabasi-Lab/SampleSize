@@ -593,6 +593,33 @@ figure_summary_table <- scaling_relation_summary_df %>%
   dplyr::select("dataset", "type_dataset", "R**2 (scaling)", "alpha (model)", "R**2 (model)", "epsilon (model)", "R**2 (Log)", "epsilon (Log)") %>%
   arrange(dataset, type_dataset)
 
+# Correct gse from sd_genes_df
+sd_genes_gse <- sd_genes_df %>%
+  filter(dataset == "gse193677") %>%
+  dplyr::select(-type_dataset) %>%
+  slice(rep(1, 5)) %>%
+  mutate(
+    type_dataset = (a_vs_fraction_corr_df %>% filter(dataset == "gse193677") %>% pull(type_dataset) %>% unique()),
+    dataset_name = (a_vs_fraction_corr_df %>% filter(dataset == "gse193677") %>% pull(dataset_name) %>% unique())
+  )
+
+# Correct type_dataset from sd_genes_df
+sd_genes_df <- sd_genes_df %>%
+  dplyr::select(-type_dataset) %>%
+  dplyr::left_join(
+    (a_vs_fraction_corr_df %>%
+       dplyr::select(type_dataset, dataset_name) %>%
+       unique()),
+    by = "dataset_name"
+  ) %>%
+  dplyr::mutate(
+    type_dataset = ifelse(
+      dataset == "gse193677",
+      "gse193677",
+      type_dataset
+    )
+  )
+
 # Calculate number of genes above certain SD, mean and CV cut-offs
 sd_cut <- 10
 mean_cut <- 10
@@ -617,7 +644,7 @@ sd_genes_summary_df <- sd_genes_df %>%
 
 sd_genes_summary_gse <- sd_genes_summary_df %>%
   filter(dataset == "gse193677") %>%
-  dplyr::select(-type_dataset, dataset_name) %>%
+  dplyr::select(-type_dataset) %>%
   slice(rep(1, 5)) %>%
   mutate(
     type_dataset = (a_vs_fraction_corr_df %>% filter(dataset == "gse193677") %>% pull(type_dataset) %>% unique()),
@@ -627,6 +654,7 @@ sd_genes_summary_gse <- sd_genes_summary_df %>%
 sd_genes_summary_df <- sd_genes_summary_df %>%
   filter(!(dataset == "gse193677")) %>%
   bind_rows(sd_genes_summary_gse)
+rm(sd_genes_summary_gse)
 
 sd_genes_vs_a_df <- sd_genes_summary_df %>%
   inner_join((a_vs_fraction_corr_df %>% select(-type_dataset, -sex, -subclassification)), 
@@ -800,7 +828,9 @@ server <- function(input, output, session) {
     # Filter sd / cv / mean gene expression vs. a table by dataset
     variance_metric <- switch(input$plot_type,
                               "SD vs. rate" = "sd",
+                              "SD" = "sd",
                               "Mean vs. rate" = "mean",
+                              "Mean" = "mean",
                               "cv")
     variance_metric_cut <- switch(input$plot_type,
                                   "SD vs. rate" = sd_cut,
@@ -852,6 +882,27 @@ server <- function(input, output, session) {
       "\ncorr. =",
       round(sd_genes_vs_a_cor, 3)
     )
+
+    # Filter gene expression SD
+    if ("gse193677" %in% unique(sd_genes_df$dataset)) {
+      selected_dataset_types <- c(selected_dataset_types, "gse193677")
+    }
+    sd_genes_filt <- sd_genes_df %>%
+      filter(
+        (dataset %in% input$dataset_input) &
+          (type_dataset %in% selected_dataset_types)
+      ) %>%
+      # Include color codes for each dataset
+      left_join(
+        (color_dict %>%
+           as.data.frame() %>%
+           dplyr::rename("rgb_col" = ".") %>%
+           tibble::rownames_to_column("type_dataset")
+        ), by = c("type_dataset")
+      ) %>%
+      # Rename dataset and type_dataset to human readable names
+      mutate(type_dataset = dplyr::recode(type_dataset, !!!name_dict),
+             dataset = dplyr::recode(dataset, !!!name_dict))
 
     # Filter sample size vs. a table by dataset
     type_correlation_selected <- "weak"
@@ -905,6 +956,7 @@ server <- function(input, output, session) {
     # Initialize the plot variable as NULL
     scaling_plot <- NULL
     discovery_rate_plot <- NULL
+    gene_expression_plot <- NULL
 
     if (input$plot_type == "Corr. vs. size") {
 
@@ -1169,6 +1221,38 @@ server <- function(input, output, session) {
         )
       
     } else if (input$power_law_tabset == "Gene expression distributions") {
+  
+      parameter_to_label <- list("sd" = "SD", "mean" = "mean", "cv" = "CV")
+      gene_expression_plot <- sd_genes_filt %>%
+        ggplot(aes(.data[[variance_metric]], color = type_dataset)) +
+        geom_freqpoly(size=1.5) +
+        scale_color_manual(
+          guide = "legend",
+          values = setNames(sd_genes_filt$rgb_col, sd_genes_filt$type_dataset)
+        ) +
+        scale_x_log10() + 
+        scale_y_log10() + 
+        labs(x = paste("Gene expression ", 
+                       parameter_to_label[[variance_metric]], 
+                       " (Log)", sep=""), 
+             y = "Number of genes (Log)") +
+        theme_linedraw() + 
+        guides(col = guide_legend(title = "Dataset")) +
+        theme(
+          aspect.ratio = 1,
+          plot.title =  element_text(size = 20, face = "bold"),
+          axis.title = element_text(size = 17, face = "bold"),
+          axis.text = element_text(size = 16),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          text = element_text(family = "Helvetica"),
+          legend.text = element_text(size = 16),
+          legend.title = element_text(size = 16, face = "bold"),
+          legend.background = element_rect(
+            fill = "transparent",
+            color = "transparent"
+          )
+        )
 
     }
 
@@ -1176,7 +1260,8 @@ server <- function(input, output, session) {
       list(
         "summary_table" = figure_summary_table_filt,
         "scaling_plot" = scaling_plot,
-        "discovery_rate_plot" = discovery_rate_plot
+        "discovery_rate_plot" = discovery_rate_plot,
+        "gene_expression_plot" = gene_expression_plot
       )
     )
   })
@@ -1193,7 +1278,7 @@ server <- function(input, output, session) {
   last_plot_type <- reactiveValues(
     discovery = "Corr. vs. rate",
     scaling = "Corr. vs. size",
-    gene_expression = "CV"
+    gene_expression = "SD"
   )
 
   # Update 'last_plot_type' whenever 'plot_type' changes
@@ -1213,14 +1298,14 @@ server <- function(input, output, session) {
       updateSelectInput(
         session,
         "plot_type",
-        choices = c("Corr. vs. rate", "CV vs. rate", "SD vs. rate", "Mean vs. rate", "Rate vs. size"),
+        choices = c("Corr. vs. rate", "SD vs. rate", "CV vs. rate", "Mean vs. rate", "Rate vs. size"),
         selected = last_plot_type$discovery
       )
     } else if (input$power_law_tabset == "Gene expression distributions") {
       updateSelectInput(
         session,
         "plot_type",
-        choices = c("CV", "SD", "Mean"),
+        choices = c("SD", "CV", "Mean"),
         selected = last_plot_type$gene_expression
       )
     } else {
