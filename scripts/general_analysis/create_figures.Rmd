@@ -935,9 +935,11 @@ for (dataset_selected in datasets_selected){
     mutate(Fn = ((S - S_lag1) / S_lag1)) %>%
     filter((!(is.infinite(Fn))) & (Fn > 0))
   pl_summary = summary(lm(log(scaling_relation_comp$Fn)~log(scaling_relation_comp$size)))
-  pl_pred = exp(log(scaling_relation_comp$size) * coef(pl_summary)[2] + coef(pl_summary)[1])
-  ed_summary = summary(lm(scaling_relation_comp$Fn~scaling_relation_comp$size))
-  ed_pred = scaling_relation_comp$size * coef(ed_summary)[2] + coef(ed_summary)[1]
+  #pl_pred = exp(log(scaling_relation_comp$size) * coef(pl_summary)[2] + coef(pl_summary)[1])
+  pl_pred = exp(coef(pl_summary)[1]) * scaling_relation_comp$size**(coef(pl_summary)[2])
+  ed_summary = summary(lm(log(scaling_relation_comp$Fn)~scaling_relation_comp$size))
+  #ed_pred = scaling_relation_comp$size * coef(ed_summary)[2] + coef(ed_summary)[1]
+  ed_pred = exp(coef(ed_summary)[1]) * exp(coef(ed_summary)[2] * scaling_relation_comp$size)
   scaling_relation_comparison_df = rbind(scaling_relation_comparison_df, 
                                            cbind(scaling_relation_comp, 
                                                  data.frame(model = "Power law",
