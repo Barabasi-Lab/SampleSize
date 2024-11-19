@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 Create figures for the manuscript, extended abstract and poster.
 
 ```{r}
-packrat::init("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR")
+#packrat::init("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR")
 ```
 
 ```{r}
@@ -108,6 +108,7 @@ name2color <- c(
   "Power law"="#cc68f7",
   "Logarithm"="#09b863",
   "Exponential decay"="#09b863",
+  "Constant discovery"="grey",
   "\u2265 0.2" = "#F8766D",
   "\u2265 0.4" = "#7CAE00",
   "\u2265 0.6" = "#00BFC4",
@@ -934,12 +935,23 @@ for (dataset_selected in datasets_selected){
     mutate(S_lag1 = if_else(size == min(size), 0, lag(S))) %>%
     mutate(Fn = ((S - S_lag1) / S_lag1)) %>%
     filter((!(is.infinite(Fn))) & (Fn > 0))
+
+  # Calculate power law
   pl_summary = summary(lm(log(scaling_relation_comp$Fn)~log(scaling_relation_comp$size)))
-  #pl_pred = exp(log(scaling_relation_comp$size) * coef(pl_summary)[2] + coef(pl_summary)[1])
   pl_pred = exp(coef(pl_summary)[1]) * scaling_relation_comp$size**(coef(pl_summary)[2])
+
+  # Calculate exponential decay
   ed_summary = summary(lm(log(scaling_relation_comp$Fn)~scaling_relation_comp$size))
-  #ed_pred = scaling_relation_comp$size * coef(ed_summary)[2] + coef(ed_summary)[1]
   ed_pred = exp(coef(ed_summary)[1]) * exp(coef(ed_summary)[2] * scaling_relation_comp$size)
+
+  # Calculate constant discovery
+  constant_discovery = rep(mean(scaling_relation_comp$Fn), length(scaling_relation_comp$size))
+  #constant_discovery = rep(mean((scaling_relation_comp %>% dplyr::filter(size >= 120))$Fn), length(scaling_relation_comp$size))
+  SS_res <- sum((scaling_relation_comp$Fn - constant_discovery)^2)
+  mean_y <- mean(scaling_relation_comp$Fn)
+  SS_tot <- sum((scaling_relation_comp$Fn - mean_y)^2)
+  R_squared <- 1 - (SS_res / SS_tot)
+
   scaling_relation_comparison_df = rbind(scaling_relation_comparison_df, 
                                            cbind(scaling_relation_comp, 
                                                  data.frame(model = "Power law",
@@ -947,13 +959,20 @@ for (dataset_selected in datasets_selected){
                                                  data.frame(slope = coef(pl_summary)[2], 
                                                             intercept = coef(pl_summary)[1], 
                                                             adj.r.squared = pl_summary$adj.r.squared)))
-  scaling_relation_comparison_df = rbind(scaling_relation_comparison_df, 
+  scaling_relation_comparison_df = rbind(scaling_relation_comparison_df,
                                            cbind(scaling_relation_comp, 
                                                  data.frame(model = "Exponential decay",
                                                             model_result = ed_pred),
                                                  data.frame(slope = coef(ed_summary)[2], 
                                                             intercept = coef(ed_summary)[1], 
                                                             adj.r.squared = ed_summary$adj.r.squared)))
+  scaling_relation_comparison_df = rbind(scaling_relation_comparison_df,
+                                           cbind(scaling_relation_comp, 
+                                                 data.frame(model = "Constant discovery",
+                                                            model_result = constant_discovery),
+                                                 data.frame(slope = 0, 
+                                                            intercept = constant_discovery[1], 
+                                                            adj.r.squared = R_squared)))
 }
 
 # Process results
@@ -973,25 +992,28 @@ scaling_relation_comparison_df = scaling_relation_comparison_df %>%
                  tibble::rownames_to_column("model")), 
               by=c("model") )
 
-scaling_relation_comparison_df$r2labels = 
-  ifelse(scaling_relation_comparison_df$model == "Power law", 
-         paste("Power law: ", 
-               unique((scaling_relation_comparison_df %>% 
-                         filter(model == "Power law"))$adj.r.squared), 
-               sep=""), 
-         ifelse(scaling_relation_comparison_df$model == "Exponential decay", 
-                paste("Exp. decay: ", 
-                      unique((scaling_relation_comparison_df %>% 
-                                filter(model == "Exponential decay"))$adj.r.squared), 
-                      sep=""), 
-                ""))
+scaling_relation_comparison_df <- scaling_relation_comparison_df %>%
+  dplyr::mutate(
+    r2labels = dplyr::case_when(
+      model == "Power law" ~ paste("Power law: ", unique((scaling_relation_comparison_df %>% filter(model == "Power law"))$adj.r.squared), sep = ""),
+      model == "Exponential decay" ~ paste("Exp. decay: ", unique((scaling_relation_comparison_df %>% filter(model == "Exponential decay"))$adj.r.squared), sep = ""),
+      model == "Constant discovery" ~ paste("Constant: ", unique((scaling_relation_comparison_df %>% filter(model == "Constant discovery"))$adj.r.squared), sep = ""),
+      TRUE ~ ""
+    )
+  )
 
 # Plot with labels
 scaling_relation_plot_comparison = scaling_relation_comparison_df %>%
-  ggplot(aes(x=size, y=Fn)) +
-  geom_point(alpha=0.9, size=3, col="#0072B2") +
-  #geom_abline(aes(intercept=intercept, slope=slope, col=model), size=1) +
-  geom_line(aes(x= size, y=model_result, col=r2labels), size=1) +
+  ggplot(aes(x = size, y = Fn)) +
+  geom_point(alpha = 0.9, size = 3, col = "#0072B2") +
+  geom_line(
+    aes(
+      x = size,
+      y = model_result,
+      col = r2labels
+    ),
+    size = 1
+  ) +
   theme_linedraw() +
   xlab("n") +
   ylab(bquote(bold((S[n]-S[n-1])/S[n-1]))) +
