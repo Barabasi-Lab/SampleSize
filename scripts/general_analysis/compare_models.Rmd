@@ -14,8 +14,18 @@ library(data.table)
 library(dplyr)
 ```
 
+Define parameters:
+
 ```{r}
-test_df <- data.table::fread("/home/j.aguirreplans/comparison_power_law.txt")
+dataset_selected <- "tcga:tcga-brca_female"
+y_column <- "num_edges"
+```
+
+Read the dataset:
+
+```{r}
+topology_results_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/example_pearson_pval_0.05/topology_results_norm_divide.L_pearson_pval_0.05.txt"
+test_df <- data.table::fread(topology_results_file)
 test_df <- test_df %>% dplyr::filter(type_dataset == "tcga:tcga-brca_female")
 head(test_df)
 ```
