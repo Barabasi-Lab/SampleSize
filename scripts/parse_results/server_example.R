@@ -153,27 +153,42 @@ get_square_root_tendency = function(results_dataframe, y_parameter, x_parameter)
 #'  
 get_exponential_decay_tendency = function(results_dataframe, y_parameter, x_parameter, L){
   # Calculate mean of repetitions from same sample size
-  results_dataframe_mean = results_dataframe %>% 
+  results_dataframe_mean <- results_dataframe %>% 
     arrange(get(x_parameter), rep) %>%
     group_by(get(x_parameter)) %>%
     summarise_at(vars(all_of(y_parameter)), list(mean=mean, median=median, sd=sd)) %>%
     rename(!!x_parameter := "get(x_parameter)") %>%
     ungroup()
   # Calculate difference between consecutive sizes and y_parameter
-  diff_n = diff(results_dataframe_mean[[x_parameter]])
-  diff_s = diff(results_dataframe_mean$mean)
+  diff_n <- diff(results_dataframe_mean[[x_parameter]])
+  diff_s <- diff(results_dataframe_mean$mean)
   # Calculate gradient = ratio between difference of y_parameter and size
-  grad = 1/(diff_n/diff_s)
+  grad <- 1 / (diff_n / diff_s)
   # Calculate normalized gradient dividing it by size (starting from 2nd position)
-  frac_grad = grad/results_dataframe_mean$mean[2:length(results_dataframe_mean$mean)]
+  frac_grad <- grad / results_dataframe_mean$mean[2:length(results_dataframe_mean$mean)]
   # Check which factions are negative so that we ignore them. 
   # Why? Because some consecutive differences might give negative values! 
   # This does not make sense in theory, and as the number of situations like this is very small, we ignore it.
-  boo=frac_grad>0
+  boo <- frac_grad > 0
   # Calculate polynomial equation = gradient vs. sample size (starting from 2nd position) (removing negatives)
-  lm_summary = summary(lm(frac_grad[boo]~results_dataframe_mean[[x_parameter]][2:length(results_dataframe_mean[[x_parameter]])][boo]))
-  used_data = data.frame(y=frac_grad[boo], x=results_dataframe_mean[[x_parameter]][2:length(results_dataframe_mean[[x_parameter]])][boo])
-  return(list(lm_summary=lm_summary, used_data=used_data, slope=coef(lm_summary)[2], intercept=coef(lm_summary)[1], a=coef(lm_summary)[2], b=coef(lm_summary)[1], L=L, adj.r.squared=lm_summary$adj.r.squared))
+  lm_summary <- summary(
+    lm(log(frac_grad[boo]) ~ results_dataframe_mean[[x_parameter]][2:length(results_dataframe_mean[[x_parameter]])][boo])
+  )
+  used_data <- data.frame(
+    y = log(frac_grad[boo]),
+    x = results_dataframe_mean[[x_parameter]][2:length(results_dataframe_mean[[x_parameter]])][boo]
+  )
+
+  return(list(
+    lm_summary = lm_summary,
+    used_data = used_data,
+    slope = coef(lm_summary)[2],
+    intercept = coef(lm_summary)[1],
+    a = coef(lm_summary)[2],
+    b = coef(lm_summary)[1],
+    L = L,
+    adj.r.squared = lm_summary$adj.r.squared
+  ))
 }
 
 #'  get_gaussian_tendency
@@ -213,29 +228,41 @@ get_gaussian_tendency = function(results_dataframe, y_parameter, x_parameter){
 #'  @param y_parameter Parameter of the Y axis.
 #'  @param x_parameter Parameter of the X axis.
 #'  
-calculate_stretched_exponential_model_without_L = function(results_dataframe, y_parameter, x_parameter){
+calculate_stretched_exponential_model_without_L <- function(results_dataframe, y_parameter, x_parameter){
   # Calculate mean of repetitions from same sample size
-  results_dataframe_mean = results_dataframe %>% 
+  results_dataframe_mean <- results_dataframe %>% 
     arrange(get(x_parameter), rep) %>%
     group_by(get(x_parameter)) %>%
     summarise_at(vars(all_of(y_parameter)), list(mean=mean, median=median, sd=sd)) %>%
     rename(!!x_parameter := "get(x_parameter)") %>%
     ungroup()
   # Calculate difference between consecutive sizes and y_parameter
-  diff_n = diff(results_dataframe_mean[[x_parameter]])
-  diff_s = diff(results_dataframe_mean$mean)
+  diff_n <- diff(results_dataframe_mean[[x_parameter]])
+  diff_s <- diff(results_dataframe_mean$mean)
   # Calculate gradient = ratio between difference of y_parameter and size
-  grad = 1/(diff_n/diff_s)
+  grad <- 1 / (diff_n / diff_s)
   # Calculate normalized gradient dividing it by size (starting from 2nd position)
-  frac_grad = grad/results_dataframe_mean$mean[2:length(results_dataframe_mean$mean)]
+  frac_grad <- grad / results_dataframe_mean$mean[2:length(results_dataframe_mean$mean)]
   # Check which factions are negative so that we ignore them. 
   # Why? Because some consecutive differences might give negative values! 
   # This does not make sense in theory, and as the number of situations like this is very small, we ignore it.
-  boo=frac_grad>0
+  boo <- frac_grad > 0
   # Calculate polynomial equation = logarithm of the gradient vs. logarithm of sample size (starting from 2nd position) (removing negatives)
-  lm_summary = summary(lm(log(frac_grad[boo])~log(results_dataframe_mean[[x_parameter]][2:length(results_dataframe_mean[[x_parameter]])][boo])))
-  used_data = data.frame(y=log(frac_grad[boo]), x=log(results_dataframe_mean[[x_parameter]][2:length(results_dataframe_mean[[x_parameter]])][boo]))
-  return(list(lm_summary=lm_summary, used_data=used_data, slope=coef(lm_summary)[2], intercept=coef(lm_summary)[1], a=coef(lm_summary)[2], b=coef(lm_summary)[1], L=NaN, adj.r.squared=lm_summary$adj.r.squared))
+  lm_summary <- summary(lm(log(frac_grad[boo]) ~ log(results_dataframe_mean[[x_parameter]][2:length(results_dataframe_mean[[x_parameter]])][boo])))
+  used_data <- data.frame(
+    y = log(frac_grad[boo]),
+    x = log(results_dataframe_mean[[x_parameter]][2:length(results_dataframe_mean[[x_parameter]])][boo])
+  )
+  return(list(
+    lm_summary = lm_summary,
+    used_data = used_data,
+    slope = coef(lm_summary)[2],
+    intercept = coef(lm_summary)[1],
+    a = coef(lm_summary)[2],
+    b = coef(lm_summary)[1],
+    L = NaN,
+    adj.r.squared = lm_summary$adj.r.squared
+  ))
 }
 
 #'  calculate_predictions_using_stretched_exponential_model_without_L
@@ -245,9 +272,9 @@ calculate_stretched_exponential_model_without_L = function(results_dataframe, y_
 #'  @param a
 #'  @param b
 #'  
-calculate_predictions_using_stretched_exponential_model_without_L = function(x, a, b){
-  y = (exp( (exp(b) * x**(1 + a) ) / (1 + a) ))
-  y=y/max(y) # Normalize y vector
+calculate_predictions_using_stretched_exponential_model_without_L <- function(x, a, b){
+  y <- (exp( (exp(b) * x**(1 + a) ) / (1 + a) ))
+  y <- y / max(y) # Normalize y vector
   return(y)
 }
 
@@ -258,26 +285,26 @@ calculate_predictions_using_stretched_exponential_model_without_L = function(x, 
 #'  @param x_parameter Parameter of the X axis.
 #'  @param L Value of L.
 #'  
-calculate_stretched_exponential_model_by_linear_fit = function(results_dataframe, y_parameter, x_parameter, L){
+calculate_stretched_exponential_model_by_linear_fit <- function(results_dataframe, y_parameter, x_parameter, L){
   # Calculate mean of repetitions from same sample size
-  results_dataframe_mean = results_dataframe %>% 
+  results_dataframe_mean <- results_dataframe %>% 
     arrange(get(x_parameter), rep) %>%
     group_by(get(x_parameter)) %>%
     summarise_at(vars(all_of(y_parameter)), list(mean=mean, median=median, sd=sd)) %>%
     rename(!!x_parameter := "get(x_parameter)") %>%
     ungroup()
   # Define s and N
-  s = results_dataframe_mean$mean / max(results_dataframe_mean$mean)
-  N = results_dataframe_mean$size
+  s <- results_dataframe_mean$mean / max(results_dataframe_mean$mean)
+  N <- results_dataframe_mean$size
   # Calculate ln(L)-ln(s)
-  s_rec = log(L) - log(s)
+  s_rec <- log(L) - log(s)
   # Calculate linear regression between ln(L)-ln(s) and ln(N)
-  lm_summary = summary(lm(log(s_rec)~log(N)))
+  lm_summary <- summary(lm(log(s_rec)~log(N)))
   # Calculate alpha and b
-  a = 1-coef(lm_summary)[2]
-  b = exp((coef(lm_summary)[1] + log(a-1)))
+  a <- 1 - coef(lm_summary)[2]
+  b <- exp((coef(lm_summary)[1] + log(a-1)))
   # This is the data used to obtain the final model
-  used_data = data.frame(y=log(s_rec), x=log(N))
+  used_data <- data.frame(y = log(s_rec), x = log(N))
   #return(list(lm_summary=lm_summary, used_data=used_data, a=coef(lm_summary)[2], b=coef(lm_summary)[1], L=L, adj.r.squared=lm_summary$adj.r.squared))
   return(list(lm_summary=lm_summary, used_data=used_data, slope=coef(lm_summary)[2], intercept=coef(lm_summary)[1], a=a, b=b, L=L, adj.r.squared=lm_summary$adj.r.squared))
 }
