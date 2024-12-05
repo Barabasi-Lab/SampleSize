@@ -3544,6 +3544,101 @@ ggsave(
 )
 ```
 
+Here I am trying a test to modify the previous plot:
+
+```{r}
+violinplot_ppi_coexpression_by_types_nozero = coexpression_pairs_filt %>%
+  select(-distances_ppi, -distances_nci, -nci, -random_not_ppi, -random_far_not_nci) %>%
+  pivot_longer(c("ppi", "random_far_not_ppi"), names_to = "category", values_to = "category_bool") %>%
+  filter(category_bool == TRUE) %>%
+  select(-category_bool) %>%
+  pivot_longer(as.character(sizes_selected), names_to = "size", values_to = "correlation", names_transform = list(size = as.character), values_transform = list(correlation = as.numeric)) %>%
+  filter(size %in% sizes_selected_comparison_plot) %>%
+  filter(!(is.na(correlation))) %>%
+  filter(abs(correlation) > 0 ) %>% 
+  mutate(category = replace(category, category == "ppi", "PPI")) %>%
+  mutate(category = replace(category, category == "random_far_not_ppi", "Distance > 4")) %>%
+  mutate(category = factor(category, levels = c("PPI", "Distance > 4"))) %>%
+  ggplot() +
+  aes(x = reorder(size, as.numeric(size)),
+      y = abs(correlation),
+      fill = category,
+      colour = category) +
+  geom_violin(alpha = 0.8) +
+  scale_fill_manual(values = colors_defined_filt) +
+  scale_color_manual(values = colors_defined_filt) +
+  theme_linedraw() +
+  theme(aspect.ratio=1,
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16),
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(size = 16), 
+        legend.title=element_text(size=16, face="bold"),
+        text = element_text(family = font_selected)) +
+  labs (x = "Number of samples",
+        y = "Absolute co-expression weight",
+        color = "",
+        fill = ""); violinplot_ppi_coexpression_by_types_nozero
+```
+
+Here another test:
+
+```{r}
+violinplot_ppi_coexpression_by_types_nozero = coexpression_pairs_filt %>%
+  select(-distances_ppi, -distances_nci, -nci, -random_not_ppi, -random_far_not_nci) %>%
+  pivot_longer(c("ppi", "random_far_not_ppi"), names_to = "category", values_to = "category_bool") %>%
+  filter(category_bool == TRUE) %>%
+  select(-category_bool) %>%
+  pivot_longer(as.character(sizes_selected), names_to = "size", values_to = "correlation", names_transform = list(size = as.character), values_transform = list(correlation = as.numeric)) %>%
+  filter(size %in% sizes_selected_comparison_plot) %>%
+  filter(!(is.na(correlation))) %>%
+  filter(abs(correlation) > 0 ) %>% 
+  mutate(category = replace(category, category == "ppi", "PPI")) %>%
+  mutate(category = replace(category, category == "random_far_not_ppi", "Distance > 4")) %>%
+  mutate(category = factor(category, levels = c("PPI", "Distance > 4"))) %>%
+  ggplot() +
+  aes(x = reorder(size, as.numeric(size)),
+      y = correlation,
+      fill = category,
+      colour = category) +
+  geom_violin(alpha = 0.8) +
+  scale_fill_manual(values = colors_defined_filt) +
+  scale_color_manual(values = colors_defined_filt) +
+  theme_linedraw() +
+  theme(aspect.ratio=1,
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16),
+        panel.grid.major=element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(size = 16), 
+        legend.title=element_text(size=16, face="bold"),
+        text = element_text(family = font_selected)) +
+  labs (x = "Number of samples",
+        y = "Co-expression weight",
+        color = "",
+        fill = ""); violinplot_ppi_coexpression_by_types_nozero
+```
+
+```{r}
+ coexpression_pairs_filt %>%
+  select(-distances_ppi, -distances_nci, -nci, -random_not_ppi, -random_far_not_nci) %>%
+  pivot_longer(c("ppi", "random_far_not_ppi"), names_to = "category", values_to = "category_bool") %>%
+  filter(category_bool == TRUE) %>%
+  select(-category_bool) %>%
+  pivot_longer(as.character(sizes_selected), names_to = "size", values_to = "correlation", names_transform = list(size = as.character), values_transform = list(correlation = as.numeric)) %>%
+  filter(size %in% sizes_selected_comparison_plot) %>%
+  filter(!(is.na(correlation))) %>%
+  filter(abs(correlation) > 0 ) %>%
+  group_by(category, size) %>%
+  summarize(mean_corr = round(mean(correlation), 2), sd_corr = round(sd(correlation), 2)) %>%
+  mutate(size = as.numeric(size)) %>%
+  arrange(size, category)
+```
+
+
 Violin plot of PPI distances across sample size:
 
 ```{r}
