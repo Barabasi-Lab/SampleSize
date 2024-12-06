@@ -145,7 +145,11 @@ dataset2name <- c(
   "tcga:tcga-brca_female" = "TCGA: Breast cancer",
   "tcga:tcga-luad" = "TCGA: Lung cancer",
   "scipher:scipher.sample.per.patient.baseline" = "R. arthritis",
-  "gse193677:rectum_uc_inflamed" = "UC inflamed"
+  "gse193677:rectum_uc_inflamed" = "UC inflamed",
+  "weak-moderate-strong-very strong" = "\u2265 0.2",
+  "moderate-strong-very strong" = "\u2265 0.4",
+  "strong-very strong" = "\u2265 0.6",
+  "very strong" = "\u2265 0.8"
 )
 
 input_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/example_pearson_pval_0.05'
@@ -2764,7 +2768,7 @@ ggsave(
 Define function to calculate critical sample size for correlation:
 
 ```{r}
-calculate_sample_size_for_pearson_correlation_using_t_distribution_with_optimization = function(r, total_num_edges, alpha=0.05, N_guess=c(10000)){
+calculate_sample_size_for_pearson_correlation_using_t_distribution_with_optimization <- function(r, total_num_edges, alpha=0.05, N_guess=c(10000)){
   optimize_N = function(par){
     N = par[1]
     t_guess = qt(alpha, df=N-2, lower.tail = F)
@@ -2775,7 +2779,7 @@ calculate_sample_size_for_pearson_correlation_using_t_distribution_with_optimiza
   return(res$par)
 }
 
-calculate_sample_size_for_pearson_correlation_using_z_distribution_with_power = function(r, total_num_edges, alpha=0.05, power=0.8){
+calculate_sample_size_for_pearson_correlation_using_z_distribution_with_power <- function(r, total_num_edges, alpha=0.05, power=0.8){
   alpha_corrected = alpha / total_num_edges # Correct alpha by multiple error
   Za = qnorm(alpha, lower.tail=F)
   Za_corrected = qnorm(alpha_corrected, lower.tail=F)
@@ -2785,13 +2789,13 @@ calculate_sample_size_for_pearson_correlation_using_z_distribution_with_power = 
   return(list(N=N, N_corrected=N_corrected))
 }
 
-calculate_sample_size_for_pearson_correlation_using_z_distribution = function(r, alpha=0.05){
+calculate_sample_size_for_pearson_correlation_using_z_distribution <- function(r, alpha=0.05){
   Za = qnorm(alpha, lower.tail=F)
   N = r / (2*Za - log((1+r)/(1-r))) + 1
   return(N)
 }
 
-calculate_sample_size_for_pearson_correlation_using_bonnet_and_wright = function(r, w, alpha=0.05){
+calculate_sample_size_for_pearson_correlation_using_bonnet_and_wright <- function(r, w, alpha=0.05){
   Za = qnorm(alpha, lower.tail=F)
   N0 = round(4 * (1-r**2)**2 * (Za/w)**2)
   L1 = 0.5 * (log(1+r) - log(1-r)) - Za/sqrt(N0-3)
@@ -2801,105 +2805,237 @@ calculate_sample_size_for_pearson_correlation_using_bonnet_and_wright = function
   return(N)
 }
 
-calculate_predictions_using_stretched_exponential_model_optimized = function(x, L, a, b){
+calculate_predictions_using_stretched_exponential_model_optimized <- function(x, L, a, b){
   y = L * exp((b*x**(-a+1))/(-a+1))
   #y = exp(log(L) - exp(b+a*log(x)))
   return(y)
 }
 ```
 
-Calculate sample size for different levels of correlation and different datasets:
+Calculate sample size for different levels of correlation and different data sets:
 
 ```{r}
-type_correlation_df = data.frame(type_correlation=c("weak", "moderate", "strong", "very strong"), lower_val=c(0.2,0.4,0.6,0.8), upper_val=c(0.4,0.6,0.8,NA))
-types_correlation = c("weak", "moderate", "strong", "very strong")
+types_correlation <- c("weak", "moderate", "strong", "very strong")
+type_correlation_df <- data.frame(
+  type_correlation = types_correlation,
+  lower_val = c(0.2,0.4,0.6,0.8),
+  upper_val = c(0.4,0.6,0.8,NA)
+)
 
-cols = c("dataset", "type_correlation", "correlation", "sample_size_statistical", "sample_size_statistical_corrected", "sample_size_z")
-sample_size_correlation_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
-for (dataset in numbers_df$dataset){
-  total_num_edges = unique((numbers_df %>% filter(dataset == !!dataset))$total_num_edges)
-  for (type_correlation in types_correlation){
-    r = (type_correlation_df %>% filter(type_correlation == !!type_correlation))$lower_val
-    N = calculate_sample_size_for_pearson_correlation_using_t_distribution_with_optimization(r=r, total_num_edges=total_num_edges, alpha=0.05, N_guess=c(10000))
-    N_corrected = calculate_sample_size_for_pearson_correlation_using_t_distribution_with_optimization(r=r, total_num_edges=total_num_edges, alpha=0.05/total_num_edges, N_guess=c(10000))
-    N_z = calculate_sample_size_for_pearson_correlation_using_bonnet_and_wright(r=r, w=0.8, alpha=0.05/total_num_edges)
-    sample_size_correlation_df <- rbind(sample_size_correlation_df, data.frame(dataset=dataset, type_correlation=type_correlation, correlation=r, sample_size_statistical=N, sample_size_statistical_corrected=N_corrected, sample_size_z=N_z))
+cols <- c("dataset", "type_correlation", "correlation", "sample_size_statistical", "sample_size_statistical_corrected", "sample_size_z")
+sample_size_correlation_df <- data.frame(matrix(
+  ncol = length(cols),
+  nrow = 0,
+  dimnames = list(NULL, cols)
+))
+
+for (dataset in numbers_df$dataset) {
+  total_num_edges <- unique((numbers_df %>% dplyr::filter(dataset == !!dataset))$total_num_edges)
+  for (type_correlation in types_correlation) {
+    r <- (type_correlation_df %>% filter(type_correlation == !!type_correlation))$lower_val
+  
+    N <- calculate_sample_size_for_pearson_correlation_using_t_distribution_with_optimization(
+      r = r,
+      total_num_edges = total_num_edges,
+      alpha = 0.05,
+      N_guess = c(10000)
+    )
+  
+    N_corrected <- calculate_sample_size_for_pearson_correlation_using_t_distribution_with_optimization(
+      r = r,
+      total_num_edges = total_num_edges,
+      alpha = 0.05 / total_num_edges,
+      N_guess = c(10000)
+    )
+  
+    N_z <- calculate_sample_size_for_pearson_correlation_using_bonnet_and_wright(
+      r = r,
+      w = 0.8,
+      alpha = 0.05 / total_num_edges
+    )
+  
+    sample_size_correlation_df <- rbind(
+      sample_size_correlation_df,
+      data.frame(
+        dataset = dataset,
+        type_correlation = type_correlation,
+        correlation = r,
+        sample_size_statistical = N,
+        sample_size_statistical_corrected = N_corrected,
+        sample_size_z = N_z
+      )
+    )
   }
 }
 
 print(sample_size_correlation_df)
 ```
 
-```{r}
-dataset_selected = "gtex:whole.blood"
-model_selected = "Stretched exponential (by linear fit)"
-results_analytical_gtex_wb = topology_results_selected_analytical_norm_df %>% 
-  filter((model == model_selected) & (type_dataset == dataset_selected)) %>%
-  select(model, type_dataset, a, b, L, max_value_in_dataset) %>% unique()
-sample_size_correlation_gtex_wb = sample_size_correlation_df %>%
-  filter((dataset == dataset_selected) & (!(type_correlation == "weak")))
+Calculate predictions from analytical model for GTEx whole blood data set at predicted optimal sample sizes:
 
-predictions_convergence_gtex_wb_norm = calculate_predictions_using_stretched_exponential_model_optimized(x=sample_size_correlation_gtex_wb$sample_size_statistical_corrected, L=results_analytical_gtex_wb$L, a=results_analytical_gtex_wb$a, b=results_analytical_gtex_wb$b)
-predictions_convergence_gtex_wb_df = data.frame(size=round(sample_size_correlation_gtex_wb$sample_size_statistical_corrected), num_edges=predictions_convergence_gtex_wb_norm * results_analytical_gtex_wb$max_value_in_dataset, num_edges_norm=predictions_convergence_gtex_wb_norm)
-predictions_convergence_gtex_wb_df$num_edges_norm = (predictions_convergence_gtex_wb_df$num_edges/results_analytical_gtex_wb$max_value_in_dataset)/results_analytical_gtex_wb$L
+```{r}
+dataset_selected <- "gtex:whole.blood"
+model_selected <- "Stretched exponential (by linear fit)"
+
+# Get analytical model parameters for GTEx whole blood
+results_analytical_gtex_wb <- topology_results_selected_analytical_norm_df %>% 
+  dplyr::filter(
+    (model == model_selected) & (type_dataset == dataset_selected)
+  ) %>%
+  dplyr::select(model, type_dataset, a, b, L, max_value_in_dataset) %>%
+  unique()
+
+# Get optimal sample size for different types of correlations and GTEx whole
+# blood data set
+sample_size_correlation_gtex_wb <- sample_size_correlation_df %>%
+  dplyr::filter((dataset == dataset_selected) & (!(type_correlation == "weak")))
+
+# Calculate fraction of edges for optimal sample sizes calculated before
+predictions_convergence_gtex_wb_norm <- calculate_predictions_using_stretched_exponential_model_optimized(
+  x = sample_size_correlation_gtex_wb$sample_size_statistical_corrected,
+  L = results_analytical_gtex_wb$L,
+  a = results_analytical_gtex_wb$a,
+  b = results_analytical_gtex_wb$b
+)
+
+# Create table to store predictions
+predictions_convergence_gtex_wb_df <- data.frame(
+  size = round(sample_size_correlation_gtex_wb$sample_size_statistical_corrected),
+  num_edges = predictions_convergence_gtex_wb_norm * results_analytical_gtex_wb$max_value_in_dataset,
+  num_edges_norm = predictions_convergence_gtex_wb_norm
+)
+
+# Include normalized num. of edges
+predictions_convergence_gtex_wb_df$num_edges_norm <- (
+  predictions_convergence_gtex_wb_df$num_edges / results_analytical_gtex_wb$max_value_in_dataset
+) / results_analytical_gtex_wb$L
+
 predictions_convergence_gtex_wb_df
 
-predicted_results_wb_df = predicted_results_df %>% filter((model == model_selected) & (type_dataset == dataset_selected)) %>% mutate_at(c('model_result'), as.numeric)
-predicted_results_wb_df$model_result_norm = (predicted_results_wb_df$model_result/results_analytical_gtex_wb$max_value_in_dataset)/results_analytical_gtex_wb$L
+# Select prediction results for GTEx whole blood
+predicted_results_wb_df <- predicted_results_df %>%
+  dplyr::filter(
+    (model == model_selected) & (type_dataset == dataset_selected)
+  ) %>%
+  dplyr::mutate_at(c('model_result'), as.numeric)
+
+# Normalize model predictions
+predicted_results_wb_df$model_result_norm <- (
+  predicted_results_wb_df$model_result / results_analytical_gtex_wb$max_value_in_dataset
+) / results_analytical_gtex_wb$L
 ```
 
+
 ```{r}
-#mtcars_mod = mtcars %>% mutate_at(c("carb"), as.character)
-#mtcars_mod %>% ggplot(aes(mpg, wt)) + geom_point(aes(col=carb, size=gear))
+dataset_selected <- "Whole.Blood"
+all_topology_results_file <- '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/analysis_topology.csv'
+threshold_selected <- 0.05
+method_selected <- "pearson"
 
-dataset_selected = "Whole.Blood"
-all_topology_results_file = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/analysis_topology.csv'
-threshold_selected = 0.05
-
+# Read information about number of edges
 all_results_df <- data.table::fread(all_topology_results_file)
-results_gtex_wb = all_results_df %>% 
-  filter((type_dataset == dataset_selected) & (threshold == threshold_selected) & (type_correlation %in% c("weak-moderate-strong-very strong", "moderate-strong-very strong", "strong-very strong", "very strong")))
-results_gtex_wb$num_edges_norm = (results_gtex_wb$num_edges/results_analytical_gtex_wb$max_value_in_dataset)/results_analytical_gtex_wb$L
 
-correlation_levels_plot_df = results_gtex_wb %>% 
-  mutate(type_correlation = replace(type_correlation, type_correlation == "weak-moderate-strong-very strong", "\u2265 0.2")) %>%
-  mutate(type_correlation = replace(type_correlation, type_correlation == "moderate-strong-very strong", "\u2265 0.4")) %>%
-  mutate(type_correlation = replace(type_correlation, type_correlation == "strong-very strong", "\u2265 0.6")) %>%
-  mutate(type_correlation = replace(type_correlation, type_correlation == "very strong", "\u2265 0.8")) %>%
-  full_join((predicted_results_wb_df %>% filter(size <= max((all_results_df %>% filter((type_dataset == dataset_selected) & (threshold == threshold_selected)))$size)) %>% mutate(type_correlation="Model prediction")), by=c("type_dataset", "size", "type_correlation", "num_edges_norm"="model_result_norm")) %>%
-  full_join((predictions_convergence_gtex_wb_df  %>% mutate(type_correlation="Convergence point")), by=c("size", "num_edges", "num_edges_norm", "type_correlation")) %>%
-  left_join( (name2color %>% as.data.frame() %>% dplyr::rename("rgb_col"=".") %>% tibble::rownames_to_column("type_correlation")), by=c("type_correlation") )
+# Select number of edges for GTEx whole blood
+results_gtex_wb <- all_results_df %>%
+  dplyr::filter(
+    (type_dataset == dataset_selected) &
+      (method == method_selected) &
+      (threshold == threshold_selected) &
+      (type_correlation %in% c("weak-moderate-strong-very strong", "moderate-strong-very strong", "strong-very strong", "very strong"))
+  ) %>%
+  dplyr::select("method", "type_dataset", "size", "rep", "type_correlation", "num_edges")
 
-correlation_levels_plot = correlation_levels_plot_df %>%
-  ggplot(aes(x=size, y=num_edges_norm)) +
-  #geom_point(data=.%>% filter(!(type_correlation %in% c("Convergence point", "Model prediction"))), aes(fill=factor(type_correlation), size=num_edges_norm), alpha=0.5, shape=21) +
-  geom_point(data=.%>% filter(!(type_correlation %in% c("Convergence point", "Model prediction"))), aes(col=type_correlation, size=num_edges_norm), alpha=0.5) +
-  scale_color_manual(name = "Correlation strength", values = as.vector(name2color[levels(factor((correlation_levels_plot_df %>% filter(!(type_correlation == "Model prediction")))$type_correlation))])) + # Plot using the dictionary
+# Normalize number of edges
+results_gtex_wb$num_edges_norm <- (
+  results_gtex_wb$num_edges / results_analytical_gtex_wb$max_value_in_dataset
+) / results_analytical_gtex_wb$L
+
+# Merge info about num. of edges with model predictions and convergence points
+correlation_levels_plot_df <- results_gtex_wb %>% 
+  dplyr::mutate(type_correlation = dplyr::recode(type_correlation, !!!dataset2name)) %>%
+  dplyr::full_join(
+    (predicted_results_wb_df %>%
+       dplyr::filter(
+         size <= max((all_results_df %>% dplyr::filter((type_dataset == dataset_selected) & (threshold == threshold_selected)))$size)
+        ) %>%
+       dplyr::mutate(type_correlation = "Model prediction")
+    ),
+    by = c("type_dataset", "size", "type_correlation", "num_edges_norm" = "model_result_norm")
+  ) %>%
+  dplyr::full_join(
+    (predictions_convergence_gtex_wb_df %>%
+       dplyr::mutate(type_correlation = "Convergence point")
+    ),
+    by = c("size", "num_edges", "num_edges_norm", "type_correlation")
+  ) %>%
+  dplyr::left_join(
+    (name2color %>% as.data.frame() %>%
+       dplyr::rename("rgb_col" = ".") %>%
+       tibble::rownames_to_column("type_correlation")),
+    by = c("type_correlation")
+  )
+
+correlation_levels_plot <- correlation_levels_plot_df %>%
+  ggplot(aes(x = size, y = num_edges_norm)) +
+  # Plot num. of edges
+  geom_point(
+    data = .%>% dplyr::filter(!(type_correlation %in% c("Convergence point", "Model prediction"))),
+    aes(
+      col = type_correlation,
+      size = num_edges_norm
+    ),
+    alpha = 0.5
+  ) +
+  scale_color_manual(
+    name = "Correlation strength",
+    values = as.vector(name2color[levels(factor((correlation_levels_plot_df %>% dplyr::filter(!(type_correlation == "Model prediction")))$type_correlation))])
+  ) +
   new_scale_color() +
-  #geom_point(data=.%>% filter(type_correlation == "Convergence point"), aes(fill=factor(type_correlation)), alpha=1, size=4, shape=21) +
-  geom_point(data=.%>% filter(type_correlation == "Convergence point"), aes(col=factor(type_correlation)), alpha=1, size=3) +
-  scale_color_manual(name = NULL, values = c("red")) + # Plot using the dictionary
+  # Plot convergence points
+  geom_point(
+    data = .%>% dplyr::filter(type_correlation == "Convergence point"),
+    aes(
+      col = factor(type_correlation)
+    ),
+    alpha = 1,
+    size = 3
+  ) +
+  scale_color_manual(name = NULL, values = c("red")) +
   new_scale_color() +
-  geom_line(data=.%>% filter(type_correlation == "Model prediction"), aes(col=type_correlation), linewidth=1) +
-  scale_color_manual(name = NULL, values = c("red")) + # Plot using the dictionary
-  #scale_x_continuous(trans = scales::log10_trans()) +
-  #scale_color_manual(values = c("#D55E00", "#E69F00", "#44AA99", "#0072B2", "#56B4E9")) +
+  # Plot model prediction
+  geom_line(
+    data = .%>% dplyr::filter(type_correlation == "Model prediction"),
+    aes(col = type_correlation),
+    linewidth = 1
+  ) +
+  scale_color_manual(name = NULL, values = c("red")) +
   theme_linedraw() +
   xlab("Num. samples") +
-  #xlab("log(N)") +
   ylab("Frac. significant correlations") +
-  guides(col=guide_legend(override.aes = list(alpha = 1, size = 3)), col=guide_legend(title=NULL), size=guide_legend(title="Frac. sig. correlations")) +
-  theme(aspect.ratio=1,
-        plot.title =  element_text(size = 20, face="bold"), 
-        axis.title = element_text(size = 17, face="bold"), 
-        axis.text = element_text(size = 16),
-        panel.grid.major=element_blank(), 
-        panel.grid.minor = element_blank(),
-        legend.text = element_text(size = 16), 
-        legend.title=element_text(size=16, face="bold"),
-        text = element_text(family = font_selected))
+  guides(
+    col = guide_legend(
+      override.aes = list(alpha = 1, size = 3)
+    ),
+    col = guide_legend(title=NULL),
+    size = guide_legend(title="Frac. sig. correlations")
+  ) +
+  theme(
+    aspect.ratio = 1,
+    plot.title = element_text(size = 20, face="bold"), 
+    axis.title = element_text(size = 17, face="bold"), 
+    axis.text = element_text(size = 16),
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    legend.text = element_text(size = 16), 
+    legend.title = element_text(size=16, face = "bold"),
+    text = element_text(family = font_selected)
+  )
 
-plot_file = paste(plots_dir, "correlation_levels_pearson_pval_0.05_data_gtexwholeblood.png", sep="/")
+plot_file <- paste(
+  plots_dir,
+  "correlation_levels_pearson_pval_0.05_data_gtexwholeblood.png",
+  sep = "/"
+)
 ggsave(
   plot_file,
   plot = correlation_levels_plot,
@@ -2909,6 +3045,12 @@ ggsave(
   units = c("px")
 )
 print(correlation_levels_plot)
+```
+
+Alternative plot:
+
+```{r}
+
 ```
 
 #### Plot with 5 specific links
