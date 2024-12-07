@@ -60,19 +60,6 @@ my_theme <- theme_linedraw() +
         panel.grid.minor = element_blank(),
         text = element_text(family = font_selected),
         legend.position = "none")
-my_geom_label_theme <- geom_label_repel(
-  aes(col=rgb_col),
-  family = font_selected,
-  fill="white",
-  box.padding = 0.5, max.overlaps = Inf,
-  label.size = 0.75, 
-  size = 5,
-  alpha = 0.9, 
-  label.padding=0.25, 
-  fontface = "bold",
-  na.rm=TRUE,
-  seed = 1234
-)
 
 name2color <- c(
   "TCGA: Lung cancer" = "#56B4E9",
@@ -143,6 +130,7 @@ dataset2name <- c(
   "gtex:whole.blood" = "GTEx: Whole blood",
   "gtex:lung" = "GTEx: Lung",
   "tcga:tcga-brca_female" = "TCGA: Breast cancer",
+  "tcga:tcga-brca-tumor_female" = "TCGA: Breast cancer",
   "tcga:tcga-luad" = "TCGA: Lung cancer",
   "scipher:scipher.sample.per.patient.baseline" = "R. arthritis",
   "gse193677:rectum_uc_inflamed" = "UC inflamed",
@@ -284,7 +272,20 @@ curve_plot_lessdatasets <- results_curve_lessdatasets_df %>%
   xlab("Num. samples") +
   ylab("Num. significant correlations") +
   my_theme +
-  my_geom_label_theme
+  geom_label_repel(
+    aes(col = rgb_col),
+    family = font_selected,
+    fill = "white",
+    max.overlaps = Inf,
+    label.size = 0.75, 
+    size = 5,
+    alpha = 0.9, 
+    box.padding = unit(0.75, "cm"),
+    label.padding = 0.25, 
+    fontface = "bold",
+    na.rm = TRUE,
+    seed = 1234
+  )
 
 plot_file = paste(plots_dir, "curve_pearson_pval_0.05_lessdatasets.png", sep="/")
 ggsave(
@@ -711,17 +712,20 @@ prediction_plot = prediction_plot_df %>%
   xlab("Num. samples (Log10)") +
   ylab("Frac. significant correlations") +
   my_theme +
-  geom_label_repel(aes(col=rgb_col, label=geom_text_repel_label),
-                   fill="white",
-                   family = font_selected,
-                   box.padding = 0.5, max.overlaps = Inf,
-                   label.size = 0.75, 
-                   size = 5,
-                   alpha = 0.9, 
-                   label.padding=0.25, 
-                   fontface = "bold",
-                   na.rm=TRUE,
-                   seed = 1234)
+  geom_label_repel(
+    aes(col = rgb_col, label = geom_text_repel_label),
+    family = font_selected,
+    fill = "white",
+    max.overlaps = Inf,
+    label.size = 0.75, 
+    size = 5,
+    alpha = 0.9, 
+    box.padding = unit(0.75, "cm"),
+    label.padding = 0.25, 
+    fontface = "bold",
+    na.rm = TRUE,
+    seed = 1234
+  )
 
 plot_file = paste(plots_dir, "prediction_pearson_pval_0.05.png", sep="/")
 print(prediction_plot)
@@ -870,17 +874,25 @@ comparison_plot = comparison_log_df %>%
         panel.grid.minor = element_blank(),
         text = element_text(family = font_selected),
         legend.position="none") +
-  geom_label_repel(aes(x=size, y=model_result, col=rgb_col, label=geom_text_repel_label),
-                   fill="white",
-                   family = font_selected,
-                   box.padding = 0.5, max.overlaps = Inf,
-                   label.size = 0.75, 
-                   size = 5,
-                   alpha = 1, 
-                   label.padding=0.25, 
-                   fontface = "bold",
-                   na.rm=TRUE,
-                   seed = 1234)
+  geom_label_repel(
+    aes(
+      x = size,
+      y = model_result,
+      col = rgb_col,
+      label = geom_text_repel_label
+    ),
+    family = font_selected,
+    fill = "white",
+    max.overlaps = Inf,
+    label.size = 0.75, 
+    size = 5,
+    alpha = 0.9, 
+    box.padding = unit(0.75, "cm"),
+    label.padding = 0.25, 
+    fontface = "bold",
+    na.rm = TRUE,
+    seed = 1234
+  )
 
 plot_file = paste(plots_dir, "/comparison_models_pearson_pval_0.05_", dataset_selected, ".png", sep="")
 print(comparison_plot)
@@ -947,17 +959,25 @@ goodnessfit_plot = goodnessfit_df %>%
         panel.grid.minor = element_blank(),
         text = element_text(family = font_selected),
         legend.position="none") +
-  geom_label_repel(aes(x=size, y=model_result, col=rgb_col, label=geom_text_repel_label),
-                   fill="white",
-                   family = font_selected,
-                   box.padding = 0.5, max.overlaps = Inf,
-                   label.size = 0.75, 
-                   size = 5,
-                   alpha = 1, 
-                   label.padding=0.25, 
-                   fontface = "bold",
-                   na.rm=TRUE,
-                   seed = 1234)
+  geom_label_repel(
+    aes(
+      x = size,
+      y = model_result,
+      col = rgb_col,
+      label = geom_text_repel_label
+    ),
+    family = font_selected,
+    fill = "white",
+    max.overlaps = Inf,
+    label.size = 0.75, 
+    size = 5,
+    alpha = 1,
+    box.padding = unit(0.75, "cm"),
+    label.padding = 0.25, 
+    fontface = "bold",
+    na.rm = TRUE,
+    seed = 1234
+  )
 
 plot_file = paste(plots_dir, "/goodnessfit_model_pearson_pval_0.05_", dataset_selected, ".png", sep="")
 print(goodnessfit_plot)
@@ -1296,7 +1316,8 @@ a_vs_fraction_sig_correlations_plot <- sample_size_vs_a_plot_df %>%
                      fill="white",
                      family = font_selected,
                      family = font_selected,
-                     box.padding = 0.5, max.overlaps = Inf,
+                     box.padding = unit(0.75, "cm"),
+                     max.overlaps = Inf,
                      label.size = 0.75, 
                      size = 5,
                      alpha = 0.6, 
@@ -1421,7 +1442,8 @@ a_vs_fraction_sig_correlations_lessdatasets_plot <- sample_size_vs_a_plot_lessda
     geom_label_repel(aes(col = rgb_col, label = geom_text_repel_label),
                      fill="white",
                      family = font_selected,
-                     box.padding = 0.5, max.overlaps = Inf,
+                     box.padding = unit(0.75, "cm"),
+                     max.overlaps = Inf,
                      label.size = 0.75, 
                      size = 5,
                      alpha = 0.6, 
@@ -1598,7 +1620,7 @@ for (x in 1:length(parameters)){
   
   # Save distribution plot without changes in the theme, because we will tune it 
   # afterwards with patchwork
-  distribution_plots_lessdatasets[[x]] = distribution_plot_lessdatasets
+  distribution_plots_lessdatasets[[parameter]] = distribution_plot_lessdatasets
   
   plot_file = paste(plots_dir, 
                     "/distribution_", 
@@ -1693,8 +1715,8 @@ head(sd_genes_vs_a_df)
 Plot different parameters (sd, mean, cv) vs. alpha:
 
 ```{r}
-parameters = c("sd", "mean", "cv")
-parameter2label <- list("sd"="SD", "mean"="mean", "cv"="CV")
+parameters <- c("sd", "mean", "cv")
+parameter2label <- list("sd" = "SD", "mean" = "mean", "cv" = "CV")
 datasets_selected <- c("scipher:scipher.sample.per.patient.baseline",
                        "gse193677:rectum-disease_inflamed_vs_control_cd",
                        "gse193677:rectum-disease_inflamed_vs_control_uc",
@@ -1719,53 +1741,23 @@ datasets_selected <- c("scipher:scipher.sample.per.patient.baseline",
                        "tcga:brca.lumb-subtype")
 
 # Prepare table for plots
-sd_genes_vs_a_filtered = sd_genes_vs_a_df %>%
-  filter(type_counts == type_counts_selected) %>%
-  filter(dataset_name %in% datasets_selected) %>%
-  mutate(dataset_name = 
-           replace(dataset_name,
-                   dataset_name == "scipher:scipher.sample.per.patient.baseline", 
-                   "R. arthritis")) %>%
-  mutate(dataset_name = 
-           replace(dataset_name, 
-                   dataset_name == "gtex:whole.blood", 
-                   "GTEx: Whole blood")) %>%
-  mutate(dataset_name = 
-           replace(dataset_name, 
-                   dataset_name == "gtex:lung", 
-                   "GTEx: Lung")) %>%
-  mutate(dataset_name = 
-           replace(dataset_name, 
-                   dataset_name == "gtex:breast.mammary.tissue_female", 
-                   "GTEx: Breast")) %>%
-  mutate(dataset_name = 
-           replace(dataset_name, 
-                   dataset_name == "tcga:tcga-luad-tumor", 
-                   "TCGA: Lung cancer")) %>%
-  mutate(dataset_name = 
-           replace(dataset_name, 
-                   dataset_name == "tcga:tcga-brca-tumor_female", 
-                   "TCGA: Breast cancer")) %>%
-  left_join( (name2color %>% 
-                as.data.frame() %>% 
-                dplyr::rename("rgb_col" = ".") %>% 
-                tibble::rownames_to_column("dataset_name")), 
-             by = c("dataset_name") ) %>%
-  mutate(rgb_col = 
-           replace(rgb_col, 
-                   is.na(rgb_col), 
-                   "#000000")) %>% # Non-selected datasets with color black
-  mutate(geom_text_repel_label = 
-           dplyr::if_else(dataset_name == "R. arthritis", 
-                          "R. arthritis", 
-                          dplyr::if_else(dataset_name == "GTEx: Whole blood", 
-                                         "GTEx: Whole blood", 
-                                         dplyr::if_else(dataset_name == "GTEx: Lung", 
-                                                        "GTEx: Lung", dplyr::if_else(dataset_name == "GTEx: Breast", 
-                                                                                     "GTEx: Breast", 
-                                                                                     dplyr::if_else(dataset_name == "TCGA: Lung cancer",
-                                                                                                    "TCGA: Lung cancer", 
-                                                                                                    dplyr::if_else(dataset_name == "TCGA: Breast cancer", "TCGA: Breast cancer", ""))))))) %>% 
+sd_genes_vs_a_filtered <- sd_genes_vs_a_df %>%
+  dplyr::filter(type_counts == type_counts_selected) %>%
+  dplyr::filter(dataset_name %in% datasets_selected) %>%
+  dplyr::mutate(dataset_name = dplyr::recode(dataset_name, !!!dataset2name)) %>%
+  dplyr::left_join(
+    (name2color %>%
+       as.data.frame() %>%
+       dplyr::rename("rgb_col"=".") %>%
+       tibble::rownames_to_column("dataset")),
+    by = c("dataset")
+  ) %>%
+  dplyr::mutate(rgb_col = replace(rgb_col, is.na(rgb_col), "#000000")) %>% # Non-selected datasets with color black
+  dplyr::mutate(geom_text_repel_label = dplyr::if_else(
+    dataset_name %in% c("R. arthritis", "GTEx: Whole blood", "GTEx: Lung", "GTEx: Breast", "TCGA: Lung cancer", "TCGA: Breast cancer"),
+    dataset_name,
+    ""
+  )) %>% 
   as.data.frame()
 scatter_plots = list()
 
@@ -1821,7 +1813,7 @@ for (x in 1:length(parameters)){
                          label = geom_text_repel_label),
                      fill = "white",
                      family = font_selected,
-                     box.padding = 0.5, 
+                     box.padding = unit(0.75, "cm"), 
                      max.overlaps = Inf,
                      label.size = 0.75, 
                      size = 5,
@@ -1873,8 +1865,8 @@ for (x in 1:length(parameters)){
 With less datasets:
 
 ```{r}
-parameters = c("sd", "mean", "cv")
-parameter2label <- list("sd"="SD", "mean"="mean", "cv"="CV")
+parameters <- c("sd", "mean", "cv")
+parameter2label <- list("sd" = "SD", "mean" = "mean", "cv" = "CV")
 datasets_selected <- c("scipher:scipher.sample.per.patient.baseline",
                        "gse193677:rectum-disease_inflamed_vs_control_cd",
                        "gse193677:rectum-disease_inflamed_vs_control_uc",
@@ -1899,39 +1891,22 @@ datasets_selected <- c("scipher:scipher.sample.per.patient.baseline",
                        "tcga:brca.lumb-subtype")
 
 # Prepare table for plots
-sd_genes_vs_a_filtered = sd_genes_vs_a_df %>%
-  filter(dataset_name %in% datasets_selected) %>%
-  mutate(dataset_name = 
-           replace(dataset_name, 
-                   dataset_name == "gtex:breast.mammary.tissue_female", 
-                   "GTEx: Breast")) %>%
-  mutate(dataset_name = 
-           replace(dataset_name, 
-                   dataset_name == "tcga:tcga-brca-tumor_female", 
-                   "TCGA: Breast cancer")) %>%
-  left_join( (name2color %>% 
-                as.data.frame() %>% 
-                dplyr::rename("rgb_col"=".") %>% 
-                tibble::rownames_to_column("dataset") #%>% 
-                #filter(dataset_name %in% c("TCGA: Breast cancer", "GTEx: Breast"))
-              ), 
-             by=c("dataset") ) %>%
-  mutate(rgb_col = replace(rgb_col, 
-                           is.na(rgb_col), 
-                           "#000000")) %>% # Non-selected datasets with color black
-  mutate(geom_text_repel_label = 
-           dplyr::if_else(dataset_name == "R. arthritis", 
-                          "R. arthritis", 
-                          dplyr::if_else(dataset_name == "GTEx: Whole blood", 
-                                         "GTEx: Whole blood", 
-                                         dplyr::if_else(dataset_name == "GTEx: Lung", 
-                                                        "GTEx: Lung", 
-                                                        dplyr::if_else(dataset_name == "GTEx: Breast", 
-                                                                       "GTEx: Breast", dplyr::if_else(dataset_name == "TCGA: Lung cancer", 
-                                                                                                      "TCGA: Lung cancer", 
-                                                                                                      dplyr::if_else(dataset_name == "TCGA: Breast cancer", 
-                                                                                                                     "TCGA: Breast cancer", 
-                                                                                                                     ""))))))) %>% 
+sd_genes_vs_a_filtered <- sd_genes_vs_a_df %>%
+  dplyr::filter(dataset_name %in% datasets_selected) %>%
+  dplyr::mutate(dataset_name = dplyr::recode(dataset_name, !!!dataset2name)) %>%
+  dplyr::left_join(
+    (name2color %>%
+       as.data.frame() %>%
+       dplyr::rename("rgb_col" = ".") %>%
+       tibble::rownames_to_column("dataset")),
+    by = c("dataset")
+  ) %>%
+  dplyr::mutate(rgb_col = replace(rgb_col, is.na(rgb_col), "#000000")) %>% # Non-selected datasets with color black
+  dplyr::mutate(geom_text_repel_label = dplyr::if_else(
+    dataset_name %in% c("GTEx: Breast", "TCGA: Breast cancer"),
+    dataset_name,
+    ""
+  )) %>% 
   as.data.frame()
 
 scatter_plots_lessdatasets = list()
@@ -1962,17 +1937,17 @@ for (x in 1:length(parameters)){
                                                    sep = "")]])
   
   # Calculate regression
-  lm_summary_avspar[[x]] <- summary(lm(sd_genes_vs_a_filtered[[paste("fraction_genes_above_",
+  lm_summary_avspar[[parameter]] <- summary(lm(sd_genes_vs_a_filtered[[paste("fraction_genes_above_",
                                                    parameter,
                                                    "_cut",
                                                    sep = "")]] ~ 
                              sd_genes_vs_a_filtered$a))
-  lm_cor_result_avspar[[x]] <- paste("R² =", 
-                         round(lm_summary_avspar[[x]]$adj.r.squared, 3), 
+  lm_cor_result_avspar[[parameter]] <- paste("R² =", 
+                         round(lm_summary_avspar[[parameter]]$adj.r.squared, 3), 
                          "\ncorr. =", 
                          round(a_vs_par_cor, 3))
   
-  scatter_plots_lessdatasets[[x]] <- sd_genes_vs_a_filtered %>%
+  scatter_plots_lessdatasets[[parameter]] <- sd_genes_vs_a_filtered %>%
     ggplot(aes(x = a, 
                y = .data[[paste("fraction_genes_above_", 
                                 parameter, 
@@ -1981,24 +1956,24 @@ for (x in 1:length(parameters)){
                col = rgb_col)) + 
     geom_point(alpha = 0.6, size = 3) +
     scale_colour_identity() +
-    geom_label_repel(aes(col=rgb_col, label=geom_text_repel_label),
+    geom_label_repel(aes(col = rgb_col, label = geom_text_repel_label),
                      fill="white",
                      family = font_selected,
                      max.iter = 1e6,
                      label.size = 0.75, 
                      size = 5,
                      alpha = 0.6, 
-                     box.padding = 0.5,
+                     box.padding = unit(0.75, "cm"),
                      label.padding = 0.25, 
                      fontface = "bold",
-                     na.rm=TRUE,
+                     na.rm = TRUE,
                      seed = 1234) +
-    geom_abline(aes(slope = coef(lm_summary_avspar[[x]])[2],
-                  intercept = coef(lm_summary_avspar[[x]])[1]),
+    geom_abline(aes(slope = coef(lm_summary_avspar[[parameter]])[2],
+                  intercept = coef(lm_summary_avspar[[parameter]])[1]),
               col = "gray50",
               linetype = "dashed", 
               show.legend = FALSE) +
-    annotate("text", x = x_legend, y = y_legend, label = lm_cor_result_avspar[[x]], size = 5) +
+    annotate("text", x = x_legend, y = y_legend, label = lm_cor_result_avspar[[parameter]], size = 5) +
     xlab(expression(alpha)) +
     ylab(paste("Frac. genes with ", 
                parameter2label[[parameter]], 
@@ -2013,7 +1988,7 @@ for (x in 1:length(parameters)){
           panel.grid.major=element_blank(), 
           panel.grid.minor = element_blank(),
           text = element_text(family = font_selected),
-          legend.position="none")
+          legend.position = "none")
 
   plot_file = paste(plots_dir, 
                     "/a_vs_fraction_genes_above_", 
@@ -2022,13 +1997,13 @@ for (x in 1:length(parameters)){
                     sep = "")
   ggsave(
     plot_file,
-    plot = scatter_plots_lessdatasets[[x]],
+    plot = scatter_plots_lessdatasets[[parameter]],
     dpi = 1200,
     width = 6000,
     #height = 6000,
     units = c("px")
   )
-  print(scatter_plots_lessdatasets[[x]])
+  print(scatter_plots_lessdatasets[[parameter]])
 }
 ```
 
@@ -2040,22 +2015,22 @@ ABC
 DFG
 "
 
-((distribution_plots_lessdatasets[[2]] + labs(tag = 'A')) +
-  (distribution_plots_lessdatasets[[1]] + labs(tag = 'B')) +
-  (distribution_plots_lessdatasets[[3]] + labs(tag = 'C')) +
-  ((scatter_plots_lessdatasets[[2]] + 
-    geom_abline(aes(slope = coef(lm_summary_avspar[[2]])[2],
-                  intercept = coef(lm_summary_avspar[[2]])[1]),
+((distribution_plots_lessdatasets[["mean"]] + labs(tag = 'A')) +
+  (distribution_plots_lessdatasets[["sd"]] + labs(tag = 'B')) +
+  (distribution_plots_lessdatasets[["cv"]] + labs(tag = 'C')) +
+  ((scatter_plots_lessdatasets[["mean"]] + 
+    geom_abline(aes(slope = coef(lm_summary_avspar[["mean"]])[2],
+                  intercept = coef(lm_summary_avspar[["mean"]])[1]),
               col = "gray50",
               linetype = "dashed", 
               show.legend = FALSE)) + labs(tag = 'D')) +
-  ((scatter_plots_lessdatasets[[1]]  + 
-    geom_abline(aes(slope = coef(lm_summary_avspar[[1]])[2],
-                  intercept = coef(lm_summary_avspar[[1]])[1]),
+  ((scatter_plots_lessdatasets[["sd"]] +
+    geom_abline(aes(slope = coef(lm_summary_avspar[["sd"]])[2],
+                  intercept = coef(lm_summary_avspar[["sd"]])[1]),
               col = "gray50",
               linetype = "dashed", 
               show.legend = FALSE)) + labs(tag = 'E')) +
-  (scatter_plots_lessdatasets[[3]] + labs(tag = 'F'))) +
+  (scatter_plots_lessdatasets[["cv"]] + labs(tag = 'F'))) +
   plot_layout(design = layout) &
   theme(plot.tag = element_text(face = 'bold', size = 17),
         plot.tag.position  = c(.1, 1.02),
@@ -2245,7 +2220,7 @@ a_vs_ss_plot <- sd_genes_vs_ss_df %>%
                          label = geom_text_repel_label),
                      fill = "white",
                      family = font_selected,
-                     box.padding = 0.5,
+                     box.padding = unit(0.75, "cm"),
                      max.iter = 1e5,
                      label.size = 0.75, 
                      size = 5,
@@ -2315,7 +2290,7 @@ a_vs_ss_lin_lin_plot <- sd_genes_vs_ss_df %>%
                          label = geom_text_repel_label),
                      fill = "white",
                      family = font_selected,
-                     box.padding = 0.5, 
+                     box.padding = unit(0.75, "cm"),
                      max.iter = 1e5,
                      label.size = 0.75, 
                      size = 5,
@@ -2375,7 +2350,7 @@ a_vs_ss_log_lin_plot <- sd_genes_vs_ss_df %>%
                          label = geom_text_repel_label),
                      fill = "white",
                      family = font_selected,
-                     box.padding = 0.5, 
+                     box.padding = unit(0.75, "cm"),
                      max.overlaps = Inf,
                      label.size = 0.75, 
                      size = 5,
@@ -2436,7 +2411,7 @@ a_vs_ss_lin_log_plot <- sd_genes_vs_ss_df %>%
                          label = geom_text_repel_label),
                      fill = "white",
                      family = font_selected,
-                     box.padding = 0.5, 
+                     box.padding = unit(0.75, "cm"),
                      max.iter = 1e5,
                      label.size = 0.75, 
                      size = 5,
@@ -2549,7 +2524,7 @@ cv_vs_ss_plot <- sd_genes_vs_ss_df %>%
                          label = geom_text_repel_label),
                      fill = "white",
                      family = font_selected,
-                     box.padding = 0.5, 
+                     box.padding = unit(0.75, "cm"),
                      max.overlaps = Inf,
                      label.size = 0.75, 
                      size = 5,
@@ -2621,7 +2596,7 @@ sd_vs_ss_plot <- sd_genes_vs_ss_df %>%
                          label = geom_text_repel_label),
                      fill = "white",
                      family = font_selected,
-                     box.padding = 0.5, 
+                     box.padding = unit(0.75, "cm"),
                      #max.overlaps = Inf,
                      max.iter = 1e5,
                      label.size = 0.75, 
@@ -2711,10 +2686,19 @@ EFG
        theme(plot.tag.position = c(.09, 1.04),
              plot.margin = margin(0.6, 0.6, 0.6, 0.6, "cm"))
      ) +
-    (scatter_plots_lessdatasets[[1]] +
-       labs(tag = 'F') +
-       theme(plot.tag.position = c(.04, 1.04),
-             plot.margin = margin(0.6, 0.6, 0.6, 0.6, "cm"))
+    (scatter_plots_lessdatasets[["sd"]] +
+      geom_abline(
+        aes(
+          slope = coef(lm_summary_avspar[["sd"]])[2],
+          intercept = coef(lm_summary_avspar[["sd"]])[1]
+        ),
+        col = "gray50",
+        linetype = "dashed",
+        show.legend = FALSE
+      ) +
+    labs(tag = 'F') +
+    theme(plot.tag.position = c(.04, 1.04),
+          plot.margin = margin(0.6, 0.6, 0.6, 0.6, "cm"))
      ) +
     (a_vs_ss_lin_log_plot +
        labs(tag='G')
@@ -3554,7 +3538,8 @@ nodes_to_follow_ranking_plot = ranking_nodes_df %>%
     geom_label_repel(aes(col=Phi_name, label = label),
                      fill="white",
                      family = font_selected,
-                     box.padding = 0.2, max.overlaps = Inf,
+                     box.padding = 0.2,
+                     max.overlaps = Inf,
                      label.size = 0.75, 
                      size = 5,
                      alpha = 0.9, 
