@@ -56,6 +56,7 @@ max_rep = as.integer(opt$max_rep)
 #max_rep = 5
 selected_sizes = c(20, 40, 60, 80, 100, 120)
 #selected_sizes = c(20, 100, 200, 300, 400, 500)
+#selected_sizes = c(20, 60, 100, 200, 300, 400)
 
 
 #### DEFINE FUNCTIONS ####

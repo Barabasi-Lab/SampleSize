@@ -335,15 +335,24 @@ pairs = fread(pairs_file)
 Fetch the files containing the gene co-expression networks of different sample sizes:
 
 ```{r}
-coexpression_dir = sprintf("/scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_%s/reads/%s/consensus", dataset, type_dataset)
-all_coexpression_files = list.files(coexpression_dir)
-coexpression_files_selected = data.frame(matrix(ncol=length(c("size", "file")),nrow=0, dimnames=list(NULL, c("size", "file"))))
+coexpression_dir <- sprintf("/scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_%s/reads/%s/consensus", dataset, type_dataset)
+all_coexpression_files <- list.files(coexpression_dir)
+coexpression_files_selected <- data.frame(matrix(ncol=length(c("size", "file")),nrow=0, dimnames=list(NULL, c("size", "file"))))
 
 for (coexpression_file in all_coexpression_files){
-  file_split = strsplit(gsub(".net", "", coexpression_file), split="_")[[1]]
-  size = as.numeric(file_split[(length(file_split)-1)])
+  file_split <- strsplit(
+    gsub(".net", "", coexpression_file),
+    split = "_"
+  )[[1]]
+  size <- as.numeric(file_split[(length(file_split)-1)])
   if (size %in% sizes_selected){
-    coexpression_files_selected = rbind(coexpression_files_selected, data.frame(size=size, file=paste(coexpression_dir, coexpression_file, sep="/")))
+    coexpression_files_selected <- rbind(
+      coexpression_files_selected,
+      data.frame(
+        size = size,
+        file = paste(coexpression_dir, coexpression_file, sep = "/")
+      )
+    )
   }
 }
 ```

@@ -272,16 +272,16 @@ module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood.gct -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Whole.Blood -m pearson
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood.gct -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Whole.Blood -m aracne
 bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_calculate_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Whole.Blood /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Whole.Blood.gct /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Whole.Blood gtex_Whole.Blood aracne 900
-# consensus TODO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Whole.Blood -t 0.05 -m pearson
+# consensus TODO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Whole.Blood -t 0.05 -m pearson
 
 # Breast.Mammary.Tissue - PEARSON - READS - FEMALE / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Breast.Mammary.Tissue_female -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Breast.Mammary.Tissue_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Breast.Mammary.Tissue_female -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Breast.Mammary.Tissue_female -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Breast.Mammary.Tissue_female -t 0.05 -m pearson
 # Breast.Mammary.Tissue - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Breast.Mammary.Tissue -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Breast.Mammary.Tissue.gct -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Breast.Mammary.Tissue -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Breast.Mammary.Tissue -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Breast.Mammary.Tissue -t 0.05 -m pearson
 # Breast.Mammary.Tissue - PEARSON - TPM - FEMALE / NOT TO DO
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Breast.Mammary.Tissue_female -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/tpm/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Breast.Mammary.Tissue_female.gct -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/tpm/Breast.Mammary.Tissue_female -m pearson
@@ -289,52 +289,52 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpressio
 # Skin.Sun.Exposed.Lower.leg - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Skin.Sun.Exposed.Lower.leg -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Skin.Sun.Exposed.Lower.leg.gct -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Skin.Sun.Exposed.Lower.leg -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Skin.Sun.Exposed.Lower.leg -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Skin.Sun.Exposed.Lower.leg -t 0.05 -m pearson
 
 # Thyroid - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Thyroid -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Thyroid.gct -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Thyroid -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Thyroid -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Thyroid -t 0.05 -m pearson
 
 # Lung - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Lung -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Lung.gct -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Lung -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Lung -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Lung -t 0.05 -m pearson
 
 # Colon.Transverse - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Colon.Transverse -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Colon.Transverse.gct -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Colon.Transverse -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Colon.Transverse -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Colon.Transverse -t 0.05 -m pearson
 
 # Brain.Cortex - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Brain.Cortex -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Brain.Cortex.gct -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Brain.Cortex -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Brain.Cortex -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Brain.Cortex -t 0.05 -m pearson
 
 # Prostate - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Prostate -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Prostate.gct -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Prostate -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Prostate -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Prostate -t 0.05 -m pearson
 
 # Stomach - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Stomach -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Stomach.gct -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Stomach -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Stomach -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Stomach -t 0.05 -m pearson
 
 # Uterus - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Uterus -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Uterus.gct -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Uterus -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Uterus -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Uterus -t 0.05 -m pearson
 
 # Liver - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Liver -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Liver.gct -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Liver -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Liver -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Liver -t 0.05 -m pearson
 
 # Esophagus.Mucosa - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GTEx/sampling_with_repetition/Esophagus.Mucosa -r /work/ccnr/j.aguirreplans/Databases/GTEx/v8/reads/rnaseq_filtered_files_by_tissue/gtex_rnaseq_Esophagus.Mucosa.gct -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Esophagus.Mucosa -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Esophagus.Mucosa -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_gtex/reads/Esophagus.Mucosa -t 0.05 -m pearson
 
 --
 
@@ -363,22 +363,22 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpressio
 # scipher.complete.dataset - PEARSON - READS 
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/scipher.complete.dataset -r /work/ccnr/j.aguirreplans/data/Scipher/Dec2021/00_data/rnaseq_filtered_files_by_group/scipher_rnaseq_scipher.complete.dataset.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_scipher/reads/scipher.complete.dataset -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_scipher/reads/scipher.complete.dataset -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_scipher/reads/scipher.complete.dataset -t 0.05 -m pearson
 
 # scipher.complete.nonresponder - PEARSON - READS 
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/scipher.complete.nonresponder -r /work/ccnr/j.aguirreplans/data/Scipher/Dec2021/00_data/rnaseq_filtered_files_by_group/scipher_rnaseq_scipher.complete.nonresponder.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_scipher/reads/scipher.complete.nonresponder -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_scipher/reads/scipher.complete.nonresponder -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_scipher/reads/scipher.complete.nonresponder -t 0.05 -m pearson
 
 # scipher.complete.responder - PEARSON - READS 
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/scipher.complete.responder -r /work/ccnr/j.aguirreplans/data/Scipher/Dec2021/00_data/rnaseq_filtered_files_by_group/scipher_rnaseq_scipher.complete.responder.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_scipher/reads/scipher.complete.responder -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_scipher/reads/scipher.complete.responder -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_scipher/reads/scipher.complete.responder -t 0.05 -m pearson
 
 # scipher.sample.per.patient.baseline - PEARSON - READS 
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/Scipher/Dec2021/sampling_with_repetition/scipher.sample.per.patient.baseline -r /work/ccnr/j.aguirreplans/data/Scipher/Dec2021/00_data/rnaseq_filtered_files_by_group/scipher_rnaseq_scipher.sample.per.patient.baseline.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_scipher/reads/scipher.sample.per.patient.baseline -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_scipher/reads/scipher.sample.per.patient.baseline -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_scipher/reads/scipher.sample.per.patient.baseline -t 0.05 -m pearson
 
 
 
@@ -408,113 +408,113 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpressio
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/tumor/TCGA-BRCA_female -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_TCGA-BRCA_female.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-BRCA_female -m pearson
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/tumor/TCGA-BRCA_female -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_TCGA-BRCA_female.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-BRCA_female -m aracne
-# consensus TODO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-BRCA_female -t 0.05 -m pearson
+# consensus TODO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-BRCA_female -t 0.05 -m pearson
 
 
 
 # TCGA-BRCA (Breast Invasive Carcinoma) - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/tumor/TCGA-BRCA -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_TCGA-BRCA.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-BRCA -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-BRCA -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-BRCA -t 0.05 -m pearson
 # TCGA-BRCA-NORMAL!!!! (Breast Invasive Carcinoma) - PEARSON - READS - BOTH SEX / TO DO
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/normal/TCGA-BRCA -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/normal/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_TCGA-BRCA.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/normal/TCGA-BRCA -m pearson
-# consensus TO DO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/normal/TCGA-BRCA -t 0.05 -m pearson
+# consensus TO DO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/normal/TCGA-BRCA -t 0.05 -m pearson
 
 # TCGA-KIRC (Kidney Renal Clear Cell Carcinoma) - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/tumor/TCGA-KIRC -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_TCGA-KIRC.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-KIRC -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-KIRC -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-KIRC -t 0.05 -m pearson
 
 # TCGA-KIRP (Kidney Renal Papillary Cell Carcinoma) - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/tumor/TCGA-KIRP -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_TCGA-KIRP.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-KIRP -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-KIRP -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-KIRP -t 0.05 -m pearson
 
 # TCGA-LUAD (Lung Adenocarcinoma) - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/tumor/TCGA-LUAD -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_TCGA-LUAD.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-LUAD -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-LUAD -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-LUAD -t 0.05 -m pearson
 # TCGA-LUAD-NORMAL!!!! (Breast Invasive Carcinoma) - PEARSON - READS - BOTH SEX / TO DO
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/normal/TCGA-LUAD -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/normal/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_TCGA-LUAD.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/normal/TCGA-LUAD -m pearson
-# consensus TO DO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/normal/TCGA-LUAD -t 0.05 -m pearson
+# consensus TO DO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/normal/TCGA-LUAD -t 0.05 -m pearson
 
 # TCGA-LUSC (Lung Squamous Cell Carcinoma) - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/tumor/TCGA-LUSC -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_TCGA-LUSC.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-LUSC -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-LUSC -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-LUSC -t 0.05 -m pearson
 # TCGA-LUSC-NORMAL!!!! (Breast Invasive Carcinoma) - PEARSON - READS - BOTH SEX / TO DO
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/normal/TCGA-LUSC -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/normal/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_TCGA-LUSC.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/normal/TCGA-LUSC -m pearson
-# consensus TO DO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/normal/TCGA-LUSC -t 0.05 -m pearson
+# consensus TO DO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/normal/TCGA-LUSC -t 0.05 -m pearson
 
 # TCGA-UCEC (Uterine Corpus Endometrial Carcinoma) - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/tumor/TCGA-UCEC -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_TCGA-UCEC.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-UCEC -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-UCEC -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-UCEC -t 0.05 -m pearson
 # TCGA-UCEC_female (Uterine Corpus Endometrial Carcinoma) - PEARSON - READS - FEMALE / TODO
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/tumor/TCGA-UCEC_female -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_TCGA-UCEC_female.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-UCEC_female -m pearson
-# consensus TODO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-UCEC_female -t 0.05 -m pearson
+# consensus TODO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-UCEC_female -t 0.05 -m pearson
 # TCGA-UCEC-NORMAL!!!! (Breast Invasive Carcinoma) - PEARSON - READS - BOTH SEX / TO DO
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/normal/TCGA-UCEC -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/normal/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_TCGA-UCEC.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/normal/TCGA-UCEC -m pearson
-# consensus TO DO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/normal/TCGA-UCEC -t 0.05 -m pearson
+# consensus TO DO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/normal/TCGA-UCEC -t 0.05 -m pearson
 
 # TCGA-OV_female (Ovarian Serous Cystadenocarcinoma) - PEARSON - READS - FEMALE / TODO
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/tumor/TCGA-OV_female -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_TCGA-OV_female.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-OV_female -m pearson
-# consensus TODO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-OV_female -t 0.05 -m pearson
+# consensus TODO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-OV_female -t 0.05 -m pearson
 
 # TCGA-COAD (Colon Adenocarcinoma) - PEARSON - READS - BOTH SEX / TODO
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/tumor/TCGA-COAD -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_TCGA-COAD.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-COAD -m pearson
-# consensus TODO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-COAD -t 0.05 -m pearson
+# consensus TODO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-COAD -t 0.05 -m pearson
 # TCGA-COAD-NORMAL!!!! (Breast Invasive Carcinoma) - PEARSON - READS - BOTH SEX / TO DO
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/normal/TCGA-COAD -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/normal/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_TCGA-COAD.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/normal/TCGA-COAD -m pearson
-# consensus TO DO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/normal/TCGA-COAD -t 0.05 -m pearson
+# consensus TO DO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/normal/TCGA-COAD -t 0.05 -m pearson
 
 # TCGA-LGG (Brain Lower Grade Glioma) - PEARSON - READS - BOTH SEX / TO DO
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/tumor/TCGA-LGG -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_TCGA-LGG.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-LGG -m pearson
-# consensus TO DO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-LGG -t 0.05 -m pearson
+# consensus TO DO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-LGG -t 0.05 -m pearson
 # TCGA-LGG HAS NO NORMAL
 
 # TCGA-THCA (Thyroid Carcinoma) - PEARSON - READS - BOTH SEX / SENT
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/tumor/TCGA-THCA -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_TCGA-THCA.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-THCA -m pearson
-# consensus TO DO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-THCA -t 0.05 -m pearson
+# consensus TO DO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-THCA -t 0.05 -m pearson
 # TCGA-THCA-NORMAL!!!! (Breast Invasive Carcinoma) - PEARSON - READS - BOTH SEX / TO DO
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/normal/TCGA-THCA -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/normal/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_TCGA-THCA.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/normal/TCGA-THCA -m pearson
-# consensus TO DO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/normal/TCGA-THCA -t 0.05 -m pearson
+# consensus TO DO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/normal/TCGA-THCA -t 0.05 -m pearson
 
 # TCGA-SKCM (Skin Cutaneous Melanoma) - PEARSON - READS - BOTH SEX / TO DO
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/tumor/TCGA-SKCM -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_TCGA-SKCM.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-SKCM -m pearson
-# consensus TO DO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-SKCM -t 0.05 -m pearson
+# consensus TO DO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-SKCM -t 0.05 -m pearson
 
 # TCGA-PRAD (Prostate Adenocarcinoma) - PEARSON - READS - BOTH SEX / TO DO
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/tumor/TCGA-PRAD -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_TCGA-PRAD.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-PRAD -m pearson
-# consensus TO DO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-PRAD -t 0.05 -m pearson
+# consensus TO DO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-PRAD -t 0.05 -m pearson
 
 # TCGA-STAD (Stomach adenocarcinoma) - PEARSON - READS - BOTH SEX / TO DO
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/tumor/TCGA-STAD -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_TCGA-STAD.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-STAD -m pearson
-# consensus TO DO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-STAD -t 0.05 -m pearson
+# consensus TO DO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-STAD -t 0.05 -m pearson
 
 # TCGA-ESCA (Esophageal carcinoma) - PEARSON - READS - BOTH SEX / TO DO
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/tumor/TCGA-ESCA -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_TCGA-ESCA.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-ESCA -m pearson
-# consensus TO DO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-ESCA -t 0.05 -m pearson
+# consensus TO DO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-ESCA -t 0.05 -m pearson
 
 # TCGA-LIHC (Liver hepatocellular carcinoma) - PEARSON - READS - BOTH SEX / TO DO
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/tumor/TCGA-LIHC -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/tumor/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_TCGA-LIHC.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-LIHC -m pearson
-# consensus TO DO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-LIHC -t 0.05 -m pearson
+# consensus TO DO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tumor/TCGA-LIHC -t 0.05 -m pearson
 
 
 ---
@@ -523,21 +523,21 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpressio
 # TCGA-Breast - PEARSON - READS - FEMALE / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/tissue/Breast_female -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/tissue/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_Breast_female.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tissue/Breast_female -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tissue/Breast_female -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tissue/Breast_female -t 0.05 -m pearson
 # Breast - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/tissue/Breast -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/tissue/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_Breast.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tissue/Breast -m pearson
-# consensus TODO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tissue/Breast -t 0.05 -m pearson
+# consensus TODO: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tissue/Breast -t 0.05 -m pearson
 
 # TCGA-Lung - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/tissue/Lung -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/tissue/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_Lung.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tissue/Lung -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tissue/Lung -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tissue/Lung -t 0.05 -m pearson
 
 # TCGA-Kidney - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/tissue/Kidney -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/tissue/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_Kidney.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tissue/Kidney -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tissue/Kidney -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/tissue/Kidney -t 0.05 -m pearson
 
 
 ---
@@ -546,37 +546,37 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpressio
 # TCGA-BRCA.LumA - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/subtype/BRCA.LumA -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/subtype/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_BRCA.LumA.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/subtype/BRCA.LumA -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/subtype/BRCA.LumA -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/subtype/BRCA.LumA -t 0.05 -m pearson
 
 # TCGA-BRCA.LumB - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/subtype/BRCA.LumB -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/subtype/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_BRCA.LumB.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/subtype/BRCA.LumB -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/subtype/BRCA.LumB -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/subtype/BRCA.LumB -t 0.05 -m pearson
 
 # TCGA-BRCA.Basal - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/subtype/BRCA.Basal -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/subtype/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_BRCA.Basal.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/subtype/BRCA.Basal -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/subtype/BRCA.Basal -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/subtype/BRCA.Basal -t 0.05 -m pearson
 
 # TCGA-GBM_LGG.G-CIMP-high - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/subtype/GBM_LGG.G-CIMP-high -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/subtype/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_GBM_LGG.G-CIMP-high.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/subtype/GBM_LGG.G-CIMP-high -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/subtype/GBM_LGG.G-CIMP-high -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/subtype/GBM_LGG.G-CIMP-high -t 0.05 -m pearson
 
 # TCGA-GBM_LGG.Codel - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/subtype/GBM_LGG.Codel -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/subtype/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_GBM_LGG.Codel.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/subtype/GBM_LGG.Codel -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/subtype/GBM_LGG.Codel -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/subtype/GBM_LGG.Codel -t 0.05 -m pearson
 
 # TCGA-UCEC.CN_HIGH - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/subtype/UCEC.CN_HIGH -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/subtype/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_UCEC.CN_HIGH.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/subtype/UCEC.CN_HIGH -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/subtype/UCEC.CN_HIGH -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/subtype/UCEC.CN_HIGH -t 0.05 -m pearson
 
 # TCGA-UCEC.CN_LOW - PEARSON - READS - BOTH SEX / DONE
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/TCGA/2022-11-18-Dataset/sampling_with_repetition/subtype/UCEC.CN_LOW -r /work/ccnr/j.aguirreplans/Databases/TCGA/2022-11-18-Dataset/TCGA/out/reads/subtype/filter_genes_low_counts/rnaseq_filtered_files_by_sample_group/tcga_rnaseq_UCEC.CN_LOW.csv -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/subtype/UCEC.CN_LOW -m pearson
-# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/subtype/UCEC.CN_LOW -t 0.05 -m pearson
+# consensus DONE: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_tcga/reads/subtype/UCEC.CN_LOW -t 0.05 -m pearson
 
 
 #-----------#
@@ -594,51 +594,51 @@ python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpressio
 # Rectum_CD_inflamed - PEARSON - READS  DONE! CONSENSUS DONE!
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GEO/GSE193677/sampling_with_repetition/disease_inflamed_vs_control/Rectum_CD_inflamed -r /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out/reads/filter_genes_low_counts/rnaseq_GSE193677.txt -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/disease_inflamed_vs_control/Rectum_CD_inflamed -m pearson
-# consensus: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/disease_inflamed_vs_control/Rectum_CD_inflamed -t 0.05 -m pearson
+# consensus: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/disease_inflamed_vs_control/Rectum_CD_inflamed -t 0.05 -m pearson
 
 # Rectum_UC_inflamed - PEARSON - READS DONE! CONSENSUS DONE!
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GEO/GSE193677/sampling_with_repetition/disease_inflamed_vs_control/Rectum_UC_inflamed -r /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out/reads/filter_genes_low_counts/rnaseq_GSE193677.txt -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/disease_inflamed_vs_control/Rectum_UC_inflamed -m pearson
-# consensus: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/disease_inflamed_vs_control/Rectum_UC_inflamed -t 0.05 -m pearson
+# consensus: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/disease_inflamed_vs_control/Rectum_UC_inflamed -t 0.05 -m pearson
 
 # Rectum_Control_noninflamed - PEARSON - READS DONE! CONSENSUS DONE!
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GEO/GSE193677/sampling_with_repetition/disease_inflamed_vs_control/Rectum_Control_noninflamed -r /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out/reads/filter_genes_low_counts/rnaseq_GSE193677.txt -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/disease_inflamed_vs_control/Rectum_Control_noninflamed -m pearson
-# consensus: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/disease_inflamed_vs_control/Rectum_Control_noninflamed -t 0.05 -m pearson
+# consensus: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/disease_inflamed_vs_control/Rectum_Control_noninflamed -t 0.05 -m pearson
 
 #### INFLAMED VS. CONTROL
 
 # Rectum_inflamed - PEARSON - READS DONE! CONSENSUS DONE!
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GEO/GSE193677/sampling_with_repetition/inflamed_vs_control/Rectum_inflamed -r /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out/reads/filter_genes_low_counts/rnaseq_GSE193677.txt -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed_vs_control/Rectum_inflamed -m pearson
-# consensus: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed_vs_control/Rectum_inflamed -t 0.05 -m pearson
+# consensus: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed_vs_control/Rectum_inflamed -t 0.05 -m pearson
 
 # Rectum_noninflamed - PEARSON - READS DONE! CONSENSUS DONE!
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GEO/GSE193677/sampling_with_repetition/inflamed_vs_control/Rectum_noninflamed -r /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out/reads/filter_genes_low_counts/rnaseq_GSE193677.txt -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed_vs_control/Rectum_noninflamed -m pearson
-# consensus: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed_vs_control/Rectum_noninflamed -t 0.05 -m pearson
+# consensus: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed_vs_control/Rectum_noninflamed -t 0.05 -m pearson
 
 #### INFLAMED VS. NONINFLAMED
 
 # Rectum_inflamed - PEARSON - READS DONE! CONSENSUS DONE!
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GEO/GSE193677/sampling_with_repetition/inflamed_vs_noninflamed/Rectum_inflamed -r /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out/reads/filter_genes_low_counts/rnaseq_GSE193677.txt -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed_vs_noninflamed/Rectum_inflamed -m pearson
-# consensus: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed_vs_noninflamed/Rectum_inflamed -t 0.05 -m pearson
+# consensus: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed_vs_noninflamed/Rectum_inflamed -t 0.05 -m pearson
 
 # Rectum_noninflamed - PEARSON - READS DONE! CONSENSUS DONE!
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GEO/GSE193677/sampling_with_repetition/inflamed_vs_noninflamed/Rectum_noninflamed -r /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out/reads/filter_genes_low_counts/rnaseq_GSE193677.txt -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed_vs_noninflamed/Rectum_noninflamed -m pearson
-# consensus: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed_vs_noninflamed/Rectum_noninflamed -t 0.05 -m pearson
+# consensus: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed_vs_noninflamed/Rectum_noninflamed -t 0.05 -m pearson
 
 # Ileum_inflamed - PEARSON - READS DONE! CONSENSUS DONE!
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GEO/GSE193677/sampling_with_repetition/inflamed_vs_noninflamed/Ileum_inflamed -r /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out/reads/filter_genes_low_counts/rnaseq_GSE193677.txt -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed_vs_noninflamed/Ileum_inflamed -m pearson
-# consensus: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed_vs_noninflamed/Ileum_inflamed -t 0.05 -m pearson
+# consensus: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed_vs_noninflamed/Ileum_inflamed -t 0.05 -m pearson
 
 # Ileum_noninflamed - PEARSON - READS DONE! CONSENSUS DONE!
 module load python/3.8.1
 python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_gene_coexpression_networks_from_samples_cluster.py -i /home/j.aguirreplans/Projects/Scipher/SampleSize/data/sampling/GEO/GSE193677/sampling_with_repetition/inflamed_vs_noninflamed/Ileum_noninflamed -r /work/ccnr/j.aguirreplans/Databases/GEO/GSE193677/out/reads/filter_genes_low_counts/rnaseq_GSE193677.txt -o /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed_vs_noninflamed/Ileum_noninflamed -m pearson
-# consensus: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed_vs_noninflamed/Ileum_noninflamed -t 0.05 -m pearson
+# consensus: python /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/create_consensus_gene_coexpression_networks_cluster.py -n /scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_geo/GSE193677/reads/inflamed_vs_noninflamed/Ileum_noninflamed -t 0.05 -m pearson
 
 
 
