@@ -2752,8 +2752,8 @@ ggsave(
 ```{r}
 dataset <- "gtex"
 type_dataset <- "Whole.Blood"
-sizes_selected <- c(20, 60, 100, 200, 300, 400)
-threshold_selected <- 0.05
+sizes_selected <- c(20, 60, 100, 200, 300)
+num_links_to_select <- 1E5
 coexpression_dir <- sprintf("/scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_%s/reads/%s/consensus", dataset, type_dataset)
 ```
 
@@ -2818,7 +2818,7 @@ if (!(file.exists(pvalue_variation_file))) {
   # Select 1M links from each correlation strength
   pvalue_df <- pvalue_df %>%
     dplyr::group_by(strength) %>%
-    dplyr::slice_sample(n = 1E6, replace = FALSE) %>%
+    dplyr::slice_sample(n = num_links_to_select, replace = FALSE) %>%
     dplyr::ungroup() %>%
     as.data.frame()
 
@@ -2834,6 +2834,7 @@ Create violin plot showing distributions of p-values across sample sizes and cor
 violinplot_pvalue_variation_file <-  sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/violin_pvalue_variation_pearson_%s_%s.png", dataset, type_dataset)
 
 violinplot_pvalue_variation <- pvalue_df %>%
+  # Transform data frame to long format
   tidyr::pivot_longer(
     !(c("Node.1", "Node.2", "strength")),
     names_prefix = "pval.",
@@ -2842,6 +2843,8 @@ violinplot_pvalue_variation <- pvalue_df %>%
     names_transform = list(size = as.character),
     values_transform = list(pval = as.numeric)
   ) %>%
+  # Transform p-values lower than 1E-20 to 1E-20 so that there are no p-values
+  # equal to 0 and the visualization improves
   dplyr::mutate(
     pval = ifelse(pval <= 1E-20, 1E-20, pval),
     strength = factor(
@@ -2856,7 +2859,7 @@ violinplot_pvalue_variation <- pvalue_df %>%
     color = strength
   )) +
   geom_violin(
-    alpha = 0.8, 
+    alpha = 0.3, 
     scale = "width", 
     adjust = 0.5
   ) +
@@ -2874,11 +2877,16 @@ violinplot_pvalue_variation <- pvalue_df %>%
     values = "dashed"
   ) +
   labs(
-    x = "Number of samples",
+    x = "Num. samples",
     y = "-Log( P-value )",
-    color = "",
-    fill = "",
+    color = "Correlation strength",
+    fill = "Correlation strength",
     linetype = ""
+  ) +
+  guides(
+    color = guide_legend(
+      override.aes = list(color = NA) # Remove the red horizontal line
+    )
   ) +
   theme_linedraw() +
   theme(
@@ -2893,6 +2901,7 @@ violinplot_pvalue_variation <- pvalue_df %>%
     text = element_text(family = font_selected)
   )
 
+rm(pvalue_df)
 print(violinplot_pvalue_variation)
 
 ggsave(
@@ -3343,22 +3352,62 @@ rm(sd_table_df)
 Patchwork:
 
 ```{r}
-# Use patchwork to concatenate plots
-(correlation_levels_plot /
-  specific_links_plot /
-  sd_plot) + 
-  plot_annotation(tag_levels = 'A') & # Include letters 
-    theme(plot.tag = element_text(face = 'bold', size = 17))
+# # Use patchwork to concatenate plots
+# (correlation_levels_plot /
+#   specific_links_plot /
+#   sd_plot) + 
+#   plot_annotation(tag_levels = 'A') & # Include letters 
+#     theme(plot.tag = element_text(face = 'bold', size = 17))
+# 
+# plot_file = paste(plots_dir, "/sd_coexpression_results.png", sep="")
+# ggsave(
+#   plot_file,
+#   dpi = 1200,
+#   width = 10000,
+#   height = 17000,
+#   units = c("px")
+# )
+```
+
+```{r}
+layout <- "
+AB
+CD
+"
+
+((violinplot_pvalue_variation +
+    labs(tag = 'A') +
+    theme(plot.tag.position = c(.07, 1.04),
+          plot.margin = margin(0.6, 0.6, 0.6, 0.6, "cm"))
+  ) +
+    (correlation_levels_plot +
+       labs(tag = 'B') +
+       theme(plot.tag.position = c(.07, 1.04),
+             plot.margin = margin(0.6, 0.6, 0.6, 0.6, "cm"))
+     ) +
+    (specific_links_plot +
+       labs(tag = 'C') +
+       theme(plot.tag.position = c(.07, 1.04),
+             plot.margin = margin(0.6, 0.6, 0.6, 0.6, "cm"))
+     ) +
+    (sd_plot +
+       labs(tag = 'D') +
+       theme(plot.tag.position = c(.07, 1.04),
+             plot.margin = margin(0.6, 0.6, 0.6, 0.6, "cm"))
+     )) +
+  plot_layout(design = layout) &
+  theme(plot.tag = element_text(face = 'bold', size = 17))
 
 plot_file = paste(plots_dir, "/sd_coexpression_results.png", sep="")
 ggsave(
   plot_file,
   dpi = 1200,
-  width = 10000,
-  height = 17000,
+  width = 16000,
+  height = 11000,
   units = c("px")
 )
 ```
+
 
 Supplementary figure with the analysis of SD for different datasets:
 
