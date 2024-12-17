@@ -5,7 +5,7 @@
 #SBATCH --time=24:00:00
 #SBATCH -o /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/../logs/%x.%j.sh.out
 #SBATCH -e /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/../logs/%x.%j.sh.err
-#SBATCH -p netsi_standard
+#SBATCH -p short
 # Potential queues ==> short, netsi_standard
 
 source /etc/profile.d/modules.sh
