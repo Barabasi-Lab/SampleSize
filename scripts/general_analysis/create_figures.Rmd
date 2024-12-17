@@ -199,7 +199,7 @@ max(((results_selected_df %>%
 Read and process analytical model data:
 
 ```{r}
-analytical_summary_file = paste(input_dir, 'analytical_model_summary_pearson_pval_0.05.txt', sep='/')
+analytical_summary_file <- paste(input_dir, "/analytical_model_summary_", type_data_selection, ".txt", sep = "")
 analytical_model_summary_df <- data.table::fread(analytical_summary_file)
 analytical_model_summary_df <- analytical_model_summary_df %>% 
   inner_join((results_selected_norm_df %>%
@@ -454,9 +454,13 @@ scaling_relation_plot_lessdatasets <- power_law_lessdatasets_df %>%
         legend.title = element_text(size = 16, face = "bold")
         )
 
-plot_file = paste(plots_dir, 
-                  "/scaling_relation_", type_data_selection, "_lessdatasets.png", 
-                  sep="/")
+plot_file <- paste(
+  plots_dir, 
+  "/scaling_relation_",
+  type_data_selection,
+  "_lessdatasets.png",
+  sep = ""
+)
 ggsave(
   plot_file,
   plot = scaling_relation_plot_lessdatasets,
@@ -2433,7 +2437,7 @@ a_vs_ss_lin_log_plot <- sd_genes_vs_ss_df %>%
               show.legend = FALSE) +
     scale_color_manual(values = c("gray50")) +
     #annotate("text", x = 4500, y = 2.05, label = lm_cor_result_ssvsa, size = 5) +
-    annotate("text", x = 3.3, y = 2, label = lm_cor_result_ssvsa, size = 5) +
+    annotate("text", x = 3.3, y = 2.1, label = lm_cor_result_ssvsa, size = 5) +
     xlab("log10(n) to get 50% sig. links") +
     ylab(expression(bold(alpha))) +
     theme_linedraw() +
@@ -3190,8 +3194,10 @@ correlation_levels_plot <- correlation_levels_plot_df %>%
 
 plot_file <- paste(
   plots_dir,
-  "correlation_levels_pearson_pval_0.05_data_gtexwholeblood.png",
-  sep = "/"
+  "/correlation_levels_",
+  type_data_selection,
+  "_data_gtexwholeblood.png",
+  sep = ""
 )
 ggsave(
   plot_file,

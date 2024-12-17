@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 Create figures for the manuscript, extended abstract and poster.
 
 ```{r}
-packrat::init("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR")
+#packrat::init("/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeR")
 ```
 
 ```{r}
@@ -92,9 +92,10 @@ name2color <- c(
   "scipher" = "#D55E00",
   #"Analytical model"="#e3f705",
   "Analytical model"="#cc68f7",
-  "Power law"="#cc68f7",
+  "Power law"="red", #cc68f7
   "Logarithm"="#09b863",
-  "Exponential decay"="#09b863",
+  "Exponential decay"="orange", #09b863
+  "Constant discovery"="grey",
   "\u2265 0.2" = "#F8766D",
   "\u2265 0.4" = "#7CAE00",
   "\u2265 0.6" = "#00BFC4",
@@ -125,6 +126,7 @@ name2color <- c(
   )
 
 dataset2name <- c(
+  "gtex:breast.mammary.tissue" = "GTEx: Breast",
   "gtex:breast.mammary.tissue_female" = "GTEx: Breast",
   "gtex:whole.blood" = "GTEx: Whole blood",
   "gtex:lung" = "GTEx: Lung",
@@ -195,6 +197,52 @@ max(((results_selected_df %>%
         dplyr::select(method, type_dataset, size, rep) %>% 
         filter(!(type_dataset == "tcga:tcga")) %>% 
         unique()))$size)
+```
+
+Read and process analytical model data:
+
+```{r}
+analytical_summary_file <- paste(input_dir, "/analytical_model_summary_", type_data_selection, ".txt", sep = "")
+analytical_model_summary_df <- data.table::fread(analytical_summary_file)
+analytical_model_summary_df <- analytical_model_summary_df %>% 
+  inner_join((results_selected_norm_df %>%
+                dplyr::select("type_dataset", "subclassification")), 
+             by = c("type_dataset")) %>%
+  unique()
+
+analytical_model_summary_df$L_vs_total <- abs((analytical_model_summary_df$unnorm_L - analytical_model_summary_df$total_num_edges)) / analytical_model_summary_df$total_num_edges
+analytical_model_summary_df$dataset_name <- analytical_model_summary_df$type_dataset
+
+analytical_model_summary_df <- analytical_model_summary_df %>%
+  tidyr::separate(col = "dataset_name", 
+           into = c("dataset_name", "sex"), 
+           sep = "_", 
+           remove = TRUE) %>%
+  tidyr::separate(col = "dataset_name", 
+           into = c("dataset", NULL), 
+           sep = ":", 
+           remove = FALSE) %>%
+  mutate(sex = if_else(is.na(sex), "", sex))
+
+analytical_model_summary_df$dataset_name <- ifelse(
+  !(analytical_model_summary_df$subclassification == ""),
+  paste(
+    analytical_model_summary_df$dataset_name, 
+    analytical_model_summary_df$subclassification, 
+    sep = "-"
+  ),
+  analytical_model_summary_df$dataset_name
+)
+
+analytical_model_summary_df$dataset_name <- ifelse(
+  !(analytical_model_summary_df$sex == ""),
+  paste(
+    analytical_model_summary_df$dataset_name,
+    analytical_model_summary_df$sex,
+    sep = "_"
+  ),
+  analytical_model_summary_df$dataset_name
+)
 ```
 
 ### Make plots
@@ -1404,7 +1452,7 @@ a_vs_fraction_sig_correlations_lessdatasets_plot <- sample_size_vs_a_plot_lessda
                 linetype = "dashed", 
                 col = "gray50",
                 show.legend = FALSE) +
-  annotate("text", x = 2.25, y = 0.7, label = lm_cor_result_avsfr, size = 5) +
+  annotate("text", x = 2, y = 0.6, label = lm_cor_result_avsfr, size = 5) +
   xlab(expression(alpha)) +
   ylab("Frac. correlations above 0.2") +
   theme_linedraw() +
@@ -1416,7 +1464,7 @@ a_vs_fraction_sig_correlations_lessdatasets_plot <- sample_size_vs_a_plot_lessda
         panel.grid.minor = element_blank(),
         text = element_text(family = font_selected),
         #legend.position="none")
-        legend.position = c(0.8, 0.2),
+        legend.position = c(0.8, 0.6),
         legend.background = element_rect(fill = 'transparent', color = "transparent"),
         legend.text = element_text(size = 16), 
         legend.title=element_blank())
@@ -1498,7 +1546,7 @@ for (x in 1:length(parameters)){
           legend.position="none")
   
   # Save distribution plot without changes in the theme, because we will tune it afterwards with patchwork
-  distribution_plots[[x]] = distribution_plot
+  distribution_plots[[parameter]] = distribution_plot
   
   plot_file = paste(plots_dir, "/distribution_", parameter, "_genes.png", sep="")
   ggsave(
@@ -1566,7 +1614,7 @@ for (x in 1:length(parameters)){
   
   # Save distribution plot without changes in the theme, because we will tune it 
   # afterwards with patchwork
-  distribution_plots_lessdatasets[[x]] = distribution_plot_lessdatasets
+  distribution_plots_lessdatasets[[parameter]] = distribution_plot_lessdatasets
   
   plot_file = paste(plots_dir, 
                     "/distribution_", 
@@ -1870,12 +1918,12 @@ for (x in 1:length(parameters)){
     y_legend <- 0.38
   } else if (parameter == "sd"){
     cut <- sd_cut
-    x_legend <- 1.585
-    y_legend <- 0.938
+    x_legend <- 2.2
+    y_legend <- 0.945
   } else if (parameter == "mean"){
     cut <- mean_cut
-    x_legend <- 1.585
-    y_legend <- 0.968
+    x_legend <- 2.15
+    y_legend <- 0.975
   }
 
   # Calculate correlation
@@ -2256,7 +2304,7 @@ a_vs_ss_lin_lin_plot <- sd_genes_vs_ss_df %>%
               show.legend = FALSE) +
     scale_color_manual(values = c("gray50")) +
     #annotate("text", x = 4500, y = 2.05, label = lm_cor_result_ssvsa, size = 5) +
-    annotate("text", x = 4000, y = 2, label = lm_cor_result_ssvsa, size = 5) +
+    annotate("text", x = 1000, y = 2, label = lm_cor_result_ssvsa, size = 5) +
     xlab("n to get 50% sig. links") +
     ylab(expression(bold(alpha))) +
     theme_linedraw() +
@@ -2316,7 +2364,7 @@ a_vs_ss_log_lin_plot <- sd_genes_vs_ss_df %>%
               show.legend = FALSE) +
     scale_color_manual(values = c("gray50")) +
     #annotate("text", x = 4500, y = 2.05, label = lm_cor_result_ssvsa, size = 5) +
-    annotate("text", x = 4000, y = 0.3, label = lm_cor_result_ssvsa, size = 5) +
+    annotate("text", x = 1000, y = 0.3, label = lm_cor_result_ssvsa, size = 5) +
     xlab("n to get 50% sig. links") +
     ylab(expression(bold(log10(alpha)))) +
     theme_linedraw() +
@@ -2377,7 +2425,7 @@ a_vs_ss_lin_log_plot <- sd_genes_vs_ss_df %>%
               show.legend = FALSE) +
     scale_color_manual(values = c("gray50")) +
     #annotate("text", x = 4500, y = 2.05, label = lm_cor_result_ssvsa, size = 5) +
-    annotate("text", x = 3.3, y = 2, label = lm_cor_result_ssvsa, size = 5) +
+    annotate("text", x = 2.75, y = 2.1, label = lm_cor_result_ssvsa, size = 5) +
     xlab("log10(n) to get 50% sig. links") +
     ylab(expression(bold(alpha))) +
     theme_linedraw() +
@@ -2489,7 +2537,7 @@ cv_vs_ss_plot <- sd_genes_vs_ss_df %>%
               linetype = "dashed", 
               show.legend = FALSE) +
     scale_color_manual(values = c("gray50")) +
-    annotate("text", x = 4500, y = 0.41, label = lm_cor_result_cvvsss, size = 5) +
+    annotate("text", x = 1100, y = 0.45, label = lm_cor_result_cvvsss, size = 5) +
     xlab("Num. samples for 50% sig. links") +
     ylab(paste("Frac. genes with CV above ", 
                cv_cut, 
@@ -2562,7 +2610,7 @@ sd_vs_ss_plot <- sd_genes_vs_ss_df %>%
               linetype = "dashed", 
               show.legend = FALSE) +
     scale_color_manual(values = c("gray50")) +
-    annotate("text", x = 3500, y = 0.93, label = lm_cor_result_sdvsss, size = 5) +
+    annotate("text", x = 1000, y = 0.93, label = lm_cor_result_sdvsss, size = 5) +
     xlab("Num. samples for 50% sig. links") +
     ylab(paste("Frac. genes with SD above ", 
                sd_cut, 
@@ -2745,22 +2793,59 @@ calculate_predictions_using_stretched_exponential_model_optimized = function(x, 
 }
 ```
 
-Calculate sample size for different levels of correlation and different datasets:
+Calculate sample size for different levels of correlation and different data sets:
 
 ```{r}
-type_correlation_df = data.frame(type_correlation=c("weak", "moderate", "strong", "very strong"), lower_val=c(0.2,0.4,0.6,0.8), upper_val=c(0.4,0.6,0.8,NA))
-types_correlation = c("weak", "moderate", "strong", "very strong")
+types_correlation <- c("weak", "moderate", "strong", "very strong")
+type_correlation_df <- data.frame(
+  type_correlation = types_correlation,
+  lower_val = c(0.2,0.4,0.6,0.8),
+  upper_val = c(0.4,0.6,0.8,NA)
+)
 
-cols = c("dataset", "type_correlation", "correlation", "sample_size_statistical", "sample_size_statistical_corrected", "sample_size_z")
-sample_size_correlation_df = data.frame(matrix(ncol=length(cols),nrow=0, dimnames=list(NULL, cols)))
-for (dataset in numbers_df$dataset){
-  total_num_edges = unique((numbers_df %>% filter(dataset == !!dataset))$total_num_edges)
-  for (type_correlation in types_correlation){
-    r = (type_correlation_df %>% filter(type_correlation == !!type_correlation))$lower_val
-    N = calculate_sample_size_for_pearson_correlation_using_t_distribution_with_optimization(r=r, total_num_edges=total_num_edges, alpha=0.05, N_guess=c(10000))
-    N_corrected = calculate_sample_size_for_pearson_correlation_using_t_distribution_with_optimization(r=r, total_num_edges=total_num_edges, alpha=0.05/total_num_edges, N_guess=c(10000))
-    N_z = calculate_sample_size_for_pearson_correlation_using_bonnet_and_wright(r=r, w=0.8, alpha=0.05/total_num_edges)
-    sample_size_correlation_df <- rbind(sample_size_correlation_df, data.frame(dataset=dataset, type_correlation=type_correlation, correlation=r, sample_size_statistical=N, sample_size_statistical_corrected=N_corrected, sample_size_z=N_z))
+cols <- c("dataset", "type_correlation", "correlation", "sample_size_statistical", "sample_size_statistical_corrected", "sample_size_z")
+sample_size_correlation_df <- data.frame(matrix(
+  ncol = length(cols),
+  nrow = 0,
+  dimnames = list(NULL, cols)
+))
+
+for (dataset in numbers_df$dataset) {
+  total_num_edges <- unique((numbers_df %>% dplyr::filter(dataset == !!dataset))$total_num_edges)
+  for (type_correlation in types_correlation) {
+    r <- (type_correlation_df %>% filter(type_correlation == !!type_correlation))$lower_val
+  
+    N <- calculate_sample_size_for_pearson_correlation_using_t_distribution_with_optimization(
+      r = r,
+      total_num_edges = total_num_edges,
+      alpha = 0.05,
+      N_guess = c(10000)
+    )
+  
+    N_corrected <- calculate_sample_size_for_pearson_correlation_using_t_distribution_with_optimization(
+      r = r,
+      total_num_edges = total_num_edges,
+      alpha = 0.05 / total_num_edges,
+      N_guess = c(10000)
+    )
+  
+    N_z <- calculate_sample_size_for_pearson_correlation_using_bonnet_and_wright(
+      r = r,
+      w = 0.8,
+      alpha = 0.05 / total_num_edges
+    )
+  
+    sample_size_correlation_df <- rbind(
+      sample_size_correlation_df,
+      data.frame(
+        dataset = dataset,
+        type_correlation = type_correlation,
+        correlation = r,
+        sample_size_statistical = N,
+        sample_size_statistical_corrected = N_corrected,
+        sample_size_z = N_z
+      )
+    )
   }
 }
 
@@ -2768,21 +2853,55 @@ print(sample_size_correlation_df)
 ```
 
 ```{r}
-dataset_selected = "gtex:whole.blood"
-model_selected = "Stretched exponential (by linear fit)"
-results_analytical_gtex_wb = topology_results_selected_analytical_norm_df %>% 
-  filter((model == model_selected) & (type_dataset == dataset_selected)) %>%
-  select(model, type_dataset, a, b, L, max_value_in_dataset) %>% unique()
-sample_size_correlation_gtex_wb = sample_size_correlation_df %>%
-  filter((dataset == dataset_selected) & (!(type_correlation == "weak")))
+dataset_selected <- "gtex:whole.blood"
+model_selected <- "Stretched exponential (by linear fit)"
 
-predictions_convergence_gtex_wb_norm = calculate_predictions_using_stretched_exponential_model_optimized(x=sample_size_correlation_gtex_wb$sample_size_statistical_corrected, L=results_analytical_gtex_wb$L, a=results_analytical_gtex_wb$a, b=results_analytical_gtex_wb$b)
-predictions_convergence_gtex_wb_df = data.frame(size=round(sample_size_correlation_gtex_wb$sample_size_statistical_corrected), num_edges=predictions_convergence_gtex_wb_norm * results_analytical_gtex_wb$max_value_in_dataset, num_edges_norm=predictions_convergence_gtex_wb_norm)
-predictions_convergence_gtex_wb_df$num_edges_norm = (predictions_convergence_gtex_wb_df$num_edges/results_analytical_gtex_wb$max_value_in_dataset)/results_analytical_gtex_wb$L
+# Get analytical model parameters for GTEx whole blood
+results_analytical_gtex_wb <- topology_results_selected_analytical_norm_df %>% 
+  dplyr::filter(
+    (model == model_selected) & (type_dataset == dataset_selected)
+  ) %>%
+  dplyr::select(model, type_dataset, a, b, L, max_value_in_dataset) %>%
+  unique()
+
+# Get optimal sample size for different types of correlations and GTEx whole
+# blood data set
+sample_size_correlation_gtex_wb <- sample_size_correlation_df %>%
+  dplyr::filter((dataset == dataset_selected) & (!(type_correlation == "weak")))
+
+# Calculate fraction of edges for optimal sample sizes calculated before
+predictions_convergence_gtex_wb_norm <- calculate_predictions_using_stretched_exponential_model_optimized(
+  x = sample_size_correlation_gtex_wb$sample_size_statistical_corrected,
+  L = results_analytical_gtex_wb$L,
+  a = results_analytical_gtex_wb$a,
+  b = results_analytical_gtex_wb$b
+)
+
+# Create table to store predictions
+predictions_convergence_gtex_wb_df <- data.frame(
+  size = round(sample_size_correlation_gtex_wb$sample_size_statistical_corrected),
+  num_edges = predictions_convergence_gtex_wb_norm * results_analytical_gtex_wb$max_value_in_dataset,
+  num_edges_norm = predictions_convergence_gtex_wb_norm
+)
+
+# Include normalized num. of edges
+predictions_convergence_gtex_wb_df$num_edges_norm <- (
+  predictions_convergence_gtex_wb_df$num_edges / results_analytical_gtex_wb$max_value_in_dataset
+) / results_analytical_gtex_wb$L
+
 predictions_convergence_gtex_wb_df
 
-predicted_results_wb_df = predicted_results_df %>% filter((model == model_selected) & (type_dataset == dataset_selected)) %>% mutate_at(c('model_result'), as.numeric)
-predicted_results_wb_df$model_result_norm = (predicted_results_wb_df$model_result/results_analytical_gtex_wb$max_value_in_dataset)/results_analytical_gtex_wb$L
+# Select prediction results for GTEx whole blood
+predicted_results_wb_df <- predicted_results_df %>%
+  dplyr::filter(
+    (model == model_selected) & (type_dataset == dataset_selected)
+  ) %>%
+  dplyr::mutate_at(c('model_result'), as.numeric)
+
+# Normalize model predictions
+predicted_results_wb_df$model_result_norm <- (
+  predicted_results_wb_df$model_result / results_analytical_gtex_wb$max_value_in_dataset
+) / results_analytical_gtex_wb$L
 ```
 
 ```{r}
