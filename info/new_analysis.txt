@@ -1,11 +1,11 @@
 To modify memory / queue parameters, check:
 /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/job_array_calculate_gene_coexpression_networks_cluster.sh
 
-gtex whole blood aracne / spearman Networks created in: Pearson (all)
+gtex whole blood - Networks created in: Pearson (all)
 bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_calculate_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_create_coexpr_gtex_wholeblood.sh
 bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_analyze_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_analysis_coexpr_gtex_wholeblood.sh
 
-gtex lung aracne / spearman / pearson  genie3 ==> done aracne ==> done
+gtex lung - Networks created in: Pearson (240) - Running 2 merged networks filtered by strong correlations
 bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_calculate_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_create_coexpr_gtex_lung.sh
 bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_analyze_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_analysis_coexpr_gtex_lung.sh
 
@@ -17,11 +17,11 @@ gtex thyroid aracne / spearman
 bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_calculate_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_create_coexpr_gtex_thyroid.sh
 bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_analyze_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_analysis_coexpr_gtex_thyroid.sh
 
-gtex breast aracne / spearman / pearson  Networks created in: Spearman (until 240), Pearson (until 240). Running networks in: Genie3 (until 240), Aracne (until 240)
+gtex breast aracne / spearman / pearson  Networks created in: Spearman (until 240), Pearson (until 240), Genie3 (until 240), Aracne (until 240)
 bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_calculate_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_create_coexpr_gtex_breast.sh
 bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_analyze_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_analysis_coexpr_gtex_breast.sh
 
-tcga brca female aracne / spearman / pearson  genie ==> done aracne ==> done
+tcga brca female - Networks created in: Pearson (240)
 bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_calculate_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_create_coexpr_tcga_brcafemale.sh
 bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_analyze_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_analysis_coexpr_tcga_brcafemale.sh
 
@@ -65,7 +65,7 @@ GSE193677 Rectum_CD_inflamed aracne / pearson / spearman
 bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_calculate_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_create_coexpr_gse193677_rectumcdinflamed.sh
 bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_analyze_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_analysis_coexpr_gse193677_rectumcdinflamed.sh
 
-GSE193677 Rectum_UC_inflamed aracne / pearson / spearman  genie3 ==> done
+GSE193677 Rectum_UC_inflamed - Networks running in: Pearson (all)
 bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_calculate_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_create_coexpr_gse193677_rectumucinflamed.sh
 bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_analyze_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_analysis_coexpr_gse193677_rectumucinflamed.sh
 
@@ -73,7 +73,7 @@ GSE193677 Rectum_Control_noninflamed aracne / pearson / spearman
 bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_calculate_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_create_coexpr_gse193677_rectumcontrolnoninflamed.sh
 bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_analyze_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_analysis_coexpr_gse193677_rectumcontrolnoninflamed.sh
 
-GSE193677 Rectum_inflamed aracne / pearson / spearman  genie3 ==> done
+GSE193677 Rectum_inflamed - Networks running in: Pearson (all)
 bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_calculate_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_create_coexpr_gse193677_rectuminflamed.sh
 bash /home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/gene_coexpression_networks/parameters_analyze_gene_coexpression_networks_cluster.sh /home/j.aguirreplans/Projects/Scipher/SampleSize/configs/config_analysis_coexpr_gse193677_rectuminflamed.sh
 
