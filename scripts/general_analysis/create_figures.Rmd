@@ -140,33 +140,35 @@ dataset2name <- c(
   "very strong" = "\u2265 0.8"
 )
 
-input_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/example_pearson_pval_0.05'
-topology_results_file = paste(input_dir, 'topology_results_pearson_pval_0.05.txt', sep='/')
+method_selected <- "pearson"
+type_data_selection <- 'pearson_pval_0.05'
+input_dir <- paste('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/example_', type_data_selection, sep = '')
+topology_results_file <- paste(input_dir, '/topology_results_', type_data_selection, '.txt', sep='')
 results_selected_df <- data.table::fread(topology_results_file)
-topology_results_by_size_file = paste(input_dir, 'topology_results_mean_pearson_pval_0.05.txt', sep='/')
+topology_results_by_size_file <- paste(input_dir, '/topology_results_mean_', type_data_selection, '.txt', sep='')
 topology_results_selected_by_size_df <- data.table::fread(topology_results_by_size_file)
-predictions_file = paste(input_dir, 'predictions_pearson_pval_0.05.txt', sep='/')
+predictions_file <- paste(input_dir, '/predictions_', type_data_selection, '.txt', sep='')
 predicted_results_df <- data.table::fread(predictions_file)
-analytical_results_file = paste(input_dir, 'analytical_model_results_pearson_pval_0.05.txt', sep='/')
+analytical_results_file <- paste(input_dir, '/analytical_model_results_', type_data_selection, '.txt', sep='')
 topology_results_selected_analytical_df <- data.table::fread(analytical_results_file)
-analytical_regression_results_file = paste(input_dir, 'analytical_model_regression_results_pearson_pval_0.05.txt', sep='/')
+analytical_regression_results_file <- paste(input_dir, '/analytical_model_regression_results_', type_data_selection, '.txt', sep='')
 stretched_exponential_regression_df <- data.table::fread(analytical_regression_results_file)
-theoretical_sample_size_file = paste(input_dir, 'theoretical_sample_size_for_correlations_of_datasets.txt', sep='/') # from => calculate_convergence_correlation_types.Rmd
+theoretical_sample_size_file <- paste(input_dir, 'theoretical_sample_size_for_correlations_of_datasets.txt', sep='/') # from => calculate_convergence_correlation_types.Rmd
 sample_size_correlation_df <- data.table::fread(theoretical_sample_size_file)
 ```
 
 Normalized data:
 
 ```{r}
-topology_type_normalization = "divide.L"
-input_dir = '/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/example_pearson_pval_0.05'
-topology_results_file = paste(input_dir, '/', 'topology_results_norm_', topology_type_normalization, '_pearson_pval_0.05.txt', sep='')
+topology_type_normalization <- "divide.L"
+input_dir <- paste('/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/example_', type_data_selection, sep = '')
+topology_results_file <- paste(input_dir, '/', 'topology_results_norm_', topology_type_normalization, '_', type_data_selection, '.txt', sep='')
 results_selected_norm_df <- data.table::fread(topology_results_file)
-topology_results_by_size_file = paste(input_dir, '/', 'topology_results_mean_norm_', topology_type_normalization, '_pearson_pval_0.05.txt', sep='')
+topology_results_by_size_file <- paste(input_dir, '/', 'topology_results_mean_norm_', topology_type_normalization, '_', type_data_selection, '.txt', sep='')
 topology_results_selected_by_size_norm_df <- data.table::fread(topology_results_by_size_file)
-predictions_file = paste(input_dir, '/', 'predictions_', topology_type_normalization, '_pearson_pval_0.05.txt', sep='')
+predictions_file <- paste(input_dir, '/', 'predictions_', topology_type_normalization, '_', type_data_selection, '.txt', sep='')
 predicted_results_norm_df <- data.table::fread(predictions_file)
-analytical_results_file = paste(input_dir, '/', 'analytical_model_results_', topology_type_normalization, '_pearson_pval_0.05.txt', sep='')
+analytical_results_file <- paste(input_dir, '/', 'analytical_model_results_', topology_type_normalization, '_', type_data_selection, '.txt', sep='')
 topology_results_selected_analytical_norm_df <- data.table::fread(analytical_results_file)
 ```
 
@@ -287,7 +289,7 @@ curve_plot_lessdatasets <- results_curve_lessdatasets_df %>%
     seed = 1234
   )
 
-plot_file = paste(plots_dir, "curve_pearson_pval_0.05_lessdatasets.png", sep="/")
+plot_file = paste(plots_dir, "/curve_", type_data_selection, "_lessdatasets.png", sep="")
 ggsave(
   plot_file,
   plot=curve_plot_lessdatasets,
@@ -453,7 +455,7 @@ scaling_relation_plot_lessdatasets <- power_law_lessdatasets_df %>%
         )
 
 plot_file = paste(plots_dir, 
-                  "scaling_relation_pearson_pval_0.05_lessdatasets.png", 
+                  "/scaling_relation_", type_data_selection, "_lessdatasets.png", 
                   sep="/")
 ggsave(
   plot_file,
@@ -524,7 +526,7 @@ scaling_relation_plot_comparison <- scaling_relation_comparison_proc_df %>%
         legend.title=element_text(size=16, face="bold"),
         legend.background = element_rect(fill = 'transparent', color = "transparent"))
 
-plot_file = paste(plots_dir, "/comparison_pl_ed_pearson_pval_0.05_", dataset_selected, ".png", sep="")
+plot_file = paste(plots_dir, "/comparison_pl_ed_", type_data_selection, "_", dataset_selected, ".png", sep="")
 ggsave(
   plot_file,
   plot = scaling_relation_plot_comparison,
@@ -727,7 +729,7 @@ prediction_plot = prediction_plot_df %>%
     seed = 1234
   )
 
-plot_file = paste(plots_dir, "prediction_pearson_pval_0.05.png", sep="/")
+plot_file = paste(plots_dir, "/prediction_", type_data_selection, ".png", sep="")
 print(prediction_plot)
 ggsave(
   plot_file,
@@ -782,7 +784,7 @@ prediction_plot_lessdatasets = prediction_plot_lessdatasets_df %>%
         legend.background = element_rect(fill = 'transparent', color = "transparent"),
         text = element_text(family = font_selected)) #+
 
-plot_file = paste(plots_dir, "prediction_pearson_pval_0.05_lessdatasets.png", sep="/")
+plot_file = paste(plots_dir, "/prediction_", type_data_selection, "_lessdatasets.png", sep="")
 print(prediction_plot_lessdatasets)
 ggsave(
   plot_file,
@@ -894,7 +896,7 @@ comparison_plot = comparison_log_df %>%
     seed = 1234
   )
 
-plot_file = paste(plots_dir, "/comparison_models_pearson_pval_0.05_", dataset_selected, ".png", sep="")
+plot_file = paste(plots_dir, "/comparison_models_", type_data_selection, "_", dataset_selected, ".png", sep="")
 print(comparison_plot)
 ggsave(
   plot_file,
@@ -979,7 +981,7 @@ goodnessfit_plot = goodnessfit_df %>%
     seed = 1234
   )
 
-plot_file = paste(plots_dir, "/goodnessfit_model_pearson_pval_0.05_", dataset_selected, ".png", sep="")
+plot_file = paste(plots_dir, "/goodnessfit_model_", type_data_selection, "_", dataset_selected, ".png", sep="")
 print(goodnessfit_plot)
 ggsave(
   plot_file,
@@ -1091,7 +1093,7 @@ goodnessfit_plot_lessdatasets = goodnessfit_lessdatasets_df %>%
   #                  na.rm=TRUE,
   #                  seed = 1234)
 
-plot_file = paste(plots_dir, "/goodnessfit_2models_pearson_pval_0.05_", dataset_selected, ".png", sep="")
+plot_file = paste(plots_dir, "/goodnessfit_2models_", type_data_selection, "_", dataset_selected, ".png", sep="")
 print(goodnessfit_plot_lessdatasets)
 ggsave(
   plot_file,
@@ -1214,8 +1216,8 @@ sample_size_vs_a_df %>%
   arrange(desc(a))
 
 a_vs_fraction_corr_file = paste(tables_dir, 
-                                "a_vs_fraction_sig_correlations_pearson_pval_0.05.txt", 
-                                sep = "/")
+                                "/a_vs_fraction_sig_correlations_", type_data_selection, ".txt", 
+                                sep = "")
 
 sample_size_vs_a_df %>% 
   arrange(desc(a)) %>% 
@@ -1350,8 +1352,8 @@ a_vs_fraction_sig_correlations_plot <- sample_size_vs_a_plot_df %>%
 
 print(a_vs_fraction_sig_correlations_plot)
 plot_file <- paste(plots_dir,
-                   "a_vs_fraction_sig_correlations_pearson_pval_0.05.png",
-                   sep="/")
+                   "/a_vs_fraction_sig_correlations_", type_data_selection, ".png",
+                   sep="")
 ggsave(
   plot_file,
   plot=a_vs_fraction_sig_correlations_plot,
@@ -1477,8 +1479,8 @@ a_vs_fraction_sig_correlations_lessdatasets_plot <- sample_size_vs_a_plot_lessda
 
 print(a_vs_fraction_sig_correlations_lessdatasets_plot)
 plot_file <- paste(plots_dir,
-                   "a_vs_fraction_sig_correlations_pearson_pval_0.05_lessdatasets.png",
-                   sep="/")
+                   "/a_vs_fraction_sig_correlations_", type_data_selection, "_lessdatasets.png",
+                   sep="")
 ggsave(
   plot_file,
   plot=a_vs_fraction_sig_correlations_lessdatasets_plot,
@@ -1642,10 +1644,13 @@ for (x in 1:length(parameters)){
 Show numbers:
 
 ```{r}
-a_vs_fraction_corr_file = 
-  paste(tables_dir, 
-        "a_vs_fraction_sig_correlations_pearson_pval_0.05.txt", 
-        sep='/')
+a_vs_fraction_corr_file <- paste(
+  tables_dir, 
+  "/a_vs_fraction_sig_correlations_",
+  type_data_selection,
+  ".txt", 
+  sep = ''
+)
 a_vs_fraction_corr_df <- data.table::fread(a_vs_fraction_corr_file)
 head(a_vs_fraction_corr_df)
 ```
