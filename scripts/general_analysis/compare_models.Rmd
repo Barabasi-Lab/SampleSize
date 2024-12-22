@@ -1,0 +1,39 @@
+---
+title: "Untitled"
+author: "Joaquim Aguirre-Plans"
+date: "2024-11-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(data.table)
+library(dplyr)
+```
+
+Define parameters:
+
+```{r}
+dataset_selected <- "tcga:tcga-brca_female"
+y_column <- "num_edges"
+```
+
+Read the dataset:
+
+```{r}
+topology_results_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/scripts/SampleSizeShiny/data/example_pearson_pval_0.05/topology_results_norm_divide.L_pearson_pval_0.05.txt"
+test_df <- data.table::fread(topology_results_file)
+test_df <- test_df %>% dplyr::filter(type_dataset == "tcga:tcga-brca_female")
+head(test_df)
+```
+
+```{r}
+rest <- test_df %>%
+  dplyr::filter(model == "Mean") %>%
+  dplyr::group_by(size) %>%
+  dplyr::summarize(model_result = mean(model_result), num_edges = mean(num_edges))
+head(rest)
+```

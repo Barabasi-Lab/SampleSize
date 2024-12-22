@@ -46,7 +46,8 @@ ui <- navbarPage(
               label = "Dataset",
               c("GTEx" = "gtex",
                 "TCGA" = "tcga",
-                "R. arthritis" = "scipher"
+                "R. arthritis" = "scipher",
+                "GSE193677" = "gse193677"
               ),
               selected = "gtex"
             ),
@@ -142,6 +143,28 @@ ui <- navbarPage(
                   `selected-text-format` = "count > 1"
                 ),
                 selected = "scipher:scipher.sample.per.patient.baseline",
+                multiple = TRUE
+              ),
+            ),
+            conditionalPanel(
+              condition = "input.dataset_input.includes('gse193677')",
+              verbatimTextOutput(outputId = "type_dataset_gse193677"),
+              shinyWidgets::pickerInput(
+                inputId = "type_dataset_gse193677",
+                label = "GSE193677 subset:",
+                choices = list(
+                  "GSE193677: UC rectum inflamed" = "gse193677:rectum_uc_inflamed",
+                  "GSE193677: CD rectum inflamed" = "gse193677:rectum_cd_inflamed",
+                  "GSE193677: Control rectum non-inflamed" = "gse193677:rectum_control_noninflamed",
+                  "GSE193677: Rectum inflamed" = "gse193677:rectum_inflamed",
+                  "GSE193677: Rectum non-inflamed" = "gse193677:rectum_noninflamed"
+                ),
+                options = list(
+                  `actions-box` = TRUE,
+                  size = 10,
+                  `selected-text-format` = "count > 1"
+                ),
+                selected = "gse193677:rectum_uc_inflamed",
                 multiple = TRUE
               ),
             ),
@@ -252,56 +275,59 @@ calculate_optimal_N <- function(L, a, b, s, N_guess=c(10000)) {
 # Read numbers and sd data
 data_dir <- "data"
 numbers_file <- paste(data_dir, "dataset_numbers_complete_graph.txt", sep = "/")
-numbers_df <- fread(numbers_file)
+numbers_df <- data.table::fread(numbers_file)
 numbers_df$dataset <- tolower(numbers_df$dataset)
 meta_file <- paste(data_dir, "metadata_summary.txt", sep = "/")
-meta_df <- fread(meta_file)
+meta_df <- data.table::fread(meta_file)
 sd_genes_file <- paste(data_dir, "variation_by_gene.txt", sep = "/") # from => calculate_rnaseq_datasets_variation.Rmd
-sd_genes_df <- fread(sd_genes_file)
+sd_genes_df <- data.table::fread(sd_genes_file)
 
 # Read unnormalized data
 input_dir <- file.path(data_dir, "example_pearson_pval_0.05")
+discarded_datasets <- c("scipher:scipher.complete.dataset", "gtex:breast.mammary.tissue")
 topology_results_file <- paste(input_dir, "topology_results_pearson_pval_0.05.txt", sep = "/")
-results_selected_df <- fread(topology_results_file)
+results_selected_df <- data.table::fread(topology_results_file) %>% mutate(dataset = tolower(dataset))
 dataset_to_type_df <- results_selected_df %>% dplyr::select(dataset, type_dataset) %>% unique()
 gtex_datasets <- results_selected_df %>% filter(dataset == "gtex") %>% pull(type_dataset) %>% unique() # Get GTEx datasets
 tcga_datasets <- results_selected_df %>% filter(dataset == "tcga") %>% pull(type_dataset) %>% unique() # Get TCGA datasets
 scipher_datasets <- results_selected_df %>% filter(dataset == "scipher") %>% pull(type_dataset) %>% unique() # Get scipher datasets
 topology_results_by_size_file <- paste(input_dir, "topology_results_mean_pearson_pval_0.05.txt", sep = "/")
-topology_results_selected_by_size_df <- fread(topology_results_by_size_file)
+topology_results_selected_by_size_df <- data.table::fread(topology_results_by_size_file)
 predictions_file <- paste(input_dir, "predictions_pearson_pval_0.05.txt", sep='/')
-predicted_results_df <- fread(predictions_file)
+predicted_results_df <- data.table::fread(predictions_file)
 analytical_results_file <- paste(input_dir, "analytical_model_results_pearson_pval_0.05.txt", sep = "/")
-topology_results_selected_analytical_df <- fread(analytical_results_file)
+topology_results_selected_analytical_df <- data.table::fread(analytical_results_file)
 analytical_summary_file <- paste(input_dir, 'analytical_model_summary_pearson_pval_0.05.txt', sep = "/")
-analytical_model_summary_df <- fread(analytical_summary_file)
+analytical_model_summary_df <- data.table::fread(analytical_summary_file)
 analytical_regression_results_file <- paste(input_dir, 'analytical_model_regression_results_pearson_pval_0.05.txt', sep = "/")
-stretched_exponential_regression_df <- fread(analytical_regression_results_file)
+stretched_exponential_regression_df <- data.table::fread(analytical_regression_results_file)
 theoretical_sample_size_file <- paste(input_dir, 'theoretical_sample_size_for_correlations_of_datasets.txt', sep = "/") # from => calculate_convergence_correlation_types.Rmd
-sample_size_correlation_df <- fread(theoretical_sample_size_file)
-a_vs_fraction_corr_file <- paste(input_dir, "a_vs_fraction_sig_correlations_pearson_pval_0.05.txt", sep = "/") # from => create_figures.Rmd
-a_vs_fraction_corr_df <- fread(a_vs_fraction_corr_file)
+sample_size_correlation_df <- data.table::fread(theoretical_sample_size_file)
+a_vs_fraction_corr_file <- paste(input_dir, "a_vs_fraction_sig_correlations_pearson_pval_0.05.txt", sep = "/") # from => create_figures.Rmd, copy from data/out/tables
+a_vs_fraction_corr_df <- data.table::fread(a_vs_fraction_corr_file) %>%
+  dplyr::filter(!(type_dataset %in% discarded_datasets))
 
 # Read normalized data
 topology_type_normalization <- "divide.L"
 topology_results_file <- paste(input_dir, "/", "topology_results_norm_", topology_type_normalization, "_pearson_pval_0.05.txt", sep = "")
-results_selected_norm_df <- fread(topology_results_file)
+results_selected_norm_df <- data.table::fread(topology_results_file)
 topology_results_by_size_file <- paste(input_dir, "/", 'topology_results_mean_norm_', topology_type_normalization, '_pearson_pval_0.05.txt', sep = "")
-topology_results_selected_by_size_norm_df <- fread(topology_results_by_size_file)
+topology_results_selected_by_size_norm_df <- data.table::fread(topology_results_by_size_file)
 predictions_file <- paste(input_dir, "/", 'predictions_', topology_type_normalization, '_pearson_pval_0.05.txt', sep = "")
-predicted_results_norm_df <- fread(predictions_file)
+predicted_results_norm_df <- data.table::fread(predictions_file)
 analytical_results_file <- paste(input_dir, "/", 'analytical_model_results_', topology_type_normalization, '_pearson_pval_0.05.txt', sep = "")
-topology_results_selected_analytical_norm_df <- fread(analytical_results_file)
+topology_results_selected_analytical_norm_df <- data.table::fread(analytical_results_file)
 
 # Create dictionary of dataset names
 name_dict <- c(
   "gtex" = "GTEx",
   "tcga" = "TCGA",
   "scipher" = "R. arthritis",
+  "gse193677" = "GSE193677",
   "gtex:whole.blood" = "GTEx: Whole blood",
   "gtex:lung" = "GTEx: Lung",
   "gtex:breast.mammary.tissue" = "GTEx: Breast",
-  "gtex:breast.mammary.tissue_female" = "GTEx: Breast (Female)",
+  "gtex:breast.mammary.tissue_female" = "GTEx: Breast",
   "gtex:skin.sun.exposed.lower.leg" = "GTEx: Skin",
   "gtex:thyroid" = "GTEx: Thyroid",
   "tcga:brca.luma" = "TCGA: Breast cancer (Luminal A)",
@@ -315,7 +341,12 @@ name_dict <- c(
   "tcga:tcga-kirp" = "TCGA: Kidney Renal Papillary Cell Cancer",
   "tcga:tcga-thca" = "TCGA: Thyroid cancer",
   "scipher:scipher.complete.dataset" = "R. arthritis (all samples)",
-  "scipher:scipher.sample.per.patient.baseline" = "R. arthritis (sample/patient)"
+  "scipher:scipher.sample.per.patient.baseline" = "R. arthritis (sample/patient)",
+  "gse193677:rectum_uc_inflamed" = "GSE193677: UC rectum inflamed",
+  "gse193677:rectum_cd_inflamed" = "GSE193677: CD rectum inflamed",
+  "gse193677:rectum_control_noninflamed" = "GSE193677: Control rectum non-inflamed",
+  "gse193677:rectum_inflamed" = "GSE193677: Rectum inflamed",
+  "gse193677:rectum_noninflamed" = "GSE193677: Rectum non-inflamed"
 )
 
 # Create a dictionary name to color
@@ -342,6 +373,14 @@ color_dict <- c(
   "GTEx: Breast (Female)" = "#00BA37",
   "gtex:breast.mammary.tissue" = "#00BA37",
   "gtex:breast.mammary.tissue_female" = "#00BA37",
+  "gse193677" = "#E032EC",
+  "GSE193677" = "#E032EC",
+  "gse193677:rectum_uc_inflamed" = "#E032EC",
+  "gse193677:rectum_cd_inflamed" = "#E032EC",
+  "gse193677:rectum_control_noninflamed" = "#E032EC",
+  "gse193677:rectum_inflamed" = "#E032EC",
+  "gse193677:rectum_noninflamed" = "#E032EC",
+  "UC inflamed" = "#E032EC",
   "R. arthritis" = "#D55E00", #E69F00
   "R. arthritis (all samples)" = "#D55E00", #E69F00
   "R. arthritis (sample/patient)" = "#D55E00", #E69F00
@@ -389,6 +428,7 @@ color_dict <- c(
 
 # Define selected parameters
 datasets_selected <- unique(topology_results_selected_by_size_df$type_dataset)
+
 model_selected <- "Stretched exponential (by linear fit)"
 
 # Show all information for model selected
@@ -555,38 +595,78 @@ figure_summary_table <- scaling_relation_summary_df %>%
   dplyr::select("dataset", "type_dataset", "R**2 (scaling)", "alpha (model)", "R**2 (model)", "epsilon (model)", "R**2 (Log)", "epsilon (Log)") %>%
   arrange(dataset, type_dataset)
 
+# Correct gse from sd_genes_df
+sd_genes_gse <- sd_genes_df %>%
+  filter(dataset == "gse193677") %>%
+  dplyr::select(-type_dataset) %>%
+  slice(rep(1, 5)) %>%
+  mutate(
+    type_dataset = (a_vs_fraction_corr_df %>% filter(dataset == "gse193677") %>% pull(type_dataset) %>% unique()),
+    dataset_name = (a_vs_fraction_corr_df %>% filter(dataset == "gse193677") %>% pull(dataset_name) %>% unique())
+  )
+
+# Correct type_dataset from sd_genes_df
+sd_genes_df <- sd_genes_df %>%
+  dplyr::select(-type_dataset) %>%
+  dplyr::left_join(
+    (a_vs_fraction_corr_df %>%
+       dplyr::select(type_dataset, dataset_name) %>%
+       unique()),
+    by = "dataset_name"
+  ) %>%
+  dplyr::mutate(
+    type_dataset = ifelse(
+      dataset == "gse193677",
+      "gse193677",
+      type_dataset
+    )
+  )
+
 # Calculate number of genes above certain SD, mean and CV cut-offs
 sd_cut <- 10
 mean_cut <- 10
 cv_cut <- 50
-sd_genes_vs_a_df <- sd_genes_df %>%
+type_counts_selected <- "reads"
+sd_genes_summary_df <- sd_genes_df %>% 
+  filter(type_counts == type_counts_selected) %>% 
+  group_by(dataset, 
+           type_dataset, 
+           dataset_name, 
+           type_counts, 
+           sex, 
+           subclassification) %>% 
+  summarize(num_genes_above_sd_cut = length(sd[sd >= sd_cut]), 
+            num_genes_above_mean_cut = length(mean[mean >= mean_cut]), 
+            num_genes_above_cv_cut = length(cv[cv >= cv_cut]), 
+            num_genes = n()) %>% 
+  ungroup() %>% 
+  mutate(fraction_genes_above_sd_cut = num_genes_above_sd_cut / num_genes, 
+         fraction_genes_above_mean_cut = num_genes_above_mean_cut / num_genes, 
+         fraction_genes_above_cv_cut = num_genes_above_cv_cut / num_genes)
+
+sd_genes_summary_gse <- sd_genes_summary_df %>%
+  filter(dataset == "gse193677") %>%
   dplyr::select(-type_dataset) %>%
-  filter(type_counts == "reads") %>%
-  group_by(dataset,
-           dataset_name,
-           type_counts,
-           sex,
-           subclassification) %>%
-  summarize(num_genes_above_sd_cut = length(sd[sd >= sd_cut]),
-            num_genes_above_mean_cut = length(mean[mean >= mean_cut]),
-            num_genes_above_cv_cut = length(cv[cv >= cv_cut]),
-            num_genes = n()) %>%
-  ungroup() %>%
-  mutate(fraction_genes_above_sd_cut = num_genes_above_sd_cut / num_genes,
-         fraction_genes_above_mean_cut = num_genes_above_mean_cut / num_genes,
-         fraction_genes_above_cv_cut = num_genes_above_cv_cut / num_genes) %>%
-  inner_join(a_vs_fraction_corr_df,
-             by = c("dataset_name", "dataset", "sex", "subclassification")) %>%
-  dplyr::select(
-    !c(
-      "type_correlation",
-      "correlation",
-      "sample_size_statistical",
-      "sample_size_statistical_corrected",
-      "num_edges_from_statistical_corrected",
-      "num_edges_from_statistical_corrected_norm"
-    )
-  ) %>%
+  slice(rep(1, 5)) %>%
+  mutate(
+    type_dataset = (a_vs_fraction_corr_df %>% filter(dataset == "gse193677") %>% pull(type_dataset) %>% unique()),
+    dataset_name = (a_vs_fraction_corr_df %>% filter(dataset == "gse193677") %>% pull(dataset_name) %>% unique())
+  )
+
+sd_genes_summary_df <- sd_genes_summary_df %>%
+  filter(!(dataset == "gse193677")) %>%
+  bind_rows(sd_genes_summary_gse)
+rm(sd_genes_summary_gse)
+
+sd_genes_vs_a_df <- sd_genes_summary_df %>%
+  inner_join((a_vs_fraction_corr_df %>% select(-type_dataset, -sex, -subclassification)), 
+             by = c("dataset_name", "dataset")) %>% 
+  select(!c("type_correlation", 
+            "correlation", 
+            "sample_size_statistical", 
+            "sample_size_statistical_corrected", 
+            "num_edges_from_statistical_corrected", 
+            "num_edges_from_statistical_corrected_norm")) %>% 
   unique() %>%
   as.data.frame()
 
@@ -623,7 +703,8 @@ server <- function(input, output, session) {
     selected_dataset_types <- c(
       input$type_dataset_gtex,
       input$type_dataset_tcga,
-      input$type_dataset_scipher
+      input$type_dataset_scipher,
+      input$type_dataset_gse193677
     )
 
     # Filter summary table by dataset
@@ -698,10 +779,11 @@ server <- function(input, output, session) {
     type_correlation_selected <- "weak"
     a_vs_fraction_corr_filt <- a_vs_fraction_corr_df %>%
       filter(
-        dataset %in% c("gtex", "tcga", "scipher")
+        dataset %in% c("gtex", "tcga", "scipher", "gse193677")
       ) %>%
       # Filter by correlation type
       filter(type_correlation == type_correlation_selected) %>%
+      unique() %>%
       # Include color codes for each dataset
       left_join(
         (color_dict %>%
@@ -748,7 +830,9 @@ server <- function(input, output, session) {
     # Filter sd / cv / mean gene expression vs. a table by dataset
     variance_metric <- switch(input$plot_type,
                               "SD vs. rate" = "sd",
+                              "SD" = "sd",
                               "Mean vs. rate" = "mean",
+                              "Mean" = "mean",
                               "cv")
     variance_metric_cut <- switch(input$plot_type,
                                   "SD vs. rate" = sd_cut,
@@ -756,7 +840,7 @@ server <- function(input, output, session) {
                                   cv_cut)
     sd_genes_vs_a_filt <- sd_genes_vs_a_df %>%
       filter(
-        dataset %in% c("gtex", "tcga", "scipher")
+        dataset %in% c("gtex", "tcga", "scipher", "gse193677")
       ) %>%
       # Include color codes for each dataset
       left_join(
@@ -801,11 +885,32 @@ server <- function(input, output, session) {
       round(sd_genes_vs_a_cor, 3)
     )
 
+    # Filter gene expression SD
+    if ("gse193677" %in% unique(sd_genes_df$dataset)) {
+      selected_dataset_types <- c(selected_dataset_types, "gse193677")
+    }
+    sd_genes_filt <- sd_genes_df %>%
+      filter(
+        (dataset %in% input$dataset_input) &
+          (type_dataset %in% selected_dataset_types)
+      ) %>%
+      # Include color codes for each dataset
+      left_join(
+        (color_dict %>%
+           as.data.frame() %>%
+           dplyr::rename("rgb_col" = ".") %>%
+           tibble::rownames_to_column("type_dataset")
+        ), by = c("type_dataset")
+      ) %>%
+      # Rename dataset and type_dataset to human readable names
+      mutate(type_dataset = dplyr::recode(type_dataset, !!!name_dict),
+             dataset = dplyr::recode(dataset, !!!name_dict))
+
     # Filter sample size vs. a table by dataset
     type_correlation_selected <- "weak"
     n_opt_filt <- n_opt_df %>%
       filter(
-        dataset %in% c("gtex", "tcga", "scipher")
+        dataset %in% c("gtex", "tcga", "scipher", "gse193677")
       ) %>%
       # Include color codes for each dataset
       left_join(
@@ -853,6 +958,7 @@ server <- function(input, output, session) {
     # Initialize the plot variable as NULL
     scaling_plot <- NULL
     discovery_rate_plot <- NULL
+    gene_expression_plot <- NULL
 
     if (input$plot_type == "Corr. vs. size") {
 
@@ -1117,6 +1223,38 @@ server <- function(input, output, session) {
         )
       
     } else if (input$power_law_tabset == "Gene expression distributions") {
+  
+      parameter_to_label <- list("sd" = "SD", "mean" = "mean", "cv" = "CV")
+      gene_expression_plot <- sd_genes_filt %>%
+        ggplot(aes(.data[[variance_metric]], color = type_dataset)) +
+        geom_freqpoly(size=1.5) +
+        scale_color_manual(
+          guide = "legend",
+          values = setNames(sd_genes_filt$rgb_col, sd_genes_filt$type_dataset)
+        ) +
+        scale_x_log10() + 
+        scale_y_log10() + 
+        labs(x = paste("Gene expression ", 
+                       parameter_to_label[[variance_metric]], 
+                       " (Log)", sep=""), 
+             y = "Number of genes (Log)") +
+        theme_linedraw() + 
+        guides(col = guide_legend(title = "Dataset")) +
+        theme(
+          aspect.ratio = 1,
+          plot.title =  element_text(size = 20, face = "bold"),
+          axis.title = element_text(size = 17, face = "bold"),
+          axis.text = element_text(size = 16),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          text = element_text(family = "Helvetica"),
+          legend.text = element_text(size = 16),
+          legend.title = element_text(size = 16, face = "bold"),
+          legend.background = element_rect(
+            fill = "transparent",
+            color = "transparent"
+          )
+        )
 
     }
 
@@ -1124,7 +1262,8 @@ server <- function(input, output, session) {
       list(
         "summary_table" = figure_summary_table_filt,
         "scaling_plot" = scaling_plot,
-        "discovery_rate_plot" = discovery_rate_plot
+        "discovery_rate_plot" = discovery_rate_plot,
+        "gene_expression_plot" = gene_expression_plot
       )
     )
   })
@@ -1141,7 +1280,7 @@ server <- function(input, output, session) {
   last_plot_type <- reactiveValues(
     discovery = "Corr. vs. rate",
     scaling = "Corr. vs. size",
-    gene_expression = "CV"
+    gene_expression = "SD"
   )
 
   # Update 'last_plot_type' whenever 'plot_type' changes
@@ -1161,14 +1300,14 @@ server <- function(input, output, session) {
       updateSelectInput(
         session,
         "plot_type",
-        choices = c("Corr. vs. rate", "CV vs. rate", "SD vs. rate", "Mean vs. rate", "Rate vs. size"),
+        choices = c("Corr. vs. rate", "SD vs. rate", "CV vs. rate", "Mean vs. rate", "Rate vs. size"),
         selected = last_plot_type$discovery
       )
     } else if (input$power_law_tabset == "Gene expression distributions") {
       updateSelectInput(
         session,
         "plot_type",
-        choices = c("CV", "SD", "Mean"),
+        choices = c("SD", "CV", "Mean"),
         selected = last_plot_type$gene_expression
       )
     } else {
@@ -1189,17 +1328,17 @@ server <- function(input, output, session) {
   output$scalingPlot <- renderCachedPlot({
     results <- process_inputs()
     results$scaling_plot
-  }, cacheKeyExpr = { list(current_tab(), input$plot_type, input$dataset_input, input$type_dataset_gtex, input$type_dataset_tcga, input$type_dataset_scipher) })  # Include all relevant inputs
+  }, cacheKeyExpr = { list(current_tab(), input$plot_type, input$dataset_input, input$type_dataset_gtex, input$type_dataset_tcga, input$type_dataset_scipher, input$type_dataset_gse193677) })  # Include all relevant inputs
 
   output$discoveryRatePlot  <- renderCachedPlot({
     results <- process_inputs()
     results$discovery_rate_plot
-  }, cacheKeyExpr = { list(current_tab(), input$plot_type, input$dataset_input, input$type_dataset_gtex, input$type_dataset_tcga, input$type_dataset_scipher) })  # Include all relevant inputs
+  }, cacheKeyExpr = { list(current_tab(), input$plot_type, input$dataset_input, input$type_dataset_gtex, input$type_dataset_tcga, input$type_dataset_scipher, input$type_dataset_gse193677) })  # Include all relevant inputs
 
   output$geneExpressionPlot  <- renderCachedPlot({
     results <- process_inputs()
     results$gene_expression_plot
-  }, cacheKeyExpr = { list(current_tab(), input$plot_type, input$dataset_input, input$type_dataset_gtex, input$type_dataset_tcga, input$type_dataset_scipher) })  # Include all relevant inputs
+  }, cacheKeyExpr = { list(current_tab(), input$plot_type, input$dataset_input, input$type_dataset_gtex, input$type_dataset_tcga, input$type_dataset_scipher, input$type_dataset_gse193677) })  # Include all relevant inputs
 
 }
 

@@ -1,0 +1,191 @@
+---
+title: "Untitled"
+author: "Joaquim Aguirre-Plans"
+date: "2024-12-06"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(data.table)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+set.seed(1510)
+```
+
+```{r}
+dataset <- "gtex"
+type_dataset <- "Whole.Blood"
+sizes_selected <- c(20, 60, 100, 200, 300, 400)
+threshold_selected <- 0.05
+```
+
+```{r}
+font_selected <- "Helvetica"
+name2color <- c(
+  "Very Weak" = "#ff7b00",
+  "Weak" = "#F8766D",
+  "Moderate" = "#7CAE00",
+  "Strong" = "#00BFC4",
+  "Very Strong" = "#C77CFF"
+)
+```
+
+Fetch the files containing the gene co-expression networks of different sample sizes:
+
+```{r}
+coexpression_dir <- sprintf("/scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_%s/reads/%s/consensus", dataset, type_dataset)
+all_coexpression_files <- list.files(coexpression_dir)
+coexpression_files_selected <- data.frame(matrix(ncol = length(c("size", "file")), nrow = 0, dimnames = list(NULL, c("size", "file"))))
+
+for (coexpression_file in all_coexpression_files){
+  file_split <- strsplit(
+    gsub(".net", "", coexpression_file),
+    split = "_"
+  )[[1]]
+  size <- as.numeric(file_split[(length(file_split)-1)])
+  if (size %in% sizes_selected){
+    coexpression_files_selected <- rbind(
+      coexpression_files_selected,
+      data.frame(
+        size = size,
+        file = paste(coexpression_dir, coexpression_file, sep = "/")
+      )
+    )
+  }
+}
+```
+
+Read the co-expression networks and extract the co-expression p-values.
+
+```{r}
+pvalue_variation_file <- sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/pval_variation_analysis_%s_%s.txt", dataset, type_dataset)
+pvalue_df <- data.frame()
+if (!(file.exists(pvalue_variation_file))) {
+  sizes_selected <- sort(unique(coexpression_files_selected$size))
+  for (i in seq_len(length(sizes_selected))) {
+    size_selected <- sizes_selected[i]
+
+    # Read co-expression file
+    coexpression_file <- (coexpression_files_selected %>% filter(size == size_selected))$file
+    coexpression_df <- data.table::fread(coexpression_file) %>%
+      dplyr::mutate(strength = dplyr::case_when(
+        CN >= 0.8 ~ "Very Strong",
+        CN < 0.8 & CN >= 0.6 ~ "Strong",
+        CN < 0.6 & CN >= 0.4 ~ "Moderate",
+        CN < 0.4 & CN >= 0.2 ~ "Weak",
+        TRUE ~ "Very Weak"
+      )) %>%
+      dplyr::select("Node.1", "Node.2", "strength", "pval.fisher") %>%
+      dplyr::rename(!!paste("pval", size_selected, sep = ".") := "pval.fisher")
+
+    if (i == 1) {
+      pvalue_df <- as.data.frame(coexpression_df)
+    } else {
+      pvalue_df <- pvalue_df %>%
+        dplyr::inner_join(
+          coexpression_df,
+          by = c("Node.1", "Node.2", "strength")
+        )
+    }
+    rm(coexpression_df)
+  }
+
+  pvalue_df <- pvalue_df %>%
+    dplyr::group_by(strength) %>%
+    dplyr::slice_sample(n = 1E6, replace = FALSE) %>%
+    dplyr::ungroup() %>%
+    as.data.frame()
+
+  pvalue_df %>% data.table::fwrite(pvalue_variation_file, sep = "\t")
+} else {
+  pvalue_df <- data.table::fread(pvalue_variation_file, sep = "\t")
+}
+```
+
+```{r}
+pvalue_df %>%
+  dplyr::group_by(strength) %>%
+  dplyr::summarize(n = n())
+```
+
+```{r}
+violinplot_pvalue_variation_file <-  sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/violin_pvalue_variation_pearson_%s_%s.png", dataset, type_dataset)
+
+violinplot_pvalue_variation <- pvalue_df %>%
+  tidyr::pivot_longer(
+    !(c("Node.1", "Node.2", "strength")),
+    names_prefix = "pval.",
+    names_to = "size",
+    values_to = "pval",
+    names_transform = list(size = as.character),
+    values_transform = list(pval = as.numeric)
+  ) %>%
+  dplyr::mutate(
+    pval = ifelse(pval <= 1E-20, 1E-20, pval),
+    strength = factor(
+      strength,
+      levels = c("Very Strong", "Strong", "Moderate", "Weak", "Very Weak")
+    )
+  ) %>%
+  ggplot(aes(
+    x = reorder(size, as.numeric(size)),
+    y = -log(pval),
+    fill = strength,
+    color = strength
+  )) +
+  geom_violin(
+    alpha = 0.8, 
+    scale = "width", 
+    adjust = 0.5
+  ) +
+  geom_hline(
+    aes(
+      yintercept = -log(0.05),
+      linetype = "P-value = 0.05"
+    ),
+    color = "red",
+    show.legend = TRUE
+  ) +
+  scale_fill_manual(values = name2color) +
+  scale_color_manual(values = name2color) +
+  scale_linetype_manual(
+    values = "dashed"
+  ) +
+  labs(
+    x = "Number of samples",
+    y = "-Log( P-value )",
+    color = "",
+    fill = "",
+    linetype = ""
+  ) +
+  theme_linedraw() +
+  theme(
+    aspect.ratio = 1,
+    plot.title =  element_text(size = 20, face = "bold"), 
+    axis.title = element_text(size = 17, face = "bold"), 
+    axis.text = element_text(size = 16),
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    legend.text = element_text(size = 16), 
+    legend.title = element_text(size = 16, face = "bold"),
+    text = element_text(family = font_selected)
+  )
+
+print(violinplot_pvalue_variation)
+
+ggsave(
+  violinplot_pvalue_variation_file,
+  plot = violinplot_pvalue_variation,
+  dpi = 1200,
+  #width = 9300,
+  #height = 6000,
+  units = c("px")
+)
+```
+
+

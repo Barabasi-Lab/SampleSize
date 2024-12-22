@@ -1,5 +1,4 @@
 import sys, os
-import configparser 
 import hashlib
 import optparse
 import pwd
@@ -51,11 +50,6 @@ def create_consensus_gene_coexpression_networks_cluster(options):
     src_path =  os.path.abspath(os.path.dirname(__file__))
     sys.path.append(src_path)
 
-    # Read configuration file #     
-    config = configparser.ConfigParser()
-    config_file = os.path.join(src_path, "config.ini")
-    config.read(config_file)
-
     # Define directories and files
     networks_dir = options.networks_dir
     output_dir = os.path.join(networks_dir, 'consensus')
@@ -73,15 +67,12 @@ def create_consensus_gene_coexpression_networks_cluster(options):
     method = options.method
 
     # Define queue parameters
-    #max_mem = config.get("Cluster", "max_mem")
     max_mem = 120000
-    queue = config.get("Cluster", "cluster_queue") # debug, express, short, long, large
+    queue = "short" # debug, express, short, long, large, netsi_standard
+    max_jobs_in_queue = 1500
     constraint = False
     exclude = []
-    #exclude = ['d0012', 'd0123']
-    #modules = ['R/4.2.0']
     modules = ['singularity/3.5.3']
-    #conda_environment = 'SampleSizeR'
     conda_environment = None
     rstudio_environment = "/shared/container_repository/rstudio/rocker-geospatial-4.2.1.sif"
     max_time_per_queue = {
@@ -89,64 +80,71 @@ def create_consensus_gene_coexpression_networks_cluster(options):
         'express' : '0:60:00',
         'short'   : '24:00:00',
         'long'    : '5-0',
-        'large'   : '6:00:00'
+        'large'   : '6:00:00',
+        'netsi_standard' : '42:00:00'
     }
     queue_parameters = {'max_mem':max_mem, 'queue':queue, 'max_time':max_time_per_queue[queue], 'logs_dir':logs_dir, 'modules':modules}
+    reps = [i for i in range(1, 6)]
 
     # Limit of jobs
-    limit = int(config.get("Cluster", "max_jobs_in_queue"))
+    limit = 1500
     l = 1
 
     # Run co-expression for all files
     networks = [f for f in os.listdir(networks_dir) if fileExist(os.path.join(networks_dir, f))]
-    #sizes = [str(size) for size in range(20, 12000, 20)]
-    #sizes = [10] + [size for size in range(20, 12000, 20)]
-    #sizes = [10] + [str(size) for size in range(100, 12000, 100)]
-    #reps = [str(rep) for rep in range(5, 11, 1)]
-    #reps = [str(rep) for rep in range(1, 11, 1)]
-    #reps = ['1', '2']
 
     # Get network attributes
     size_to_networks = {}
     size_to_network_name = {}
+    network_name_to_reps = {}
     for network in sorted(networks):
-        size = int(network.replace('.txt', '').split("_")[-3])
-        network_name_without_rep = '_'.join(network.replace('.txt', '').split("_")[:-2])
+        network_name = network.replace('.txt', '').replace('.net', '')
+        network_method = network_name.split("_")[0]
+        if method != network_method:
+            print(f"Skipping network: {network_name} (incorrect method {network_method}).")
+        size = int(network_name.split("_")[-3])
+        rep = int(network_name.split("_")[-1])
+        network_name_without_rep = '_'.join(network_name.split("_")[:-2])
         size_to_networks.setdefault(size, []).append(network)
         size_to_network_name[size] = network_name_without_rep
-    
+        network_name_to_reps.setdefault(network_name_without_rep, []).append(rep)
+
     for size in sorted(size_to_network_name.keys()):
 
-        #if size in sizes:
+        if limit: # Break the loop if a limit of jobs is introduced
+            if l > limit:
+                print('The number of submitted jobs arrived to the limit of {}. The script will stop sending submissions!'.format(limit))
+                break
 
-            if limit: # Break the loop if a limit of jobs is introduced
-                if l > limit:
-                    print('The number of submitted jobs arrived to the limit of {}. The script will stop sending submissions!'.format(limit))
-                    break
+        network_name_without_rep = size_to_network_name[size]
+        network_reps = network_name_to_reps[network_name_without_rep]
+    
+        # Skip execution if repetitions not match expected ones
+        if sorted(network_reps) != reps:
+            print(f"Skipping network: {network_name}. Repetitions found: {network_reps}. Repetitions expected: {reps}")
 
-            # Write list file
-            network_name_without_rep = size_to_network_name[size]
-            list_file = os.path.join(inputs_dir, 'network_replicates_{}.txt'.format(network_name_without_rep))
-            with open(list_file, 'w') as list_fd:
-                for network in size_to_networks[size]:
-                    list_fd.write('{}\n'.format(os.path.join(networks_dir, network)))
-            
-            # Define other parameters
-            output_file = os.path.join(output_dir, '{}_consensus.net'.format(network_name_without_rep))
-            bash_script_name = '{}.sh'.format(network_name_without_rep)
-            bash_script_file = os.path.join(dummy_dir, bash_script_name)
+        # Write list file
+        list_file = os.path.join(inputs_dir, 'network_replicates_{}.txt'.format(network_name_without_rep))
+        with open(list_file, 'w') as list_fd:
+            for network in size_to_networks[size]:
+                list_fd.write('{}\n'.format(os.path.join(networks_dir, network)))
+        
+        # Define other parameters
+        output_file = os.path.join(output_dir, '{}_consensus.net'.format(network_name_without_rep))
+        bash_script_name = '{}.sh'.format(network_name_without_rep)
+        bash_script_file = os.path.join(dummy_dir, bash_script_name)
 
-            #if not fileExist(bash_script_file):
-            if not fileExist(output_file):
+        #if not fileExist(bash_script_file):
+        if not fileExist(output_file):
 
-                #command = 'Rscript {}'.format(script_file)
-                command = 'Rscript {} -l {} -n {} -t {} -m {}'.format(script_file, list_file, output_file, threshold, method)
-                print(command)
-                print(size)
-                print(l)
-                submit_command_to_queue(command, max_jobs_in_queue=int(config.get("Cluster", "max_jobs_in_queue")), queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude, conda_environment=conda_environment, rstudio_environment=rstudio_environment)
+            #command = 'Rscript {}'.format(script_file)
+            command = 'Rscript {} -l {} -n {} -t {} -m {}'.format(script_file, list_file, output_file, threshold, method)
+            print(command)
+            print(size)
+            print(l)
+            submit_command_to_queue(command, max_jobs_in_queue=max_jobs_in_queue, queue_file=None, queue_parameters=queue_parameters, dummy_dir=dummy_dir, script_name=bash_script_name, constraint=constraint, exclude=exclude, conda_environment=conda_environment, rstudio_environment=rstudio_environment)
 
-                l += 1
+            l += 1
 
     return
 

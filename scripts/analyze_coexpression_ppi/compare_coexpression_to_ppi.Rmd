@@ -64,7 +64,7 @@ calculate_distance_matrix_ppi = function(ppi_net){
 }
 ```
 
-Calculate the distance matrices if necessary:
+Calculate the distance matrices of the PPI and NCI networks (if necessary):
 
 ```{r}
 # Calculate distances between pairs of nodes of the PPI and NCI networks
@@ -232,7 +232,7 @@ coexpression_gene_info_df = fread(coexpression_gene_info_file) %>% filter(enough
 length(unique(coexpression_gene_info_df$HGNC_Symbol))
 ```
 
-Filter the matrix of distances between protein/gene pairs:
+Filter the matrix of distances between protein/gene pairs keeping the genes that are in the gene expression dataset selected.
 
 ```{r}
 ppi_nci_distances_filt = ppi_nci_distances %>% filter((Node.1 %in% unique(coexpression_gene_info_df$HGNC_Symbol)) & (Node.2 %in% unique(coexpression_gene_info_df$HGNC_Symbol)))
@@ -265,7 +265,7 @@ nci_interactions = ppi_nci_distances_filt %>% filter(distances_nci == 1) %>% sel
 nrow(nci_interactions)
 ```
 
-Select random control interactions of the same size as the PPI:
+Select random control interactions (non-direct interactions) of the same size as the PPI:
 
 ```{r}
 random_pp_pairs = ppi_nci_distances_filt %>% 
@@ -275,7 +275,9 @@ random_pp_pairs = ppi_nci_distances_filt %>%
 nrow(random_pp_pairs)
 ```
 
-Select random control interactions of the same size as the PPI that are far in the PPI:
+Select random control interactions of the same size as the PPI that are far in the PPI.
+How? From the maximum distance in the PPI (e.g. 6) we select all protein pairs. Then for the next distance (e.g. 5), and so on, until the number of selected pairs surpasses the number of direct interactions. In the case of GTEx whole blood, this would be at distance 4.
+Then, we select randomly from this pool of protein pairs (from distances 4 to 6) the same number of pairs as the number of direct PPIs.
 
 ```{r}
 max_ppi_filt_distance = max((ppi_nci_distances_filt %>% filter(!(is.na(distances_ppi))))$distances_ppi)
@@ -294,7 +296,8 @@ random_far_pp_pairs = random_far_pp_pairs %>%
 nrow(random_far_pp_pairs)
 ```
 
-Select random control interactions of the same size as the NCI that are far in the NCI:
+Select random control interactions of the same size as the NCI that are far in the NCI following the same strategy as in PPIs described above.
+In the case of GTEx whole blood, we select NCI pairs from distances 4 to 7.
 
 ```{r}
 max_nci_filt_distance = max((ppi_nci_distances_filt %>% filter(!(is.na(distances_nci))))$distances_nci)
@@ -316,18 +319,21 @@ nrow(random_far_nc_pairs)
 Merge all the selected pairs in the same dataframe:
 
 ```{r}
-pairs = (ppi_interactions %>% mutate(ppi=TRUE)) %>% 
-  full_join((nci_interactions %>% mutate(nci=TRUE)), by=c("Node.1", "Node.2")) %>% 
-  left_join(ppi_nci_distances_filt, by=c("Node.1", "Node.2")) %>% 
-  full_join((ppi_nci_distances_filt %>% filter((distances_ppi >= 5) | (distances_nci >= 5))), by=c("Node.1", "Node.2", "distances_ppi", "distances_nci")) %>% 
-  full_join((random_pp_pairs %>% mutate(random_not_ppi=TRUE)), by=c("Node.1", "Node.2", "distances_ppi", "distances_nci")) %>%
-  full_join((random_far_pp_pairs %>% mutate(random_far_not_ppi=TRUE)), by=c("Node.1", "Node.2", "distances_ppi", "distances_nci")) %>%
-  full_join((random_far_nc_pairs %>% mutate(random_far_not_nci=TRUE)), by=c("Node.1", "Node.2", "distances_ppi", "distances_nci")) %>%
-  replace_na(list(ppi=FALSE, nci=FALSE, random_not_ppi=FALSE, random_far_not_ppi=FALSE, random_far_not_nci=FALSE))
-head(pairs)
-pairs_file = "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/ppi_analysis_pairs.txt"
-pairs %>% fwrite(pairs_file)
-pairs = fread(pairs_file)
+pairs_file <- "/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/ppi_analysis_pairs.txt"
+if (file.exists(pairs_file)) {
+  pairs <- data.table::fread(pairs_file)
+} else {
+  pairs <- (ppi_interactions %>% mutate(ppi=TRUE)) %>% 
+    full_join((nci_interactions %>% mutate(nci=TRUE)), by=c("Node.1", "Node.2")) %>% 
+    left_join(ppi_nci_distances_filt, by=c("Node.1", "Node.2")) %>% 
+    full_join((ppi_nci_distances_filt %>% filter((distances_ppi >= 5) | (distances_nci >= 5))), by=c("Node.1", "Node.2", "distances_ppi", "distances_nci")) %>% 
+    full_join((random_pp_pairs %>% mutate(random_not_ppi=TRUE)), by=c("Node.1", "Node.2", "distances_ppi", "distances_nci")) %>%
+    full_join((random_far_pp_pairs %>% mutate(random_far_not_ppi=TRUE)), by=c("Node.1", "Node.2", "distances_ppi", "distances_nci")) %>%
+    full_join((random_far_nc_pairs %>% mutate(random_far_not_nci=TRUE)), by=c("Node.1", "Node.2", "distances_ppi", "distances_nci")) %>%
+    replace_na(list(ppi=FALSE, nci=FALSE, random_not_ppi=FALSE, random_far_not_ppi=FALSE, random_far_not_nci=FALSE))
+  head(pairs)
+  pairs %>% data.table::fwrite(pairs_file)
+}
 ```
 
 ### Read the co-expression networks across different sample sizes and extract the co-expression of the protein pair sets
@@ -335,15 +341,24 @@ pairs = fread(pairs_file)
 Fetch the files containing the gene co-expression networks of different sample sizes:
 
 ```{r}
-coexpression_dir = sprintf("/scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_%s/reads/%s/consensus", dataset, type_dataset)
-all_coexpression_files = list.files(coexpression_dir)
-coexpression_files_selected = data.frame(matrix(ncol=length(c("size", "file")),nrow=0, dimnames=list(NULL, c("size", "file"))))
+coexpression_dir <- sprintf("/scratch/j.aguirreplans/Scipher/SampleSizeProject/networks_%s/reads/%s/consensus", dataset, type_dataset)
+all_coexpression_files <- list.files(coexpression_dir)
+coexpression_files_selected <- data.frame(matrix(ncol=length(c("size", "file")),nrow=0, dimnames=list(NULL, c("size", "file"))))
 
 for (coexpression_file in all_coexpression_files){
-  file_split = strsplit(gsub(".net", "", coexpression_file), split="_")[[1]]
-  size = as.numeric(file_split[(length(file_split)-1)])
+  file_split <- strsplit(
+    gsub(".net", "", coexpression_file),
+    split = "_"
+  )[[1]]
+  size <- as.numeric(file_split[(length(file_split)-1)])
   if (size %in% sizes_selected){
-    coexpression_files_selected = rbind(coexpression_files_selected, data.frame(size=size, file=paste(coexpression_dir, coexpression_file, sep="/")))
+    coexpression_files_selected <- rbind(
+      coexpression_files_selected,
+      data.frame(
+        size = size,
+        file = paste(coexpression_dir, coexpression_file, sep = "/")
+      )
+    )
   }
 }
 ```
@@ -374,7 +389,7 @@ if (!(file.exists(coexpression_pairs_file))){
 }
 ```
 
-Do the same, but this time without setting to 0 the statistically insignificant co-expression values:
+Do the same, but this time without setting to 0 the statistically unsignificant co-expression values:
 
 ```{r}
 coexpression_pairs_file = sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/ppi_analysis_pairs_%s_%s.txt", dataset, type_dataset)
@@ -403,10 +418,10 @@ colors_defined = c("PPI" = "#DBA9CA",
                    "PPI & iNCI" = "#FAF69E",
                    "Random" = "#B8BECC",
                    "Random pairs in PPI" = "#B8BECC",
-                   "Random (distance > 4)" = "#543F4D",
-                   "Distance > 4" = "#543F4D",
-                   "Random pairs in PPI (dist. > 4)" = "#543F4D",
-                   "Random pairs in PPI & iNCI (dist. > 4)" = "#545334",
+                   "Random (distance > 3)" = "#543F4D",
+                   "Distance > 3" = "#543F4D",
+                   "Random pairs in PPI (dist. > 3)" = "#543F4D",
+                   "Random pairs in PPI & iNCI (dist. > 3)" = "#545334",
                    "1" = "#DBA9CA",
                    "2" = "#a8829b",
                    "3" = "#87677c",
@@ -415,9 +430,10 @@ colors_defined = c("PPI" = "#DBA9CA",
                    "6" = "#1c151a")
 ```
 
-Plot the co-expression of pairs of proteins grouped by their distance in the PPI network:
 
-Boxplot plotting the zeroes:
+### Plot the co-expression of pairs of proteins grouped by their distance in the PPI network
+
+Boxplot plotting the zeroes (corresponding to the unsignificant correlations):
 
 ```{r}
 boxplot_ppi_coexpression_by_distances_file = sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/ppi_coexpression_boxplot_by_ppi_distance_pval_%s_%s_%s.png", as.character(threshold_selected), dataset, type_dataset)
@@ -464,7 +480,7 @@ ggsave(
 boxplot_ppi_coexpression_by_distances
 ```
 
-Violin plot plotting the zeroes:
+Violin plot plotting the zeroes (corresponding to the unsignificant correlations):
 
 ```{r}
 violinplot_ppi_coexpression_by_distances_file = sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/ppi_coexpression_violinplot_by_ppi_distance_pval_%s_%s_%s.png", as.character(threshold_selected), dataset, type_dataset)
@@ -512,7 +528,7 @@ ggsave(
 violinplot_ppi_coexpression_by_distances
 ```
 
-Violin plot not plotting the zeroes:
+Violin plot showing only the weights of significant correlations (removing the unsignificant ones):
 
 ```{r}
 violinplot_ppi_coexpression_by_distances_nozero_file = sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/ppi_coexpression_violinplot_by_ppi_distance_nozero_pval_%s_%s_%s.png", as.character(threshold_selected), dataset, type_dataset)
@@ -527,12 +543,15 @@ violinplot_ppi_coexpression_by_distances_nozero = coexpression_pairs_filt %>%
   mutate(across(c(distances_ppi), as.character)) %>%
   ggplot() +
   aes(x = reorder(size, as.numeric(size)),
-      y = abs(correlation),
+      #y = abs(correlation),
+      y = correlation,
       fill = distances_ppi,
       colour = distances_ppi) +
-  geom_violin(alpha = 0.8, 
-              scale = "width", 
-              adjust = 0.5) +
+  geom_violin(
+    alpha = 0.8
+    #scale = "width",
+    #adjust = 0.5
+  ) +
   scale_fill_manual(values = colors_defined_filt) +
   scale_color_manual(values = colors_defined_filt) +
   theme_linedraw() +
@@ -546,7 +565,8 @@ violinplot_ppi_coexpression_by_distances_nozero = coexpression_pairs_filt %>%
         legend.title=element_text(size=14, face="bold"),
         text = element_text(family = "Helvetica")) +
   labs (x = "Number of samples",
-        y = "Absolute co-expression weight",
+        #y = "Absolute co-expression weight",
+        y = "Co-expression weight",
         color = "PPI distance",
         fill = "PPI distance")
 ggsave(
@@ -560,10 +580,10 @@ ggsave(
 violinplot_ppi_coexpression_by_distances_nozero
 ```
 
-Violin plot without setting unsignificant co-expression links to 0:
+Violin plot showing all co-expression weights (without setting unsignificant co-expression links to 0):
 
 ```{r}
-violinplot_ppi_coexpression_by_distances_nofilt_file = sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/ppi_coexpression_violinplot_by_ppi_distance_%s_%s.png", as.character(threshold_selected), dataset, type_dataset)
+violinplot_ppi_coexpression_by_distances_nofilt_file = sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/ppi_coexpression_violinplot_by_ppi_distance_%s_%s.png", dataset, type_dataset)
 colors_defined_filt = colors_defined[names(colors_defined) %in% c("1", "2", "3", "4", "5", "6")]
 violinplot_ppi_coexpression_by_distances_nofilt = coexpression_pairs %>%
   select(-ppi, -nci, -distances_nci, -random_not_ppi, -random_far_not_ppi, -random_far_not_nci) %>%
@@ -574,26 +594,30 @@ violinplot_ppi_coexpression_by_distances_nofilt = coexpression_pairs %>%
   mutate(across(c(distances_ppi), as.character)) %>%
   ggplot() +
   aes(x = reorder(size, as.numeric(size)),
-      y = abs(correlation),
+      #y = abs(correlation),
+      y = correlation,
       fill = distances_ppi,
       colour = distances_ppi) +
-  geom_violin(alpha = 0.8, 
-              scale = "width", 
-              adjust = 0.5) +
+  geom_violin(
+    alpha = 0.8
+    #scale = "width",
+    #adjust = 0.5
+  ) +
   scale_fill_manual(values = colors_defined_filt) +
   scale_color_manual(values = colors_defined_filt) +
   theme_linedraw() +
   theme(aspect.ratio=1,
-        plot.title =  element_text(size = 15, face="bold"), 
-        axis.title = element_text(size = 14, face="bold"), 
-        axis.text = element_text(size = 13),
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16), 
         panel.grid.major=element_blank(), 
         panel.grid.minor = element_blank(),
-        legend.text = element_text(size = 13), 
-        legend.title=element_text(size=14, face="bold"),
+        legend.text = element_text(size = 16), 
+        legend.title=element_text(size=16, face="bold"),
         text = element_text(family = "Helvetica")) +
   labs (x = "Number of samples",
-        y = "Absolute co-expression weight",
+        #y = "Absolute co-expression weight",
+        y = "Co-expression weight",
         color = "PPI distance",
         fill = "PPI distance")
 ggsave(
@@ -607,14 +631,15 @@ ggsave(
 violinplot_ppi_coexpression_by_distances_nofilt
 ```
 
-Plot the co-expression of pairs of proteins/genes grouped by different categories:
 
-Boxplot plotting the zeroes:
+### Plot the co-expression of pairs of proteins/genes grouped by different categories (PPI vs. Random vs. Random (distance > 3))
+
+Boxplot plotting the zeroes (corresponding to the unsignificant correlations):
 
 ```{r}
 boxplot_ppi_coexpression_by_types_file = sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/ppi_coexpression_boxplot_by_pair_type_pval_%s_%s_%s.png", as.character(threshold_selected), dataset, type_dataset)
-#colors_defined_filt = colors_defined[names(colors_defined) %in% c("PPI", "PPI & iNCI", "Random pairs in PPI", "Random pairs in PPI (dist. > 4)", "Random pairs in PPI & iNCI (dist. > 4)")]
-colors_defined_filt = colors_defined[names(colors_defined) %in% c("PPI", "Random", "Random (distance > 4)")]
+#colors_defined_filt = colors_defined[names(colors_defined) %in% c("PPI", "PPI & iNCI", "Random pairs in PPI", "Random pairs in PPI (dist. > 3)", "Random pairs in PPI & iNCI (dist. > 3)")]
+colors_defined_filt = colors_defined[names(colors_defined) %in% c("PPI", "Random", "Random (distance > 3)")]
 boxplot_ppi_coexpression_by_types = coexpression_pairs_filt %>%
   #select(-distances_ppi, -distances_nci) %>%
   select(-distances_ppi, -distances_nci, -nci, -random_far_not_nci) %>%
@@ -627,11 +652,11 @@ boxplot_ppi_coexpression_by_types = coexpression_pairs_filt %>%
   filter(!(is.na(correlation))) %>%
   #mutate(category = replace(category, category == "nci", "PPI+iNCI")) %>%
   mutate(category = replace(category, category == "ppi", "PPI")) %>%
-  #mutate(category = replace(category, category == "random_not_ppi", "Random")) %>%
-  mutate(category = replace(category, category == "random_far_not_ppi", "Random (distance > 4)")) %>%
-  #mutate(category = replace(category, category == "random_far_not_nci", "Random pairs in PPI+iNCI (d > 4)")) %>%
-  #mutate(category = factor(category, levels = c("PPI","PPI & iNCI", "Random pairs in PPI","Random pairs in PPI (dist. > 4)","Random pairs in PPI & iNCI (dist. > 4)"))) %>%
-  mutate(category = factor(category, levels = c("PPI", "Random", "Random (distance > 4)"))) %>%
+  mutate(category = replace(category, category == "random_not_ppi", "Random")) %>%
+  mutate(category = replace(category, category == "random_far_not_ppi", "Random (distance > 3)")) %>%
+  #mutate(category = replace(category, category == "random_far_not_nci", "Random pairs in PPI+iNCI (d > 3)")) %>%
+  #mutate(category = factor(category, levels = c("PPI","PPI & iNCI", "Random pairs in PPI","Random pairs in PPI (dist. > 3)","Random pairs in PPI & iNCI (dist. > 3)"))) %>%
+  mutate(category = factor(category, levels = c("PPI", "Random", "Random (distance > 3)"))) %>%
   ggplot() +
   aes(x = reorder(size, as.numeric(size)),
       y = abs(correlation),
@@ -667,11 +692,11 @@ ggsave(
 boxplot_ppi_coexpression_by_types
 ```
 
-Violin plot plotting the zeroes:
+Violin plot plotting the zeroes (corresponding to the unsignificant correlations):
 
 ```{r}
 violinplot_ppi_coexpression_by_types_file =  sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/ppi_coexpression_violinplot_by_pair_type_pval_%s_%s_%s.png", as.character(threshold_selected), dataset, type_dataset)
-colors_defined_filt = colors_defined[names(colors_defined) %in% c("PPI", "Distance > 4")]
+colors_defined_filt = colors_defined[names(colors_defined) %in% c("PPI", "Distance > 3")]
 violinplot_ppi_coexpression_by_types = coexpression_pairs_filt %>%
   select(-distances_ppi, -distances_nci, -nci, -random_not_ppi, -random_far_not_nci) %>%
   pivot_longer(c("ppi", "random_far_not_ppi"), names_to = "category", values_to = "category_bool") %>%
@@ -681,8 +706,8 @@ violinplot_ppi_coexpression_by_types = coexpression_pairs_filt %>%
   filter(size %in% sizes_selected_comparison_plot) %>%
   filter(!(is.na(correlation))) %>%
   mutate(category = replace(category, category == "ppi", "PPI")) %>%
-  mutate(category = replace(category, category == "random_far_not_ppi", "Distance > 4")) %>%
-  mutate(category = factor(category, levels = c("PPI", "Distance > 4"))) %>%
+  mutate(category = replace(category, category == "random_far_not_ppi", "Distance > 3")) %>%
+  mutate(category = factor(category, levels = c("PPI", "Distance > 3"))) %>%
   ggplot() +
   aes(x = reorder(size, as.numeric(size)),
       y = abs(correlation),
@@ -717,11 +742,11 @@ ggsave(
 )
 ```
 
-Violin plot not plotting the zeroes:
+Violin plot showing only the weights of significant correlations (removing the unsignificant ones):
 
 ```{r}
 violinplot_ppi_coexpression_by_types_nozero_file =  sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/ppi_coexpression_violinplot_by_pair_type_nozero_pval_%s_%s_%s.png", as.character(threshold_selected), dataset, type_dataset)
-colors_defined_filt = colors_defined[names(colors_defined) %in% c("PPI", "Distance > 4")]
+colors_defined_filt = colors_defined[names(colors_defined) %in% c("PPI", "Distance > 3")]
 violinplot_ppi_coexpression_by_types_nozero = coexpression_pairs_filt %>%
   select(-distances_ppi, -distances_nci, -nci, -random_not_ppi, -random_far_not_nci) %>%
   pivot_longer(c("ppi", "random_far_not_ppi"), names_to = "category", values_to = "category_bool") %>%
@@ -732,11 +757,12 @@ violinplot_ppi_coexpression_by_types_nozero = coexpression_pairs_filt %>%
   filter(!(is.na(correlation))) %>%
   filter(abs(correlation) > 0 ) %>% 
   mutate(category = replace(category, category == "ppi", "PPI")) %>%
-  mutate(category = replace(category, category == "random_far_not_ppi", "Distance > 4")) %>%
-  mutate(category = factor(category, levels = c("PPI", "Distance > 4"))) %>%
+  mutate(category = replace(category, category == "random_far_not_ppi", "Distance > 3")) %>%
+  mutate(category = factor(category, levels = c("PPI", "Distance > 3"))) %>%
   ggplot() +
   aes(x = reorder(size, as.numeric(size)),
-      y = abs(correlation),
+      #y = abs(correlation),
+      y = correlation,
       fill = category,
       colour = category) +
   geom_violin(alpha = 0.8, 
@@ -755,7 +781,8 @@ violinplot_ppi_coexpression_by_types_nozero = coexpression_pairs_filt %>%
         legend.title=element_text(size=14, face="bold"),
         text = element_text(family = "Helvetica")) +
   labs (x = "Number of samples",
-        y = "Absolute co-expression weight",
+        #y = "Absolute co-expression weight",
+        y = "Co-expression weight",
         color = "",
         fill = ""); violinplot_ppi_coexpression_by_types_nozero
 ggsave(
@@ -768,11 +795,11 @@ ggsave(
 )
 ```
 
-Violin plot without setting unsignificant co-expression links to 0:
+Violin plot showing all co-expression weights (without setting unsignificant co-expression links to 0):
 
 ```{r}
 violinplot_ppi_coexpression_by_types_nofilt_file =  sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/plots/ppi_coexpression_violinplot_by_pair_type_%s_%s.png", dataset, type_dataset)
-colors_defined_filt = colors_defined[names(colors_defined) %in% c("PPI", "Distance > 4")]
+colors_defined_filt = colors_defined[names(colors_defined) %in% c("PPI", "Distance > 3")]
 violinplot_ppi_coexpression_by_types_nofilt = coexpression_pairs %>%
   select(-distances_ppi, -distances_nci, -nci, -random_not_ppi, -random_far_not_nci) %>%
   pivot_longer(c("ppi", "random_far_not_ppi"), names_to = "category", values_to = "category_bool") %>%
@@ -782,30 +809,34 @@ violinplot_ppi_coexpression_by_types_nofilt = coexpression_pairs %>%
   filter(size %in% sizes_selected_comparison_plot) %>%
   filter(!(is.na(correlation))) %>%
   mutate(category = replace(category, category == "ppi", "PPI")) %>%
-  mutate(category = replace(category, category == "random_far_not_ppi", "Distance > 4")) %>%
-  mutate(category = factor(category, levels = c("PPI", "Distance > 4"))) %>%
+  mutate(category = replace(category, category == "random_far_not_ppi", "Distance > 3")) %>%
+  mutate(category = factor(category, levels = c("PPI", "Distance > 3"))) %>%
   ggplot() +
   aes(x = reorder(size, as.numeric(size)),
-      y = abs(correlation),
+      #y = abs(correlation),
+      y = correlation,
       fill = category,
       colour = category) +
-  geom_violin(alpha = 0.8, 
-              scale = "width", 
-              adjust = 0.5) +
+  geom_violin(
+    alpha = 0.8
+    #scale = "width",
+    #adjust = 0.5
+  ) +
   scale_fill_manual(values = colors_defined_filt) +
   scale_color_manual(values = colors_defined_filt) +
   theme_linedraw() +
   theme(aspect.ratio=1,
-        plot.title =  element_text(size = 15, face="bold"), 
-        axis.title = element_text(size = 14, face="bold"), 
-        axis.text = element_text(size = 13),
+        plot.title =  element_text(size = 20, face="bold"), 
+        axis.title = element_text(size = 17, face="bold"), 
+        axis.text = element_text(size = 16), 
         panel.grid.major=element_blank(), 
         panel.grid.minor = element_blank(),
-        legend.text = element_text(size = 13), 
-        legend.title=element_text(size=14, face="bold"),
+        legend.text = element_text(size = 16), 
+        legend.title=element_text(size=16, face="bold"),
         text = element_text(family = "Helvetica")) +
   labs (x = "Number of samples",
-        y = "Absolute co-expression weight",
+        #y = "Absolute co-expression weight",
+        y = "Co-expression weight",
         color = "",
         fill = ""); violinplot_ppi_coexpression_by_types_nofilt
 ggsave(
@@ -817,6 +848,7 @@ ggsave(
   units = c("px")
 )
 ```
+
 
 ### Calculate differences between different sample sizes of the same protein pair group
 
@@ -1085,42 +1117,146 @@ test_results_across_distances_by_sizes_df %>%
   arrange(comparison, size)
 ```
 
-Check differences when keeping all links:
+Check differences when keeping all links (TABLE S2):
 
 ```{r}
-# Select data to compare
-ppi_coexpression_across_distances_by_sizes_df = coexpression_pairs %>%
-  select(-ppi, -nci, -distances_nci, -random_not_ppi, -random_far_not_ppi, -random_far_not_nci) %>%
-  filter(!(is.na(distances_ppi))) %>%
-  pivot_longer(as.character(sizes_selected), names_to = "size", values_to = "correlation", names_transform = list(size = as.numeric), values_transform = list(correlation = as.numeric)) %>%
-  filter(!(is.na(correlation))) %>%
-  unite(edge, c("Node.1", "Node.2"), sep = "_", remove = FALSE)
+# Function to Compute Pairwise Differences with Comparison Column
+compute_pairwise_differences <- function(data, group_col, value_col) {
 
-kw_results_across_distances_by_sizes_df = data.frame(matrix(ncol=length(c("size", "kw.statistic", "kw.pvalue")),nrow=0, dimnames=list(NULL, c("size", "kw.statistic", "kw.pvalue"))))
-dunn_results_across_distances_by_sizes_df = data.frame(matrix(ncol=length(c("size", "Comparison", "Z", "P.unadj", "P.adj")),nrow=0, dimnames=list(NULL, c("size", "Comparison", "Z", "P.unadj", "P.adj"))))
-for(size_selected in sort(unique(ppi_coexpression_across_distances_by_sizes_df$size))){
+  unique_groups <- sort(unique(data[[group_col]]))
+  
+  # Generate all pairwise combinations of groups
+  group_pairs <- combn(unique_groups, 2)
+  
+  results <- data.frame(
+    comparison = character(0),
+    difference = numeric(0)
+  )
+  
+  for (i in seq_len(ncol(group_pairs))) {
+    g1 <- group_pairs[1, i]
+    g2 <- group_pairs[2, i]
+
+    mean_abs_g1 <- mean(abs(data[data[[group_col]] == g1, ][[value_col]]))
+    mean_abs_g2 <- mean(abs(data[data[[group_col]] == g2, ][[value_col]]))
+    mean_diff <- round((mean_abs_g1 - mean_abs_g2), 3)
+
+    results <- rbind(results, data.frame(
+      comparison = paste(g1, "-", g2),
+      mean_diff = mean_diff
+    ))
+  }
+  
+  return(results)
+}
+
+# Select protein pairs from different distances and transform to long format
+ppi_coexpression_across_distances_by_sizes_df <- coexpression_pairs %>%
+  dplyr::select(-ppi, -nci, -distances_nci, -random_not_ppi, -random_far_not_ppi, -random_far_not_nci) %>%
+  dplyr::filter(!(is.na(distances_ppi))) %>%
+  tidyr::pivot_longer(
+    as.character(sizes_selected),
+    names_to = "size",
+    values_to = "correlation",
+    names_transform = list(size = as.numeric),
+    values_transform = list(correlation = as.numeric)
+  ) %>%
+  dplyr::filter(!(is.na(correlation))) %>%
+  tidyr::unite(edge, c("Node.1", "Node.2"), sep = "_", remove = FALSE)
+
+# Calculate mean, SD and difference across distances
+mean_sd_corr_across_distances_by_sizes_df <- ppi_coexpression_across_distances_by_sizes_df %>%
+  dplyr::group_by(size, distances_ppi) %>%
+  dplyr::summarize(
+    mean_abs_corr = round(mean(abs(correlation)), 3),
+    sd_abs_corr = round(sd(abs(correlation)), 3)
+  ) %>%
+  dplyr::ungroup()
+
+# Calculate statistical tests between protein pairs from different distances for
+# each sample size
+kw_results_across_distances_by_sizes_df <- data.frame()
+mean_diff_across_distances_by_sizes_df <- data.frame()
+dunn_results_across_distances_by_sizes_df <- data.frame()
+
+for(size_selected in sort(unique(ppi_coexpression_across_distances_by_sizes_df$size))) {
+
   # Filter co-expression by size
-  ppi_coexpression_by_selected_size_df = ppi_coexpression_across_distances_by_sizes_df %>% filter(size == size_selected)
+  ppi_coexpression_by_selected_size_df <- ppi_coexpression_across_distances_by_sizes_df %>%
+    dplyr::filter(size == size_selected)
+
   # Run KW test across distance groups
-  kw_across_distances = ppi_coexpression_by_selected_size_df %>% 
-    mutate(distances_ppi = factor(distances_ppi, levels = c(1,2,3,4,5,6))) %>% 
+  kw_across_distances <- ppi_coexpression_by_selected_size_df %>% 
+    dplyr::mutate(distances_ppi = factor(distances_ppi, levels = c(1,2,3,4,5,6))) %>% 
     kruskal.test(abs(correlation) ~ distances_ppi, .)
+
   # Save result
-  kw_results_across_distances_by_sizes_df = rbind(kw_results_across_distances_by_sizes_df, data.frame(size=size_selected, kw.statistic=kw_across_distances$statistic[[1]], kw.pvalue=kw_across_distances$p.value))
+  kw_results_across_distances_by_sizes_df <- rbind(
+    kw_results_across_distances_by_sizes_df,
+    data.frame(
+      size = size_selected,
+      kw.statistic = kw_across_distances$statistic[[1]],
+      kw.pvalue = ifelse(kw_across_distances$p.value == 0, "< 2.2e-16", kw_across_distances$p.value)
+    )
+  )
+
+  # Pairwise differences of means across distances
+  mean_diff_across_distances <- compute_pairwise_differences(
+    data = ppi_coexpression_by_selected_size_df,
+    group_col = "distances_ppi",
+    value_col = "correlation"
+  )
+
+  # Save result
+  mean_diff_across_distances_by_sizes_df <- rbind(
+    mean_diff_across_distances_by_sizes_df,
+    cbind(
+      data.frame(size = size_selected),
+      mean_diff_across_distances
+    )
+  )
+
   # Run Dunn test across distance groups
-  dunn_across_distances = ppi_coexpression_by_selected_size_df %>% 
-    mutate(distances_ppi = factor(distances_ppi, levels = c(1,2,3,4,5,6))) %>% 
+  dunn_across_distances <- ppi_coexpression_by_selected_size_df %>% 
+    dplyr::mutate(distances_ppi = factor(distances_ppi, levels = c(1,2,3,4,5,6))) %>% 
     FSA::dunnTest(abs(correlation) ~ distances_ppi, .)
+
   # Save result
-  dunn_results_across_distances_by_sizes_df= rbind(dunn_results_across_distances_by_sizes_df, cbind(data.frame(size=size_selected), dunn_across_distances$res))
+  dunn_results_across_distances_by_sizes_df <- rbind(
+    dunn_results_across_distances_by_sizes_df,
+    cbind(
+      data.frame(size = size_selected),
+      dunn_across_distances$res
+    )
+  )
+
   rm(ppi_coexpression_by_selected_size_df)
 }
+
 rm(ppi_coexpression_across_distances_by_sizes_df)
 
 # Merge and save results
-test_results_across_distances_by_sizes_df = kw_results_across_distances_by_sizes_df %>% full_join(dunn_results_across_distances_by_sizes_df, by=c("size")) %>% rename("comparison"="Comparison", "dunn.z"="Z", "dunn.p.unadj"="P.unadj", "dunn.p.adj"="P.adj")
-test_results_across_distances_by_sizes_file = sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/ppi_coexpression_analysis_statistic_tests_across_distance_by_sizes_%s_%s.txt", dataset, type_dataset)
-test_results_across_distances_by_sizes_df %>% fwrite(test_results_across_distances_by_sizes_file)
+test_results_across_distances_by_sizes_df <- kw_results_across_distances_by_sizes_df %>%
+  dplyr::full_join(
+    dunn_results_across_distances_by_sizes_df %>%
+      dplyr::full_join(
+        mean_diff_across_distances_by_sizes_df,
+        by = c("size" = "size", "Comparison" = "comparison")
+      ),
+    by = c("size")
+  ) %>%
+  dplyr::rename(
+    "comparison" = "Comparison",
+    "dunn.z" = "Z",
+    "dunn.p.unadj" = "P.unadj",
+    "dunn.p.adj" = "P.adj"
+  )
+
+test_results_across_distances_by_sizes_file <- sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/ppi_coexpression_analysis_statistic_tests_across_distance_by_sizes_%s_%s.txt", dataset, type_dataset)
+test_results_across_distances_by_sizes_df %>%
+  data.table::fwrite(test_results_across_distances_by_sizes_file)
+
+test_results_across_distances_by_sizes_df
 ```
 
 The results are the following:
@@ -1189,48 +1325,83 @@ The results are the following:
 test_results_across_types_by_sizes_df
 ```
 
-Check differences when keeping all links:
+Check differences when keeping all links (TABLE S1):
 
 ```{r}
-# Select data to compare
-ppi_coexpression_across_types_by_sizes_df = coexpression_pairs %>%
-  select(-distances_ppi, -distances_nci, -nci, -random_far_not_nci) %>%
-  #pivot_longer(c("ppi", "random_not_ppi", "random_far_not_ppi"), names_to = "category", values_to = "category_bool") %>%
-  pivot_longer(c("ppi", "random_far_not_ppi"), names_to = "category", values_to = "category_bool") %>%
-  filter(category_bool == TRUE) %>%
-  select(-category_bool) %>%
-  pivot_longer(as.character(sizes_selected), names_to = "size", values_to = "correlation", names_transform = list(size = as.numeric), values_transform = list(correlation = as.numeric)) %>%
-  filter(!(is.na(correlation))) %>%
-  unite(edge, c("Node.1", "Node.2"), sep = "_", remove = FALSE)
+# Select PPIs and far protein pairs and transform the data to long format
+ppi_coexpression_across_types_by_sizes_df <- coexpression_pairs %>%
+  dplyr::select(-distances_ppi, -distances_nci, -nci, -random_far_not_nci) %>%
+  tidyr::pivot_longer(
+    c("ppi", "random_far_not_ppi"),
+    names_to = "category",
+    values_to = "category_bool"
+  ) %>%
+  dplyr::filter(category_bool == TRUE) %>%
+  dplyr::select(-category_bool) %>%
+  tidyr::pivot_longer(
+    as.character(sizes_selected),
+    names_to = "size",
+    values_to = "correlation",
+    names_transform = list(size = as.numeric),
+    values_transform = list(correlation = as.numeric)
+  ) %>%
+  dplyr::filter(!(is.na(correlation))) %>%
+  tidyr::unite(edge, c("Node.1", "Node.2"), sep = "_", remove = FALSE)
 
-kw_results_across_types_by_sizes_df = data.frame(matrix(ncol=length(c("size", "kw.statistic", "kw.pvalue")),nrow=0, dimnames=list(NULL, c("size", "kw.statistic", "kw.pvalue"))))
-wilcox_results_across_types_by_sizes_df = data.frame(matrix(ncol=length(c("size", "w.statistic", "w.pvalue")),nrow=0, dimnames=list(NULL, c("size", "w.statistic", "w.pvalue"))))
-for(size_selected in sort(unique(ppi_coexpression_across_types_by_sizes_df$size))){
+# Calculate statistical tests between PPIs and far protein pairs for each sample
+# size
+wilcox_results_across_types_by_sizes_df <- data.frame()
+for(size_selected in sort(unique(ppi_coexpression_across_types_by_sizes_df$size))) {
+
   # Filter co-expression by size
-  ppi_coexpression_by_selected_size_df = ppi_coexpression_across_types_by_sizes_df %>% 
-    filter(size == size_selected) %>% 
-    mutate(category = factor(category, levels = c("ppi", "random_far_not_ppi"))) 
-  # Run KW test across types
-  kw_across_types = ppi_coexpression_by_selected_size_df %>% 
-    kruskal.test(abs(correlation) ~ category, .)
-  # Save result
-  kw_results_across_types_by_sizes_df = rbind(kw_results_across_types_by_sizes_df, data.frame(size=size_selected, kw.statistic=kw_across_types$statistic[[1]], kw.pvalue=kw_across_types$p.value))
-  # # Run Dunn test across types
-  # dunn_across_types = ppi_coexpression_by_selected_size_df %>% 
-  #   mutate(category = factor(category, levels = c("ppi", "random_far_not_ppi"))) %>% 
-  #   FSA::dunnTest(abs(correlation) ~ category, .) # ERROR: Error in Psort[1, i] : incorrect number of dimensions
+  ppi_coexpression_by_selected_size_df <- ppi_coexpression_across_types_by_sizes_df %>% 
+    dplyr::filter(size == size_selected) %>% 
+    dplyr::mutate(category = factor(category, levels = c("ppi", "random_far_not_ppi")))
+
   # Run Wilcoxon test instead of Dunn, because there are only two groups
-  wilcox_across_types = wilcox.test(abs((ppi_coexpression_by_selected_size_df %>% filter(category == "ppi"))$correlation), abs((ppi_coexpression_by_selected_size_df %>% filter(category == "random_far_not_ppi"))$correlation), alternative = "greater", correct = FALSE, exact = FALSE)
+  wilcox_across_types <- wilcox.test(
+    abs((ppi_coexpression_by_selected_size_df %>% filter(category == "ppi"))$correlation),
+    abs((ppi_coexpression_by_selected_size_df %>% filter(category == "random_far_not_ppi"))$correlation),
+    alternative = "greater",
+    correct = FALSE,
+    exact = FALSE
+  )
+
+  # Calculate mean and SD
+  mean_abs_corr_ppi <- mean(abs((ppi_coexpression_by_selected_size_df %>% filter(category == "ppi"))$correlation))
+  mean_abs_corr_far <- mean(abs((ppi_coexpression_by_selected_size_df %>% filter(category == "random_far_not_ppi"))$correlation))
+  diff_mean <- mean_abs_corr_ppi - mean_abs_corr_far
+  sd_abs_corr_ppi <- sd(abs((ppi_coexpression_by_selected_size_df %>% filter(category == "ppi"))$correlation))
+  sd_abs_corr_far <- sd(abs((ppi_coexpression_by_selected_size_df %>% filter(category == "random_far_not_ppi"))$correlation))
+  diff_sd <- sd_abs_corr_ppi - sd_abs_corr_far
+
   # Save result
-  wilcox_results_across_types_by_sizes_df= rbind(wilcox_results_across_types_by_sizes_df, data.frame(size=size_selected, w.statistic=as.numeric(wilcox_across_types$statistic), w.pvalue=wilcox_across_types$p.value))
+  wilcox_results_across_types_by_sizes_df <- rbind(
+    wilcox_results_across_types_by_sizes_df,
+    data.frame(
+      size = size_selected,
+      mean_abs_corr_ppi = round(mean_abs_corr_ppi, 3),
+      mean_abs_corr_far = round(mean_abs_corr_far, 3),
+      diff_mean = round(diff_mean, 3),
+      sd_abs_corr_ppi = round(sd_abs_corr_ppi, 3),
+      sd_abs_corr_far = round(sd_abs_corr_far, 3),
+      diff_sd = round(diff_sd, 3),
+      w.statistic = as.numeric(wilcox_across_types$statistic),
+      w.pvalue = ifelse(wilcox_across_types$p.value == 0, "< 2.2e-16", wilcox_across_types$p.value)
+    )
+  )
+
   rm(ppi_coexpression_by_selected_size_df)
 }
+
 rm(ppi_coexpression_across_types_by_sizes_df)
 
-# Merge and save results
-test_results_across_types_by_sizes_df = kw_results_across_types_by_sizes_df %>% full_join(wilcox_results_across_types_by_sizes_df, by=c("size"))
-test_results_across_types_by_sizes_file = sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/ppi_coexpression_analysis_statistic_tests_across_pair_type_by_sizes_%s_%s.txt", dataset, type_dataset)
-test_results_across_types_by_sizes_df %>% fwrite(test_results_across_types_by_sizes_file)
+# Save results
+wilcox_results_across_types_by_sizes_file <- sprintf("/home/j.aguirreplans/Projects/Scipher/SampleSize/data/out/tables/ppi_coexpression_analysis_wilcox_across_pair_type_by_sizes_%s_%s.txt", dataset, type_dataset)
+wilcox_results_across_types_by_sizes_df %>%
+  data.table::fwrite(wilcox_results_across_types_by_sizes_file)
+
+wilcox_results_across_types_by_sizes_df
 ```
 
 The results are the following:
@@ -1405,6 +1576,7 @@ ggsave(
 )
  perf_plot
 ```
+
 ```{r}
 perf_auc = perf_df %>%
   select(size, AUC) %>%

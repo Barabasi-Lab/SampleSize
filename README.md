@@ -40,6 +40,9 @@ We also created summary tables and figures to illustrate the results.
     8. [Analyze the gene co-expression variation in individual links](#8-analyze-the-gene-co-expression-variation-in-individual-links)
     9. [Analyze the gene co-expression of protein-protein interactions](#9-analyze-the-gene-co-expression-of-protein-protein-interactions)
     10. [Create the figures](#10-create-the-figures)
+* [Supplementary Information](#supplementary-information)
+* [Shiny App](#shiny-app)
+* [Acknowledgments](#acknowledgments)
 
 
 ## Code
@@ -482,11 +485,25 @@ To create the figures of the manuscript and supplementary material, plus some ad
 create_figures.Rmd
 ```
 
-For the analysis of strong correlations, we executed the following Rmarkdown notebook:
+For the analysis using Spearman's correlation, we executed the following Rmarkdown notebook:
 
 ```
-strong_correlations.Rmd
+create_figures_spearman.Rmd
 ```
+
+For the analysis of strong correlations, we executed this notebook:
+
+```
+strong_correlations_size240.Rmd
+```
+
+## Supplementary Information
+
+The Supplementary Information from the article can be found at [info/SampleSize_SI.pdf](https://github.com/quimaguirre/SampleSize/blob/master/info/SampleSize_SI.pdf).
+
+## Shiny App
+
+An interactive online tool for exploring the trends described in the article is accessible at the following web address: https://joaquimaguirreplans.shinyapps.io/samplesizeshiny/. 
 
 ## Acknowledgments
 
